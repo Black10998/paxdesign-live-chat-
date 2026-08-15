@@ -3788,6 +3788,22 @@
     if (report.platforms) {
       html += '<h4>Platforms</h4><div class="pdx-portal-body-text">' + escHtml(report.platforms) + '</div>';
     }
+    if (report.next_action) {
+      html += '<h4>What is still required</h4><div class="pdx-portal-body-text">' + escHtml(report.next_action) + '</div>';
+    }
+    var checks = report.checks || {};
+    var checkFiles = checks.files || [];
+    if (checkFiles.length || (report.correction_required || []).length) {
+      html += '<h4>Document checks (preliminary)</h4>';
+      html += '<p class="pdx-portal-note">' + escHtml(checks.disclaimer || 'Automated quality checks only — not legal verification.') + '</p><ul class="pdx-portal-list">';
+      checkFiles.forEach(function (file) {
+        if (!file) {
+          return;
+        }
+        html += '<li>' + escHtml(file.filename || 'file') + ' — ' + escHtml(file.customer_status || file.status || '') + '</li>';
+      });
+      html += '</ul>';
+    }
     var timeline = cybercrimeVisibleTimeline(report);
     if (timeline.length) {
       html += '<h4>Official updates</h4><ul class="pdx-portal-cybercrime-timeline">';
@@ -3818,6 +3834,10 @@
     if (!isActive) {
       html += '<p class="pdx-portal-records-actions"><a class="pdx-portal-btn pdx-portal-btn--secondary" href="' +
         escHtml(homePageUrl().replace(/\/$/, '') + '/cybercrime-support/') + '">Start a new report</a></p>';
+    } else {
+      html += '<p class="pdx-portal-records-actions"><a class="pdx-portal-btn pdx-portal-btn--secondary" href="' +
+        escHtml(homePageUrl().replace(/\/$/, '') + '/cybercrime-support/?ref=' + encodeURIComponent(report.reference_id || '')) +
+        '">Open this case</a></p>';
     }
     return html + '</article>';
   }

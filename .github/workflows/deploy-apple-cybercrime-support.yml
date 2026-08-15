@@ -8,7 +8,7 @@ on:
       - 'cursor/cybercrime-support-page-bdff'
       - 'cursor/cybercrime-support-fixes-db83'
       - 'cursor/cybercrime-ticket-workflow-db83'
-      - 'cursor/cybercrime-admin-reply-hotfix-3a65'
+      - 'cursor/revolut-full-redesign-b0ff'
     paths:
       - '.github/triggers/deploy-apple-cybercrime-support'
       - '.github/workflows/deploy-apple-cybercrime-support.yml'
@@ -35,6 +35,8 @@ on:
       - 'paxdesign-booking/assets/js/cybercrime-admin-notifications.js'
       - 'paxdesign-booking/includes/class-paxdesign-cybercrime-intake.php'
       - 'paxdesign-booking/includes/class-paxdesign-cybercrime-tickets.php'
+      - 'paxdesign-booking/includes/class-paxdesign-cybercrime-document-checks.php'
+      - 'paxdesign-booking/includes/class-paxdesign-cybercrime-admin-reminders.php'
       - 'paxdesign-booking/includes/class-paxdesign-link-scan-service.php'
       - 'paxdesign-booking/includes/class-paxdesign-widget-performance.php'
       - '.gitignore'
@@ -162,6 +164,8 @@ jobs:
             paxdesign-booking/includes/class-paxdesign-chat-knowledge.php \
             paxdesign-booking/includes/class-paxdesign-cybercrime-intake.php \
             paxdesign-booking/includes/class-paxdesign-cybercrime-tickets.php \
+            paxdesign-booking/includes/class-paxdesign-cybercrime-document-checks.php \
+            paxdesign-booking/includes/class-paxdesign-cybercrime-admin-reminders.php \
             paxdesign-booking/includes/class-paxdesign-chat-live.php \
             paxdesign-booking/includes/class-paxdesign-link-scan-service.php \
             paxdesign-booking/includes/class-paxdesign-widget-performance.php \
@@ -241,11 +245,14 @@ jobs:
           grep -Eq 'id="navein-home-critical-css"' /tmp/home-page.html
           grep -Eq "iconfont-css|fonts/iconfont\.css" /tmp/home-page.html
           ! grep -Eq "paxdesign-booking-styles-css[^\"']*media='print' onload" /tmp/home-page.html
-          grep -Eq "Version: 1\.4\.36" /tmp/style.css
-          grep -Eq "apple-cybercrime-support\.css\?ver=1\.4\.36|apple-cybercrime-support\.js\?ver=1\.4\.36" /tmp/ccs-page.html
+          grep -Eq "Version: 1\.4\.37" /tmp/style.css
+          grep -Eq "apple-cybercrime-support\.css\?ver=1\.4\.37|apple-cybercrime-support\.js\?ver=1\.4\.37" /tmp/ccs-page.html
           grep -Eq "pax-ccs-portal|pax-ccs-intake-form|pax-ccs-country-search|pax-ccs-phone-code" /tmp/ccs-page.html
+          grep -Eq "pax-ccs-category-cards|pax-ccs-case-dossier|pax-ccs-resubmit|pax-ccs-evidence-coach" /tmp/ccs-page.html
           grep -Eq "full-bleed Apple-style|--ccs-gutter|pax-ccs-portal__coverage-track" /tmp/apple-ccs.css
+          grep -Eq "pax-ccs-portal__cards|pax-ccs-portal__dossier|pax-ccs-portal__check-item" /tmp/apple-ccs.css
           grep -Eq "initCountryPicker|validateAllSteps|pax-ccs-country-search" /tmp/apple-ccs.js
+          grep -Eq "initGuidedInterview|renderCaseDossier|paxdesign_cybercrime_customer_resubmit" /tmp/apple-ccs.js
           grep -Eq "PAXdesignWidgetLoader" /tmp/widget-loader.js
           grep -Eq 'name="identity_document" required|pax-ccs-portal__required' /tmp/ccs-page.html
           grep -Eq "Sitewide isolated Sign In|background: #000 !important" /tmp/pdx-auth.css
@@ -253,10 +260,13 @@ jobs:
           grep -Eq "markStaffRead|paxdesign_cybercrime_admin_mark_read" /tmp/cybercrime-admin.js
           grep -Eq "paxCybercrimeAdminApplyUnread|paxdesign_cybercrime_admin_unread" /tmp/cybercrime-admin-notifications.js
           grep -Eq "paxdesign_cybercrime_admin_status|pax-cc-close-ticket|REQUEST_TIMEOUT_MS|markStaffRead" /tmp/cybercrime-admin.js
-          grep -Eq "paxdesign-booking[^\"']*ver=3\.174\.59" /tmp/ccs-page.html
+          grep -Eq "paxdesign-booking[^\"']*ver=3\.175\.0" /tmp/ccs-page.html
           grep -Eq "queueBackgroundRealtimeSync|shouldSkipHistoryFetch|HISTORY_INITIAL" /tmp/chat-script.js
           grep -Eq "renderPortalRecordsSection|renderPortalCybercrimeDetail|cybercrime/reports" /tmp/pax-auth.js
+          grep -Eq "Document checks \\(preliminary\\)|What is still required" /tmp/pax-auth.js
           grep -A6 '#pdx-auth-bar.pdx-auth-bar--header .pdx-auth-signup-btn {' /tmp/pdx-auth.css | grep -Eq 'background: #000|background-color: #000'
+          grep -Eq "class-paxdesign-cybercrime-document-checks|class-paxdesign-cybercrime-admin-reminders" /tmp/pax-plugin.php
+          grep -Eq "Version: 3\.175\.0" /tmp/pax-plugin.php
           if [ "$BOOKING_JS" = "200" ]; then
             grep -Eq 'ensureChatReady' /tmp/booking-script.js
             grep -Eq 'escapeHtml|paxdesign_get_team_members' /tmp/booking-script.js

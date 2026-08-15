@@ -12,7 +12,7 @@ class PAXdesign_Cybercrime_Intake {
     const TABLE_SUFFIX = 'paxdesign_cybercrime_reports';
     const NONCE_ACTION = 'paxdesign_cybercrime_report';
     const UPLOAD_SUBDIR = 'pax-cybercrime-intake';
-    const SCHEMA_VERSION = '2';
+    const SCHEMA_VERSION = '3';
     const MAX_FILES = 20;
     const MAX_FILE_BYTES = 26214400; // 25 MB
 
@@ -64,6 +64,25 @@ class PAXdesign_Cybercrime_Intake {
             }
         }
 
+        $columns = $wpdb->get_col("SHOW COLUMNS FROM `$table`", 0);
+        if (!is_array($columns)) {
+            $columns = array();
+        }
+        if (!in_array('needs_human_review', $columns, true)) {
+            $wpdb->query("ALTER TABLE `$table` ADD COLUMN needs_human_review tinyint(1) unsigned NOT NULL DEFAULT 0 AFTER status");
+        }
+        $columns = $wpdb->get_col("SHOW COLUMNS FROM `$table`", 0);
+        if (is_array($columns) && !in_array('last_staff_reminder_at', $columns, true)) {
+            $wpdb->query("ALTER TABLE `$table` ADD COLUMN last_staff_reminder_at datetime NULL AFTER updated_at");
+        }
+        $columns = $wpdb->get_col("SHOW COLUMNS FROM `$table`", 0);
+        if (is_array($columns) && in_array('needs_human_review', $columns, true)) {
+            $indexes = $wpdb->get_results("SHOW INDEX FROM `$table` WHERE Key_name = 'needs_human_review'", ARRAY_A);
+            if (empty($indexes)) {
+                $wpdb->query("ALTER TABLE `$table` ADD KEY needs_human_review (needs_human_review)");
+            }
+        }
+
         update_option('paxdesign_cybercrime_schema_version', self::SCHEMA_VERSION, false);
     }
 
@@ -81,6 +100,7 @@ class PAXdesign_Cybercrime_Intake {
             reference_id varchar(32) NOT NULL,
             customer_user_id bigint(20) unsigned NOT NULL DEFAULT 0,
             status varchar(24) NOT NULL DEFAULT 'submitted',
+            needs_human_review tinyint(1) unsigned NOT NULL DEFAULT 0,
             reporter_name varchar(190) NOT NULL DEFAULT '',
             reporter_email varchar(190) NOT NULL DEFAULT '',
             reporter_phone varchar(64) NOT NULL DEFAULT '',
@@ -93,11 +113,13 @@ class PAXdesign_Cybercrime_Intake {
             ip_hash varchar(64) NOT NULL DEFAULT '',
             created_at datetime NOT NULL,
             updated_at datetime NOT NULL,
+            last_staff_reminder_at datetime NULL,
             PRIMARY KEY (id),
             UNIQUE KEY reference_id (reference_id),
             KEY status (status),
             KEY created_at (created_at),
-            KEY customer_user_id (customer_user_id)
+            KEY customer_user_id (customer_user_id),
+            KEY needs_human_review (needs_human_review)
         ) $charset;";
         require_once ABSPATH . 'wp-admin/includes/upgrade.php';
         dbDelta($sql);
@@ -124,6 +146,7 @@ class PAXdesign_Cybercrime_Intake {
             'loginUrl'      => esc_url($login_url),
             'resumeParam'   => 'pdx_ccs_start',
             'activeReport'  => self::safe_active_report_for_current_user(),
+            'checksDisclaimer' => __('Automated preliminary quality checks are not legal verification. Uncertain files are sent to an administrator.', 'paxdesign-booking'),
         );
     }
 
@@ -239,6 +262,36 @@ class PAXdesign_Cybercrime_Intake {
             );
         }
 
+        $check_context = array(
+            'reporter_name' => (string) ($parsed['full_name'] ?? ''),
+            'email'         => (string) ($parsed['email'] ?? ''),
+            'category'      => (string) ($parsed['category'] ?? ''),
+        );
+        $document_checks = class_exists('PAXdesign_Cybercrime_Document_Checks')
+            ? PAXdesign_Cybercrime_Document_Checks::evaluate_uploads($uploads, $check_context)
+            : array();
+
+        if (class_exists('PAXdesign_Cybercrime_Document_Checks')
+            && PAXdesign_Cybercrime_Document_Checks::has_blocking_identity_failure($document_checks)
+        ) {
+            self::delete_stored_uploads($uploads);
+            $corrections = array_values((array) ($document_checks['customer_corrections'] ?? array()));
+            $message = !empty($corrections)
+                ? implode(' ', $corrections)
+                : __('The identity document did not pass preliminary quality checks. Please upload a readable, complete document.', 'paxdesign-booking');
+            return new WP_Error(
+                'document_check_failed',
+                $message,
+                array(
+                    'status'           => 400,
+                    'corrections'      => $corrections,
+                    'document_checks'  => class_exists('PAXdesign_Cybercrime_Document_Checks')
+                        ? PAXdesign_Cybercrime_Document_Checks::customer_view($document_checks)
+                        : array(),
+                )
+            );
+        }
+
         self::ensure_schema();
 
         $reference = self::generate_reference_id();
@@ -255,32 +308,54 @@ class PAXdesign_Cybercrime_Intake {
             'declarations'        => $parsed['declarations'],
             'locale'              => $parsed['locale'],
             'source'              => sanitize_key((string) ($post['source'] ?? 'web')),
+            'incident_date'       => (string) ($parsed['incident_date'] ?? ''),
+            'incident_time'       => (string) ($parsed['incident_time'] ?? ''),
+            'document_checks'     => $document_checks,
+            'guided_case'         => array(
+                'needs_human_review' => !empty($document_checks['needs_human_review']),
+                'next_action'        => (string) ($document_checks['next_action'] ?? ''),
+                'correction_rounds'  => array(),
+            ),
+        );
+
+        $needs_human = !empty($document_checks['needs_human_review']) ? 1 : 0;
+
+        $insert_row = array(
+            'reference_id'         => $reference,
+            'customer_user_id'     => max(0, (int) $user_id),
+            'status'               => 'submitted',
+            'needs_human_review'   => $needs_human,
+            'reporter_name'        => $parsed['full_name'],
+            'reporter_email'       => $parsed['email'],
+            'reporter_phone'       => $parsed['phone'],
+            'reporter_country'     => $parsed['country'],
+            'category'             => $parsed['category'],
+            'urgency'              => $parsed['urgency'],
+            'incident_at'          => $parsed['incident_at_sql'],
+            'payload'              => wp_json_encode($payload),
+            'attachments'          => wp_json_encode(self::public_upload_records($uploads)),
+            'ip_hash'              => self::hash_ip(self::client_ip()),
+            'created_at'           => $now,
+            'updated_at'           => $now,
         );
 
         $inserted = $wpdb->insert(
             self::table_name(),
-            array(
-                'reference_id'     => $reference,
-                'customer_user_id' => max(0, (int) $user_id),
-                'status'           => 'submitted',
-                'reporter_name'    => $parsed['full_name'],
-                'reporter_email'   => $parsed['email'],
-                'reporter_phone'   => $parsed['phone'],
-                'reporter_country' => $parsed['country'],
-                'category'         => $parsed['category'],
-                'urgency'          => $parsed['urgency'],
-                'incident_at'      => $parsed['incident_at_sql'],
-                'payload'          => wp_json_encode($payload),
-                'attachments'      => wp_json_encode($uploads),
-                'ip_hash'          => self::hash_ip(self::client_ip()),
-                'created_at'       => $now,
-                'updated_at'       => $now,
-            ),
-            array('%s', '%d', '%s', '%s', '%s', '%s', '%s', '%s', '%s', '%s', '%s', '%s', '%s', '%s', '%s')
+            $insert_row,
+            array('%s', '%d', '%s', '%d', '%s', '%s', '%s', '%s', '%s', '%s', '%s', '%s', '%s', '%s', '%s', '%s')
         );
 
         if (!$inserted) {
             $db_error = (string) $wpdb->last_error;
+            if ($db_error !== '' && strpos($db_error, 'needs_human_review') !== false) {
+                unset($insert_row['needs_human_review']);
+                $inserted = $wpdb->insert(
+                    self::table_name(),
+                    $insert_row,
+                    array('%s', '%d', '%s', '%s', '%s', '%s', '%s', '%s', '%s', '%s', '%s', '%s', '%s', '%s', '%s')
+                );
+                $db_error = (string) $wpdb->last_error;
+            }
             if ($db_error !== '') {
                 error_log('[PAXdesign Cybercrime] Insert failed: ' . $db_error);
             }
@@ -297,8 +372,12 @@ class PAXdesign_Cybercrime_Intake {
             );
         }
 
-        self::notify_admin($reference, $parsed, $uploads);
+        self::notify_admin($reference, $parsed, $uploads, $document_checks);
         self::notify_customer_submitted($user_id, $reference, $parsed);
+
+        if ($needs_human && class_exists('PAXdesign_Cybercrime_Admin_Reminders')) {
+            do_action('paxdesign_cybercrime_needs_human_review', $reference, $document_checks);
+        }
 
         if (class_exists('PAXdesign_Cybercrime_Tickets')) {
             PAXdesign_Cybercrime_Tickets::record_submission($reference, $user_id, $parsed, $chat_session_id);
@@ -474,6 +553,8 @@ class PAXdesign_Cybercrime_Intake {
             'declarations'       => $declarations,
             'locale'             => $locale,
             'incident_at_sql'    => $incident_at_sql,
+            'incident_date'      => $incident_date,
+            'incident_time'      => $incident_time,
         );
     }
 
@@ -591,11 +672,14 @@ class PAXdesign_Cybercrime_Intake {
                     }
 
                     $saved[] = array(
-                        'field' => sanitize_key((string) $field),
-                        'name'  => basename($upload['file']),
-                        'url'   => $upload['url'],
-                        'type'  => $upload['type'] ?? '',
-                        'size'  => (string) filesize($upload['file']),
+                        'field'         => sanitize_key((string) $field),
+                        'name'          => basename($upload['file']),
+                        'original_name' => sanitize_file_name((string) ($single['name'] ?? '')),
+                        'url'           => $upload['url'],
+                        'type'          => $upload['type'] ?? '',
+                        'size'          => (string) filesize($upload['file']),
+                        'path'          => $upload['file'],
+                        'sha256'        => is_readable($upload['file']) ? hash_file('sha256', $upload['file']) : '',
                     );
                     $count++;
                 }
@@ -605,6 +689,67 @@ class PAXdesign_Cybercrime_Intake {
         }
 
         return $saved;
+    }
+
+    /**
+     * Store new uploads for an existing case (same reference).
+     *
+     * @param array<string, mixed> $files
+     * @return array<int, array<string, mixed>>|WP_Error
+     */
+    public static function save_uploaded_files($files) {
+        return self::handle_uploads($files);
+    }
+
+    /**
+     * Records safe to persist in the attachments JSON (no server path).
+     *
+     * @param array<int, array<string, mixed>> $uploads
+     * @return array<int, array<string, mixed>>
+     */
+    public static function public_upload_records($uploads) {
+        $out = array();
+        foreach ((array) $uploads as $file) {
+            if (!is_array($file)) {
+                continue;
+            }
+            $out[] = array(
+                'field'         => sanitize_key((string) ($file['field'] ?? '')),
+                'name'          => (string) ($file['name'] ?? ''),
+                'original_name' => (string) ($file['original_name'] ?? ''),
+                'url'           => (string) ($file['url'] ?? ''),
+                'type'          => (string) ($file['type'] ?? ''),
+                'size'          => (string) ($file['size'] ?? ''),
+                'sha256'        => (string) ($file['sha256'] ?? ''),
+            );
+        }
+        return $out;
+    }
+
+    /**
+     * @param array<int, array<string, mixed>> $uploads
+     */
+    public static function delete_stored_uploads($uploads) {
+        foreach ((array) $uploads as $file) {
+            if (!is_array($file)) {
+                continue;
+            }
+            $path = (string) ($file['path'] ?? '');
+            if ($path !== '' && is_file($path)) {
+                @unlink($path);
+            }
+        }
+    }
+
+    /**
+     * @param string $reference
+     * @return string
+     */
+    public static function admin_case_url($reference) {
+        if (class_exists('PAXdesign_Cybercrime_Admin_Reminders')) {
+            return PAXdesign_Cybercrime_Admin_Reminders::admin_case_url($reference);
+        }
+        return admin_url('admin.php?page=paxdesign-customer-portal&tab=cybercrime&reference=' . rawurlencode((string) $reference));
     }
 
     /**
@@ -675,12 +820,18 @@ class PAXdesign_Cybercrime_Intake {
 
     /**
      * @param array<string, mixed> $parsed
-     * @param array<int, array<string, string>> $uploads
+     * @param array<int, array<string, mixed>> $uploads
+     * @param array<string, mixed> $document_checks
      */
-    private static function notify_admin($reference, $parsed, $uploads) {
+    private static function notify_admin($reference, $parsed, $uploads, $document_checks = array()) {
         $to = get_option('paxdesign_booking_notification_email', 'info@paxdesign.at');
-        $subject = sprintf('[Cybercrime Report] %s — %s', $reference, $parsed['category']);
-        $body = "New cybercrime intake report\n\n"
+        $admin_url = self::admin_case_url($reference);
+        $needs_human = !empty($document_checks['needs_human_review']);
+        $subject = $needs_human
+            ? 'A Cybercrime Support request requires your review.'
+            : sprintf('[Cybercrime Report] %s — %s', $reference, $parsed['category']);
+        $body = ($needs_human ? "A Cybercrime Support request requires your review.\n\n" : '')
+            . "New cybercrime intake report\n\n"
             . "Reference: {$reference}\n"
             . "Name: {$parsed['full_name']}\n"
             . "Email: {$parsed['email']}\n"
@@ -695,8 +846,18 @@ class PAXdesign_Cybercrime_Intake {
             . 'Attachments: ' . count($uploads) . "\n";
 
         foreach ($uploads as $file) {
-            $body .= '- ' . ($file['name'] ?? '') . ' ' . ($file['url'] ?? '') . "\n";
+            $body .= '- ' . ($file['original_name'] ?? $file['name'] ?? '') . "\n";
         }
+
+        if ($needs_human) {
+            $body .= "\nAutomated preliminary checks flagged this case for administrator review (not legal verification).\n";
+            $reasons = (array) ($document_checks['human_review_reasons'] ?? array());
+            if (!empty($reasons)) {
+                $body .= 'Flags: ' . implode(', ', array_slice($reasons, 0, 12)) . "\n";
+            }
+        }
+
+        $body .= "\nOpen the exact case:\n{$admin_url}\n";
 
         wp_mail($to, $subject, $body, array('Content-Type: text/plain; charset=UTF-8'));
     }
@@ -869,6 +1030,18 @@ class PAXdesign_Cybercrime_Intake {
                 }
             }
 
+            $checks = is_array($payload['document_checks'] ?? null) ? $payload['document_checks'] : array();
+            $guided = is_array($payload['guided_case'] ?? null) ? $payload['guided_case'] : array();
+            $checks_bits = array();
+            if (!empty($checks['files']) && is_array($checks['files'])) {
+                foreach ($checks['files'] as $check_file) {
+                    if (!is_array($check_file)) {
+                        continue;
+                    }
+                    $checks_bits[] = (string) ($check_file['filename'] ?? 'file') . '=' . (string) ($check_file['customer_status'] ?? $check_file['status'] ?? '');
+                }
+            }
+
             $out[] = array(
                 'reference_id'       => (string) ($row['reference_id'] ?? ''),
                 'status'             => (string) ($row['status'] ?? ''),
@@ -886,6 +1059,9 @@ class PAXdesign_Cybercrime_Intake {
                 'financial_currency' => (string) ($payload['financial_currency'] ?? ''),
                 'attachments'        => count($attachments),
                 'attachment_names'   => $attachment_names,
+                'needs_human_review' => !empty($row['needs_human_review']) || !empty($checks['needs_human_review']),
+                'next_action'        => (string) ($guided['next_action'] ?? $checks['next_action'] ?? ''),
+                'checks_summary'     => implode('; ', array_slice($checks_bits, 0, 12)),
             );
         }
 
@@ -1017,10 +1193,18 @@ class PAXdesign_Cybercrime_Intake {
                 $lines[] = '    updates/messages: none yet beyond initial submission';
             }
             $lines[] = '    last status change: ' . (string) ($report['updated_at'] ?? $report['created_at'] ?? '');
+            if (!empty($report['next_action'])) {
+                $lines[] = '    what still needs to be done: ' . (string) $report['next_action'];
+            }
+            if (!empty($report['checks_summary'])) {
+                $lines[] = '    document checks (preliminary, not legal verification): ' . (string) $report['checks_summary'];
+            }
         }
 
-        $lines[] = '- For Cybercrime Support questions, use ONLY these report facts (reference number, category, status, dates, summary, updates, attachments).';
+        $lines[] = '- For Cybercrime Support questions, use ONLY these report facts (reference number, category, status, dates, summary, updates, attachments, checks, next action).';
+        $lines[] = '- Stay on the same reference. Never start a new case if one already exists unless it is closed.';
         $lines[] = '- If the customer asks for updates and none are listed above, say the report is recorded and the team will contact them when there is news.';
+        $lines[] = '- If files were rejected by preliminary checks, tell the customer exactly what to correct and that they can resubmit on the same reference.';
 
         return implode("\n", $lines);
     }

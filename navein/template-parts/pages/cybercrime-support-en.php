@@ -108,6 +108,18 @@ return array(
 		'closed_title' => 'Closed report (read-only)',
 		'read_only' => 'This report is closed. You can view the full history only.',
 		'back_history' => 'Back to ticket history',
+		'original_heading' => 'Original request',
+		'checks_heading' => 'Document checks (preliminary)',
+		'checks_disclaimer' => 'Automated quality checks only — not legal verification. Uncertain items are reviewed by the team.',
+		'next_heading' => 'What is needed now',
+		'resubmit_heading' => 'Correct or add files on this same case',
+		'resubmit_hint' => 'Your reference number does not change. Upload only the files that are required.',
+		'resubmit_identity' => 'Replace identity document',
+		'resubmit_evidence' => 'Additional evidence',
+		'resubmit_submit' => 'Submit correction',
+		'check_accepted' => 'Accepted for review',
+		'check_rejected' => 'Rejected — correction needed',
+		'check_review' => 'Pending team review',
 	),
 	'login_gate' => array(
 		'title' => 'Sign in required',
@@ -207,6 +219,33 @@ return array(
 		'evidence_other' => array(
 			'label' => 'Additional evidence',
 		),
+		'evidence_required' => array(
+			'label' => 'Please attach at least one piece of evidence before continuing.',
+		),
+	),
+	'guided' => array(
+		'ask' => 'Current question',
+		'missing' => 'Still needed in this step',
+		'identity_q' => 'Who are you? Enter your legal details as on the official document, then upload a clear photo of the full document.',
+		'incident_q' => 'What happened? Choose the type, then add when, which platforms, and a description in your own words.',
+		'evidence_q' => 'What proves it? Upload screenshots, messages, or statements that match this incident type.',
+		'review_q' => 'Review the summary, then confirm accuracy. After submit you receive a fixed reference number for this case.',
+		'category_hint' => 'Choose what best describes the incident. You can add detail in the description.',
+		'id_why' => 'We need a complete, readable identity document to match your name to the case. Automated checks are quality-only — the team makes the final decision.',
+		'continue_blocked' => 'Complete the required answers in this step before continuing.',
+	),
+	'evidence_coach' => array(
+		'account_takeover' => 'Most useful: email/phone change notices, recovery messages, unknown session screenshots.',
+		'phishing_fraud' => 'Most useful: the message or link, sender address, and any payment you made.',
+		'identity_theft' => 'Most useful: accounts opened in your name, credit alerts, platform notices.',
+		'malware_ransomware' => 'Most useful: ransom note, encrypted file extensions, antivirus alert. Do not upload runnable malware.',
+		'social_media_recovery' => 'Most useful: username, profile screenshots, platform emails, last known activity.',
+		'financial_fraud' => 'Most useful: bank notice or statement, transaction ID, scammer chat. Hide full card numbers.',
+		'data_breach' => 'Most useful: breach notice, what data leaked, and where it appeared.',
+		'other' => 'Upload anything that shows the sequence: screenshots, messages, or documents.',
+	),
+	'platform_chips' => array(
+		'other' => 'Other',
 	),
 	'categories' => array(
 		'account_takeover'      => 'Account takeover',
@@ -303,6 +342,9 @@ return array(
 			'none'     => '—',
 			'yes'      => 'Yes',
 			'no'       => 'No',
+		),
+		'guided' => array(
+			'files' => 'files',
 		),
 	),
 );

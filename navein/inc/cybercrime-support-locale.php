@@ -224,6 +224,16 @@ if ( ! function_exists( 'pax_ccs_portal_i18n' ) ) {
 			$history[ $key ] = $pick( $labels );
 		}
 
+		$guided = array();
+		foreach ( (array) ( $copy['guided'] ?? array() ) as $key => $labels ) {
+			$guided[ $key ] = $pick( $labels );
+		}
+
+		$coach = array();
+		foreach ( (array) ( $copy['evidence_coach'] ?? array() ) as $key => $labels ) {
+			$coach[ $key ] = $pick( $labels );
+		}
+
 		return array(
 			'langs'           => $langs,
 			'supportTeam'     => $pick( $copy['timeline_i18n']['support_team'] ?? array() ),
@@ -237,11 +247,21 @@ if ( ! function_exists( 'pax_ccs_portal_i18n' ) ) {
 			'errors'          => $errors,
 			'review'          => $review,
 			'ticketHistory'   => $history,
-			'activeReport'    => $pick( array(
-				'closed_title' => $copy['active_report']['closed_title'] ?? array(),
-				'read_only'    => $copy['active_report']['read_only'] ?? array(),
-				'back_history' => $copy['active_report']['back_history'] ?? array(),
-			) ),
+			'guided'          => $guided,
+			'evidenceCoach'   => $coach,
+			'activeReport'    => array(
+				'closed_title'       => $pick( $copy['active_report']['closed_title'] ?? array() ),
+				'read_only'          => $pick( $copy['active_report']['read_only'] ?? array() ),
+				'back_history'       => $pick( $copy['active_report']['back_history'] ?? array() ),
+				'original_heading'   => $pick( $copy['active_report']['original_heading'] ?? array() ),
+				'checks_heading'     => $pick( $copy['active_report']['checks_heading'] ?? array() ),
+				'checks_disclaimer'  => $pick( $copy['active_report']['checks_disclaimer'] ?? array() ),
+				'next_heading'       => $pick( $copy['active_report']['next_heading'] ?? array() ),
+				'check_accepted'     => $pick( $copy['active_report']['check_accepted'] ?? array() ),
+				'check_rejected'     => $pick( $copy['active_report']['check_rejected'] ?? array() ),
+				'check_review'       => $pick( $copy['active_report']['check_review'] ?? array() ),
+				'resubmit_heading'   => $pick( $copy['active_report']['resubmit_heading'] ?? array() ),
+			),
 		);
 	}
 }

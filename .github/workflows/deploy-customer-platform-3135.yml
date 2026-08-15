@@ -36,6 +36,11 @@ jobs:
           set -euo pipefail
           rg --files -g '*.php' paxdesign-booking/includes/customer paxdesign-booking/includes/auth | xargs -n1 php -l
           php -l paxdesign-booking/includes/class-paxdesign-chat.php
+          php -l paxdesign-booking/includes/class-paxdesign-cybercrime-intake.php
+          php -l paxdesign-booking/includes/class-paxdesign-cybercrime-tickets.php
+          php -l paxdesign-booking/includes/class-paxdesign-cybercrime-document-checks.php
+          php -l paxdesign-booking/includes/class-paxdesign-cybercrime-admin-reminders.php
+          php -l paxdesign-booking/includes/class-paxdesign-chat-knowledge.php
 
       - name: Customer platform static tests
         run: php tests/customer-platform/run.php

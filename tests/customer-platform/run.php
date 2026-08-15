@@ -270,4 +270,50 @@ cx_assert_true(strpos($launch_view, 'Color.black') !== false, 'Launch screen mus
 $animated_logo = file_get_contents(dirname(__DIR__, 2) . '/paxdesign-booking/ios-live-chat/PAXDesignLiveChat/Features/Launch/PAXAnimatedLogoView.swift');
 cx_assert_true(strpos($animated_logo, 'holdDuration') !== false && strpos($animated_logo, '1.2') !== false, 'Logo animation must preserve website hold timing');
 
+$ccs_root = dirname(__DIR__, 2) . '/paxdesign-booking';
+$ccs_checks = file_get_contents($ccs_root . '/includes/class-paxdesign-cybercrime-document-checks.php');
+cx_assert_true(strpos($ccs_checks, 'class PAXdesign_Cybercrime_Document_Checks') !== false, 'Document quality checks class must exist');
+cx_assert_true(strpos($ccs_checks, 'legal_verification') !== false, 'Document checks must record they are not legal verification');
+cx_assert_true(strpos($ccs_checks, 'appears_expired') !== false, 'Document checks must flag expired-looking files');
+cx_assert_true(strpos($ccs_checks, 'duplicate_in_submission') !== false, 'Document checks must detect duplicate uploads');
+cx_assert_true(strpos($ccs_checks, 'customer_corrections') !== false, 'Document checks must tell the customer what to correct');
+
+$ccs_remind = file_get_contents($ccs_root . '/includes/class-paxdesign-cybercrime-admin-reminders.php');
+cx_assert_true(strpos($ccs_remind, 'A Cybercrime Support request requires your review.') !== false, 'Admin reminder email must use the required review subject');
+cx_assert_true(strpos($ccs_remind, 'paxdesign_cybercrime_admin_review_reminders') !== false, 'Admin reminder cron hook must be registered');
+cx_assert_true(strpos($ccs_remind, 'tab=cybercrime&reference=') !== false, 'Admin reminder must link to the exact case');
+
+$ccs_tickets = file_get_contents($ccs_root . '/includes/class-paxdesign-cybercrime-tickets.php');
+cx_assert_true(strpos($ccs_tickets, 'paxdesign_cybercrime_customer_resubmit') !== false, 'Customers must resubmit files on the same reference');
+cx_assert_true(strpos($ccs_tickets, 'append_customer_evidence') !== false, 'Same-reference evidence corrections must be implemented');
+cx_assert_true(strpos($ccs_tickets, 'original_request') !== false, 'Case payload must expose the original request');
+cx_assert_true(strpos($ccs_tickets, 'needs_human_review') !== false, 'Tickets must expose human-review flags');
+
+$ccs_intake = file_get_contents($ccs_root . '/includes/class-paxdesign-cybercrime-intake.php');
+cx_assert_true(strpos($ccs_intake, 'document_checks') !== false, 'Intake must store document check results on the case');
+cx_assert_true(strpos($ccs_intake, 'document_check_failed') !== false, 'Intake must reject unreadable identity documents before creating a new case');
+
+$ccs_chat = file_get_contents($ccs_root . '/includes/class-paxdesign-chat-knowledge.php');
+cx_assert_true(strpos($ccs_chat, 'guided Cybercrime Support case assistant') !== false, 'Live Chat must drive the Cybercrime Support case, not only explain it');
+cx_assert_true(strpos($ccs_chat, 'Never tell the customer to start over') !== false, 'Assistant must stay on the existing reference');
+
+$ccs_admin = file_get_contents($ccs_root . '/includes/customer/class-paxdesign-customer-admin.php');
+cx_assert_true(strpos($ccs_admin, 'Needs human review') !== false, 'Admin list must flag cases that need human review');
+cx_assert_true(strpos($ccs_admin, 'Preliminary document checks') !== false, 'Admin case view must show preliminary document checks');
+
+$ccs_js = file_get_contents(dirname(__DIR__, 2) . '/navein/assets/js/apple-cybercrime-support.js');
+cx_assert_true(strpos($ccs_js, 'initGuidedInterview') !== false, 'Website intake must run a guided interview');
+cx_assert_true(strpos($ccs_js, 'renderCaseDossier') !== false, 'Returning customers must see the existing case dossier');
+cx_assert_true(strpos($ccs_js, 'paxdesign_cybercrime_customer_resubmit') !== false, 'Website must allow same-case file corrections');
+
+$ccs_page = file_get_contents(dirname(__DIR__, 2) . '/navein/template-parts/pages/cybercrime-support.php');
+cx_assert_true(strpos($ccs_page, 'pax-ccs-category-cards') !== false, 'Intake must present category as guided choices');
+cx_assert_true(strpos($ccs_page, 'pax-ccs-case-dossier') !== false, 'Active case view must include the case dossier');
+cx_assert_true(strpos($ccs_page, 'name="identity_document"') !== false, 'Identity document upload must remain in the intake form');
+
+$plugin_bootstrap = file_get_contents($ccs_root . '/paxdesign-booking.php');
+cx_assert_true(strpos($plugin_bootstrap, "define('PAXDESIGN_BOOKING_VERSION', '3.175.0')") !== false, 'Plugin version must be 3.175.0');
+cx_assert_true(strpos($plugin_bootstrap, 'class-paxdesign-cybercrime-document-checks.php') !== false, 'Plugin must load document checks');
+cx_assert_true(strpos($plugin_bootstrap, 'PAXdesign_Cybercrime_Admin_Reminders::init') !== false, 'Plugin must boot admin review reminders');
+
 echo "OK: customer platform static verification passed (" . count($files) . " modules)\n";

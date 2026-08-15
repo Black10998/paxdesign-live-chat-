@@ -10,7 +10,7 @@ if (!defined('ABSPATH')) {
 class PAXdesign_Cybercrime_Tickets {
 
     const TABLE_MESSAGES = 'paxdesign_cybercrime_messages';
-    const SCHEMA_VERSION = '3';
+    const SCHEMA_VERSION = '4';
 
     /** @var list<string> Canonical workflow statuses (admin + database). */
     private static $workflow_statuses = array(
@@ -39,6 +39,7 @@ class PAXdesign_Cybercrime_Tickets {
         add_action('wp_ajax_paxdesign_cybercrime_active_report', array(__CLASS__, 'ajax_active_report'));
         add_action('wp_ajax_paxdesign_cybercrime_report_detail', array(__CLASS__, 'ajax_report_detail'));
         add_action('wp_ajax_paxdesign_cybercrime_customer_reply', array(__CLASS__, 'ajax_customer_reply'));
+        add_action('wp_ajax_paxdesign_cybercrime_customer_resubmit', array(__CLASS__, 'ajax_customer_resubmit'));
         add_action('rest_api_init', array(__CLASS__, 'register_rest_routes'), 25);
         add_action('paxdesign_chat_message_appended', array(__CLASS__, 'on_chat_message'), 10, 4);
         add_action('admin_post_paxdesign_cybercrime_update_status', array(__CLASS__, 'admin_update_status'));
@@ -221,6 +222,16 @@ class PAXdesign_Cybercrime_Tickets {
      */
     public static function build_activity_indicators($row, $timeline = null) {
         $indicators = array();
+        $payload = json_decode((string) ($row['payload'] ?? ''), true);
+        $checks = is_array($payload) && isset($payload['document_checks']) && is_array($payload['document_checks'])
+            ? $payload['document_checks']
+            : array();
+        if (!empty($row['needs_human_review']) || !empty($checks['needs_human_review'])) {
+            $indicators[] = array(
+                'key'   => 'needs_human_review',
+                'label' => __('Needs human review (preliminary document checks)', 'paxdesign-booking'),
+            );
+        }
         $raw_status = sanitize_key((string) ($row['status'] ?? ''));
         if (isset(self::$legacy_status_map[$raw_status])) {
             if ($raw_status === 'customer_replied') {
@@ -419,6 +430,40 @@ class PAXdesign_Cybercrime_Tickets {
         }
         $out['unread_count'] = self::count_unread_for_audience((string) ($row['reference_id'] ?? ''), $read_audience, $row);
 
+        $checks = is_array($payload['document_checks'] ?? null) ? $payload['document_checks'] : array();
+        $guided = is_array($payload['guided_case'] ?? null) ? $payload['guided_case'] : array();
+        $customer_checks = class_exists('PAXdesign_Cybercrime_Document_Checks')
+            ? PAXdesign_Cybercrime_Document_Checks::customer_view($checks)
+            : array();
+
+        $next_action = (string) ($guided['next_action'] ?? $checks['next_action'] ?? '');
+        if ($next_action === '') {
+            $next_action = self::default_next_action($workflow_status, $customer_checks);
+        }
+
+        $out['original_request'] = array(
+            'reporter_name'       => (string) ($row['reporter_name'] ?? ''),
+            'reporter_email'      => (string) ($row['reporter_email'] ?? ''),
+            'reporter_phone'      => (string) ($row['reporter_phone'] ?? ''),
+            'reporter_country'    => (string) ($row['reporter_country'] ?? ''),
+            'category'            => (string) ($row['category'] ?? ''),
+            'category_label'      => $out['category_label'],
+            'urgency'             => (string) ($row['urgency'] ?? ''),
+            'incident_at'         => (string) ($row['incident_at'] ?? ''),
+            'incident_date'       => (string) ($payload['incident_date'] ?? ''),
+            'incident_time'       => (string) ($payload['incident_time'] ?? ''),
+            'platforms'           => (string) ($payload['platforms'] ?? ''),
+            'description'         => (string) ($payload['description'] ?? ''),
+            'financial_loss'      => (string) ($payload['financial_loss'] ?? ''),
+            'financial_currency'  => (string) ($payload['financial_currency'] ?? 'EUR'),
+        );
+        $out['checks'] = $timeline_audience === 'admin' ? $checks : $customer_checks;
+        $out['needs_human_review'] = !empty($row['needs_human_review']) || !empty($checks['needs_human_review']);
+        $out['next_action'] = $next_action;
+        $out['correction_required'] = array_values((array) ($customer_checks['customer_corrections'] ?? array()));
+        $out['can_resubmit'] = self::is_active_status($raw_status);
+        $out['case_summary'] = self::build_case_summary_text($out);
+
         if ($with_timeline) {
             if ($timeline_audience === 'admin') {
                 $out['timeline'] = self::list_official_messages(
@@ -440,6 +485,50 @@ class PAXdesign_Cybercrime_Tickets {
         }
 
         return $out;
+    }
+
+    /**
+     * @param string               $status
+     * @param array<string, mixed> $checks
+     * @return string
+     */
+    public static function default_next_action($status, $checks = array()) {
+        $status = self::normalize_workflow_status($status);
+        $corrections = (array) ($checks['customer_corrections'] ?? array());
+        if (!empty($corrections)) {
+            return __('Replace the rejected files on this same case, then wait for administrator review.', 'paxdesign-booking');
+        }
+        switch ($status) {
+            case 'waiting_for_customer':
+                return __('The team asked for more information. Reply or upload the requested files on this same reference.', 'paxdesign-booking');
+            case 'in_review':
+                return __('The PAXDesign team is reviewing this case. No action is required unless they ask for more information.', 'paxdesign-booking');
+            case 'submitted':
+                return __('Your report is received and waiting for administrator review.', 'paxdesign-booking');
+            case 'resolved':
+                return __('This case is resolved. You can review the outcome on this reference.', 'paxdesign-booking');
+            case 'closed':
+                return __('This case is closed. Start a new report only if you need help with a new incident.', 'paxdesign-booking');
+            default:
+                return __('Stay on this reference. The team will update the official conversation when there is news.', 'paxdesign-booking');
+        }
+    }
+
+    /**
+     * @param array<string, mixed> $report
+     * @return string
+     */
+    public static function build_case_summary_text($report) {
+        $ref = (string) ($report['reference_id'] ?? '');
+        $status = (string) ($report['status_label'] ?? $report['status'] ?? '');
+        $category = (string) ($report['category_label'] ?? '');
+        $next = (string) ($report['next_action'] ?? '');
+        $parts = array_filter(array($ref, $category, $status));
+        $text = implode(' · ', $parts);
+        if ($next !== '') {
+            $text .= '. ' . $next;
+        }
+        return $text;
     }
 
     /**
@@ -1093,7 +1182,8 @@ class PAXdesign_Cybercrime_Tickets {
         $subject = sprintf('[Cybercrime Reply] %s', $reference_id);
         $text = "Customer reply on cybercrime report {$reference_id}\n\n"
             . 'From: ' . ($row['reporter_name'] ?? '') . ' <' . ($row['reporter_email'] ?? '') . ">\n\n"
-            . $body . "\n";
+            . $body . "\n\n"
+            . 'Open the exact case: ' . PAXdesign_Cybercrime_Intake::admin_case_url($reference_id) . "\n";
         wp_mail($to, $subject, $text, array('Content-Type: text/plain; charset=UTF-8'));
     }
 
@@ -1274,7 +1364,41 @@ class PAXdesign_Cybercrime_Tickets {
             '- Submitted: ' . ($detail['created_at'] ?? ''),
             '- Last update: ' . ($detail['updated_at'] ?? ''),
             '- Reason/summary: ' . wp_html_excerpt((string) ($detail['description'] ?? ''), 400, '…'),
+            '- Next action for the customer: ' . (string) ($detail['next_action'] ?? ''),
+            '- Needs administrator review: ' . (!empty($detail['needs_human_review']) ? 'yes' : 'no'),
+            '- Stay on this same reference for the entire workflow: submission → document checks → corrections → administrator review → status changes → customer communication → final outcome.',
+            '- Never ask the customer to restart or re-explain facts already listed here.',
         );
+
+        $original = is_array($detail['original_request'] ?? null) ? $detail['original_request'] : array();
+        if (!empty($original)) {
+            $lines[] = '- Original request on this same reference:';
+            $lines[] = '    reporter: ' . (string) ($original['reporter_name'] ?? '');
+            $lines[] = '    platforms: ' . (string) ($original['platforms'] ?? '');
+            $lines[] = '    incident: ' . (string) ($original['incident_at'] ?? '');
+            if (!empty($original['financial_loss'])) {
+                $lines[] = '    reported loss: ' . (string) $original['financial_loss'] . ' ' . (string) ($original['financial_currency'] ?? '');
+            }
+        }
+
+        $checks = is_array($detail['checks'] ?? null) ? $detail['checks'] : array();
+        $lines[] = '- Document/evidence checks are PRELIMINARY QUALITY CHECKS, not legal verification.';
+        if (!empty($checks['disclaimer'])) {
+            $lines[] = '    disclaimer: ' . (string) $checks['disclaimer'];
+        }
+        if (!empty($checks['files']) && is_array($checks['files'])) {
+            foreach (array_slice($checks['files'], 0, 16) as $file) {
+                if (!is_array($file)) {
+                    continue;
+                }
+                $lines[] = '    • ' . (string) ($file['filename'] ?? 'file')
+                    . ' [' . (string) ($file['field'] ?? '') . '] status='
+                    . (string) ($file['customer_status'] ?? $file['status'] ?? '');
+            }
+        }
+        foreach ((array) ($detail['correction_required'] ?? array()) as $fix) {
+            $lines[] = '    correction needed: ' . (string) $fix;
+        }
 
         if (!empty($detail['attachments']) && is_array($detail['attachments'])) {
             $names = array();
@@ -1695,6 +1819,210 @@ class PAXdesign_Cybercrime_Tickets {
 
         $report = self::get_report_for_user($reference, get_current_user_id());
         wp_send_json_success(array('message_id' => $result, 'report' => $report));
+    }
+
+    public static function ajax_customer_resubmit() {
+        if (!is_user_logged_in()) {
+            wp_send_json_error(array('message' => __('Please sign in.', 'paxdesign-booking'), 'code' => 'login_required'), 401);
+        }
+        check_ajax_referer(PAXdesign_Cybercrime_Intake::NONCE_ACTION, 'nonce');
+
+        $reference = sanitize_text_field(wp_unslash($_POST['reference'] ?? ''));
+        $note = sanitize_textarea_field(wp_unslash($_POST['message'] ?? $_POST['note'] ?? ''));
+        $result = self::append_customer_evidence($reference, $_FILES, get_current_user_id(), $note);
+        if (is_wp_error($result)) {
+            $data = $result->get_error_data();
+            $payload = is_array($data) ? $data : array();
+            $payload['message'] = $result->get_error_message();
+            $payload['code'] = $result->get_error_code();
+            wp_send_json_error($payload, 400);
+        }
+
+        wp_send_json_success($result);
+    }
+
+    /**
+     * Append corrected documents/evidence to the same reference without restarting the case.
+     *
+     * @param string               $reference_id
+     * @param array<string, mixed> $files
+     * @param int                  $user_id
+     * @param string               $note
+     * @return array<string, mixed>|WP_Error
+     */
+    public static function append_customer_evidence($reference_id, $files, $user_id, $note = '') {
+        $reference_id = sanitize_text_field((string) $reference_id);
+        $user_id = absint($user_id);
+        $row = self::get_report_row($reference_id);
+        if (!$row || !self::user_can_view_report($row, $user_id)) {
+            return new WP_Error('forbidden', __('You cannot update this report.', 'paxdesign-booking'));
+        }
+        if (!self::is_active_status((string) ($row['status'] ?? ''))) {
+            return new WP_Error('closed', __('This report is closed.', 'paxdesign-booking'));
+        }
+
+        if (!class_exists('PAXdesign_Cybercrime_Intake')) {
+            return new WP_Error('unavailable', __('Upload is temporarily unavailable.', 'paxdesign-booking'));
+        }
+
+        $uploads = PAXdesign_Cybercrime_Intake::save_uploaded_files(is_array($files) ? $files : array());
+        if (is_wp_error($uploads)) {
+            return $uploads;
+        }
+        if (empty($uploads) && trim($note) === '') {
+            return new WP_Error('empty_update', __('Please attach a file or add a message.', 'paxdesign-booking'));
+        }
+
+        $existing = json_decode((string) ($row['attachments'] ?? ''), true);
+        if (!is_array($existing)) {
+            $existing = array();
+        }
+        $existing_hashes = array();
+        foreach ($existing as $item) {
+            if (is_array($item) && !empty($item['sha256'])) {
+                $existing_hashes[] = (string) $item['sha256'];
+            }
+        }
+
+        $payload = json_decode((string) ($row['payload'] ?? ''), true);
+        if (!is_array($payload)) {
+            $payload = array();
+        }
+
+        $check_context = array(
+            'reporter_name'   => (string) ($row['reporter_name'] ?? ''),
+            'email'           => (string) ($row['reporter_email'] ?? ''),
+            'category'        => (string) ($row['category'] ?? ''),
+            'existing_hashes' => $existing_hashes,
+        );
+        $new_checks = class_exists('PAXdesign_Cybercrime_Document_Checks')
+            ? PAXdesign_Cybercrime_Document_Checks::evaluate_uploads($uploads, $check_context)
+            : array();
+
+        $accepted = array();
+        $rejected = array();
+        $file_checks = is_array($new_checks['files'] ?? null) ? $new_checks['files'] : array();
+        foreach ($uploads as $index => $file) {
+            $check = is_array($file_checks[$index] ?? null) ? $file_checks[$index] : array();
+            if (($check['status'] ?? '') === 'fail') {
+                $rejected[] = $file;
+                continue;
+            }
+            $accepted[] = $file;
+        }
+
+        if (!empty($rejected)) {
+            PAXdesign_Cybercrime_Intake::delete_stored_uploads($rejected);
+        }
+
+        if (empty($accepted) && !empty($uploads)) {
+            $corrections = array_values((array) ($new_checks['customer_corrections'] ?? array()));
+            return new WP_Error(
+                'document_check_failed',
+                !empty($corrections)
+                    ? implode(' ', $corrections)
+                    : __('The new files did not pass preliminary quality checks. Please correct them and try again on this same case.', 'paxdesign-booking'),
+                array(
+                    'corrections'     => $corrections,
+                    'document_checks' => class_exists('PAXdesign_Cybercrime_Document_Checks')
+                        ? PAXdesign_Cybercrime_Document_Checks::customer_view($new_checks)
+                        : array(),
+                )
+            );
+        }
+
+        $merged = array_merge($existing, PAXdesign_Cybercrime_Intake::public_upload_records($accepted));
+        $previous_checks = is_array($payload['document_checks'] ?? null) ? $payload['document_checks'] : array();
+        $merged_files = array_merge(
+            (array) ($previous_checks['files'] ?? array()),
+            (array) ($new_checks['files'] ?? array())
+        );
+        $merged_summary = class_exists('PAXdesign_Cybercrime_Document_Checks')
+            ? PAXdesign_Cybercrime_Document_Checks::summarize($merged_files, $check_context)
+            : $new_checks;
+
+        $guided = is_array($payload['guided_case'] ?? null) ? $payload['guided_case'] : array();
+        $rounds = is_array($guided['correction_rounds'] ?? null) ? $guided['correction_rounds'] : array();
+        $rounds[] = array(
+            'at'      => gmdate('c'),
+            'files'   => count($accepted),
+            'note'    => $note,
+            'checks'  => class_exists('PAXdesign_Cybercrime_Document_Checks')
+                ? PAXdesign_Cybercrime_Document_Checks::customer_view($new_checks)
+                : array(),
+        );
+        $guided['correction_rounds'] = $rounds;
+        $guided['needs_human_review'] = !empty($merged_summary['needs_human_review']);
+        $guided['next_action'] = (string) ($merged_summary['next_action'] ?? '');
+        $payload['guided_case'] = $guided;
+        $payload['document_checks'] = $merged_summary;
+
+        $needs_human = !empty($merged_summary['needs_human_review']) ? 1 : 0;
+        $now = current_time('mysql', true);
+        global $wpdb;
+        $update = array(
+            'attachments'        => wp_json_encode($merged),
+            'payload'            => wp_json_encode($payload),
+            'updated_at'         => $now,
+            'needs_human_review' => $needs_human,
+        );
+        $formats = array('%s', '%s', '%s', '%d');
+        $columns = $wpdb->get_col('SHOW COLUMNS FROM ' . PAXdesign_Cybercrime_Intake::table_name(), 0);
+        if (!is_array($columns) || !in_array('needs_human_review', $columns, true)) {
+            unset($update['needs_human_review']);
+            $formats = array('%s', '%s', '%s');
+        }
+        $wpdb->update(
+            PAXdesign_Cybercrime_Intake::table_name(),
+            $update,
+            array('reference_id' => $reference_id),
+            $formats,
+            array('%s')
+        );
+
+        $names = array();
+        foreach ($accepted as $file) {
+            $names[] = (string) ($file['original_name'] ?? $file['name'] ?? 'file');
+        }
+        $body = $note !== ''
+            ? $note
+            : sprintf(
+                /* translators: %s: file names */
+                __('Updated files submitted on this case: %s. Preliminary quality checks were run. This is not legal verification.', 'paxdesign-booking'),
+                implode(', ', $names)
+            );
+        self::add_message(
+            $reference_id,
+            'customer',
+            $body,
+            'portal',
+            $user_id,
+            array(
+                'event'          => 'customer_resubmit',
+                'files'          => $names,
+                'visible_to_customer' => true,
+            )
+        );
+
+        $status = self::normalize_workflow_status((string) ($row['status'] ?? ''));
+        if ($status === 'waiting_for_customer' || $status === 'submitted') {
+            self::update_status($reference_id, 'in_review', $user_id, '', false, false);
+        }
+
+        self::notify_staff_reply($row, $reference_id, $body);
+
+        if ($needs_human && class_exists('PAXdesign_Cybercrime_Admin_Reminders')) {
+            do_action('paxdesign_cybercrime_needs_human_review', $reference_id, $merged_summary);
+        }
+
+        return array(
+            'report'          => self::get_report_for_user($reference_id, $user_id),
+            'document_checks' => class_exists('PAXdesign_Cybercrime_Document_Checks')
+                ? PAXdesign_Cybercrime_Document_Checks::customer_view($new_checks)
+                : array(),
+            'accepted_count'  => count($accepted),
+            'rejected_count'  => count($rejected),
+        );
     }
 
     public static function admin_update_status() {

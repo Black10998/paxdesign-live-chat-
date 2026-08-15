@@ -66,6 +66,18 @@
   var countryListEl = document.getElementById('pax-ccs-country-list');
   var countryPickerEl = document.getElementById('pax-ccs-country-picker');
   var identityDocEl = document.getElementById('pax-ccs-identity-doc');
+  var categoryEl = document.getElementById('pax-ccs-category');
+  var categoryCardsEl = document.getElementById('pax-ccs-category-cards');
+  var platformChipsEl = document.getElementById('pax-ccs-platform-chips');
+  var platformsInputEl = document.getElementById('pax-ccs-platforms');
+  var evidenceCoachEl = document.getElementById('pax-ccs-evidence-coach');
+  var caseDossierEl = document.getElementById('pax-ccs-case-dossier');
+  var originalRequestEl = document.getElementById('pax-ccs-original-request');
+  var checksListEl = document.getElementById('pax-ccs-checks-list');
+  var nextActionEl = document.getElementById('pax-ccs-next-action');
+  var resubmitIdentityEl = document.getElementById('pax-ccs-resubmit-identity');
+  var resubmitEvidenceEl = document.getElementById('pax-ccs-resubmit-evidence');
+  var resubmitSubmitEl = document.getElementById('pax-ccs-resubmit-submit');
   var countries = Array.isArray(config.countries) ? config.countries.slice() : [];
   var countriesByCode = {};
   var selectedCountryCode = '';
@@ -215,6 +227,95 @@
     });
   }
   initCountryPicker();
+  initGuidedInterview();
+
+  function setCategory(value) {
+    if (!categoryEl) {
+      return;
+    }
+    categoryEl.value = value || '';
+    if (categoryCardsEl) {
+      categoryCardsEl.querySelectorAll('[data-ccs-category]').forEach(function (card) {
+        card.classList.toggle('is-selected', card.getAttribute('data-ccs-category') === categoryEl.value);
+        card.setAttribute('aria-pressed', card.classList.contains('is-selected') ? 'true' : 'false');
+      });
+    }
+    updateEvidenceCoach();
+  }
+
+  function updateEvidenceCoach() {
+    if (!evidenceCoachEl || !categoryEl) {
+      return;
+    }
+    var key = categoryEl.value || '';
+    var text = i18nText('evidenceCoach.' + key, '');
+    if (text && text !== 'evidenceCoach.' + key) {
+      evidenceCoachEl.hidden = false;
+      evidenceCoachEl.textContent = text;
+    } else {
+      evidenceCoachEl.hidden = true;
+      evidenceCoachEl.textContent = '';
+    }
+  }
+
+  function togglePlatformChip(name) {
+    if (!platformsInputEl || !name) {
+      return;
+    }
+    var current = (platformsInputEl.value || '').split(',').map(function (part) {
+      return part.trim();
+    }).filter(Boolean);
+    var idx = current.indexOf(name);
+    if (idx === -1) {
+      current.push(name);
+    } else {
+      current.splice(idx, 1);
+    }
+    platformsInputEl.value = current.join(', ');
+    syncPlatformChips();
+  }
+
+  function syncPlatformChips() {
+    if (!platformChipsEl || !platformsInputEl) {
+      return;
+    }
+    var current = (platformsInputEl.value || '').toLowerCase();
+    platformChipsEl.querySelectorAll('[data-ccs-platform]').forEach(function (chip) {
+      var name = chip.getAttribute('data-ccs-platform') || '';
+      chip.classList.toggle('is-selected', name && current.indexOf(name.toLowerCase()) !== -1);
+    });
+  }
+
+  function initGuidedInterview() {
+    if (categoryCardsEl) {
+      categoryCardsEl.addEventListener('click', function (e) {
+        var card = e.target.closest('[data-ccs-category]');
+        if (!card) {
+          return;
+        }
+        setCategory(card.getAttribute('data-ccs-category'));
+      });
+      setCategory(categoryEl ? categoryEl.value : '');
+    }
+    if (categoryEl) {
+      categoryEl.addEventListener('change', function () {
+        setCategory(categoryEl.value);
+      });
+    }
+    if (platformChipsEl) {
+      platformChipsEl.addEventListener('click', function (e) {
+        var chip = e.target.closest('[data-ccs-platform]');
+        if (!chip) {
+          return;
+        }
+        togglePlatformChip(chip.getAttribute('data-ccs-platform'));
+      });
+    }
+    if (platformsInputEl) {
+      platformsInputEl.addEventListener('input', syncPlatformChips);
+      syncPlatformChips();
+    }
+  }
 
   function getLang() {
     var lang = root.getAttribute('data-ccs-lang') || 'ar';
@@ -671,6 +772,8 @@
     }
     updateUnreadBadges(parseInt(report.unread_count, 10) || prevUnread);
     renderTimeline(report.timeline || [], { forceNewest: newActivity });
+    renderAttachments(report.attachments || []);
+    renderCaseDossier(report);
     applyReportLifecycle(report);
     if (phase === 'active-report' && report.reference_id && (parseInt(report.unread_count, 10) || 0) > 0) {
       markReportRead(report.reference_id);
@@ -809,6 +912,61 @@
     }).join('');
   }
 
+  function checkStatusLabel(status) {
+    if (status === 'fail' || status === 'rejected') {
+      return activeReportText('check_rejected', 'Rejected — correction needed');
+    }
+    if (status === 'review' || status === 'pending_review') {
+      return activeReportText('check_review', 'Pending team review');
+    }
+    return activeReportText('check_accepted', 'Accepted for review');
+  }
+
+  function renderCaseDossier(report) {
+    if (!caseDossierEl || !report) {
+      return;
+    }
+    caseDossierEl.hidden = false;
+    if (nextActionEl) {
+      nextActionEl.textContent = report.next_action || '';
+    }
+    if (originalRequestEl) {
+      var orig = report.original_request || {};
+      var rows = [
+        [activeReportText('category', 'Category'), categoryLabel(orig.category || report.category || '')],
+        [i18nText('review.incident', 'Incident'), orig.incident_at || report.incident_at || ''],
+        [i18nText('review.identity', 'Identity'), orig.reporter_name || report.reporter_name || ''],
+        ['', orig.platforms || report.platforms || '']
+      ];
+      var desc = orig.description || report.description || '';
+      originalRequestEl.innerHTML = rows.filter(function (row) {
+        return row[1];
+      }).map(function (row) {
+        return '<div class="pax-ccs-portal__active-meta-row"><dt>' + escapeHtml(row[0] || '') + '</dt><dd>' + escapeHtml(String(row[1])) + '</dd></div>';
+      }).join('') + (desc
+        ? '<div class="pax-ccs-portal__active-meta-row pax-ccs-portal__active-meta-row--desc"><dt></dt><dd>' + escapeHtml(desc) + '</dd></div>'
+        : '');
+    }
+    if (checksListEl) {
+      var checks = report.checks || {};
+      var files = checks.files || [];
+      var corrections = report.correction_required || checks.customer_corrections || [];
+      var html = files.map(function (file) {
+        var st = file.customer_status || file.status || '';
+        var extra = (file.customer_corrections || []).join(' ');
+        return '<li class="pax-ccs-portal__check-item pax-ccs-portal__check-item--' + escapeHtml(file.status || '') + '">'
+          + '<strong>' + escapeHtml(file.filename || 'file') + '</strong>'
+          + ' <span>' + escapeHtml(checkStatusLabel(st)) + '</span>'
+          + (extra ? '<p>' + escapeHtml(extra) + '</p>' : '')
+          + '</li>';
+      }).join('');
+      if (corrections.length && !files.length) {
+        html += '<li class="pax-ccs-portal__check-item pax-ccs-portal__check-item--fail"><p>' + escapeHtml(corrections.join(' ')) + '</p></li>';
+      }
+      checksListEl.innerHTML = html;
+    }
+  }
+
   function showActiveReport(report, forceNewest) {
     if (!report || !activeReportEl) {
       return;
@@ -831,6 +989,7 @@
     }
     renderTimeline(report.timeline || [], { forceNewest: forceNewest !== false });
     renderAttachments(report.attachments || []);
+    renderCaseDossier(report);
     if (activeReplyError) {
       activeReplyError.hidden = true;
     }
@@ -1174,6 +1333,7 @@
 
   function validateStep(step) {
     clearInvalid();
+    hideMissingBanners();
     var panel = getStepEl(step);
     if (!panel) {
       return true;
@@ -1223,7 +1383,27 @@
         }
       }
     }
+    if (step === 3) {
+      var evidenceInputs = [
+        document.getElementById('pax-ccs-screenshots'),
+        document.getElementById('pax-ccs-documents'),
+        document.getElementById('pax-ccs-chats'),
+        document.getElementById('pax-ccs-other')
+      ];
+      var hasEvidence = evidenceInputs.some(function (input) {
+        return input && input.files && input.files.length;
+      });
+      if (!hasEvidence) {
+        valid = false;
+        evidenceInputs.forEach(function (input) {
+          if (input) {
+            markInvalid(input);
+          }
+        });
+      }
+    }
     if (!valid) {
+      showMissingBanner(step);
       var invalid = panel.querySelector('.is-invalid input, .is-invalid select, .is-invalid textarea, .is-invalid .pax-ccs-portal__country-picker');
       if (invalid) {
         if (invalid.classList && invalid.classList.contains('pax-ccs-portal__country-picker') && countrySearchEl) {
@@ -1239,6 +1419,25 @@
       }
     }
     return valid;
+  }
+
+  function showMissingBanner(step) {
+    var banner = document.getElementById('pax-ccs-missing-' + step);
+    if (!banner) {
+      return;
+    }
+    banner.hidden = false;
+    banner.textContent = i18nText('guided.continue_blocked', 'Complete the required answers in this step before continuing.');
+  }
+
+  function hideMissingBanners() {
+    [1, 2, 3].forEach(function (step) {
+      var banner = document.getElementById('pax-ccs-missing-' + step);
+      if (banner) {
+        banner.hidden = true;
+        banner.textContent = '';
+      }
+    });
   }
 
   function validateAllSteps() {
@@ -1419,6 +1618,14 @@
             showActiveReport(json.data.activeReport);
             return;
           }
+          if (json && json.data && json.data.code === 'document_check_failed') {
+            var checkMsg = mapServerError(json, 'submit');
+            var extra = json.data.corrections;
+            if (Array.isArray(extra) && extra.length) {
+              checkMsg = extra.join(' ');
+            }
+            throw new Error(checkMsg);
+          }
           var errMsg = mapServerError(json, 'submit');
           if (json && json.data && json.data.detail) {
             errMsg += ' (' + json.data.detail + ')';
@@ -1516,6 +1723,75 @@
         })
         .finally(function () {
           activeReplySubmit.disabled = false;
+        });
+    });
+  }
+
+  if (resubmitSubmitEl) {
+    resubmitSubmitEl.addEventListener('click', function () {
+      if (!activeReport || !activeReport.reference_id || !isReportActive(activeReport)) {
+        return;
+      }
+      var hasFiles = (resubmitIdentityEl && resubmitIdentityEl.files && resubmitIdentityEl.files.length)
+        || (resubmitEvidenceEl && resubmitEvidenceEl.files && resubmitEvidenceEl.files.length);
+      var note = activeReplyInput ? (activeReplyInput.value || '').trim() : '';
+      if (!hasFiles && !note) {
+        if (activeReplyError) {
+          activeReplyError.hidden = false;
+          activeReplyError.textContent = i18nText('errors.message_required', 'Please attach a file or add a message.');
+        }
+        return;
+      }
+      if (activeReplyError) {
+        activeReplyError.hidden = true;
+      }
+      resubmitSubmitEl.disabled = true;
+      var body = new FormData();
+      body.append('action', 'paxdesign_cybercrime_customer_resubmit');
+      body.append('nonce', config.nonce);
+      body.append('reference', activeReport.reference_id);
+      if (note) {
+        body.append('message', note);
+      }
+      if (resubmitIdentityEl && resubmitIdentityEl.files && resubmitIdentityEl.files[0]) {
+        body.append('identity_document', resubmitIdentityEl.files[0]);
+      }
+      if (resubmitEvidenceEl && resubmitEvidenceEl.files) {
+        Array.prototype.forEach.call(resubmitEvidenceEl.files, function (file) {
+          body.append('evidence_other[]', file);
+        });
+      }
+      fetch(config.ajaxUrl, { method: 'POST', body: body, credentials: 'same-origin' })
+        .then(function (res) { return res.json(); })
+        .then(function (json) {
+          if (!json || !json.success) {
+            var msg = mapServerError(json, 'reply');
+            if (json && json.data && Array.isArray(json.data.corrections) && json.data.corrections.length) {
+              msg = json.data.corrections.join(' ');
+            }
+            throw new Error(msg);
+          }
+          if (activeReplyInput) {
+            activeReplyInput.value = '';
+          }
+          if (resubmitIdentityEl) {
+            resubmitIdentityEl.value = '';
+          }
+          if (resubmitEvidenceEl) {
+            resubmitEvidenceEl.value = '';
+          }
+          if (json.data && json.data.report) {
+            showActiveReport(json.data.report, true);
+          }
+        })
+        .catch(function (err) {
+          if (activeReplyError) {
+            activeReplyError.hidden = false;
+            activeReplyError.textContent = err.message || i18nText('errors.reply', 'Update failed');
+          }
+        })
+        .finally(function () {
+          resubmitSubmitEl.disabled = false;
         });
     });
   }

@@ -217,6 +217,22 @@ if ( ! function_exists( 'pax_ccs_bilingual' ) ) {
 						</div>
 					</dl>
 
+					<div id="pax-ccs-case-dossier" class="pax-ccs-portal__dossier" hidden>
+						<section class="pax-ccs-portal__dossier-block" id="pax-ccs-next-action-block">
+							<h3 class="pax-ccs-portal__subsection-title pax-ccs-portal__subsection-title--compact"><?php pax_ccs_bilingual( $copy['active_report']['next_heading'] ); ?></h3>
+							<p id="pax-ccs-next-action" class="pax-ccs-portal__dossier-text"></p>
+						</section>
+						<section class="pax-ccs-portal__dossier-block">
+							<h3 class="pax-ccs-portal__subsection-title pax-ccs-portal__subsection-title--compact"><?php pax_ccs_bilingual( $copy['active_report']['original_heading'] ); ?></h3>
+							<dl id="pax-ccs-original-request" class="pax-ccs-portal__active-meta pax-ccs-portal__active-meta--compact"></dl>
+						</section>
+						<section class="pax-ccs-portal__dossier-block">
+							<h3 class="pax-ccs-portal__subsection-title pax-ccs-portal__subsection-title--compact"><?php pax_ccs_bilingual( $copy['active_report']['checks_heading'] ); ?></h3>
+							<p class="pax-ccs-portal__hint"><?php pax_ccs_bilingual( $copy['active_report']['checks_disclaimer'] ); ?></p>
+							<ul id="pax-ccs-checks-list" class="pax-ccs-portal__checks"></ul>
+						</section>
+					</div>
+
 					<details class="pax-ccs-portal__attachments-fold" id="pax-ccs-attachments-fold" hidden>
 						<summary class="pax-ccs-portal__subsection-title pax-ccs-portal__subsection-title--fold"><?php pax_ccs_bilingual( $copy['active_report']['attachments'] ); ?></summary>
 						<ul id="pax-ccs-active-attachments" class="pax-ccs-portal__attachment-list pax-ccs-portal__attachment-list--compact"></ul>
@@ -235,10 +251,20 @@ if ( ! function_exists( 'pax_ccs_bilingual' ) ) {
 							data-placeholder-ar="<?php echo esc_attr( pax_ccs_text( $copy['active_report']['reply_placeholder'], 'ar' ) ); ?>"
 							data-placeholder-de="<?php echo esc_attr( pax_ccs_text( $copy['active_report']['reply_placeholder'], 'de' ) ); ?>"
 							data-placeholder-en="<?php echo esc_attr( pax_ccs_text( $copy['active_report']['reply_placeholder'], 'en' ) ); ?>"></textarea>
+						<div id="pax-ccs-resubmit" class="pax-ccs-portal__resubmit">
+							<p class="pax-ccs-portal__hint"><?php pax_ccs_bilingual( $copy['active_report']['resubmit_hint'] ); ?></p>
+							<label class="pax-ccs-portal__resubmit-label" for="pax-ccs-resubmit-identity"><?php pax_ccs_bilingual( $copy['active_report']['resubmit_identity'] ); ?></label>
+							<input type="file" id="pax-ccs-resubmit-identity" name="identity_document" accept=".pdf,.jpg,.jpeg,.png,.heic,.heif">
+							<label class="pax-ccs-portal__resubmit-label" for="pax-ccs-resubmit-evidence"><?php pax_ccs_bilingual( $copy['active_report']['resubmit_evidence'] ); ?></label>
+							<input type="file" id="pax-ccs-resubmit-evidence" name="evidence_other[]" accept="image/*,.pdf,.txt,.csv,.zip,.doc,.docx" multiple>
+						</div>
 						<p id="pax-ccs-active-reply-error" class="pax-ccs-portal__error" hidden role="alert"></p>
 						<div class="pax-ccs-portal__actions pax-ccs-portal__actions--compact">
 							<button type="button" class="pax-ccs-portal__btn pax-ccs-portal__btn--primary pax-ccs-portal__btn--compact" id="pax-ccs-active-reply-submit">
 								<?php pax_ccs_bilingual( $copy['active_report']['reply_submit'] ); ?>
+							</button>
+							<button type="button" class="pax-ccs-portal__btn pax-ccs-portal__btn--ghost pax-ccs-portal__btn--compact" id="pax-ccs-resubmit-submit">
+								<?php pax_ccs_bilingual( $copy['active_report']['resubmit_submit'] ); ?>
 							</button>
 						</div>
 					</div>
@@ -277,6 +303,11 @@ if ( ! function_exists( 'pax_ccs_bilingual' ) ) {
 			<!-- Step 1: Identity -->
 			<section class="pax-ccs-portal__step is-active" data-step="1" aria-labelledby="pax-ccs-step-1-title">
 				<div class="pax-ccs-portal__wrap pax-ccs-portal__panel">
+					<p class="pax-ccs-portal__guide" data-ccs-guide="identity">
+						<span class="pax-ccs-portal__guide-kicker"><?php pax_ccs_bilingual( $copy['guided']['ask'] ); ?></span>
+						<span class="pax-ccs-portal__guide-q"><?php pax_ccs_bilingual( $copy['guided']['identity_q'] ); ?></span>
+					</p>
+					<p class="pax-ccs-portal__missing" id="pax-ccs-missing-1" hidden></p>
 					<h2 id="pax-ccs-step-1-title" class="pax-ccs-portal__section-title"><?php pax_ccs_bilingual( $copy['sections']['identity']['title'] ); ?></h2>
 					<p class="pax-ccs-portal__section-intro"><?php pax_ccs_bilingual( $copy['sections']['identity']['intro'] ); ?></p>
 
@@ -338,6 +369,7 @@ if ( ! function_exists( 'pax_ccs_bilingual' ) ) {
 								<span class="pax-ccs-portal__required" aria-hidden="true"><?php pax_ccs_bilingual( $copy['fields']['required']['label'] ); ?></span>
 							</label>
 							<p class="pax-ccs-portal__hint"><?php pax_ccs_bilingual( $copy['fields']['identity_document']['hint'] ); ?></p>
+							<p class="pax-ccs-portal__hint pax-ccs-portal__hint--why"><?php pax_ccs_bilingual( $copy['guided']['id_why'] ); ?></p>
 							<input type="file" id="pax-ccs-identity-doc" name="identity_document" required accept=".pdf,.jpg,.jpeg,.png,.heic,.heif">
 						</div>
 						<div class="pax-ccs-portal__field pax-ccs-portal__field--full">
@@ -358,13 +390,26 @@ if ( ! function_exists( 'pax_ccs_bilingual' ) ) {
 			<!-- Step 2: Incident -->
 			<section class="pax-ccs-portal__step" data-step="2" hidden aria-labelledby="pax-ccs-step-2-title">
 				<div class="pax-ccs-portal__wrap pax-ccs-portal__panel">
+					<p class="pax-ccs-portal__guide" data-ccs-guide="incident">
+						<span class="pax-ccs-portal__guide-kicker"><?php pax_ccs_bilingual( $copy['guided']['ask'] ); ?></span>
+						<span class="pax-ccs-portal__guide-q"><?php pax_ccs_bilingual( $copy['guided']['incident_q'] ); ?></span>
+					</p>
+					<p class="pax-ccs-portal__missing" id="pax-ccs-missing-2" hidden></p>
 					<h2 id="pax-ccs-step-2-title" class="pax-ccs-portal__section-title"><?php pax_ccs_bilingual( $copy['sections']['incident']['title'] ); ?></h2>
 					<p class="pax-ccs-portal__section-intro"><?php pax_ccs_bilingual( $copy['sections']['incident']['intro'] ); ?></p>
 
 					<div class="pax-ccs-portal__grid">
 						<div class="pax-ccs-portal__field pax-ccs-portal__field--full">
 							<label for="pax-ccs-category"><?php pax_ccs_bilingual( $copy['fields']['category']['label'] ); ?></label>
-							<select id="pax-ccs-category" name="category" required>
+							<p class="pax-ccs-portal__hint"><?php pax_ccs_bilingual( $copy['guided']['category_hint'] ); ?></p>
+							<div class="pax-ccs-portal__cards" id="pax-ccs-category-cards" role="list">
+								<?php foreach ( $copy['categories'] as $key => $labels ) : ?>
+									<button type="button" class="pax-ccs-portal__card" role="listitem" data-ccs-category="<?php echo esc_attr( $key ); ?>">
+										<?php pax_ccs_bilingual( $labels ); ?>
+									</button>
+								<?php endforeach; ?>
+							</div>
+							<select id="pax-ccs-category" name="category" required class="pax-ccs-portal__sr-select">
 								<option value="">—</option>
 								<?php foreach ( $copy['categories'] as $key => $labels ) : ?>
 									<option value="<?php echo esc_attr( $key ); ?>" data-label-ar="<?php echo esc_attr( pax_ccs_text( $labels, 'ar' ) ); ?>" data-label-de="<?php echo esc_attr( pax_ccs_text( $labels, 'de' ) ); ?>" data-label-en="<?php echo esc_attr( pax_ccs_text( $labels, 'en' ) ); ?>"><?php echo esc_html( pax_ccs_text( $labels, 'ar' ) ); ?></option>
@@ -381,7 +426,15 @@ if ( ! function_exists( 'pax_ccs_bilingual' ) ) {
 						</div>
 						<div class="pax-ccs-portal__field pax-ccs-portal__field--full">
 							<label for="pax-ccs-platforms"><?php pax_ccs_bilingual( $copy['fields']['platforms']['label'] ); ?></label>
-							<input type="text" id="pax-ccs-platforms" name="platforms" required>
+							<div class="pax-ccs-portal__chips" id="pax-ccs-platform-chips">
+								<?php
+								$ccs_chip_platforms = array( 'Google', 'Gmail', 'Facebook', 'Instagram', 'WhatsApp', 'Apple', 'iCloud', 'Microsoft', 'PayPal', 'Binance' );
+								foreach ( $ccs_chip_platforms as $chip ) :
+									?>
+									<button type="button" class="pax-ccs-portal__chip" data-ccs-platform="<?php echo esc_attr( $chip ); ?>"><?php echo esc_html( $chip ); ?></button>
+								<?php endforeach; ?>
+							</div>
+							<input type="text" id="pax-ccs-platforms" name="platforms" required placeholder="<?php echo esc_attr( pax_ccs_text( $copy['fields']['platforms']['placeholder'], 'ar' ) ); ?>" data-placeholder-ar="<?php echo esc_attr( pax_ccs_text( $copy['fields']['platforms']['placeholder'], 'ar' ) ); ?>" data-placeholder-de="<?php echo esc_attr( pax_ccs_text( $copy['fields']['platforms']['placeholder'], 'de' ) ); ?>" data-placeholder-en="<?php echo esc_attr( pax_ccs_text( $copy['fields']['platforms']['placeholder'], 'en' ) ); ?>">
 						</div>
 						<div class="pax-ccs-portal__field pax-ccs-portal__field--full">
 							<label for="pax-ccs-description"><?php pax_ccs_bilingual( $copy['fields']['description']['label'] ); ?></label>
@@ -420,8 +473,14 @@ if ( ! function_exists( 'pax_ccs_bilingual' ) ) {
 			<!-- Step 3: Evidence -->
 			<section class="pax-ccs-portal__step" data-step="3" hidden aria-labelledby="pax-ccs-step-3-title">
 				<div class="pax-ccs-portal__wrap pax-ccs-portal__panel">
+					<p class="pax-ccs-portal__guide" data-ccs-guide="evidence">
+						<span class="pax-ccs-portal__guide-kicker"><?php pax_ccs_bilingual( $copy['guided']['ask'] ); ?></span>
+						<span class="pax-ccs-portal__guide-q"><?php pax_ccs_bilingual( $copy['guided']['evidence_q'] ); ?></span>
+					</p>
+					<p class="pax-ccs-portal__missing" id="pax-ccs-missing-3" hidden></p>
 					<h2 id="pax-ccs-step-3-title" class="pax-ccs-portal__section-title"><?php pax_ccs_bilingual( $copy['sections']['evidence']['title'] ); ?></h2>
 					<p class="pax-ccs-portal__section-intro"><?php pax_ccs_bilingual( $copy['sections']['evidence']['intro'] ); ?></p>
+					<p id="pax-ccs-evidence-coach" class="pax-ccs-portal__coach" hidden></p>
 
 					<div class="pax-ccs-portal__uploads">
 						<div class="pax-ccs-portal__upload">
@@ -452,6 +511,10 @@ if ( ! function_exists( 'pax_ccs_bilingual' ) ) {
 			<!-- Step 4: Review & Declaration -->
 			<section class="pax-ccs-portal__step" data-step="4" hidden aria-labelledby="pax-ccs-step-4-title">
 				<div class="pax-ccs-portal__wrap pax-ccs-portal__panel">
+					<p class="pax-ccs-portal__guide" data-ccs-guide="review">
+						<span class="pax-ccs-portal__guide-kicker"><?php pax_ccs_bilingual( $copy['guided']['ask'] ); ?></span>
+						<span class="pax-ccs-portal__guide-q"><?php pax_ccs_bilingual( $copy['guided']['review_q'] ); ?></span>
+					</p>
 					<h2 id="pax-ccs-step-4-title" class="pax-ccs-portal__section-title"><?php pax_ccs_bilingual( $copy['sections']['review']['title'] ); ?></h2>
 					<p class="pax-ccs-portal__section-intro"><?php pax_ccs_bilingual( $copy['sections']['review']['intro'] ); ?></p>
 
