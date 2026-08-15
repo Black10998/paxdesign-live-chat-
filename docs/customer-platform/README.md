@@ -1,18 +1,19 @@
 # PAXDesign Customer Platform
 
-Implementation lives in `paxdesign-booking/includes/customer/` and extends the existing `pdx/v1` REST namespace shared with `paxdesign-toolbar`.
+Implementation lives in `paxdesign-booking/includes/customer/` and `paxdesign-booking/includes/auth/`, using the `pdx/v1` REST namespace.
 
 ## Authentication
 
-- **Website:** WordPress cookie session + `X-WP-Nonce` via `paxdesign-toolbar` `/auth/*` routes (`PDX_Auth`).
-- **Mobile:** WordPress Application Password (HTTP Basic Auth) on `/pdx/v1/customer/*` — same `wp_users` records, no parallel auth store.
-- **Role:** `pdx_customer` (from toolbar `PDX_Auth::CUSTOMER_ROLE`), not a separate `pax_customer` role.
-- **Account status:** Suspended/pending accounts blocked via `PDX_Customers::is_login_allowed()`.
-- **Rate limiting:** `PDX_RateLimit` when toolbar is active.
+- **Website:** WordPress cookie session + `X-WP-Nonce` via `paxdesign-booking` `/pdx/v1/auth/*` routes (`PAXdesign_Auth_Native`).
+- **Mobile:** WordPress Application Password (HTTP Basic Auth) on `/pdx/v1/customer/*` — same `wp_users` records.
+- **Apple Sign-In:** `/pdx/v1/auth/apple/*` web and mobile flows.
+- **Role:** `pdx_customer` (booking-native customer role).
+- **Account status:** Suspended/pending accounts blocked via `PAXdesign_Customers::is_login_allowed()`.
+- **Rate limiting:** WordPress transients (toolbar `PDX_RateLimit` optional if present on server).
 
-## Toolbar integration
+## Toolbar (removed)
 
-The full `paxdesign-toolbar` plugin (v9.1.0+) is included in this repository. Customer platform auth delegates to `PDX_Auth` and fires `pdx_user_logged_in` on toolbar login for chat session linking.
+`paxdesign-toolbar` is **not** part of this repository or deployment. Auth UI runs standalone in `assets/customer-auth/js/pax-auth.js` with no `PDXDock` dependency.
 
 ## Guest chat migration
 
@@ -48,20 +49,9 @@ Chat logs gain `wp_user_id` for account-linked conversations.
 | GET | `/customer/chat/session` |
 | GET | `/customer/chat/conversations` |
 | POST | `/customer/chat/claim` |
-| GET/POST | `/customer/chat/messages` |
-| POST | `/customer/chat/stream` (SSE AI responses) |
-| POST | `/customer/push/register` |
 
-## WordPress admin
+## Deploy
 
-**Booking System → Customer Portal** — manage projects, news, and sync the services catalog.
-
-## No purchases
-
-Customer portal endpoints and the iOS customer app exclude PayPal, billing checkout, and In-App Purchases.
-
-## Deploy notes
-
-- Deploy both `paxdesign-toolbar` and `paxdesign-booking` (v3.134.0+).
-- Run DB migration on activation or first load (`PAXdesign_Customer_DB::install()`).
-- Back up production database before first deploy.
+- Deploy **only** `paxdesign-booking` plugin ZIP from GitHub Releases.
+- Theme shell assets (mobile nav, referenzen wrapper, cybercrime page) live under `navein/` and deploy via theme rsync workflows.
+- Run `scripts/verify-no-toolbar.sh` before every release.

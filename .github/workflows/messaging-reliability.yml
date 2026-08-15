@@ -7,7 +7,7 @@ on:
       - "paxdesign-booking/assets/js/**"
       - "paxdesign-booking/ios-live-chat/**"
       - "paxdesign-booking/ios-customer-portal/**"
-      - "paxdesign-toolbar/**"
+      - "navein/**"
       - "tests/messaging/**"
       - "tests/customer-platform/**"
       - ".github/workflows/messaging-reliability.yml"

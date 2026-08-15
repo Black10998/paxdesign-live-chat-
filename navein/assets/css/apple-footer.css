@@ -1,0 +1,924 @@
+/**
+ * Apple-inspired sitewide footer.
+ */
+
+body.dtr-apple-footer {
+  --af-ink: #1d1d1f;
+  --af-muted: #6e6e73;
+  --af-soft: #86868b;
+  --af-line: rgba(0, 0, 0, 0.1);
+  --af-snow: #f5f5f7;
+  --af-white: #ffffff;
+  --af-black: #000000;
+  --af-accent: #c6ff00;
+  --af-blue: #0071e3;
+  --af-ease: cubic-bezier(0.25, 0.1, 0.25, 1);
+  --af-display: "SF Pro Display", "SF Pro Text", -apple-system, BlinkMacSystemFont, "Helvetica Neue", Helvetica, sans-serif;
+  --af-text: "SF Pro Text", -apple-system, BlinkMacSystemFont, "Helvetica Neue", Helvetica, sans-serif;
+}
+
+/* Neutralize legacy dark/radius footer chrome */
+body.dtr-apple-footer #dtr-footer-section.dtr-footer-section-wrap,
+body.dtr-apple-footer #dtr-footer-section {
+  background: var(--af-snow) !important;
+  background-image: none !important;
+  color: var(--af-ink) !important;
+  border: 0 !important;
+  border-radius: 0 !important;
+  box-shadow: none !important;
+  margin: 0 !important;
+  padding: 0 !important;
+  overflow: visible;
+}
+
+/* Kill decorative theme diagonals that assume a dark footer */
+body.dtr-apple-footer #dtr-footer-section.dtr-footer-section-wrap::before,
+body.dtr-apple-footer #dtr-footer-section.dtr-footer-section-wrap::after {
+  display: none !important;
+  content: none !important;
+}
+
+/*
+ * Theme `.dtr-footer-section-wrap h*` forces --dtr-text-color-light (white).
+ * Beat that specificity so Apple light footer text stays readable.
+ */
+body.dtr-apple-footer #dtr-footer-section.dtr-footer-section-wrap,
+body.dtr-apple-footer #dtr-footer-section.dtr-footer-section-wrap .pax-af,
+body.dtr-apple-footer #dtr-footer-section.dtr-footer-section-wrap p,
+body.dtr-apple-footer #dtr-footer-section.dtr-footer-section-wrap span,
+body.dtr-apple-footer #dtr-footer-section.dtr-footer-section-wrap li,
+body.dtr-apple-footer #dtr-footer-section.dtr-footer-section-wrap label,
+body.dtr-apple-footer #dtr-footer-section.dtr-footer-section-wrap small {
+  color: var(--af-ink) !important;
+}
+
+body.dtr-apple-footer #dtr-footer-section.dtr-footer-section-wrap h1,
+body.dtr-apple-footer #dtr-footer-section.dtr-footer-section-wrap h2,
+body.dtr-apple-footer #dtr-footer-section.dtr-footer-section-wrap h3,
+body.dtr-apple-footer #dtr-footer-section.dtr-footer-section-wrap h4,
+body.dtr-apple-footer #dtr-footer-section.dtr-footer-section-wrap h5,
+body.dtr-apple-footer #dtr-footer-section.dtr-footer-section-wrap h6,
+body.dtr-apple-footer #dtr-footer-section.dtr-footer-section-wrap .pax-af__news-title,
+body.dtr-apple-footer #dtr-footer-section.dtr-footer-section-wrap .pax-af__brand,
+body.dtr-apple-footer #dtr-footer-section.dtr-footer-section-wrap .pax-af__col-title,
+body.dtr-apple-footer #dtr-footer-section.dtr-footer-section-wrap .pax-af__col-toggle {
+  color: var(--af-ink) !important;
+}
+
+body.dtr-apple-footer #dtr-footer-section.dtr-footer-section-wrap .pax-af__eyebrow,
+body.dtr-apple-footer #dtr-footer-section.dtr-footer-section-wrap .pax-af__news-lede,
+body.dtr-apple-footer #dtr-footer-section.dtr-footer-section-wrap .pax-af__tagline,
+body.dtr-apple-footer #dtr-footer-section.dtr-footer-section-wrap .pax-af__trust-label,
+body.dtr-apple-footer #dtr-footer-section.dtr-footer-section-wrap .pax-af__copy,
+body.dtr-apple-footer #dtr-footer-section.dtr-footer-section-wrap .pax-af__locale,
+body.dtr-apple-footer #dtr-footer-section.dtr-footer-section-wrap .paxmc-fs-msg {
+  color: var(--af-muted) !important;
+}
+
+body.dtr-apple-footer #dtr-footer-section.dtr-footer-section-wrap .pax-af__eyebrow,
+body.dtr-apple-footer #dtr-footer-section.dtr-footer-section-wrap .pax-af__trust-label,
+body.dtr-apple-footer #dtr-footer-section.dtr-footer-section-wrap .pax-af__soft,
+body.dtr-apple-footer #dtr-footer-section.dtr-footer-section-wrap .pax-af__col-chevron,
+body.dtr-apple-footer #dtr-footer-section.dtr-footer-section-wrap .pax-af__contact-icon,
+body.dtr-apple-footer #dtr-footer-section.dtr-footer-section-wrap .pax-af__github-lock {
+  color: var(--af-soft) !important;
+}
+
+body.dtr-apple-footer #dtr-footer-section.dtr-footer-section-wrap a,
+body.dtr-apple-footer #dtr-footer-section.dtr-footer-section-wrap .pax-af__links a,
+body.dtr-apple-footer #dtr-footer-section.dtr-footer-section-wrap .pax-af__social a,
+body.dtr-apple-footer #dtr-footer-section.dtr-footer-section-wrap .pax-af__github-btn,
+body.dtr-apple-footer #dtr-footer-section.dtr-footer-section-wrap .pax-af__legal-links a {
+  color: var(--af-muted) !important;
+}
+
+body.dtr-apple-footer #dtr-footer-section.dtr-footer-section-wrap .pax-af__brand,
+body.dtr-apple-footer #dtr-footer-section.dtr-footer-section-wrap .pax-af__contact a,
+body.dtr-apple-footer #dtr-footer-section.dtr-footer-section-wrap .pax-af__social-icon {
+  color: var(--af-ink) !important;
+}
+
+body.dtr-apple-footer #dtr-footer-section.dtr-footer-section-wrap a:hover,
+body.dtr-apple-footer #dtr-footer-section.dtr-footer-section-wrap .pax-af__links a:hover,
+body.dtr-apple-footer #dtr-footer-section.dtr-footer-section-wrap .pax-af__social a:hover,
+body.dtr-apple-footer #dtr-footer-section.dtr-footer-section-wrap .pax-af__github-btn:hover,
+body.dtr-apple-footer #dtr-footer-section.dtr-footer-section-wrap .pax-af__legal-links a:hover,
+body.dtr-apple-footer #dtr-footer-section.dtr-footer-section-wrap .pax-af__contact a:hover {
+  color: var(--af-ink) !important;
+}
+
+body.dtr-apple-footer #dtr-footer-section.dtr-footer-section-wrap .pax-af__contact a:hover {
+  color: var(--af-blue) !important;
+}
+
+body.dtr-apple-footer #dtr-footer-section.dtr-footer-section-wrap .paxmc-footer-subscribe .input,
+body.dtr-apple-footer #dtr-footer-section.dtr-footer-section-wrap .paxmc-footer-subscribe .icon {
+  color: var(--af-ink) !important;
+}
+
+body.dtr-apple-footer #dtr-footer-section.dtr-footer-section-wrap .paxmc-footer-subscribe .icon {
+  color: var(--af-soft) !important;
+}
+
+body.dtr-apple-footer #dtr-footer-section.dtr-footer-section-wrap .paxmc-footer-subscribe .Subscribe-btn {
+  color: #fff !important;
+}
+
+body.dtr-apple-footer #dtr-footer-section.dtr-footer-section-wrap .pax-af__trust-list a {
+  color: var(--af-muted) !important;
+}
+
+body.dtr-apple-footer #dtr-footer-section.dtr-footer-section-wrap .pax-af__trust-list a:hover {
+  color: var(--af-ink) !important;
+}
+
+/* Modal sits in footer DOM — keep readable dark type on white panel */
+body.dtr-apple-footer #dtr-footer-section.dtr-footer-section-wrap .pax-af-github-modal__title,
+body.dtr-apple-footer #dtr-footer-section.dtr-footer-section-wrap .pax-af-github-modal__icon {
+  color: var(--af-ink) !important;
+}
+
+body.dtr-apple-footer #dtr-footer-section.dtr-footer-section-wrap .pax-af-github-modal__badge,
+body.dtr-apple-footer #dtr-footer-section.dtr-footer-section-wrap .pax-af-github-modal__text,
+body.dtr-apple-footer #dtr-footer-section.dtr-footer-section-wrap .pax-af-github-modal__close {
+  color: var(--af-muted) !important;
+}
+
+body.dtr-apple-footer #dtr-footer-section.dtr-footer-section-wrap .pax-af-github-modal__btn {
+  color: #fff !important;
+}
+
+body.dtr-apple-footer #dtr-footer-section > .container {
+  max-width: none;
+  width: 100%;
+  padding: 0;
+  margin: 0;
+}
+
+body.dtr-apple-footer #dtr-footer-section .dtr-footer-row,
+body.dtr-apple-footer #dtr-footer-section .dtr-copyright {
+  display: none !important;
+}
+
+.pax-af {
+  font-family: var(--af-text);
+  color: var(--af-ink);
+  -webkit-font-smoothing: antialiased;
+  text-rendering: optimizeLegibility;
+}
+
+.pax-af__shell {
+  width: min(1120px, calc(100% - 48px));
+  margin: 0 auto;
+  padding: clamp(48px, 7vw, 88px) 0 clamp(28px, 4vw, 40px);
+}
+
+/* Newsletter band */
+.pax-af__newsletter {
+  display: grid;
+  grid-template-columns: 1.1fr 0.9fr;
+  gap: clamp(28px, 4vw, 56px);
+  align-items: end;
+  padding-bottom: clamp(36px, 5vw, 56px);
+  border-bottom: 1px solid var(--af-line);
+  margin-bottom: clamp(36px, 5vw, 56px);
+}
+
+.pax-af__eyebrow {
+  margin: 0 0 10px;
+  font-size: 12px;
+  font-weight: 600;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--af-soft);
+}
+
+.pax-af__news-title {
+  margin: 0 0 12px;
+  font-family: var(--af-display);
+  font-size: clamp(28px, 3.6vw, 40px);
+  font-weight: 600;
+  letter-spacing: -0.03em;
+  line-height: 1.1;
+  color: var(--af-ink);
+}
+
+.pax-af__news-lede {
+  margin: 0;
+  max-width: 38ch;
+  font-size: 15px;
+  line-height: 1.5;
+  color: var(--af-muted);
+}
+
+/* Preserve pax-mail-center markup; restyle for Apple look */
+.pax-af .paxmc-footer-subscribe {
+  width: 100%;
+}
+
+.pax-af .paxmc-footer-subscribe .input-wrapper {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  min-height: 52px;
+  padding: 6px 6px 6px 16px;
+  border-radius: 980px;
+  border: 1px solid rgba(0, 0, 0, 0.12);
+  background: rgba(255, 255, 255, 0.92);
+  box-shadow: 0 14px 36px rgba(0, 0, 0, 0.05);
+  backdrop-filter: blur(14px);
+  -webkit-backdrop-filter: blur(14px);
+  transition: border-color 0.25s ease, box-shadow 0.25s ease;
+}
+
+.pax-af .paxmc-footer-subscribe .input-wrapper:focus-within {
+  border-color: rgba(0, 113, 227, 0.45);
+  box-shadow: 0 16px 40px rgba(0, 113, 227, 0.1);
+}
+
+.pax-af .paxmc-footer-subscribe .icon {
+  width: 18px;
+  height: 18px;
+  flex: 0 0 auto;
+  color: var(--af-soft);
+}
+
+.pax-af .paxmc-footer-subscribe .input {
+  flex: 1 1 auto;
+  min-width: 0;
+  border: 0 !important;
+  outline: none !important;
+  background: transparent !important;
+  box-shadow: none !important;
+  font: inherit;
+  font-size: 15px;
+  letter-spacing: -0.01em;
+  color: var(--af-ink);
+}
+
+.pax-af .paxmc-footer-subscribe .input::placeholder {
+  color: #a1a1a6;
+}
+
+.pax-af .paxmc-footer-subscribe .Subscribe-btn {
+  flex: 0 0 auto;
+  min-height: 40px;
+  padding: 0 18px;
+  border: 0 !important;
+  border-radius: 980px !important;
+  background: var(--af-black) !important;
+  color: #fff !important;
+  font: inherit;
+  font-size: 14px;
+  font-weight: 500;
+  letter-spacing: -0.01em;
+  cursor: pointer;
+  transition: none;
+  text-underline-offset: 0.22em;
+  text-decoration-thickness: 1px;
+}
+
+.pax-af .paxmc-footer-subscribe .Subscribe-btn:hover {
+  background: #1d1d1f !important;
+  transform: none;
+  text-decoration: underline !important;
+}
+
+.pax-af .paxmc-footer-subscribe .Subscribe-btn .arrow {
+  display: none;
+}
+
+.pax-af .paxmc-fs-msg {
+  margin-top: 10px;
+  min-height: 1.2em;
+  font-size: 13px;
+  color: var(--af-muted);
+}
+
+/* Directory */
+.pax-af__directory {
+  display: grid;
+  grid-template-columns: 1.35fr 1fr 1fr 1fr;
+  gap: clamp(28px, 4vw, 48px);
+  padding-bottom: clamp(36px, 5vw, 52px);
+  border-bottom: 1px solid var(--af-line);
+}
+
+.pax-af__brand {
+  display: inline-block;
+  margin: 0 0 14px;
+  font-family: var(--af-display);
+  font-size: clamp(26px, 2.4vw, 30px);
+  font-weight: 600;
+  letter-spacing: -0.035em;
+  color: var(--af-ink);
+  text-decoration: none;
+  transition: none;
+  text-underline-offset: 0.22em;
+  text-decoration-thickness: 1px;
+}
+
+.pax-af__brand span {
+  font-weight: 300;
+}
+
+.pax-af__brand:hover {
+  opacity: 1;
+  text-decoration: underline !important;
+}
+
+.pax-af__tagline {
+  margin: 0 0 22px;
+  max-width: 28ch;
+  font-size: 14px;
+  line-height: 1.55;
+  color: var(--af-muted);
+}
+
+.pax-af__contact {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: grid;
+  gap: 10px;
+}
+
+.pax-af__contact a {
+  display: inline-flex;
+  align-items: center;
+  gap: 10px;
+  color: var(--af-ink);
+  text-decoration: none;
+  font-size: 13px;
+  letter-spacing: -0.01em;
+  transition: none;
+  text-underline-offset: 0.22em;
+  text-decoration-thickness: 1px;
+}
+
+.pax-af__contact a:hover {
+  color: var(--af-blue);
+  transform: none;
+  text-decoration: underline !important;
+}
+
+.pax-af__contact-icon {
+  display: inline-flex;
+  width: 16px;
+  height: 16px;
+  color: var(--af-soft);
+}
+
+.pax-af__contact-icon svg,
+.pax-af__social-icon svg,
+.pax-af__col-chevron svg,
+.pax-af__github-lock svg,
+.pax-af-github-modal__icon svg {
+  width: 100%;
+  height: 100%;
+  display: block;
+}
+
+.pax-af__col-title {
+  margin: 0 0 14px;
+  font-size: 12px;
+  font-weight: 600;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  color: var(--af-ink);
+}
+
+.pax-af__col-toggle {
+  display: none;
+}
+
+.pax-af__links,
+.pax-af__social {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: grid;
+  gap: 10px;
+}
+
+.pax-af__links a,
+.pax-af__social a,
+.pax-af__github-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 10px;
+  padding: 0;
+  border: 0;
+  background: none;
+  color: var(--af-muted);
+  font: inherit;
+  font-size: 13px;
+  letter-spacing: -0.01em;
+  text-decoration: none;
+  cursor: pointer;
+  text-align: left;
+  transition: none;
+  text-underline-offset: 0.22em;
+  text-decoration-thickness: 1px;
+}
+
+.pax-af__links a:hover,
+.pax-af__social a:hover,
+.pax-af__github-btn:hover {
+  color: var(--af-ink);
+  transform: none;
+  text-decoration: underline !important;
+}
+
+.pax-af__social-icon {
+  display: inline-flex;
+  width: 16px;
+  height: 16px;
+  color: var(--af-ink);
+  opacity: 0.72;
+  transition: none;
+}
+
+.pax-af__social a:hover .pax-af__social-icon,
+.pax-af__github-btn:hover .pax-af__social-icon {
+  opacity: 1;
+  color: var(--af-black);
+  transform: none;
+}
+
+.pax-af__github-lock {
+  display: inline-flex;
+  width: 12px;
+  height: 12px;
+  color: var(--af-soft);
+}
+
+/* Trust strip */
+.pax-af__trust {
+  padding: clamp(28px, 4vw, 40px) 0;
+  border-bottom: 1px solid var(--af-line);
+}
+
+.pax-af__trust-label {
+  margin: 0 0 16px;
+  font-size: 12px;
+  font-weight: 600;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: var(--af-soft);
+}
+
+.pax-af__trust-list {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 12px 18px;
+  align-items: center;
+}
+
+.pax-af__trust-list a {
+  display: inline-flex;
+  align-items: center;
+  gap: 10px;
+  padding: 10px 14px;
+  border-radius: 14px;
+  border: 1px solid var(--af-line);
+  background: var(--af-white);
+  text-decoration: none;
+  color: var(--af-muted);
+  font-size: 12px;
+  letter-spacing: -0.01em;
+  transition: none;
+  text-underline-offset: 0.22em;
+  text-decoration-thickness: 1px;
+}
+
+.pax-af__trust-list a:hover {
+  color: var(--af-ink);
+  border-color: rgba(0, 0, 0, 0.12);
+  box-shadow: none;
+  transform: none;
+  text-decoration: underline !important;
+}
+
+.pax-af__trust-list img {
+  display: block;
+  height: 22px;
+  width: auto;
+  max-width: 88px;
+  object-fit: contain;
+  filter: grayscale(1);
+  opacity: 0.85;
+  transition: none;
+}
+
+.pax-af__trust-list a:hover img {
+  filter: grayscale(1);
+  opacity: 0.85;
+}
+
+/* Legal */
+.pax-af__legal {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 18px;
+  padding-top: clamp(22px, 3vw, 28px);
+  flex-wrap: wrap;
+}
+
+.pax-af__legal-links {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px 18px;
+}
+
+.pax-af__legal-links a {
+  color: var(--af-muted);
+  text-decoration: none;
+  font-size: 12px;
+  letter-spacing: -0.01em;
+  transition: none;
+  text-underline-offset: 0.22em;
+  text-decoration-thickness: 1px;
+}
+
+.pax-af__legal-links a:hover {
+  color: var(--af-ink);
+  text-decoration: underline !important;
+}
+
+.pax-af__copy {
+  margin: 0;
+  font-size: 12px;
+  color: var(--af-soft);
+  letter-spacing: -0.01em;
+}
+
+.pax-af__locale {
+  margin-left: 8px;
+  padding-left: 8px;
+  border-left: 1px solid var(--af-line);
+}
+
+/* Reveal */
+[data-pax-af-reveal] {
+  opacity: 0;
+  transform: translateY(14px);
+  transition: opacity 0.7s var(--af-ease), transform 0.7s var(--af-ease);
+}
+
+[data-pax-af-reveal].is-in {
+  opacity: 1;
+  transform: none;
+}
+
+/* GitHub modal */
+.pax-af-github-modal {
+  position: fixed;
+  inset: 0;
+  z-index: 12000;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 24px;
+  opacity: 0;
+  visibility: hidden;
+  pointer-events: none;
+  transition: opacity 0.28s ease, visibility 0.28s ease;
+}
+
+.pax-af-github-modal.is-open {
+  opacity: 1;
+  visibility: visible;
+  pointer-events: auto;
+}
+
+body.pax-af-modal-open {
+  overflow: hidden;
+}
+
+.pax-af-github-modal__backdrop {
+  position: absolute;
+  inset: 0;
+  background: rgba(0, 0, 0, 0.42);
+  backdrop-filter: blur(8px);
+  -webkit-backdrop-filter: blur(8px);
+}
+
+.pax-af-github-modal__panel {
+  position: relative;
+  z-index: 1;
+  width: min(440px, 100%);
+  padding: 32px 28px 28px;
+  border-radius: 22px;
+  background: var(--af-white);
+  box-shadow: 0 30px 80px rgba(0, 0, 0, 0.22);
+  transform: translateY(10px) scale(0.98);
+  transition: transform 0.32s var(--af-ease);
+}
+
+.pax-af-github-modal.is-open .pax-af-github-modal__panel {
+  transform: none;
+}
+
+.pax-af-github-modal__close {
+  position: absolute;
+  top: 12px;
+  right: 14px;
+  width: 36px;
+  height: 36px;
+  border: 0;
+  border-radius: 999px;
+  background: transparent;
+  color: var(--af-muted);
+  font-size: 28px;
+  line-height: 1;
+  cursor: pointer;
+}
+
+.pax-af-github-modal__icon {
+  position: relative;
+  width: 42px;
+  height: 42px;
+  margin-bottom: 14px;
+  color: var(--af-ink);
+}
+
+.pax-af-github-modal__icon > span {
+  position: absolute;
+  right: -4px;
+  bottom: -2px;
+  width: 16px;
+  height: 16px;
+  color: var(--af-muted);
+}
+
+.pax-af-github-modal__badge {
+  margin: 0 0 8px;
+  font-size: 11px;
+  font-weight: 600;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--af-soft);
+}
+
+.pax-af-github-modal__title {
+  margin: 0 0 12px;
+  font-family: var(--af-display);
+  font-size: 22px;
+  font-weight: 600;
+  letter-spacing: -0.025em;
+  color: var(--af-ink);
+}
+
+.pax-af-github-modal__text {
+  margin: 0 0 10px;
+  font-size: 14px;
+  line-height: 1.5;
+  color: var(--af-muted);
+}
+
+.pax-af-github-modal__btn {
+  margin-top: 16px;
+  min-height: 42px;
+  padding: 0 18px;
+  border: 0;
+  border-radius: 980px;
+  background: var(--af-black);
+  color: #fff;
+  font: inherit;
+  font-size: 14px;
+  font-weight: 500;
+  cursor: pointer;
+  transition: none;
+  text-underline-offset: 0.22em;
+  text-decoration-thickness: 1px;
+}
+
+.pax-af-github-modal__btn:hover {
+  background: #1d1d1f;
+  transform: none;
+  text-decoration: underline !important;
+}
+
+/* Scroll-top polish when present */
+body.dtr-apple-footer #take-to-top {
+  background: var(--af-black) !important;
+  color: #fff !important;
+  border-radius: 999px !important;
+  box-shadow: 0 10px 30px rgba(0, 0, 0, 0.18);
+}
+
+@media (max-width: 900px) {
+  .pax-af__shell {
+    padding: 40px 0 24px;
+  }
+
+  .pax-af__newsletter {
+    grid-template-columns: 1fr;
+    align-items: start;
+    gap: 20px;
+    padding-bottom: 28px;
+    margin-bottom: 28px;
+  }
+
+  .pax-af__eyebrow {
+    margin: 0 0 6px;
+    font-size: 11px;
+    letter-spacing: 0.07em;
+  }
+
+  .pax-af__news-title {
+    margin: 0 0 8px;
+    font-size: 24px !important;
+    line-height: 1.18;
+    letter-spacing: -0.025em;
+  }
+
+  .pax-af__news-lede {
+    font-size: 14px;
+    line-height: 1.45;
+    max-width: none;
+  }
+
+  .pax-af__directory {
+    grid-template-columns: 1fr;
+    gap: 0;
+    padding-bottom: 24px;
+  }
+
+  .pax-af__brand {
+    margin: 0 0 10px;
+    font-size: 22px !important;
+    letter-spacing: -0.03em;
+  }
+
+  .pax-af__tagline {
+    margin: 0 0 16px;
+    font-size: 13px;
+    line-height: 1.45;
+  }
+
+  .pax-af__brand-col {
+    padding-bottom: 20px;
+    margin-bottom: 4px;
+    border-bottom: 1px solid var(--af-line);
+  }
+
+  .pax-af__col {
+    border-bottom: 1px solid var(--af-line);
+  }
+
+  .pax-af__col-title {
+    display: none;
+  }
+
+  .pax-af__col-toggle {
+    display: flex;
+    width: 100%;
+    align-items: center;
+    justify-content: space-between;
+    gap: 12px;
+    min-height: 44px;
+    padding: 0;
+    border: 0;
+    background: transparent;
+    font-family: var(--af-display);
+    font-size: 13px !important;
+    font-weight: 600;
+    letter-spacing: -0.01em;
+    color: var(--af-ink);
+    cursor: pointer;
+  }
+
+  .pax-af__col-chevron {
+    display: inline-flex;
+    width: 14px;
+    height: 14px;
+    color: var(--af-soft);
+    transition: transform 0.3s var(--af-ease);
+  }
+
+  .pax-af__col.is-open .pax-af__col-chevron {
+    transform: rotate(180deg);
+  }
+
+  .pax-af__links,
+  .pax-af__social {
+    display: none;
+    padding: 0 0 14px;
+    gap: 10px;
+  }
+
+  .pax-af__col.is-open .pax-af__links,
+  .pax-af__col.is-open .pax-af__social {
+    display: grid;
+  }
+
+  .pax-af__links a,
+  .pax-af__social a,
+  .pax-af__github-btn {
+    font-size: 13px;
+  }
+
+  .pax-af__trust {
+    padding: 22px 0;
+  }
+
+  .pax-af__trust-label {
+    margin: 0 0 12px;
+    font-size: 11px;
+  }
+
+  .pax-af__legal {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 12px;
+    padding-top: 18px;
+  }
+}
+
+@media (max-width: 560px) {
+  .pax-af__shell {
+    width: min(1120px, calc(100% - 32px));
+    padding: 32px 0 20px;
+  }
+
+  .pax-af__newsletter {
+    gap: 16px;
+    padding-bottom: 24px;
+    margin-bottom: 22px;
+  }
+
+  .pax-af__news-title {
+    font-size: 22px !important;
+    line-height: 1.2;
+    margin: 0 0 6px;
+  }
+
+  .pax-af__news-lede {
+    font-size: 13px;
+    line-height: 1.45;
+  }
+
+  .pax-af__brand {
+    font-size: 20px !important;
+    margin: 0 0 8px;
+  }
+
+  .pax-af__tagline {
+    font-size: 12.5px;
+    margin: 0 0 14px;
+  }
+
+  .pax-af__brand-col {
+    padding-bottom: 16px;
+  }
+
+  .pax-af__col-toggle {
+    min-height: 42px;
+    font-size: 12.5px !important;
+  }
+
+  .pax-af .paxmc-footer-subscribe .input-wrapper {
+    flex-wrap: wrap;
+    border-radius: 22px;
+    padding: 12px;
+    min-height: 0;
+  }
+
+  .pax-af .paxmc-footer-subscribe .Subscribe-btn {
+    width: 100%;
+  }
+
+  .pax-af__trust-list a span {
+    display: none;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  [data-pax-af-reveal],
+  .pax-af__links a,
+  .pax-af__social a,
+  .pax-af__github-btn,
+  .pax-af__trust-list a,
+  .pax-af .paxmc-footer-subscribe .Subscribe-btn,
+  .pax-af-github-modal,
+  .pax-af-github-modal__panel,
+  .pax-af__col-chevron {
+    transition: none !important;
+    transform: none !important;
+  }
+
+  [data-pax-af-reveal] {
+    opacity: 1;
+  }
+}
+
+/* contrast fix 1.2.1 */

@@ -74,6 +74,40 @@
   text-decoration: none;
 }
 
+/* Standalone auth toast (booking-native, no external dock) */
+#pdx-auth-notify {
+  position: fixed;
+  left: 50%;
+  bottom: calc(18px + env(safe-area-inset-bottom, 0px));
+  transform: translateX(-50%) translateY(12px);
+  z-index: 100001;
+  max-width: min(92vw, 420px);
+  padding: 10px 14px;
+  border-radius: 12px;
+  font-size: 13px;
+  font-weight: 600;
+  line-height: 1.35;
+  color: #fff;
+  background: rgba(29, 29, 31, 0.94);
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.22);
+  opacity: 0;
+  pointer-events: none;
+  transition: opacity 0.2s ease, transform 0.2s ease;
+}
+
+#pdx-auth-notify.is-visible {
+  opacity: 1;
+  transform: translateX(-50%) translateY(0);
+}
+
+#pdx-auth-notify.pdx-auth-notify--warn {
+  background: rgba(120, 86, 0, 0.95);
+}
+
+#pdx-auth-notify.pdx-auth-notify--error {
+  background: rgba(120, 24, 24, 0.95);
+}
+
 /* Remove legacy gold / page-specific Sign In variants */
 @media (prefers-color-scheme: light) {
   #pdx-auth-bar.pdx-auth-bar--header .pdx-auth-signup-btn,

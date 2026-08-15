@@ -69,4 +69,32 @@ jobs:
             paxdesign-booking/ "${WP_SSH_USER}@${WP_SSH_HOST}:${TARGET}/"
           ssh -i ~/.ssh/id_deploy -o StrictHostKeyChecking=no \
             "${WP_SSH_USER}@${WP_SSH_HOST}" \
-            "cd '${WP_PATH}' && (command -v wp >/dev/null && wp plugin activate paxdesign-booking || true) && (command -v wp >/dev/null && wp cache flush || true)"
+            "cd '${WP_PATH}' && (command -v wp >/dev/null && wp plugin deactivate paxdesign-toolbar --quiet 2>/dev/null || true) && (command -v wp >/dev/null && wp plugin activate paxdesign-booking || true) && (command -v wp >/dev/null && wp cache flush || true)"
+
+      - name: Deploy navein theme shell (mobile nav, referenzen wrapper, footer)
+        if: steps.secrets.outputs.has_secrets == 'true'
+        env:
+          WP_SSH_HOST: ${{ secrets.WP_SSH_HOST }}
+          WP_SSH_USER: ${{ secrets.WP_SSH_USER }}
+          WP_SSH_PRIVATE_KEY: ${{ secrets.WP_SSH_PRIVATE_KEY }}
+          WP_PATH: ${{ secrets.WP_PATH }}
+        run: |
+          install -m 600 -D /dev/null ~/.ssh/id_deploy
+          printf '%s\n' "$WP_SSH_PRIVATE_KEY" > ~/.ssh/id_deploy
+          ssh-keyscan -H "$WP_SSH_HOST" >> ~/.ssh/known_hosts 2>/dev/null || true
+          THEME="${WP_PATH%/}/wp-content/themes/navein"
+          REMOTE="${WP_SSH_USER}@${WP_SSH_HOST}"
+          rsync -az -e "ssh -i ~/.ssh/id_deploy -o StrictHostKeyChecking=no" \
+            navein/assets/css/apple-mobile-nav.css \
+            navein/assets/css/apple-sticky-header.css \
+            navein/assets/css/apple-inner-page-title.css \
+            navein/assets/css/apple-footer.css \
+            "${REMOTE}:${THEME}/assets/css/" 2>/dev/null || true
+          rsync -az -e "ssh -i ~/.ssh/id_deploy -o StrictHostKeyChecking=no" \
+            navein/assets/js/apple-mobile-nav.js \
+            navein/assets/js/apple-sticky-header.js \
+            navein/assets/js/apple-footer.js \
+            "${REMOTE}:${THEME}/assets/js/" 2>/dev/null || true
+          rsync -az -e "ssh -i ~/.ssh/id_deploy -o StrictHostKeyChecking=no" \
+            navein/template-apple-referenzen.php \
+            "${REMOTE}:${THEME}/" 2>/dev/null || true

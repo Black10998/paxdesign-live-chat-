@@ -9,7 +9,7 @@
 
 ## Executive Summary
 
-The uploaded theme ZIP is a **presentation shell**. Most business content on production is built with **Elementor** page builder and stored in WordPress posts/meta — not in static theme template files. Customer account data, chat, projects, orders, notifications, and services are served by **`paxdesign-booking`** (customer platform). Auth routes currently live in **`paxdesign-toolbar`** and will be migrated into booking in Phase 2.
+The uploaded theme ZIP is a **presentation shell**. Most business content on production is built with **Elementor** page builder and stored in WordPress posts/meta — not in static theme template files. Customer account data, chat, projects, orders, notifications, and services are served by **`paxdesign-booking`** (customer platform). Auth routes live in **`paxdesign-booking/includes/auth/`** (toolbar migration complete as of v3.175.23).
 
 The iOS app should remain a **native client** over REST — never a WebView clone of the marketing site.
 
@@ -114,7 +114,7 @@ Backend: `PAXdesign_Customer_Notifications` — DB inbox + APNS push.
 | `PDX_RateLimit` | Auth rate limits | Booking auth module |
 | `pdx-auth.js` | Web login overlay | Keep until booking auth UI exists |
 
-Goal: delete `paxdesign-toolbar` without breaking auth or chat.
+Goal: **done** — `paxdesign-toolbar` removed from repo and production deploy deactivates it.
 
 ---
 

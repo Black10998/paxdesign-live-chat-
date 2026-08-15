@@ -625,15 +625,19 @@
     else openAuthMenu();
   }
 
+  function defaultAccountUrl(hash) {
+    if (C.accountPageUrl) return accountPageUrl() + (hash || '');
+    var base = C.homeUrl ? String(C.homeUrl).replace(/\/$/, '') : '';
+    return (base || '') + '/account/' + (hash || '');
+  }
+
   function openAccountPanel() {
     if (C.accountPageUrl || isAuthPage()) {
       if (isAuthPage()) setAccountSection('overview');
       else window.location.href = accountPageUrl() + '#/overview';
       return;
     }
-    if (window.PDXDock && window.PDXDock.openPanel) {
-      window.PDXDock.openPanel('account');
-    }
+    window.location.href = defaultAccountUrl('#/overview');
   }
 
   function openProfileOverlay() {
@@ -711,7 +715,6 @@
         } catch (e) {}
       }
       notify('Logged out.', 'info');
-      if (window.PDXDock && window.PDXDock.closePanel) window.PDXDock.closePanel();
     });
   }
 
@@ -1173,10 +1176,8 @@
         returnModule = null;
         refreshUser().then(function () {
           claimGuestSessionIfNeeded().finally(function () {
-            if (!inline) {
-              if (mod && window.PDXDock && window.PDXDock.openPanel) {
-                window.PDXDock.openPanel(mod);
-              }
+            if (!inline && mod) {
+              openAccountPanel();
             }
           });
         });
@@ -1220,10 +1221,25 @@
     }
   }
 
+  var notifyEl = null;
+
   function notify(msg, type) {
-    if (window.PDXDock && window.PDXDock.showNotif) {
-      window.PDXDock.showNotif(msg, type);
+    if (!msg) return;
+    type = type || 'info';
+    if (!notifyEl) {
+      notifyEl = document.createElement('div');
+      notifyEl.id = 'pdx-auth-notify';
+      notifyEl.className = 'pdx-auth-notify';
+      notifyEl.setAttribute('role', 'status');
+      notifyEl.setAttribute('aria-live', 'polite');
+      document.body.appendChild(notifyEl);
     }
+    notifyEl.className = 'pdx-auth-notify pdx-auth-notify--' + type + ' is-visible';
+    notifyEl.textContent = String(msg);
+    clearTimeout(notify._timer);
+    notify._timer = window.setTimeout(function () {
+      if (notifyEl) notifyEl.classList.remove('is-visible');
+    }, 4200);
   }
 
   function isolateAuthShell() {

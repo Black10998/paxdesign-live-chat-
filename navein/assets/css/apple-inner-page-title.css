@@ -1,0 +1,83 @@
+/**
+ * Apple-style inner page title — replaces the legacy banner card.
+ * Compact intro under the fixed header; no large card, no extra push-down.
+ */
+
+/* Kill any leftover legacy page-title card (theme + Customizer CSS). */
+body.dtr-apple-sticky-header:not(.home):not(.page-template-template-apple-homepage):not(.page-template-template-apple-homepage-php) .dtr-page-title--section,
+body.dtr-apple-sticky-header:not(.home) .dtr-page-title__section {
+  display: none !important;
+  margin: 0 !important;
+  padding: 0 !important;
+  min-height: 0 !important;
+  height: 0 !important;
+  overflow: hidden !important;
+  border: 0 !important;
+  background: none !important;
+}
+
+/* Minimal Apple intro */
+body.dtr-apple-sticky-header .dtr-apple-page-intro {
+  position: relative;
+  z-index: 1;
+  margin: 0;
+  padding: 18px clamp(20px, 3vw, 40px) 6px;
+  background: transparent;
+  color: #1d1d1f;
+  border: 0;
+  box-shadow: none;
+}
+
+body.dtr-apple-sticky-header .dtr-apple-page-intro__inner {
+  width: 100%;
+  max-width: 980px;
+  margin: 0 auto;
+  padding: 0;
+  text-align: left;
+}
+
+body.dtr-apple-sticky-header .dtr-apple-page-intro__title,
+body.dtr-apple-sticky-header h1.dtr-apple-page-intro__title {
+  margin: 0;
+  padding: 0;
+  font-size: clamp(26px, 2.6vw, 34px);
+  font-weight: 600;
+  letter-spacing: -0.022em;
+  line-height: 1.15;
+  color: #1d1d1f;
+  text-align: left;
+  background: none;
+  border: 0;
+  box-shadow: none;
+}
+
+body.dtr-apple-sticky-header .dtr-apple-page-intro__crumbs,
+body.dtr-apple-sticky-header .dtr-apple-page-intro .dtr-breadcrumb-wrapper {
+  margin: 8px 0 0;
+  padding: 0;
+  color: rgba(29, 29, 31, 0.55);
+  font-size: 12px;
+  line-height: 1.4;
+}
+
+body.dtr-apple-sticky-header .dtr-apple-page-intro .breadcrumbs,
+body.dtr-apple-sticky-header .dtr-apple-page-intro .breadcrumbs li,
+body.dtr-apple-sticky-header .dtr-apple-page-intro .breadcrumbs a {
+  color: inherit;
+}
+
+body.dtr-apple-sticky-header .dtr-apple-page-intro .breadcrumbs li:after {
+  opacity: 0.45;
+  margin: 0 5px 0 8px;
+}
+
+@media (max-width: 992px) {
+  body.dtr-apple-sticky-header .dtr-apple-page-intro {
+    padding: 14px 20px 4px;
+  }
+
+  body.dtr-apple-sticky-header .dtr-apple-page-intro__title,
+  body.dtr-apple-sticky-header h1.dtr-apple-page-intro__title {
+    font-size: clamp(24px, 6.5vw, 30px);
+  }
+}

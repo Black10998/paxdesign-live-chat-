@@ -1,0 +1,37 @@
+---
+description: paxdesign-toolbar is permanently removed from this project
+alwaysApply: true
+---
+
+# paxdesign-toolbar is forbidden
+
+**Decision (2026-08-16):** `paxdesign-toolbar` (PaxDesign Utility Dock) must **never** be added, restored, deployed, or referenced in this repository unless the user explicitly requests it in writing.
+
+## What belongs here instead
+
+All customer-facing functionality lives in **`paxdesign-booking`** only:
+
+- Customer Platform (`assets/customer-auth/`)
+- Live Chat + AI (`assets/js/chat-script.js`, `includes/class-paxdesign-chat*.php`)
+- CCS / Cybercrime workflows (REST `pdx/v1/customer/cybercrime/*`, chat page context)
+- Case status, files, attachments, and customer dashboard APIs
+
+## Never do
+
+- Add `paxdesign-toolbar` plugin files, ZIPs, or submodules
+- Reference `window.PDXDock`, `#pdx-dock`, or `#pdx-root`
+- Deploy from `C:\Users\43681\.ssh\paxdesign-toolbar`
+- Install toolbar via WordPress updater, Composer, or CI
+- Re-introduce toolbar as a “fallback” for Customer Platform UI
+
+## Before every release
+
+Run:
+
+```bash
+bash scripts/verify-no-toolbar.sh
+```
+
+## If toolbar code is needed for reference
+
+Use git history **outside** this repo only. Do not copy toolbar PHP/JS into `paxdesign-booking`.
