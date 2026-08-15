@@ -264,7 +264,8 @@ jobs:
           grep -Eq "queueBackgroundRealtimeSync|shouldSkipHistoryFetch|HISTORY_INITIAL" /tmp/chat-script.js
           grep -Eq "renderPortalRecordsSection|renderPortalCybercrimeDetail|cybercrime/reports" /tmp/pax-auth.js
           grep -Eq "Document checks \\(preliminary\\)|What is still required" /tmp/pax-auth.js
-          grep -A6 '#pdx-auth-bar.pdx-auth-bar--header .pdx-auth-signup-btn {' /tmp/pdx-auth.css | grep -Eq 'background: #000|background-color: #000'
+          grep -Eq "html body #pdx-auth-bar.pdx-auth-bar--header .pdx-auth-signup-btn" /tmp/pdx-auth.css
+          grep -A8 "html body #pdx-auth-bar.pdx-auth-bar--header .pdx-auth-signup-btn {" /tmp/pdx-auth.css | grep -Eq "display: none"
           if [ "$BOOKING_JS" = "200" ]; then
             grep -Eq 'ensureChatReady' /tmp/booking-script.js
             grep -Eq 'escapeHtml|paxdesign_get_team_members' /tmp/booking-script.js
