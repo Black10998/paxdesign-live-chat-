@@ -416,9 +416,11 @@ class PAXdesign_Chat {
      * @param string                         $language
      * @param array<string, mixed>|WP_Error|null $ccs_report
      * @param bool                           $streaming
+     * @param string                         $assistant_client_id
+     * @param array<string, mixed>|null      $user_entry
      * @return array<string, mixed>
      */
-    private function apply_ccs_operation_turn($session_id, $user_id, $user_message, $language, $ccs_report, $streaming = false) {
+    private function apply_ccs_operation_turn($session_id, $user_id, $user_message, $language, $ccs_report, $streaming = false, $assistant_client_id = '', $user_entry = null) {
         $out = array(
             'skip_llm'   => false,
             'assistant'  => null,
@@ -482,7 +484,8 @@ class PAXdesign_Chat {
             }
             $reply = (string) ($decision['reply'] ?? '');
             $operation = is_array($decision['operation'] ?? null) ? $decision['operation'] : array();
-            $assistant = PAXdesign_Cybercrime_AI_Operations::persist_assistant_reply($session_id, $reply, $operation);
+            $assistant_client_id = $this->assistant_client_id_for_turn($assistant_client_id, $user_entry);
+            $assistant = PAXdesign_Cybercrime_AI_Operations::persist_assistant_reply($session_id, $reply, $operation, $assistant_client_id);
             $out['skip_llm'] = true;
             $out['assistant'] = $assistant;
             $out['operation'] = $operation;
@@ -496,10 +499,6 @@ class PAXdesign_Chat {
                     echo 'data: ' . wp_json_encode(array(
                         'type'    => 'done',
                         'message' => $formatted,
-                    )) . "\n\n";
-                    echo 'data: ' . wp_json_encode(array(
-                        'type' => 'text',
-                        'text' => $reply,
                     )) . "\n\n";
                     $this->flush_sse_output();
                 }
@@ -602,8 +601,149 @@ class PAXdesign_Chat {
     }
 
     /**
-     * @param string $session_id
+     * One assistant client_msg_id per customer turn so retries cannot insert a second reply.
+     *
+     * @param string                    $assistant_client_id
+     * @param array<string, mixed>|null $user_entry
+     * @return string
      */
+    private function assistant_client_id_for_turn($assistant_client_id, $user_entry = null) {
+        $assistant_client_id = sanitize_text_field((string) $assistant_client_id);
+        if ($assistant_client_id !== '') {
+            return $assistant_client_id;
+        }
+        $user_client = is_array($user_entry) ? sanitize_text_field((string) ($user_entry['client_msg_id'] ?? '')) : '';
+        if ($user_client !== '') {
+            return 'ccs-asst:' . $user_client;
+        }
+        $user_id = is_array($user_entry) ? absint($user_entry['id'] ?? 0) : 0;
+        if ($user_id > 0) {
+            return 'ccs-asst:' . $user_id;
+        }
+        return '';
+    }
+
+    /**
+     * Reuse the latest user row when the same customer text is processed twice
+     * (mobile send + stream, desktop + phone, or a retry).
+     *
+     * @param string               $session_id
+     * @param string               $user_message
+     * @return array{user:array<string,mixed>,assistant:?array<string,mixed>}|null
+     */
+    private function matching_user_turn($session_id, $user_message) {
+        if (!class_exists('PAXdesign_Message_Store')) {
+            return null;
+        }
+        $user_message = trim((string) $user_message);
+        if ($session_id === '' || $user_message === '') {
+            return null;
+        }
+        $recent = PAXdesign_Message_Store::latest_messages($session_id, 16, 'customer');
+        if (!is_array($recent) || empty($recent)) {
+            return null;
+        }
+        $last_user = null;
+        $assistant_after = null;
+        foreach ($recent as $msg) {
+            if (!is_array($msg)) {
+                continue;
+            }
+            $role = (string) ($msg['role'] ?? '');
+            if ($role === 'user') {
+                $last_user = $msg;
+                $assistant_after = null;
+            } elseif ($role === 'assistant' && is_array($last_user)) {
+                $assistant_after = $msg;
+            }
+        }
+        if (!is_array($last_user) || trim((string) ($last_user['content'] ?? '')) !== $user_message) {
+            return null;
+        }
+        return array(
+            'user'      => $last_user,
+            'assistant' => is_array($assistant_after) ? $assistant_after : null,
+        );
+    }
+
+    /**
+     * @param PAXdesign_Chat_Live $live
+     * @param string              $session_id
+     * @param string              $user_message
+     * @param array<string, mixed> $extra
+     * @return array{entry:array<string,mixed>|WP_Error|null,assistant:?array<string,mixed>}
+     */
+    private function resolve_user_turn($live, $session_id, $user_message, $extra) {
+        $match = $this->matching_user_turn($session_id, $user_message);
+        if (is_array($match) && !empty($match['user'])) {
+            $user = $match['user'];
+            $user['_deduplicated'] = true;
+            return array(
+                'entry'     => $user,
+                'assistant' => is_array($match['assistant'] ?? null) ? $match['assistant'] : null,
+            );
+        }
+        $entry = $live->append_message($session_id, 'user', $user_message, $extra);
+        return array(
+            'entry'     => $entry,
+            'assistant' => null,
+        );
+    }
+
+    /**
+     * @param array<string, mixed>      $entry
+     * @param array<string, mixed>|null $assistant
+     * @param array<string, mixed>|null $ccs_report
+     */
+    private function emit_reused_assistant_sse($entry, $assistant, $ccs_report = null) {
+        $live = class_exists('PAXdesign_Chat_Live') ? PAXdesign_Chat_Live::get_instance() : null;
+        $this->send_sse_headers();
+        echo 'data: ' . wp_json_encode(array(
+            'type'    => 'user',
+            'message' => $live ? $live->format_sse_message_payload($entry, 0) : $entry,
+        )) . "\n\n";
+        $this->flush_sse_output();
+        if (is_array($ccs_report)) {
+            $this->emit_ccs_case_sse($ccs_report);
+        }
+        if (is_array($assistant) && !empty($assistant['id'])) {
+            $formatted = $live ? $live->format_sse_message_payload($assistant, 0) : $assistant;
+            echo 'data: ' . wp_json_encode(array(
+                'type'    => 'done',
+                'message' => $formatted,
+            )) . "\n\n";
+            $this->flush_sse_output();
+        }
+        echo "data: [DONE]\n\n";
+        exit;
+    }
+
+    /**
+     * @param string                        $session_id
+     * @param array<string, mixed>          $entry
+     * @param array<string, mixed>|null     $assistant
+     * @param array<string, mixed>|null     $ccs_report
+     * @return array<string, mixed>
+     */
+    private function reused_assistant_payload($session_id, $entry, $assistant, $ccs_report = null) {
+        $live = PAXdesign_Chat_Live::get_instance();
+        $formatted_user = $live->format_sse_message_payload($entry, 0);
+        $formatted_assistant = is_array($assistant)
+            ? $live->format_sse_message_payload($assistant, 0)
+            : array();
+        return array(
+            'session_id'    => $session_id,
+            'handler'       => $live->get_handler($session_id),
+            'message'       => $formatted_user,
+            'assistant'     => $formatted_assistant,
+            'processing'    => null,
+            'ccs_operation' => null,
+            'ccs_case'      => (class_exists('PAXdesign_Cybercrime_AI_Case') && is_array($ccs_report))
+                ? PAXdesign_Cybercrime_AI_Case::public_case_sync_payload($ccs_report)
+                : null,
+        );
+    }
+
     private function persist_page_context_from_request($session_id) {
         $session_id = sanitize_text_field((string) $session_id);
         $reference = isset($_POST['page_reference']) ? sanitize_text_field(wp_unslash($_POST['page_reference'])) : '';
@@ -827,10 +967,15 @@ class PAXdesign_Chat {
             $user_id = get_current_user_id();
             $session_id = PAXdesign_Customer_Chat_Bridge::resolve_ajax_session($user_id, $session_id);
             $last_user = '';
-            for ($i = count($messages) - 1; $i >= 0; $i--) {
-                if (is_array($messages[$i]) && ($messages[$i]['role'] ?? '') === 'user') {
-                    $last_user = sanitize_textarea_field((string) ($messages[$i]['content'] ?? ''));
-                    break;
+            if (isset($_POST['message'])) {
+                $last_user = sanitize_textarea_field(wp_unslash($_POST['message']));
+            }
+            if ($last_user === '') {
+                for ($i = count($messages) - 1; $i >= 0; $i--) {
+                    if (is_array($messages[$i]) && ($messages[$i]['role'] ?? '') === 'user') {
+                        $last_user = sanitize_textarea_field((string) ($messages[$i]['content'] ?? ''));
+                        break;
+                    }
                 }
             }
             if ($last_user !== '') {
@@ -1568,12 +1713,16 @@ class PAXdesign_Chat {
             $extra = PAXdesign_Link_Scanner::attach_scan_meta($user_message, 'user', $extra);
         }
 
-        $entry = $live->append_message($session_id, 'user', $user_message, $extra);
+        $turn = $this->resolve_user_turn($live, $session_id, $user_message, $extra);
+        $entry = $turn['entry'];
         if (is_wp_error($entry)) {
             return $entry;
         }
         if (!$entry) {
             return new WP_Error('send_failed', __('Could not save your message.', 'paxdesign-booking'), array('status' => 500));
+        }
+        if (is_array($turn['assistant'] ?? null) && !empty($turn['assistant']['id'])) {
+            $this->emit_reused_assistant_sse($entry, $turn['assistant']);
         }
 
         $ccs_report = $this->ingest_ccs_case_from_chat($session_id, $user_id, $user_message);
@@ -1619,7 +1768,9 @@ class PAXdesign_Chat {
             $user_message,
             $customer_language,
             $ccs_report,
-            true
+            true,
+            $assistant_client_id,
+            is_array($entry) ? $entry : null
         );
         if (!empty($ccs_ops['report'])) {
             $ccs_report = $ccs_ops['report'];
@@ -1740,12 +1891,17 @@ class PAXdesign_Chat {
             $extra = PAXdesign_Link_Scanner::attach_scan_meta($user_message, 'user', $extra);
         }
 
-        $entry = $live->append_message($session_id, 'user', $user_message, $extra);
+        $turn = $this->resolve_user_turn($live, $session_id, $user_message, $extra);
+        $entry = $turn['entry'];
         if (is_wp_error($entry)) {
             return $entry;
         }
         if (!$entry) {
             return new WP_Error('send_failed', __('Your message could not be sent. Please try again.', 'paxdesign-booking'), array('status' => 500));
+        }
+        if (is_array($turn['assistant'] ?? null) && !empty($turn['assistant']['id'])) {
+            $payload = $this->reused_assistant_payload($session_id, $entry, $turn['assistant']);
+            return $payload;
         }
 
         $ccs_report = $this->ingest_ccs_case_from_chat($session_id, $user_id, $user_message);
@@ -1806,7 +1962,9 @@ class PAXdesign_Chat {
             $user_message,
             $customer_language,
             $ccs_report,
-            false
+            false,
+            $assistant_client_id,
+            is_array($entry) ? $entry : null
         );
         if (!empty($ccs_ops['report'])) {
             $ccs_report = $ccs_ops['report'];

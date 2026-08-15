@@ -1,6 +1,6 @@
 /**
  * PAXdesign AI Chat — Sales & Booking Assistant
- * Version: 3.175.11
+ * Version: 3.175.12
  */
 (function () {
   'use strict';
@@ -898,6 +898,9 @@
         }
         return existingById;
       }
+    }
+    if (isDuplicateMessage(msg)) {
+      return null;
     }
     if (opId && msg.ccs_operation_status && msg.ccs_operation_status !== 'running') {
       var running = threadEl.querySelector('[data-ccs-op-id="' + opId + '"][data-ccs-op-status="running"]');
@@ -2643,15 +2646,37 @@
     var dedupKey = messageDedupKey(msg);
     if (dedupKey && domClientMsgIds[dedupKey]) return true;
     if (msg.role === 'system' && msg.content === 'Chat-Session gestartet.') return true;
+    if (msg.role === 'assistant' || msg.role === 'admin') {
+      var text = messageText(msg.content || msg);
+      if (text) {
+        var lastAsst = null;
+        for (var i = messages.length - 1; i >= 0; i--) {
+          if (messages[i] && (messages[i].role === 'assistant' || messages[i].role === 'admin')) {
+            lastAsst = messages[i];
+            break;
+          }
+        }
+        if (lastAsst && messageText(lastAsst.content) === text) return true;
+        if (threadEl) {
+          var bubbles = threadEl.querySelectorAll('.paxdesign-booking-chat-message--assistant .paxdesign-booking-chat-message-bubble, .paxdesign-booking-chat-message--admin .paxdesign-booking-chat-message-bubble');
+          if (bubbles.length) {
+            var lastBubble = bubbles[bubbles.length - 1];
+            if (lastBubble && (lastBubble.textContent || '').trim() === text) return true;
+          }
+        }
+      }
+    }
     return false;
   }
 
   function rememberMessageIdentity(msg) {
-    if (!msg || !msg.id) return;
-    domMsgIds[msg.id] = true;
-    seenMsgId(msg.id);
+    if (!msg) return;
+    if (msg.id) {
+      domMsgIds[msg.id] = true;
+      seenMsgId(msg.id);
+    }
     var dedupKey = messageDedupKey(msg);
-    if (dedupKey) domClientMsgIds[dedupKey] = msg.id;
+    if (dedupKey) domClientMsgIds[dedupKey] = msg.id || true;
   }
 
   function loadConsultationLogged(sessionId) {
@@ -5326,6 +5351,12 @@
       isStreaming = true;
       updateSendButton();
       showTyping();
+      var clientMsgId = newClientMessageId();
+      var last = messages[messages.length - 1];
+      if (last && last.role === 'user' && last.content === text) {
+        last.client_msg_id = last.client_msg_id || clientMsgId;
+        clientMsgId = last.client_msg_id;
+      }
       var assistantClientMsgId = newClientMessageId();
 
       var formData = new FormData();
@@ -5333,6 +5364,8 @@
       formData.append('nonce', config.nonce);
       stampChatRequest(formData);
       formData.append('session_id', getSessionId());
+      formData.append('message', text);
+      formData.append('client_msg_id', clientMsgId);
       formData.append('assistant_client_msg_id', assistantClientMsgId);
       formData.append('messages', JSON.stringify(messages.filter(function (m) {
         return m.role === 'user' || m.role === 'assistant';
@@ -5410,6 +5443,9 @@
           try {
             var data = JSON.parse(line.slice(6));
             if (data.type === 'text' && data.text) {
+              if (persistedAssistantMessage) {
+                return;
+              }
               if (!gotFirstChunk) {
                 gotFirstChunk = true;
                 ensureAssistantBubble();
@@ -5439,6 +5475,7 @@
               }
             } else if (data.type === 'done' && data.message) {
               persistedAssistantMessage = data.message;
+              rememberMessageIdentity(data.message);
               if (!gotFirstChunk && data.message) {
                 var doneText = messageText(data.message);
                 if (doneText) {
@@ -5449,6 +5486,14 @@
                   pendingText = fullText;
                   flushStreamBubble();
                 }
+              }
+              if (data.message.id && messageEl) {
+                if (streamingMsgId && streamingMsgId !== data.message.id) {
+                  delete domMsgIds[streamingMsgId];
+                }
+                streamingMsgId = data.message.id;
+                messageEl.setAttribute('data-msg-id', String(data.message.id));
+                domMsgIds[data.message.id] = true;
               }
             } else if (data.type === 'ccs_case' && data.report) {
               dispatchCcsCaseUpdate(data.report);

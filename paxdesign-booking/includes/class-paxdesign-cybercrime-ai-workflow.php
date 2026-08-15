@@ -569,7 +569,21 @@ class PAXdesign_Cybercrime_AI_Workflow {
         }
 
         $state = self::state_from_row($row);
+        $state['fresh_start'] = false;
         $extracted = self::extract_from_message($user_message, $state);
+        if (!empty($extracted) && $user_id > 0 && class_exists('PAXdesign_Cybercrime_AI_Case')) {
+            $updated = PAXdesign_Cybercrime_AI_Case::apply_extracted_fields(
+                (string) $row['reference_id'],
+                $user_id,
+                $extracted,
+                'chat'
+            );
+            if (is_array($updated)) {
+                $row = $updated;
+                $state = self::state_from_row($row);
+                $state['fresh_start'] = false;
+            }
+        }
         if (!empty($extracted) && $user_id > 0 && class_exists('PAXdesign_Cybercrime_AI_Case')) {
             $updated = PAXdesign_Cybercrime_AI_Case::apply_extracted_fields(
                 (string) $row['reference_id'],

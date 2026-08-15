@@ -395,7 +395,7 @@ cx_assert_true(strpos($ccs_widget, 'ccs_operation') !== false, 'Chat must render
 cx_assert_true(strpos($ccs_widget, 'upsertCcsOperationMessage') !== false, 'Chat must keep the same processing message across follow-ups');
 
 $plugin_bootstrap = file_get_contents($ccs_root . '/paxdesign-booking.php');
-cx_assert_true(strpos($plugin_bootstrap, "define('PAXDESIGN_BOOKING_VERSION', '3.175.11')") !== false, 'Plugin version must be 3.175.11');
+cx_assert_true(strpos($plugin_bootstrap, "define('PAXDESIGN_BOOKING_VERSION', '3.175.12')") !== false, 'Plugin version must be 3.175.12');
 cx_assert_true(strpos($plugin_bootstrap, 'class-paxdesign-cybercrime-i18n.php') !== false, 'Plugin must load CCS localization');
 cx_assert_true(strpos($plugin_bootstrap, 'class-paxdesign-cybercrime-document-checks.php') !== false, 'Plugin must load document checks');
 cx_assert_true(strpos($plugin_bootstrap, 'class-paxdesign-cybercrime-ai-case.php') !== false, 'Plugin must load AI case sync');
@@ -557,6 +557,17 @@ cx_assert_true(strpos($chat_src, 'is_array($ccs_report) ? $ccs_report : null') !
 cx_assert_true(strpos($chat_src, 'reset_ccs_conversation_epoch') !== false, 'A new case must drop previous conversation context from the model prompt');
 cx_assert_true(strpos($chat_src, 'explicitly started a NEW Cybercrime Support case') !== false, 'The model prompt for a new case must forbid reusing the previous CCS reference');
 cx_assert_true(strpos($chat_src, 'get_reference_for_session($session_id)') !== false, 'Stale page_reference must not override the session-bound CCS case');
+cx_assert_true(strpos($chat_src, 'function matching_user_turn') !== false, 'The same customer text must not be processed as a second turn');
+cx_assert_true(strpos($chat_src, 'function assistant_client_id_for_turn') !== false, 'Each customer turn must have a stable assistant message id');
+cx_assert_true(strpos($chat_src, "isset(\$_POST['message'])") !== false, 'The latest posted customer message must be processed, not a stale history item');
+cx_assert_true(strpos($chat_src, "'text' => \$reply") === false, 'Skip-LLM CCS replies must not also emit a duplicate streaming text event');
+cx_assert_true(strpos($ops_src, '$client_msg_id = \'\'') !== false, 'Assistant CCS replies must persist with a client_msg_id');
+cx_assert_true(strpos($ops_src, 'find_by_client_id($session_id, $client_msg_id)') !== false, 'A retry with the same assistant client_msg_id must not insert a second row');
+$wf_src = file_get_contents($ccs_root . '/includes/class-paxdesign-cybercrime-ai-workflow.php');
+cx_assert_true(strpos($wf_src, "\$state['fresh_start'] = false") !== false, 'Follow-up CCS turns must not replay the new-case opening copy');
+cx_assert_true(strpos($ccs_widget, "formData.append('message', text)") !== false, 'Website chat must send the latest customer message explicitly');
+cx_assert_true(strpos($ccs_widget, "formData.append('client_msg_id', clientMsgId)") !== false, 'Website chat must send a unique customer message id');
+cx_assert_true(strpos($ccs_widget, 'if (persistedAssistantMessage)') !== false, 'Streaming text events must not redraw an assistant reply that was already finalized');
 $prompt_state = PAXdesign_Cybercrime_AI_Operations::prompt_state_block(array(
     'payload' => json_encode(array(
         'ai_workflow' => array('step' => 'review'),
@@ -725,6 +736,21 @@ cx_assert_true(strpos($fresh_copy, 'CCS-20260815-NEWCASE01') !== false, 'A new-c
 cx_assert_true(strpos($fresh_copy, 'CCS-20260815-18FF0B59') === false, 'A new-case reply must never reuse the previous CCS reference');
 cx_assert_true(strpos($fresh_copy, 'بلاغ جديد') !== false || strpos($fresh_copy, 'تم فتح') !== false, 'Arabic new-case copy must say a new report was opened');
 cx_assert_true(strpos($fresh_copy, 'ما زلنا على نفس') === false, 'A new-case reply must not say this is still the previous case');
+$follow_copy = PAXdesign_Cybercrime_AI_Workflow::assistant_copy(
+    array(
+        'reference_id' => 'CCS-20260815-NEWCASE01',
+        'step' => 1,
+        'step_label' => 'الهوية',
+        'missing_labels' => array('البلد'),
+        'missing' => array('country'),
+        'review' => array(),
+    ),
+    array('fresh_start' => false),
+    'ar'
+);
+cx_assert_true(strpos($follow_copy, 'تم فتح بلاغ جديد') === false, 'A follow-up must not replay the new-case opening line');
+cx_assert_true(strpos($follow_copy, 'ما زلنا على نفس') !== false, 'A follow-up must continue the same CCS case');
+cx_assert_true(strpos($follow_copy, 'CCS-20260815-NEWCASE01') !== false, 'A follow-up must keep the new CCS reference');
 cx_assert_true(strpos($ccs_page, 'data-step="1"') !== false && strpos($ccs_page, 'data-step="4"') !== false, 'The existing 4-step page must remain the source of truth');
 cx_assert_true(strpos(file_get_contents($ccs_root . '/includes/class-paxdesign-cybercrime-ai-operations.php'), '$is_draft && class_exists(\'PAXdesign_Cybercrime_AI_Workflow\')') !== false, 'Draft CCS turns must run the website workflow before document checks');
 

@@ -417,15 +417,43 @@ class PAXdesign_Cybercrime_AI_Operations {
      * @param string               $session_id
      * @param string               $content
      * @param array<string, mixed> $operation
+     * @param string               $client_msg_id
      * @return array<string, mixed>|null
      */
-    public static function persist_assistant_reply($session_id, $content, $operation = array()) {
+    public static function persist_assistant_reply($session_id, $content, $operation = array(), $client_msg_id = '') {
         $session_id = sanitize_text_field((string) $session_id);
         $content = trim((string) $content);
         if ($session_id === '' || $content === '' || !class_exists('PAXdesign_Chat_Live')) {
             return null;
         }
+        $client_msg_id = sanitize_text_field((string) $client_msg_id);
+        if ($client_msg_id !== '' && class_exists('PAXdesign_Message_Store')) {
+            $existing = PAXdesign_Message_Store::find_by_client_id($session_id, $client_msg_id);
+            if (is_array($existing) && !empty($existing['id'])) {
+                $existing['_deduplicated'] = true;
+                return $existing;
+            }
+        }
+        if (class_exists('PAXdesign_Message_Store')) {
+            $recent = PAXdesign_Message_Store::latest_messages($session_id, 8, 'customer');
+            if (is_array($recent)) {
+                for ($i = count($recent) - 1; $i >= 0; $i--) {
+                    $msg = $recent[$i];
+                    if (!is_array($msg) || (($msg['role'] ?? '') !== 'assistant')) {
+                        continue;
+                    }
+                    if (trim((string) ($msg['content'] ?? '')) === $content) {
+                        $msg['_deduplicated'] = true;
+                        return $msg;
+                    }
+                    break;
+                }
+            }
+        }
         $extra = array();
+        if ($client_msg_id !== '') {
+            $extra['client_msg_id'] = $client_msg_id;
+        }
         if (is_array($operation) && !empty($operation['id'])) {
             $extra['ccs_operation_id'] = sanitize_text_field((string) $operation['id']);
             $extra['ccs_operation_status'] = sanitize_key((string) ($operation['status'] ?? self::STATUS_RUNNING));
