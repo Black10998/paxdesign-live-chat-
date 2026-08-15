@@ -24,6 +24,7 @@ $skip_legacy_banner =
 	|| is_page_template( 'template-apple-impressum.php' )
 	|| is_page_template( 'template-apple-unsere-experten.php' )
 	|| is_page_template( 'template-apple-leistungen.php' )
+	|| is_page_template( 'template-apple-referenzen.php' )
 	|| is_page( 'app-entwicklung' )
 	|| is_page( 'advanced-website-systems' )
 	|| is_page( 'softwareentwicklung' )
@@ -34,7 +35,9 @@ $skip_legacy_banner =
 	|| is_page( 'unsere-experten' )
 	|| is_page( 'it-consulting' )
 	|| is_page( 'leistungen' )
-	|| is_page( 787 );
+	|| is_page( 787 )
+	|| is_page( 'referenzen' )
+	|| is_page( 791 );
 
 if ( $skip_legacy_banner ) {
 	return;

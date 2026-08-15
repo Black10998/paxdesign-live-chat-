@@ -360,6 +360,10 @@ function navein_custom_scripts_styles() {
 		|| is_page( 'leistungen' )
 		|| is_page( 787 );
 
+	$is_apple_referenzen = is_page_template( 'template-apple-referenzen.php' )
+		|| is_page( 'referenzen' )
+		|| is_page( 791 );
+
 	$is_apple_cybercrime = is_page_template( 'template-apple-cybercrime-support.php' )
 		|| is_page( 'cybercrime-support' );
 
@@ -405,6 +409,44 @@ function navein_custom_scripts_styles() {
 			get_template_directory_uri() . '/assets/js/apple-leistungen.js',
 			array(),
 			$ls_js_ver,
+			true
+		);
+	}
+
+	if ( $is_apple_referenzen ) {
+		$rf_css = get_template_directory() . '/assets/css/apple-referenzen.css';
+		$rf_js  = get_template_directory() . '/assets/js/apple-referenzen.js';
+		$rf_ver = file_exists( $rf_css ) ? (string) filemtime( $rf_css ) : $theme_version;
+		$rf_js_ver = file_exists( $rf_js ) ? (string) filemtime( $rf_js ) : $theme_version;
+		wp_enqueue_style(
+			'navein-apple-referenzen',
+			get_template_directory_uri() . '/assets/css/apple-referenzen.css',
+			array( 'navein-style', 'navein-apple-sticky-header', 'navein-apple-hover' ),
+			$rf_ver
+		);
+		wp_add_inline_style(
+			'navein-apple-referenzen',
+			'html body.page-template-template-apple-referenzen #dtr-main-wrapper,' .
+			'html body.page-template-template-apple-referenzen-php #dtr-main-wrapper,' .
+			'html body.page-referenzen #dtr-main-wrapper,' .
+			'html body.page-id-791 #dtr-main-wrapper,' .
+			'html body.page-template-template-apple-referenzen #dtr-primary-section,' .
+			'html body.page-template-template-apple-referenzen-php #dtr-primary-section,' .
+			'html body.page-referenzen #dtr-primary-section,' .
+			'html body.page-id-791 #dtr-primary-section,' .
+			'html body.page-template-template-apple-referenzen .dtr-content-area,' .
+			'html body.page-template-template-apple-referenzen-php .dtr-content-area,' .
+			'html body.page-referenzen .dtr-content-area,' .
+			'html body.page-id-791 .dtr-content-area{' .
+			'width:100%!important;max-width:none!important;margin:0!important;' .
+			'padding:0!important;padding-left:0!important;padding-right:0!important;' .
+			'float:none!important;box-sizing:border-box!important;}'
+		);
+		wp_enqueue_script(
+			'navein-apple-referenzen',
+			get_template_directory_uri() . '/assets/js/apple-referenzen.js',
+			array(),
+			$rf_js_ver,
 			true
 		);
 	}
@@ -596,6 +638,7 @@ if ( ! function_exists( 'navein_force_apple_product_templates' ) ) :
 			'impressum'                  => 'template-apple-impressum.php',
 			'unsere-experten'            => 'template-apple-unsere-experten.php',
 			'leistungen'                 => 'template-apple-leistungen.php',
+			'referenzen'                 => 'template-apple-referenzen.php',
 		);
 		foreach ( $map as $slug => $file ) {
 			if ( is_page( $slug ) ) {
