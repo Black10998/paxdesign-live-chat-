@@ -121,6 +121,9 @@ return array(
 		'check_accepted' => 'Accepted for review',
 		'check_rejected' => 'Rejected — correction needed',
 		'check_review' => 'Pending team review',
+		'rejection_heading' => 'Rejection reason',
+		'rejected_next_heading' => 'Next action',
+		'rejected_next' => 'No further action is required on this reference. You can start a new report if you have a new incident.',
 	),
 	'login_gate' => array(
 		'title' => 'Sign in required',
@@ -302,7 +305,7 @@ return array(
 			'label' => 'Waiting for Your Reply',
 		),
 		'resolved' => array(
-			'label' => 'Resolved',
+			'label' => 'Approved',
 		),
 		'closed' => array(
 			'label' => 'Closed',
@@ -323,7 +326,7 @@ return array(
 			'status_waiting_for_customer' => 'Waiting for customer',
 			'status_customer_replied' => 'Customer replied',
 			'status_waiting_for_staff' => 'Waiting for staff',
-			'status_resolved' => 'Resolved',
+			'status_resolved' => 'Approved',
 			'status_closed' => 'Closed',
 			'status_rejected' => 'Rejected',
 		),

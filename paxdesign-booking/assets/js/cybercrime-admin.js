@@ -32,6 +32,14 @@
   var workflowEl = document.getElementById('pax-cc-admin-workflow');
   var tabUnreadBadge = document.getElementById('pax-cc-tab-unread-badge');
 
+  var rejectPanel = document.getElementById('pax-cc-reject-panel');
+  var rejectReasonSelect = document.getElementById('pax-cc-reject-reason');
+  var rejectExplanation = document.getElementById('pax-cc-reject-explanation');
+  var rejectExplanationLabel = document.getElementById('pax-cc-reject-explanation-label');
+  var rejectSubmit = document.getElementById('pax-cc-reject-submit');
+  var rejectCancel = document.getElementById('pax-cc-reject-cancel');
+  var rejectionCard = document.getElementById('pax-cc-admin-rejection');
+
   if (actionsRoot && !referenceId) {
     referenceId = actionsRoot.getAttribute('data-reference') || '';
   }
@@ -276,18 +284,101 @@
     });
   }
 
+  function authorLabel(type) {
+    return text('author_' + (type || ''), type || '');
+  }
+
+  function channelLabel(channel) {
+    return text('channel_' + (channel || ''), channel || '');
+  }
+
+  function statusIconHtml(status) {
+    var icons = cfg.statusIcons || {};
+    return icons[status] || icons.submitted || '';
+  }
+
+  function fillStatusBadge(el, report) {
+    if (!el || !report) {
+      return;
+    }
+    var status = report.status || '';
+    var label = report.status_label || status;
+    var html = statusIconHtml(status) + '<span class="pax-cc-status__label">' + escapeHtml(label) + '</span>';
+    var target = el.classList && el.classList.contains('pax-cc-status')
+      ? el
+      : (el.querySelector ? el.querySelector('.pax-cc-status') : null);
+    if (!target) {
+      el.innerHTML = '<span class="pax-cc-status ' + (statusClasses[status] || 'pax-cc-status--submitted') + '">' + html + '</span>';
+      return;
+    }
+    target.className = 'pax-cc-status ' + (statusClasses[status] || 'pax-cc-status--submitted');
+    target.innerHTML = html;
+  }
+
+  function setRejectPanelOpen(open) {
+    if (!rejectPanel) {
+      return;
+    }
+    rejectPanel.hidden = !open;
+  }
+
+  function syncRejectExplanationLabel() {
+    if (!rejectExplanationLabel || !rejectReasonSelect) {
+      return;
+    }
+    var other = rejectReasonSelect.value === 'other';
+    rejectExplanationLabel.textContent = other
+      ? text('rejectExplanationOther', text('rejectExplanation', 'Additional explanation (required)'))
+      : text('rejectExplanation', 'Additional explanation (optional)');
+  }
+
+  function renderRejectionCard(report) {
+    if (!rejectionCard) {
+      return;
+    }
+    var rejection = report && report.rejection && typeof report.rejection === 'object' ? report.rejection : null;
+    var status = report && report.status ? report.status : '';
+    if (status !== 'rejected' && !rejection) {
+      rejectionCard.innerHTML = '';
+      return;
+    }
+    var lang = cfg.lang || 'en';
+    var reasonI18n = rejection && rejection.reason_i18n ? rejection.reason_i18n : {};
+    var reason = (reasonI18n[lang] || (rejection && rejection.reason) || '');
+    var explanation = rejection && rejection.explanation ? rejection.explanation : '';
+    var html = '<div class="pax-cc-decision">';
+    html += '<div class="pax-cc-decision__status">' + statusIconHtml('rejected') + '<strong>' + escapeHtml(report.status_label || text('rejectTicket', 'Rejected')) + '</strong></div>';
+    if (reason) {
+      html += '<p class="pax-cc-decision__heading">' + escapeHtml(text('rejectReason', 'Rejection reason')) + '</p>';
+      html += '<p class="pax-cc-decision__reason">' + escapeHtml(reason) + '</p>';
+    }
+    if (explanation) {
+      html += '<p class="pax-cc-decision__reason">' + escapeHtml(explanation).replace(/\n/g, '<br>') + '</p>';
+    }
+    var meta = [];
+    if (rejection && rejection.admin_name) {
+      meta.push(text('detail_rejection_by', 'Administrator decision') + ': ' + rejection.admin_name);
+    }
+    if (rejection && rejection.decided_at) {
+      meta.push(text('detail_rejection_at', 'Date / time') + ': ' + rejection.decided_at);
+    }
+    if (meta.length) {
+      html += '<p class="pax-cc-decision__meta">' + escapeHtml(meta.join(' · ')) + '</p>';
+    }
+    html += '</div>';
+    rejectionCard.innerHTML = html;
+  }
+
   function updateStatusBadge(report) {
     if (!statusBadge || !report) {
       return;
     }
-    var status = report.status || '';
-    statusBadge.textContent = report.status_label || status;
-    statusBadge.className = 'pax-cc-status ' + (statusClasses[status] || 'pax-cc-status--submitted');
+    fillStatusBadge(statusBadge, report);
   }
 
   function renderTimelineItem(entry) {
-    var author = escapeHtml(entry.author_type || '');
-    var channel = escapeHtml(entry.channel || '');
+    var author = escapeHtml(authorLabel(entry.author_type || ''));
+    var channel = escapeHtml(channelLabel(entry.channel || ''));
     var createdAt = escapeHtml(entry.created_at || '');
     var body = escapeHtml(entry.body || '').replace(/\n/g, '<br>');
     var meta = entry.meta && typeof entry.meta === 'object' ? entry.meta : {};
@@ -327,9 +418,7 @@
     if (!badge) {
       return;
     }
-    var status = report.status || '';
-    badge.textContent = report.status_label || status;
-    badge.className = 'pax-cc-status ' + (statusClasses[status] || 'pax-cc-status--submitted');
+    fillStatusBadge(badge, report);
   }
 
   function updateClosedUi(report) {
@@ -360,20 +449,34 @@
     renderTimeline(report.timeline || []);
     updateListRowStatus(report);
     updateClosedUi(report);
+    renderRejectionCard(report);
+    if (report.status === 'rejected') {
+      setRejectPanelOpen(false);
+    }
     if (statusSelect && report.status) {
       statusSelect.value = report.status;
       lastSavedStatus = report.status;
     }
   }
 
-  function saveStatus(status) {
-    if (!status || status === lastSavedStatus) {
+  function saveStatus(status, extra) {
+    extra = extra || {};
+    if (!status || (status === lastSavedStatus && status !== 'rejected')) {
+      return Promise.resolve();
+    }
+    if (status === 'rejected' && status === lastSavedStatus && !extra.reason_key) {
       return Promise.resolve();
     }
 
     setFeedback(statusFeedback, text('saving', 'Saving…'), 'saving');
 
-    return postAction('paxdesign_cybercrime_admin_status', { status: status })
+    var payload = { status: status };
+    if (status === 'rejected') {
+      payload.reason_key = extra.reason_key || '';
+      payload.explanation = extra.explanation || '';
+    }
+
+    return postAction('paxdesign_cybercrime_admin_status', payload)
       .then(function (data) {
         applyReport(data.report);
         if (isClosedStatus(status)) {
@@ -400,6 +503,11 @@
   if (statusSelect) {
     statusSelect.addEventListener('change', function () {
       var nextStatus = statusSelect.value;
+      if (nextStatus === 'rejected') {
+        statusSelect.value = lastSavedStatus;
+        setRejectPanelOpen(true);
+        return;
+      }
       if (statusSaveTimer) {
         window.clearTimeout(statusSaveTimer);
       }
@@ -428,13 +536,43 @@
 
   if (rejectTicketBtn) {
     rejectTicketBtn.addEventListener('click', function () {
-      if (!window.confirm(text('rejectConfirm', 'Reject this case? The customer will see the Rejected status on this same CCS reference.'))) {
+      setRejectPanelOpen(true);
+    });
+  }
+
+  if (rejectCancel) {
+    rejectCancel.addEventListener('click', function () {
+      setRejectPanelOpen(false);
+      if (statusSelect) {
+        statusSelect.value = lastSavedStatus;
+      }
+    });
+  }
+
+  if (rejectReasonSelect) {
+    rejectReasonSelect.addEventListener('change', syncRejectExplanationLabel);
+    syncRejectExplanationLabel();
+  }
+
+  if (rejectSubmit) {
+    rejectSubmit.addEventListener('click', function () {
+      var reasonKey = rejectReasonSelect ? rejectReasonSelect.value : '';
+      var explanation = rejectExplanation ? rejectExplanation.value.trim() : '';
+      if (!reasonKey) {
+        setFeedback(statusFeedback, text('rejectRequired', 'Please choose a rejection reason.'), 'error');
+        return;
+      }
+      if (reasonKey === 'other' && !explanation) {
+        setFeedback(statusFeedback, text('rejectExplanationRequired', 'Please enter an additional explanation for this reason.'), 'error');
         return;
       }
       if (statusSelect) {
         statusSelect.value = 'rejected';
       }
-      saveStatus('rejected');
+      saveStatus('rejected', {
+        reason_key: reasonKey,
+        explanation: explanation
+      });
     });
   }
 

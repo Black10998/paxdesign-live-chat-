@@ -603,6 +603,7 @@ class PAXdesign_Cybercrime_AI_Case {
             'original_request' => $original,
             'created_at'       => (string) ($report['created_at'] ?? ''),
             'updated_at'       => (string) ($report['updated_at'] ?? ''),
+            'rejection'        => is_array($report['rejection'] ?? null) ? $report['rejection'] : null,
         );
         if (class_exists('PAXdesign_Cybercrime_AI_Operations')) {
             $operation = is_array($report['ai_operation'] ?? null) ? $report['ai_operation'] : null;

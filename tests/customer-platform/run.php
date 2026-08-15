@@ -332,11 +332,24 @@ cx_assert_true(strpos($ccs_tickets, "'rejected'") !== false, 'Rejected must be a
 cx_assert_true(strpos($ccs_tickets, 'display_case_description') !== false, 'Case display must replace pasted chat dumps with structured facts');
 
 $ccs_admin = file_get_contents($ccs_root . '/includes/customer/class-paxdesign-customer-admin.php');
-cx_assert_true(strpos($ccs_admin, 'Needs human review') !== false, 'Admin list must flag cases that need human review');
-cx_assert_true(strpos($ccs_admin, 'Preliminary document checks') !== false, 'Admin case view must show preliminary document checks');
-cx_assert_true(strpos($ccs_admin, 'Evidence / documents') !== false, 'Admin case view must show an evidence gallery');
+cx_assert_true(strpos($ccs_admin, 'alerts.human_review') !== false, 'Admin list must flag cases that need human review');
+cx_assert_true(strpos($ccs_admin, 'detail.checks') !== false, 'Admin case view must show preliminary document checks');
+cx_assert_true(strpos($ccs_admin, 'detail.evidence') !== false, 'Admin case view must show an evidence gallery');
 cx_assert_true(strpos($ccs_admin, 'pax-cc-evidence') !== false, 'Admin evidence must use preview cards');
 cx_assert_true(strpos($ccs_admin, 'pax-cc-reject-ticket') !== false, 'Admin must be able to reject a CCS case');
+cx_assert_true(strpos($ccs_admin, 'pax-cc-reject-panel') !== false, 'Admin rejection must collect a reason');
+cx_assert_true(strpos($ccs_admin, 'cc_t(') !== false, 'Admin CCS dashboard must use the shared localization helper');
+
+$ccs_i18n = file_get_contents($ccs_root . '/includes/class-paxdesign-cybercrime-i18n.php');
+cx_assert_true(strpos($ccs_i18n, 'class PAXdesign_Cybercrime_I18n') !== false, 'CCS admin i18n class must exist');
+cx_assert_true(strpos($ccs_i18n, "'ar' => 'مرفوض'") !== false, 'Arabic rejected status must be localized');
+cx_assert_true(strpos($ccs_i18n, "'ar' => 'تمت الموافقة'") !== false, 'Arabic approved status must be localized');
+cx_assert_true(strpos($ccs_i18n, 'status_icon_svg') !== false, 'Professional status icons must be SVG');
+cx_assert_true(strpos($ccs_i18n, 'reject.reason.unclear_document') !== false, 'Rejection reasons must be localized');
+
+cx_assert_true(strpos($ccs_tickets, 'apply_rejection') !== false, 'Admin rejection must store reason on the same CCS case');
+cx_assert_true(strpos($ccs_tickets, 'public_rejection') !== false, 'Customer payload must expose the rejection decision');
+cx_assert_true(strpos($ccs_tickets, "'reason_i18n'") !== false, 'Rejection reasons must be stored in AR/DE/EN');
 
 $ccs_js = file_get_contents(dirname(__DIR__, 2) . '/navein/assets/js/apple-cybercrime-support.js');
 cx_assert_true(strpos($ccs_js, 'initGuidedInterview') !== false, 'Website intake must run a guided interview');
@@ -346,12 +359,16 @@ cx_assert_true(strpos($ccs_js, 'pax-ccs-case-updated') !== false, 'Case page mus
 cx_assert_true(strpos($ccs_js, 'continueDraftOnPage') !== false, 'Draft cases must remain completable on the existing page');
 cx_assert_true(strpos($ccs_js, 'isStructuredCaseDescription') !== false, 'Case dossier must hide pasted chat paragraphs');
 cx_assert_true(strpos($ccs_js, 'rejected') !== false, 'Customer case view must treat Rejected as a closed status');
+cx_assert_true(strpos($ccs_js, 'statusIconSvg') !== false, 'Customer status must use professional SVG icons');
+cx_assert_true(strpos($ccs_js, 'renderDecisionCard') !== false, 'Customer case page must present the rejection decision clearly');
+cx_assert_true(strpos($ccs_js, 'emoji') === false, 'Customer status badges must not use random emojis');
 
 $ccs_page = file_get_contents(dirname(__DIR__, 2) . '/navein/template-parts/pages/cybercrime-support.php');
 cx_assert_true(strpos($ccs_page, 'pax-ccs-category-cards') !== false, 'Intake must present category as guided choices');
 cx_assert_true(strpos($ccs_page, 'pax-ccs-case-dossier') !== false, 'Active case view must include the case dossier');
 cx_assert_true(strpos($ccs_page, 'name="identity_document"') !== false, 'Identity document upload must remain in the intake form');
 cx_assert_true(strpos($ccs_page, 'pax-ccs-continue-form') !== false, 'Existing case page must keep a continue path');
+cx_assert_true(strpos($ccs_page, 'pax-ccs-decision-card') !== false, 'Case page must include an Apple-style decision card');
 
 $ccs_widget = file_get_contents($ccs_root . '/assets/js/chat-script.js');
 cx_assert_true(strpos($ccs_widget, 'isCybercrimeCaseChat') !== false, 'CCS chat must force the Sign In gate');
@@ -360,7 +377,8 @@ cx_assert_true(strpos($ccs_widget, 'ccs_operation') !== false, 'Chat must render
 cx_assert_true(strpos($ccs_widget, 'upsertCcsOperationMessage') !== false, 'Chat must keep the same processing message across follow-ups');
 
 $plugin_bootstrap = file_get_contents($ccs_root . '/paxdesign-booking.php');
-cx_assert_true(strpos($plugin_bootstrap, "define('PAXDESIGN_BOOKING_VERSION', '3.175.3')") !== false, 'Plugin version must be 3.175.3');
+cx_assert_true(strpos($plugin_bootstrap, "define('PAXDESIGN_BOOKING_VERSION', '3.175.4')") !== false, 'Plugin version must be 3.175.4');
+cx_assert_true(strpos($plugin_bootstrap, 'class-paxdesign-cybercrime-i18n.php') !== false, 'Plugin must load CCS localization');
 cx_assert_true(strpos($plugin_bootstrap, 'class-paxdesign-cybercrime-document-checks.php') !== false, 'Plugin must load document checks');
 cx_assert_true(strpos($plugin_bootstrap, 'class-paxdesign-cybercrime-ai-case.php') !== false, 'Plugin must load AI case sync');
 cx_assert_true(strpos($plugin_bootstrap, 'class-paxdesign-cybercrime-ai-operations.php') !== false, 'Plugin must load AI operation state');
@@ -384,6 +402,16 @@ if (!function_exists('sanitize_key')) {
         return strtolower(preg_replace('/[^a-z0-9_]/', '', (string) $value));
     }
 }
+if (!function_exists('esc_attr')) {
+    function esc_attr($value) {
+        return htmlspecialchars((string) $value, ENT_QUOTES, 'UTF-8');
+    }
+}
+if (!function_exists('esc_html')) {
+    function esc_html($value) {
+        return htmlspecialchars((string) $value, ENT_QUOTES, 'UTF-8');
+    }
+}
 if (!function_exists('__')) {
     function __($text, $domain = '') {
         unset($domain);
@@ -396,7 +424,13 @@ if (!function_exists('mb_strpos')) {
         return $pos === false ? false : $pos;
     }
 }
+require_once $ccs_root . '/includes/class-paxdesign-cybercrime-i18n.php';
 require_once $ccs_root . '/includes/class-paxdesign-cybercrime-ai-case.php';
+cx_assert_true(PAXdesign_Cybercrime_I18n::t('status.rejected', 'ar') === 'مرفوض', 'Arabic rejected status must read مرفوض');
+cx_assert_true(PAXdesign_Cybercrime_I18n::t('status.resolved', 'ar') === 'تمت الموافقة', 'Arabic approved status must read تمت الموافقة');
+cx_assert_true(PAXdesign_Cybercrime_I18n::t('status.in_review', 'de') === 'In Prüfung', 'German under-review status must remain available');
+cx_assert_true(strpos(PAXdesign_Cybercrime_I18n::status_icon_svg('rejected'), '<circle') !== false, 'Rejected status must use a circular SVG icon');
+cx_assert_true(strpos(PAXdesign_Cybercrime_I18n::rejection_reason_text('unclear_document', 'ar'), 'غير واضح') !== false, 'Arabic rejection reason must explain the decision');
 $extracted = PAXdesign_Cybercrime_AI_Case::extract_fields_from_message(
     'My account was compromised on August 12. GitHub and my email were affected. I did not lose any money.',
     array()

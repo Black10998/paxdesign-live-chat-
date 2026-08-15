@@ -1218,6 +1218,88 @@ html body.page-cybercrime-support .pax-ccs-portal__btn--primary {
   border: 1px solid transparent;
 }
 
+.pax-ccs-portal__status-hero-icon,
+.pax-ccs-portal__decision-icon {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  flex: 0 0 auto;
+  width: 18px;
+  height: 18px;
+  color: currentColor;
+}
+
+.pax-ccs-status-icon {
+  display: block;
+}
+
+.pax-ccs-portal__status-hero--collecting {
+  background: rgba(142, 142, 147, 0.14);
+  color: #636366;
+  border-color: rgba(142, 142, 147, 0.28);
+}
+
+.pax-ccs-portal__decision {
+  margin: 0 0 18px;
+  padding: 16px 18px;
+  border-radius: 16px;
+  border: 1px solid transparent;
+}
+
+.pax-ccs-portal__decision--rejected {
+  background: rgba(255, 59, 48, 0.08);
+  border-color: rgba(255, 59, 48, 0.22);
+  color: #d70015;
+}
+
+.pax-ccs-portal__decision-status {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin: 0 0 12px;
+  font-size: 17px;
+  font-weight: 700;
+  letter-spacing: -0.02em;
+  color: inherit;
+}
+
+.pax-ccs-portal__decision-heading {
+  margin: 0 0 4px;
+  font-size: 12px;
+  font-weight: 700;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  color: inherit;
+}
+
+.pax-ccs-portal__decision-reason,
+.pax-ccs-portal__decision-explanation,
+.pax-ccs-portal__decision-next {
+  margin: 0 0 12px;
+  font-size: 15px;
+  font-weight: 500;
+  line-height: 1.5;
+  color: var(--ccs-ink);
+}
+
+.pax-ccs-portal__decision-next-wrap .pax-ccs-portal__decision-next {
+  margin-bottom: 0;
+}
+
+html[data-theme="dark"] .pax-ccs-portal__decision--rejected {
+  background: rgba(255, 69, 58, 0.16);
+  color: #ff8a80;
+  border-color: rgba(255, 69, 58, 0.32);
+}
+
+@media (prefers-color-scheme: dark) {
+  html:not([data-theme="light"]) .pax-ccs-portal__decision--rejected {
+    background: rgba(255, 69, 58, 0.16);
+    color: #ff8a80;
+    border-color: rgba(255, 69, 58, 0.32);
+  }
+}
+
 .pax-ccs-portal__status-hero-dot {
   display: none;
 }

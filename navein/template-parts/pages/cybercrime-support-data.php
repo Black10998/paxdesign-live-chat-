@@ -366,6 +366,18 @@ return array(
 			'ar' => 'بانتظار مراجعة الفريق',
 			'de' => 'Wartet auf Teamprüfung',
 		),
+		'rejection_heading' => array(
+			'ar' => 'سبب الرفض',
+			'de' => 'Ablehnungsgrund',
+		),
+		'rejected_next_heading' => array(
+			'ar' => 'الإجراء التالي',
+			'de' => 'Nächster Schritt',
+		),
+		'rejected_next' => array(
+			'ar' => 'لا يلزم إجراء إضافي على هذا المرجع. يمكنك بدء بلاغ جديد إذا كانت لديك حادثة جديدة.',
+			'de' => 'Für diese Referenz ist keine weitere Aktion erforderlich. Starten Sie eine neue Meldung, wenn ein neuer Vorfall vorliegt.',
+		),
 	),
 	'login_gate' => array(
 		'title' => array(
@@ -690,42 +702,42 @@ return array(
 	),
 	'status_badges' => array(
 		'collecting' => array(
-			'emoji' => '🟡',
+			'emoji' => '',
 			'label' => array(
 				'ar' => 'جارٍ جمع المعلومات',
 				'de' => 'Angaben werden erfasst',
 			),
 		),
 		'under_review' => array(
-			'emoji' => '🟠',
+			'emoji' => '',
 			'label' => array(
 				'ar' => 'قيد المراجعة',
 				'de' => 'In Prüfung',
 			),
 		),
 		'waiting_for_customer' => array(
-			'emoji' => '🔵',
+			'emoji' => '',
 			'label' => array(
 				'ar' => 'بانتظار ردك',
 				'de' => 'Wartet auf Ihre Antwort',
 			),
 		),
 		'resolved' => array(
-			'emoji' => '🟢',
+			'emoji' => '',
 			'label' => array(
-				'ar' => 'تم الحل',
-				'de' => 'Gelöst',
+				'ar' => 'تمت الموافقة',
+				'de' => 'Genehmigt',
 			),
 		),
 		'closed' => array(
-			'emoji' => '🔴',
+			'emoji' => '',
 			'label' => array(
 				'ar' => 'مغلق',
 				'de' => 'Geschlossen',
 			),
 		),
 		'rejected' => array(
-			'emoji' => '🔴',
+			'emoji' => '',
 			'label' => array(
 				'ar' => 'مرفوض',
 				'de' => 'Abgelehnt',
@@ -775,8 +787,8 @@ return array(
 				'de' => 'Wartet auf Support',
 			),
 			'status_resolved' => array(
-				'ar' => 'تم الحل',
-				'de' => 'Gelöst',
+				'ar' => 'تمت الموافقة',
+				'de' => 'Genehmigt',
 			),
 			'status_closed' => array(
 				'ar' => 'مغلق',

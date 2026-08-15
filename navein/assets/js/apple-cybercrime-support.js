@@ -31,7 +31,18 @@
   var activeReportEl = document.getElementById('pax-ccs-active-report');
   var activeRefEl = document.getElementById('pax-ccs-active-ref');
   var activeStatusBadgeEl = document.getElementById('pax-ccs-active-status-badge');
+  var activeStatusIconEl = document.getElementById('pax-ccs-active-status-icon');
   var activeStatusLabelEl = document.getElementById('pax-ccs-active-status-label');
+  var decisionCardEl = document.getElementById('pax-ccs-decision-card');
+  var decisionIconEl = document.getElementById('pax-ccs-decision-icon');
+  var decisionLabelEl = document.getElementById('pax-ccs-decision-label');
+  var decisionReasonWrapEl = document.getElementById('pax-ccs-decision-reason-wrap');
+  var decisionReasonHeadingEl = document.getElementById('pax-ccs-decision-reason-heading');
+  var decisionReasonEl = document.getElementById('pax-ccs-decision-reason');
+  var decisionExplanationEl = document.getElementById('pax-ccs-decision-explanation');
+  var decisionNextWrapEl = document.getElementById('pax-ccs-decision-next-wrap');
+  var decisionNextHeadingEl = document.getElementById('pax-ccs-decision-next-heading');
+  var decisionNextEl = document.getElementById('pax-ccs-decision-next');
   var activeCategoryEl = document.getElementById('pax-ccs-active-category');
   var activeSubmittedEl = document.getElementById('pax-ccs-active-submitted');
   var activeTimelineEl = document.getElementById('pax-ccs-active-timeline');
@@ -406,6 +417,26 @@
     }
   }
 
+  function statusIconSvg(key) {
+    var common = 'class="pax-ccs-status-icon pax-ccs-status-icon--' + key + '" width="18" height="18" viewBox="0 0 24 24" aria-hidden="true" focusable="false"';
+    if (key === 'rejected') {
+      return '<svg ' + common + '><circle cx="12" cy="12" r="10" fill="currentColor"/><rect x="11" y="6.2" width="2" height="8.2" rx="1" fill="#fff"/><rect x="11" y="16.2" width="2" height="2.1" rx="1" fill="#fff"/></svg>';
+    }
+    if (key === 'resolved') {
+      return '<svg ' + common + '><circle cx="12" cy="12" r="10" fill="currentColor"/><path d="M7.2 12.3l3.1 3.1 6.5-6.6" fill="none" stroke="#fff" stroke-width="2.1" stroke-linecap="round" stroke-linejoin="round"/></svg>';
+    }
+    if (key === 'waiting_for_customer') {
+      return '<svg ' + common + '><circle cx="12" cy="12" r="10" fill="currentColor"/><path d="M12 7.2v5.1l3.2 1.9" fill="none" stroke="#fff" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>';
+    }
+    if (key === 'collecting') {
+      return '<svg ' + common + '><circle cx="12" cy="12" r="10" fill="currentColor"/><circle cx="12" cy="12" r="3.1" fill="#fff"/></svg>';
+    }
+    if (key === 'closed') {
+      return '<svg ' + common + '><circle cx="12" cy="12" r="10" fill="currentColor"/><path d="M8.2 8.2l7.6 7.6M15.8 8.2l-7.6 7.6" fill="none" stroke="#fff" stroke-width="2" stroke-linecap="round"/></svg>';
+    }
+    return '<svg ' + common + '><circle cx="12" cy="12" r="10" fill="currentColor"/><circle cx="12" cy="12" r="3.4" fill="none" stroke="#fff" stroke-width="2"/></svg>';
+  }
+
   function updateStatusBadge(report) {
     if (!activeStatusBadgeEl || !activeStatusLabelEl || !report) {
       return;
@@ -413,11 +444,65 @@
     var badgeKey = report.customer_status || statusBadgeKey(report.status || '');
     var badges = i18nBundle().statusBadges || {};
     var badge = badges[badgeKey] || {};
-    var label = (badge.label && badge.label[getLang()]) || report.status || '';
-    var emoji = badge.emoji || '';
+    var label = (badge.label && badge.label[getLang()]) || report.status_label || report.status || '';
     activeStatusBadgeEl.className = 'pax-ccs-portal__status-hero pax-ccs-portal__status-hero--' + badgeKey;
-    activeStatusLabelEl.textContent = (emoji ? emoji + ' ' : '') + label;
+    if (activeStatusIconEl) {
+      activeStatusIconEl.innerHTML = statusIconSvg(badgeKey);
+    }
+    activeStatusLabelEl.textContent = label;
     activeStatusBadgeEl.hidden = !label;
+    renderDecisionCard(report, badgeKey, label);
+  }
+
+  function renderDecisionCard(report, badgeKey, label) {
+    if (!decisionCardEl) {
+      return;
+    }
+    var isRejected = (report.status || '') === 'rejected' || badgeKey === 'rejected';
+    if (!isRejected) {
+      decisionCardEl.hidden = true;
+      return;
+    }
+    var rejection = report.rejection && typeof report.rejection === 'object' ? report.rejection : {};
+    var lang = getLang();
+    var reasonI18n = rejection.reason_i18n || {};
+    var reason = reasonI18n[lang] || rejection.reason || '';
+    var explanation = (rejection.explanation || '').trim();
+    var next = activeReportText('rejected_next', report.next_action || '');
+    decisionCardEl.hidden = false;
+    decisionCardEl.className = 'pax-ccs-portal__decision pax-ccs-portal__decision--rejected';
+    if (decisionIconEl) {
+      decisionIconEl.innerHTML = statusIconSvg('rejected');
+    }
+    if (decisionLabelEl) {
+      decisionLabelEl.textContent = label || activeReportText('status', 'Rejected');
+    }
+    if (decisionReasonWrapEl && decisionReasonEl && decisionReasonHeadingEl) {
+      if (reason) {
+        decisionReasonHeadingEl.textContent = activeReportText('rejection_heading', 'Rejection reason');
+        decisionReasonEl.textContent = reason;
+        decisionReasonWrapEl.hidden = false;
+      } else {
+        decisionReasonWrapEl.hidden = true;
+      }
+    }
+    if (decisionExplanationEl) {
+      if (explanation) {
+        decisionExplanationEl.textContent = explanation;
+        decisionExplanationEl.hidden = false;
+      } else {
+        decisionExplanationEl.hidden = true;
+      }
+    }
+    if (decisionNextWrapEl && decisionNextEl && decisionNextHeadingEl) {
+      if (next) {
+        decisionNextHeadingEl.textContent = activeReportText('rejected_next_heading', 'Next action');
+        decisionNextEl.textContent = next;
+        decisionNextWrapEl.hidden = false;
+      } else {
+        decisionNextWrapEl.hidden = true;
+      }
+    }
   }
 
   function categoryLabel(category) {
@@ -1037,7 +1122,11 @@
     }
     caseDossierEl.hidden = false;
     if (nextActionEl) {
-      nextActionEl.textContent = report.next_action || '';
+      if ((report.status || '') === 'rejected') {
+        nextActionEl.textContent = activeReportText('rejected_next', report.next_action || '');
+      } else {
+        nextActionEl.textContent = report.next_action || '';
+      }
     }
     if (continueFormBtn) {
       continueFormBtn.hidden = !(report.is_draft || report.status === 'draft');

@@ -182,8 +182,23 @@ if ( ! function_exists( 'pax_ccs_bilingual' ) ) {
 			<div class="pax-ccs-portal__wrap pax-ccs-portal__wrap--wide">
 				<div class="pax-ccs-portal__panel pax-ccs-portal__panel--active-report">
 					<div id="pax-ccs-active-status-badge" class="pax-ccs-portal__status-hero" role="status" aria-live="polite" hidden>
-						<span class="pax-ccs-portal__status-hero-dot" aria-hidden="true"></span>
+						<span class="pax-ccs-portal__status-hero-icon" id="pax-ccs-active-status-icon" aria-hidden="true"></span>
 						<span class="pax-ccs-portal__status-hero-label" id="pax-ccs-active-status-label"></span>
+					</div>
+					<div id="pax-ccs-decision-card" class="pax-ccs-portal__decision" hidden>
+						<div class="pax-ccs-portal__decision-status">
+							<span class="pax-ccs-portal__decision-icon" id="pax-ccs-decision-icon" aria-hidden="true"></span>
+							<strong class="pax-ccs-portal__decision-label" id="pax-ccs-decision-label"></strong>
+						</div>
+						<div class="pax-ccs-portal__decision-reason-wrap" id="pax-ccs-decision-reason-wrap" hidden>
+							<h3 class="pax-ccs-portal__decision-heading" id="pax-ccs-decision-reason-heading"></h3>
+							<p class="pax-ccs-portal__decision-reason" id="pax-ccs-decision-reason"></p>
+						</div>
+						<p class="pax-ccs-portal__decision-explanation" id="pax-ccs-decision-explanation" hidden></p>
+						<div class="pax-ccs-portal__decision-next-wrap" id="pax-ccs-decision-next-wrap" hidden>
+							<h3 class="pax-ccs-portal__decision-heading" id="pax-ccs-decision-next-heading"></h3>
+							<p class="pax-ccs-portal__decision-next" id="pax-ccs-decision-next"></p>
+						</div>
 					</div>
 
 					<div class="pax-ccs-portal__active-report-head">
