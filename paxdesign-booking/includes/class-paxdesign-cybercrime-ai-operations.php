@@ -78,6 +78,15 @@ class PAXdesign_Cybercrime_AI_Operations {
         $probe = self::is_status_probe($user_message);
         $asks_check = self::is_check_request($user_message);
         $same_case = self::is_same_case_continuation($user_message);
+        $status = sanitize_key((string) ($row['status'] ?? ''));
+        $is_draft = ($status === '' || $status === 'draft');
+
+        if ($is_draft && class_exists('PAXdesign_Cybercrime_AI_Workflow')) {
+            $workflow = PAXdesign_Cybercrime_AI_Workflow::decide_turn($row, $user_message, $language, $user_id);
+            if (is_array($workflow) && !empty($workflow['action']) && $workflow['action'] !== 'continue') {
+                return $workflow;
+            }
+        }
 
         if ($needs_check) {
             return array(
@@ -89,7 +98,7 @@ class PAXdesign_Cybercrime_AI_Operations {
             );
         }
 
-        if (class_exists('PAXdesign_Cybercrime_AI_Workflow')) {
+        if (!$is_draft && class_exists('PAXdesign_Cybercrime_AI_Workflow')) {
             $workflow = PAXdesign_Cybercrime_AI_Workflow::decide_turn($row, $user_message, $language, $user_id);
             if (is_array($workflow) && !empty($workflow['action']) && $workflow['action'] !== 'continue') {
                 return $workflow;

@@ -502,6 +502,9 @@ class PAXdesign_Cybercrime_Tickets {
             'description'         => (string) ($payload['description'] ?? ''),
             'financial_loss'      => (string) ($payload['financial_loss'] ?? ''),
             'financial_currency'  => (string) ($payload['financial_currency'] ?? 'EUR'),
+            'country_code'        => strtoupper((string) ($payload['country_code'] ?? '')),
+            'identity_accuracy'   => !empty($payload['identity_accuracy']),
+            'declarations'        => is_array($payload['declarations'] ?? null) ? $payload['declarations'] : array(),
         );
         if (!empty($out['description_raw'])) {
             $out['original_request']['description'] = $out['description'];

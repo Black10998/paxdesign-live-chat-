@@ -619,7 +619,7 @@ class PAXdesign_Cybercrime_AI_Case {
             return $row;
         }
 
-        $field = self::guess_attachment_field($kind, $caption, (string) ($upload['name'] ?? ''));
+        $field = self::guess_attachment_field($kind, $caption, (string) ($upload['name'] ?? ''), $row);
         $path = (string) ($upload['file'] ?? $upload['path'] ?? '');
         $sha256 = (string) ($upload['sha256'] ?? '');
         if ($sha256 === '' && $path !== '' && is_readable($path)) {
@@ -828,15 +828,44 @@ class PAXdesign_Cybercrime_AI_Case {
     }
 
     /**
-     * @param string $kind
-     * @param string $caption
-     * @param string $filename
+     * @param string                    $kind
+     * @param string                    $caption
+     * @param string                    $filename
+     * @param array<string, mixed>|null $row
      * @return string
      */
-    private static function guess_attachment_field($kind, $caption, $filename) {
+    private static function guess_attachment_field($kind, $caption, $filename, $row = null) {
         $hay = self::normalize_match_text($caption . ' ' . $filename . ' ' . $kind);
         if (preg_match('/\b(passport|national id|identity|ausweis|reisepass|هوية|جواز)\b/u', $hay)) {
             return 'identity_document';
+        }
+        $needs_id = true;
+        if (is_array($row) && class_exists('PAXdesign_Cybercrime_AI_Workflow')) {
+            $state = PAXdesign_Cybercrime_AI_Workflow::state_from_row($row);
+            $needs_id = empty($state['identity_document']);
+        } elseif (is_array($row)) {
+            $attachments = json_decode((string) ($row['attachments'] ?? ''), true);
+            $needs_id = true;
+            if (is_array($attachments)) {
+                foreach ($attachments as $file) {
+                    if (is_array($file) && sanitize_key((string) ($file['field'] ?? '')) === 'identity_document') {
+                        $needs_id = false;
+                        break;
+                    }
+                }
+            }
+        }
+        if ($needs_id) {
+            return 'identity_document';
+        }
+        if (preg_match('/\b(screenshot|screen shot|png|img_|photo)/u', $hay) || preg_match('/\.(jpe?g|png|gif|webp|heic|heif)$/i', $filename)) {
+            return 'evidence_screenshots';
+        }
+        if (preg_match('/\b(chat|whatsapp|telegram|imessage)\b/u', $hay) || preg_match('/\.(txt|csv)$/i', $filename)) {
+            return 'evidence_chats';
+        }
+        if (preg_match('/\.(pdf|docx?)$/i', $filename)) {
+            return 'evidence_documents';
         }
         return 'evidence_other';
     }
@@ -859,13 +888,14 @@ class PAXdesign_Cybercrime_AI_Case {
     private static function detect_category($normalized, $original) {
         unset($original);
         $map = array(
-            'account_takeover'       => array('compromised', 'hacked', 'takeover', 'taken over', 'account stolen', 'logged in from', 'unauthorized access', 'اختراق', 'تم اختراق', 'حسابي', 'übernommen', 'gehackt', 'kompromittiert'),
-            'phishing_fraud'         => array('phish', 'scam email', 'fake email', 'spoof', 'تصيد', 'احتيال', 'phishing', 'betrug'),
+            'account_takeover'       => array('account takeover', 'kontoübernahme', 'استيلاء على حساب', 'compromised', 'hacked', 'takeover', 'taken over', 'account stolen', 'logged in from', 'unauthorized access', 'اختراق', 'تم اختراق', 'übernommen', 'gehackt', 'kompromittiert'),
+            'financial_fraud'        => array('financial fraud', 'finanzbetrug', 'احتيال مالي', 'wire fraud', 'bank transfer', 'unauthorized payment', 'stolen money'),
             'identity_theft'         => array('identity theft', 'stolen identity', 'impersonat', 'سرقة هوية', 'identitätsdiebstahl'),
-            'malware_ransomware'     => array('ransomware', 'malware', 'virus', 'trojan', 'برمجيات خبيثة', 'فدية'),
-            'social_media_recovery'  => array('instagram hack', 'facebook hack', 'tiktok hack', 'recover my', 'استرداد حساب'),
-            'financial_fraud'        => array('wire fraud', 'bank transfer', 'unauthorized payment', 'stolen money', 'احتيال مالي', 'finanzbetrug'),
-            'data_breach'            => array('data breach', 'leaked data', 'database leak', 'تسريب', 'datenleck'),
+            'malware_ransomware'     => array('malware / ransomware', 'ransomware', 'malware', 'virus', 'trojan', 'برمجيات خبيثة', 'فدية'),
+            'social_media_recovery'  => array('social media recovery', 'social-media-wiederherstellung', 'instagram hack', 'facebook hack', 'tiktok hack', 'recover my', 'استرداد حساب تواصل', 'استرداد حساب'),
+            'data_breach'            => array('data breach', 'leaked data', 'database leak', 'تسريب بيانات', 'تسريب', 'datenleck'),
+            'phishing_fraud'         => array('phishing / fraud', 'phishing / betrug', 'phish', 'scam email', 'fake email', 'spoof', 'تصيد / احتيال', 'تصيد', 'phishing', 'betrug'),
+            'other'                  => array('other cyber incident'),
         );
         foreach ($map as $category => $needles) {
             foreach ($needles as $needle) {
@@ -885,6 +915,14 @@ class PAXdesign_Cybercrime_AI_Case {
     private static function detect_incident_date($text, $normalized) {
         $out = array();
         $year_now = (int) gmdate('Y');
+
+        if (preg_match('/\b(today|heute)\b/u', $normalized) || $normalized === 'اليوم') {
+            return self::date_parts((int) gmdate('Y'), (int) gmdate('n'), (int) gmdate('j'));
+        }
+        if (preg_match('/\b(yesterday|gestern)\b/u', $normalized) || mb_strpos($normalized, 'أمس') !== false || mb_strpos($normalized, 'امس') !== false) {
+            $ts = time() - 86400;
+            return self::date_parts((int) gmdate('Y', $ts), (int) gmdate('n', $ts), (int) gmdate('j', $ts));
+        }
 
         if (preg_match('/\b(\d{4})-(\d{2})-(\d{2})\b/', $text, $m)) {
             return self::date_parts((int) $m[1], (int) $m[2], (int) $m[3]);

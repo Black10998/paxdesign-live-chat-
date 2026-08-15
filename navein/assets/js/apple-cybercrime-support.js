@@ -241,6 +241,43 @@
   initCountryPicker();
   initGuidedInterview();
 
+  function setPhoneFromStored(phone, countryCode) {
+    phone = String(phone || '').trim();
+    if (!phone || !phoneLocalEl) {
+      return;
+    }
+    var compact = phone.replace(/\s+/g, '');
+    var best = null;
+    var bestLen = 0;
+    if (phoneCodeEl) {
+      var options = phoneCodeEl.querySelectorAll('option[data-country-code]');
+      options.forEach(function (opt) {
+        var dial = String(opt.value || '').replace(/\s/g, '');
+        var code = String(opt.getAttribute('data-country-code') || '').toUpperCase();
+        if (countryCode && code === String(countryCode).toUpperCase() && dial) {
+          best = opt;
+          bestLen = dial.length;
+        } else if (!best && dial && compact.indexOf(dial) === 0 && dial.length > bestLen) {
+          best = opt;
+          bestLen = dial.length;
+        }
+      });
+      if (best) {
+        phoneCodeEl.value = best.value;
+        var local = compact;
+        if (bestLen && compact.indexOf(String(best.value).replace(/\s/g, '')) === 0) {
+          local = compact.slice(String(best.value).replace(/\s/g, '').length);
+        }
+        phoneLocalEl.value = local.replace(/^\+/, '');
+      } else {
+        phoneLocalEl.value = phone.replace(/^\+\d{1,4}\s*/, '');
+      }
+    } else {
+      phoneLocalEl.value = phone;
+    }
+    syncPhoneField();
+  }
+
   function setCategory(value) {
     if (!categoryEl) {
       return;
@@ -1241,6 +1278,40 @@
     var urgencyEl = document.getElementById('pax-ccs-urgency');
     if (urgencyEl && orig.urgency) {
       urgencyEl.value = orig.urgency;
+    }
+    if (orig.reporter_phone) {
+      setPhoneFromStored(orig.reporter_phone, orig.country_code || '');
+    }
+    var countryCode = String(orig.country_code || '').toUpperCase();
+    if (!countryCode && orig.reporter_country) {
+      var hint = String(orig.reporter_country).toLowerCase();
+      Object.keys(countriesByCode).forEach(function (code) {
+        var country = countriesByCode[code];
+        var names = country && country.name ? [country.name.en, country.name.de, country.name.ar] : [];
+        if (names.some(function (name) { return name && String(name).toLowerCase() === hint; })) {
+          countryCode = code;
+        }
+      });
+    }
+    if (countryCode) {
+      selectCountry(countryCode);
+    }
+    var accEl = document.getElementById('pax-ccs-identity-accuracy');
+    if (accEl && orig.identity_accuracy) {
+      accEl.checked = true;
+    }
+    var decls = orig.declarations || {};
+    var truthfulEl = document.getElementById('pax-ccs-decl-truthful');
+    var falseEl = document.getElementById('pax-ccs-decl-false');
+    var verifyEl = document.getElementById('pax-ccs-decl-verify');
+    if (truthfulEl && decls.truthful) {
+      truthfulEl.checked = true;
+    }
+    if (falseEl && decls.false_reports) {
+      falseEl.checked = true;
+    }
+    if (verifyEl && decls.verification) {
+      verifyEl.checked = true;
     }
     var chatSession = document.getElementById('pax-ccs-chat-session');
     if (!chatSession) {

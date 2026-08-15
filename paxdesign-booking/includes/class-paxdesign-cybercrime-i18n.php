@@ -164,6 +164,8 @@ class PAXdesign_Cybercrime_I18n {
             'country'              => 'field.country',
             'identity_accuracy'    => 'field.identity_accuracy',
             'declarations'         => 'field.declarations',
+            'urgency'              => 'field.urgency',
+            'financial_loss'       => 'field.financial_loss',
         );
         $key = $map[strtolower($item)] ?? $map[$item] ?? '';
         return $key !== '' ? self::t($key, $lang) : self::localize_canned($item, $lang);
@@ -934,6 +936,16 @@ class PAXdesign_Cybercrime_I18n {
                 'ar' => 'إقرارات المراجعة',
                 'de' => 'Prüferklärungen',
                 'en' => 'Review declarations',
+            ),
+            'field.urgency' => array(
+                'ar' => 'درجة الاستعجال',
+                'de' => 'Dringlichkeit',
+                'en' => 'Urgency',
+            ),
+            'field.financial_loss' => array(
+                'ar' => 'الخسارة المالية',
+                'de' => 'Finanzieller Verlust',
+                'en' => 'Financial loss',
             ),
             'field.evidence_other' => array(
                 'ar' => 'أدلة أخرى',

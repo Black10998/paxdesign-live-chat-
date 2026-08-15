@@ -281,6 +281,12 @@ class PAXdesign_Cybercrime_AI_Workflow {
         $existing = is_array($existing) ? $existing : array();
         $fields = array();
         $normalized = self::normalize_text($text);
+        $step = self::current_step($existing);
+        $missing = array();
+        foreach (array(self::STEP_IDENTITY, self::STEP_INCIDENT, self::STEP_EVIDENCE, self::STEP_REVIEW) as $n) {
+            $missing = array_merge($missing, self::missing_for_step($existing, $n));
+        }
+        $first_missing = (string) ($missing[0] ?? '');
 
         $name = self::detect_full_name($text);
         if ($name !== '') {
@@ -290,6 +296,9 @@ class PAXdesign_Cybercrime_AI_Workflow {
             $fields['reporter_email'] = strtolower($m[0]);
         }
         $phone = self::detect_phone($text);
+        if ($phone === '' && in_array('phone', $missing, true) && !self::looks_like_date($text)) {
+            $phone = self::detect_phone_loose($text);
+        }
         if ($phone !== '') {
             $fields['reporter_phone'] = $phone;
         }
@@ -299,9 +308,18 @@ class PAXdesign_Cybercrime_AI_Workflow {
             $fields['country_code'] = $country['code'];
         }
 
+        if (
+            empty($fields['reporter_name'])
+            && in_array('full_name', $missing, true)
+            && self::looks_like_person_name($text, $first_missing === 'full_name')
+        ) {
+            $fields['reporter_name'] = preg_replace('/\s+/u', ' ', $text);
+        }
+
         $only_checkboxes_left = self::only_confirmations_missing($existing);
         $confirms = self::is_confirmation($normalized);
         $short_yes = self::is_short_yes($normalized);
+        $submit = self::is_submit_intent($text);
         if ($confirms || $short_yes) {
             $identity_missing = self::missing_for_step($existing, self::STEP_IDENTITY);
             if ($identity_missing === array('identity_accuracy')) {
@@ -317,7 +335,7 @@ class PAXdesign_Cybercrime_AI_Workflow {
             }
         }
 
-        if (self::is_submit_intent($text)) {
+        if ($submit) {
             $fields['submit_intent'] = true;
             if (self::review_ready_except_declarations($existing) || self::can_submit(array_merge($existing, array(
                 'decl_truthful' => true,
@@ -334,7 +352,148 @@ class PAXdesign_Cybercrime_AI_Workflow {
             }
         }
 
+        $ack_only = ($confirms || $short_yes || $submit) && empty($fields['reporter_name']) && empty($fields['reporter_email']) && empty($fields['reporter_phone']);
+        if ($ack_only && $step === self::STEP_IDENTITY && empty($fields['identity_accuracy'])) {
+            return $fields;
+        }
+
+        $label_category = self::detect_category_label($text);
+        if ($label_category !== '') {
+            $fields['category'] = $label_category;
+        }
+        if (class_exists('PAXdesign_Cybercrime_AI_Case')) {
+            $incident = PAXdesign_Cybercrime_AI_Case::extract_fields_from_message(
+                $text,
+                array(
+                    'category'      => (string) ($existing['category'] ?? ''),
+                    'platforms'     => (string) ($existing['platforms'] ?? ''),
+                    'description'   => (string) ($existing['description'] ?? ''),
+                    'incident_date' => (string) ($existing['incident_date'] ?? ''),
+                    'incident_at'   => (string) ($existing['incident_at'] ?? ''),
+                )
+            );
+            if (is_array($incident)) {
+                foreach (array('category', 'incident_date', 'incident_time', 'incident_at', 'platforms', 'urgency', 'financial_loss', 'financial_currency') as $key) {
+                    if ($key === 'category' && !empty($fields['category'])) {
+                        continue;
+                    }
+                    if (!empty($incident[$key]) && empty($fields[$key])) {
+                        $fields[$key] = $incident[$key];
+                    }
+                }
+            }
+        }
+
+        if (empty($fields['incident_date']) && in_array('incident_date', $missing, true)) {
+            $relative = self::detect_relative_date($normalized);
+            if ($relative !== '') {
+                $fields['incident_date'] = $relative;
+                $fields['incident_at'] = $relative . ' 00:00:00';
+            } elseif (preg_match('/^(\d{4})-(\d{2})-(\d{2})$/', $text, $m) && checkdate((int) $m[2], (int) $m[3], (int) $m[1])) {
+                $fields['incident_date'] = $m[0];
+                $fields['incident_at'] = $m[0] . ' 00:00:00';
+            }
+        }
+
+        $urgency = self::detect_urgency_label($normalized);
+        if ($urgency !== '') {
+            $fields['urgency'] = $urgency;
+        }
+
+        if (
+            empty($fields['platforms'])
+            && in_array('platforms', $missing, true)
+            && $first_missing === 'platforms'
+            && !$submit
+            && !$short_yes
+            && mb_strlen($text) <= 160
+            && !self::looks_like_date($text)
+        ) {
+            $fields['platforms'] = preg_replace('/\s+/u', ' ', $text);
+        }
+
+        if (
+            in_array('description', $missing, true)
+            && $step === self::STEP_INCIDENT
+            && mb_strlen($text) >= 20
+            && !$submit
+            && !$short_yes
+            && !self::is_workflow_help_intent($text)
+        ) {
+            $fields['description'] = $text;
+        }
+
         return $fields;
+    }
+
+    /**
+     * Merge extracted chat fields into a workflow state (no database).
+     *
+     * @param array<string, mixed> $state
+     * @param array<string, mixed> $fields
+     * @return array<string, mixed>
+     */
+    public static function merge_extracted_into_state($state, $fields) {
+        $state = is_array($state) ? $state : array();
+        $fields = is_array($fields) ? $fields : array();
+        if (!empty($fields['reporter_name'])) {
+            $state['full_name'] = trim((string) $fields['reporter_name']);
+        }
+        if (!empty($fields['reporter_email'])) {
+            $state['email'] = trim((string) $fields['reporter_email']);
+        }
+        if (!empty($fields['reporter_phone'])) {
+            $state['phone'] = trim((string) $fields['reporter_phone']);
+            $digits = preg_replace('/[^\d]/', '', $state['phone']);
+            $state['phone_digits'] = is_string($digits) ? $digits : '';
+        }
+        if (!empty($fields['reporter_country'])) {
+            $state['country'] = trim((string) $fields['reporter_country']);
+        }
+        if (!empty($fields['country_code'])) {
+            $state['country_code'] = strtoupper(sanitize_text_field((string) $fields['country_code']));
+        }
+        if (!empty($fields['identity_accuracy'])) {
+            $state['identity_accuracy'] = true;
+        }
+        if (!empty($fields['declarations']) && is_array($fields['declarations'])) {
+            $state['decl_truthful'] = !empty($fields['declarations']['truthful']);
+            $state['decl_false_reports'] = !empty($fields['declarations']['false_reports']);
+            $state['decl_verification'] = !empty($fields['declarations']['verification']);
+        }
+        foreach (array('category', 'incident_date', 'incident_time', 'incident_at', 'platforms', 'description', 'urgency', 'financial_loss', 'financial_currency') as $key) {
+            if (isset($fields[$key]) && (string) $fields[$key] !== '') {
+                $state[$key] = $fields[$key];
+            }
+        }
+        return $state;
+    }
+
+    /**
+     * Apply one customer message (and optional chat uploads) to the same CCS state.
+     *
+     * @param array<string, mixed>             $state
+     * @param string                           $message
+     * @param array<int, array<string, mixed>> $files
+     * @return array<string, mixed>
+     */
+    public static function advance_state($state, $message, $files = array()) {
+        $state = self::merge_extracted_into_state($state, self::extract_from_message($message, $state));
+        foreach ((array) $files as $file) {
+            if (!is_array($file)) {
+                continue;
+            }
+            $field = sanitize_key((string) ($file['field'] ?? ''));
+            $name = (string) ($file['name'] ?? $file['original_name'] ?? 'file');
+            if ($field === 'identity_document' || (empty($state['identity_document']) && $field === '')) {
+                $state['identity_document'] = true;
+                $state['identity_files'] = array_values(array_filter(array_merge((array) ($state['identity_files'] ?? array()), array($name))));
+            } else {
+                $state['has_evidence'] = true;
+                $state['evidence_files'] = array_values(array_filter(array_merge((array) ($state['evidence_files'] ?? array()), array($name))));
+            }
+        }
+        return $state;
     }
 
     /**
@@ -362,7 +521,7 @@ class PAXdesign_Cybercrime_AI_Workflow {
             return false;
         }
         return (bool) preg_match(
-            '/(?:help .{0,24}(?:submit|file|report)|submit a report|file a report|start (?:the )?report|أريد (?:تقديم|فتح|إرسال) بلاغ|اريد (?:تقديم|فتح|ارسال) بلاغ|مساعدة.{0,20}بلاغ|bericht (?:erstatten|einreichen)|meldung (?:erstatten|einreichen))/u',
+            '/(?:help .{0,24}(?:submit|file|report)|submit a report|file a report|start (?:the )?report|i (?:want|need|would like) to (?:submit|file|report)|أريد (?:تقديم|فتح|إرسال) بلاغ|اريد (?:تقديم|فتح|ارسال) بلاغ|مساعدة.{0,20}بلاغ|bericht.{0,24}(?:erstatten|einreichen)|meldung.{0,24}(?:erstatten|einreichen)|mochte.{0,24}bericht)/u',
             $normalized
         );
     }
@@ -550,6 +709,8 @@ class PAXdesign_Cybercrime_AI_Workflow {
             'description' => array('en' => 'incident description', 'de' => 'Beschreibung des Vorfalls', 'ar' => 'وصف الحادثة'),
             'evidence_files' => array('en' => 'evidence files', 'de' => 'Beweisdateien', 'ar' => 'ملفات الأدلة'),
             'declarations' => array('en' => 'review declarations', 'de' => 'Prüferklärungen', 'ar' => 'إقرارات المراجعة'),
+            'urgency' => array('en' => 'urgency', 'de' => 'Dringlichkeit', 'ar' => 'درجة الاستعجال'),
+            'financial_loss' => array('en' => 'financial loss', 'de' => 'finanzieller Verlust', 'ar' => 'الخسارة المالية'),
         );
         if (class_exists('PAXdesign_Cybercrime_I18n')) {
             $mapped = PAXdesign_Cybercrime_I18n::missing_field_label($key, $lang);
@@ -580,19 +741,23 @@ class PAXdesign_Cybercrime_AI_Workflow {
         if (!empty($state['incident_time'])) {
             $date = trim($date . ' ' . $state['incident_time']);
         }
-        $none = $lang === 'ar' ? '—' : ($lang === 'de' ? '—' : '—');
+        $none = '—';
+        $yes = $lang === 'ar' ? 'نعم' : ($lang === 'de' ? 'Ja' : 'Yes');
+        $no = $lang === 'ar' ? 'لا' : ($lang === 'de' ? 'Nein' : 'No');
         return array(
             array('label' => self::field_label('full_name', $lang), 'value' => (string) ($state['full_name'] ?: $none)),
             array('label' => self::field_label('email', $lang), 'value' => (string) ($state['email'] ?: $none)),
             array('label' => self::field_label('phone', $lang), 'value' => (string) ($state['phone'] ?: $none)),
             array('label' => self::field_label('country', $lang), 'value' => (string) (($state['country'] ?: $state['country_code']) ?: $none)),
             array('label' => self::field_label('identity_document', $lang), 'value' => $id_files !== '' ? $id_files : $none),
-            array('label' => self::field_label('incident_type', $lang), 'value' => (string) ($state['category'] ?: $none)),
+            array('label' => self::field_label('incident_type', $lang), 'value' => self::category_display((string) ($state['category'] ?? ''), $lang) ?: $none),
             array('label' => self::field_label('incident_date', $lang), 'value' => $date !== '' ? $date : $none),
             array('label' => self::field_label('platforms', $lang), 'value' => (string) ($state['platforms'] ?: $none)),
+            array('label' => self::field_label('urgency', $lang), 'value' => self::urgency_display((string) ($state['urgency'] ?? ''), $lang) ?: $none),
+            array('label' => self::field_label('financial_loss', $lang), 'value' => $loss !== '' ? $loss : $none),
             array('label' => self::field_label('description', $lang), 'value' => (string) ($state['description'] ?: $none)),
             array('label' => self::field_label('evidence_files', $lang), 'value' => $evidence !== '' ? $evidence : $none),
-            array('label' => self::field_label('declarations', $lang), 'value' => (!empty($state['decl_truthful']) && !empty($state['decl_false_reports']) && !empty($state['decl_verification'])) ? ($lang === 'ar' ? 'نعم' : ($lang === 'de' ? 'Ja' : 'Yes')) : ($lang === 'ar' ? 'لا' : ($lang === 'de' ? 'Nein' : 'No'))),
+            array('label' => self::field_label('declarations', $lang), 'value' => (!empty($state['decl_truthful']) && !empty($state['decl_false_reports']) && !empty($state['decl_verification'])) ? $yes : $no),
         );
     }
 
@@ -831,7 +996,7 @@ class PAXdesign_Cybercrime_AI_Workflow {
         $rows = array(
             array('AT', 'austria', 'österreich', 'osterreich', 'النمسا'),
             array('DE', 'germany', 'deutschland', 'ألمانيا', 'المانيا'),
-            array('EG', 'egypt', 'ägyptenagypten', 'مصر'),
+            array('EG', 'egypt', 'ägypten', 'agypten', 'مصر'),
             array('SA', 'saudi arabia', 'saudi', 'السعودية', 'السعوديه'),
             array('AE', 'united arab emirates', 'uae', 'emirates', 'الإمارات', 'الامارات'),
             array('US', 'united states', 'usa', 'america', 'الولايات المتحدة', 'امريكا'),
@@ -878,14 +1043,197 @@ class PAXdesign_Cybercrime_AI_Workflow {
      * @return string
      */
     private static function detect_full_name($text) {
-        if (preg_match('/(?:my (?:full |legal )?name is|full (?:legal )?name[:\s]+|ich heiße|ich heisse|mein name ist|اسمي(?: الكامل)?(?: هو)?[:\s]+)\s*([^\n.,]{2,80})/iu', $text, $m)) {
+        if (preg_match('/(?:my (?:full |legal )?name is|full (?:legal )?name[:\s]+|i am called|ich heiße|ich heisse|mein name ist|اسمي(?: الكامل)?(?: هو)?[:\s]+)\s*([^\n.,]{2,80})/iu', $text, $m)) {
             $name = trim($m[1]);
             $name = preg_replace('/\s+/', ' ', $name);
-            if (is_string($name) && strlen($name) >= 2) {
+            if (is_string($name) && strlen($name) >= 2 && !self::looks_like_date($name)) {
                 return $name;
             }
         }
         return '';
+    }
+
+    /**
+     * @param string $text
+     * @param bool   $asked
+     * @return bool
+     */
+    private static function looks_like_person_name($text, $asked = false) {
+        $text = trim((string) $text);
+        unset($asked);
+        if ($text === '' || mb_strlen($text) < 2 || mb_strlen($text) > 80) {
+            return false;
+        }
+        if (strpos($text, '@') !== false || self::looks_like_date($text)) {
+            return false;
+        }
+        $normalized = self::normalize_text($text);
+        if (
+            self::is_submit_intent($text)
+            || self::is_workflow_help_intent($text)
+            || self::is_short_yes($normalized)
+            || self::is_confirmation($normalized)
+            || self::detect_category_label($text) !== ''
+        ) {
+            return false;
+        }
+        if (preg_match('/^(instagram|github|gmail|facebook|whatsapp|paypal|google|icloud|apple|microsoft|binance)$/u', $normalized)) {
+            return false;
+        }
+        $country = self::detect_country($text);
+        $words = preg_split('/\s+/u', $text);
+        $word_count = is_array($words) ? count($words) : 0;
+        if ($country !== '' && $word_count <= 4) {
+            return false;
+        }
+        if ($word_count > 6) {
+            return false;
+        }
+        foreach ((array) $words as $word) {
+            if (!preg_match('/^[\p{L}][\p{L}\'\-]{0,40}$/u', $word)) {
+                return false;
+            }
+        }
+        if (preg_match('/^(help|submit|report|please|incident|phishing|konto|بلاغ|hilfe|meldung|ich|mochte|einen|bericht|einreichen)/iu', $normalized)) {
+            return false;
+        }
+        return true;
+    }
+
+    /**
+     * @param string $text
+     * @return bool
+     */
+    private static function looks_like_date($text) {
+        $text = trim((string) $text);
+        return (bool) preg_match('/^\d{4}-\d{2}-\d{2}$/', $text)
+            || (bool) preg_match('/^\d{1,2}[\/.\-]\d{1,2}[\/.\-]\d{2,4}$/', $text);
+    }
+
+    /**
+     * @param string $text
+     * @return string
+     */
+    private static function detect_phone_loose($text) {
+        if (preg_match('/(?:\+|00)?\d[\d\s().\-]{5,18}\d/', $text, $m)) {
+            $raw = trim($m[0]);
+            $digits = preg_replace('/[^\d]/', '', $raw);
+            if (is_string($digits) && strlen($digits) >= 6 && strlen($digits) <= 15 && !self::looks_like_date($text)) {
+                return $raw;
+            }
+        }
+        return '';
+    }
+
+    /**
+     * Match the website category cards in AR / DE / EN.
+     *
+     * @param string $text
+     * @return string
+     */
+    private static function detect_category_label($text) {
+        $normalized = self::normalize_text($text);
+        if ($normalized === '') {
+            return '';
+        }
+        $map = array(
+            'account_takeover'      => array('account takeover', 'kontoübernahme', 'kontoubernahme', 'استيلاء على حساب', 'account_takeover'),
+            'phishing_fraud'        => array('phishing / fraud', 'phishing / betrug', 'phishing', 'تصيد / احتيال', 'تصيد', 'phishing_fraud'),
+            'identity_theft'        => array('identity theft', 'identitätsdiebstahl', 'identitatsdiebstahl', 'سرقة هوية', 'identity_theft'),
+            'malware_ransomware'    => array('malware / ransomware', 'ransomware', 'malware', 'برمجيات خبيثة / فدية', 'برمجيات خبيثة', 'malware_ransomware'),
+            'social_media_recovery' => array('social media recovery', 'social-media-wiederherstellung', 'استرداد حساب تواصل', 'استرداد حساب', 'social_media_recovery'),
+            'financial_fraud'       => array('financial fraud', 'finanzbetrug', 'احتيال مالي', 'financial_fraud'),
+            'data_breach'           => array('data breach', 'datenleck', 'تسريب بيانات', 'data_breach'),
+            'other'                 => array('other cyber incident', 'sonstiges', 'أخرى', 'other'),
+        );
+        foreach ($map as $key => $needles) {
+            foreach ($needles as $needle) {
+                $needle = self::normalize_text($needle);
+                if ($needle === '') {
+                    continue;
+                }
+                if ($key === 'other' || $needle === 'other') {
+                    if ($normalized === $needle) {
+                        return $key;
+                    }
+                    continue;
+                }
+                if ($normalized === $needle || mb_strpos($normalized, $needle) !== false) {
+                    return $key;
+                }
+            }
+        }
+        return '';
+    }
+
+    /**
+     * @param string $normalized
+     * @return string
+     */
+    private static function detect_relative_date($normalized) {
+        if (preg_match('/^(today|heute|اليوم)$/u', $normalized) || preg_match('/\b(today|heute)\b/u', $normalized) || mb_strpos($normalized, 'اليوم') !== false) {
+            return gmdate('Y-m-d');
+        }
+        if (preg_match('/^(yesterday|gestern|أمس|امس)$/u', $normalized) || preg_match('/\b(yesterday|gestern)\b/u', $normalized) || mb_strpos($normalized, 'أمس') !== false || mb_strpos($normalized, 'امس') !== false) {
+            return gmdate('Y-m-d', time() - 86400);
+        }
+        return '';
+    }
+
+    /**
+     * @param string $normalized
+     * @return string
+     */
+    private static function detect_urgency_label($normalized) {
+        if (preg_match('/(?:critical|kritisch|حرج)/u', $normalized)) {
+            return 'critical';
+        }
+        if (preg_match('/(?:high urgency|very urgent|\bhigh\b|\bhoch\b|مرتفع|عاجل|dringend)/u', $normalized)) {
+            return 'high';
+        }
+        if (preg_match('/(?:medium|\bmittel\b|متوسط)/u', $normalized)) {
+            return 'medium';
+        }
+        if (preg_match('/(?:low urgency|not urgent|\blow\b|\bniedrig\b|منخفض)/u', $normalized)) {
+            return 'low';
+        }
+        return '';
+    }
+
+    /**
+     * @param string $key
+     * @param string $lang
+     * @return string
+     */
+    private static function category_display($key, $lang) {
+        $map = array(
+            'account_takeover'      => array('en' => 'Account takeover', 'de' => 'Kontoübernahme', 'ar' => 'استيلاء على حساب'),
+            'phishing_fraud'        => array('en' => 'Phishing / fraud', 'de' => 'Phishing / Betrug', 'ar' => 'تصيد / احتيال'),
+            'identity_theft'        => array('en' => 'Identity theft', 'de' => 'Identitätsdiebstahl', 'ar' => 'سرقة هوية'),
+            'malware_ransomware'    => array('en' => 'Malware / ransomware', 'de' => 'Malware / Ransomware', 'ar' => 'برمجيات خبيثة / فدية'),
+            'social_media_recovery' => array('en' => 'Social media recovery', 'de' => 'Social-Media-Wiederherstellung', 'ar' => 'استرداد حساب تواصل'),
+            'financial_fraud'       => array('en' => 'Financial fraud', 'de' => 'Finanzbetrug', 'ar' => 'احتيال مالي'),
+            'data_breach'           => array('en' => 'Data breach', 'de' => 'Datenleck', 'ar' => 'تسريب بيانات'),
+            'other'                 => array('en' => 'Other cyber incident', 'de' => 'Sonstiges', 'ar' => 'أخرى'),
+        );
+        $key = sanitize_key((string) $key);
+        return $map[$key][$lang] ?? $map[$key]['en'] ?? $key;
+    }
+
+    /**
+     * @param string $key
+     * @param string $lang
+     * @return string
+     */
+    private static function urgency_display($key, $lang) {
+        $map = array(
+            'low'      => array('en' => 'Low', 'de' => 'Niedrig', 'ar' => 'منخفض'),
+            'medium'   => array('en' => 'Medium', 'de' => 'Mittel', 'ar' => 'متوسط'),
+            'high'     => array('en' => 'High', 'de' => 'Hoch', 'ar' => 'مرتفع'),
+            'critical' => array('en' => 'Critical — happening now', 'de' => 'Kritisch — läuft gerade', 'ar' => 'حرج — نشط الآن'),
+        );
+        $key = sanitize_key((string) $key);
+        return $map[$key][$lang] ?? $map[$key]['en'] ?? '';
     }
 
     /**
@@ -979,8 +1327,13 @@ class PAXdesign_Cybercrime_AI_Workflow {
      * @return string
      */
     private static function normalize_text($text) {
-        $text = strtolower(trim((string) $text));
-        $text = str_replace(array('’', '‘', '`', 'ö', 'ä', 'ü', 'ß'), array("'", "'", "'", 'o', 'a', 'u', 'ss'), $text);
+        $text = trim((string) $text);
+        if (function_exists('mb_strtolower')) {
+            $text = mb_strtolower($text, 'UTF-8');
+        } else {
+            $text = strtolower($text);
+        }
+        $text = str_replace(array('’', '‘', '`', 'ö', 'ä', 'ü', 'ß', 'Ö', 'Ä', 'Ü'), array("'", "'", "'", 'o', 'a', 'u', 'ss', 'o', 'a', 'u'), $text);
         $text = preg_replace('/[?؟!.]+$/u', '', $text);
         $text = preg_replace('/\s+/', ' ', $text);
         return is_string($text) ? trim($text) : '';
