@@ -1196,6 +1196,7 @@ class PAXdesign_Message_Store {
             'link_scan_completed_at', 'link_scan_provider',
             'link_scan_frame', 'link_scan_label', 'link_scan_analysis',
             'link_scan_original_content',
+            'ccs_operation_id', 'ccs_operation_status', 'ccs_operation_type', 'ccs_operation_label',
         );
         $meta = array();
         foreach ($allowed as $key) {

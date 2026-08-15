@@ -3257,6 +3257,18 @@ class PAXdesign_Chat_Live {
             if ($role === 'user' && !empty($msg['link_scan_original_content'])) {
                 $entry['link_scan_original_content'] = sanitize_textarea_field((string) $msg['link_scan_original_content']);
             }
+            if (!empty($msg['ccs_operation_id'])) {
+                $entry['ccs_operation_id'] = sanitize_text_field((string) $msg['ccs_operation_id']);
+            }
+            if (!empty($msg['ccs_operation_status'])) {
+                $entry['ccs_operation_status'] = sanitize_key((string) $msg['ccs_operation_status']);
+            }
+            if (!empty($msg['ccs_operation_type'])) {
+                $entry['ccs_operation_type'] = sanitize_key((string) $msg['ccs_operation_type']);
+            }
+            if (!empty($msg['ccs_operation_label'])) {
+                $entry['ccs_operation_label'] = sanitize_text_field((string) $msg['ccs_operation_label']);
+            }
             if ($role === 'admin') {
                 $sender_id = !empty($msg['sender_id']) ? absint($msg['sender_id']) : 0;
                 if ($sender_id <= 0 && $fallback_agent_id > 0) {

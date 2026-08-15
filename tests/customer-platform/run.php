@@ -287,16 +287,27 @@ $ccs_chat = file_get_contents($ccs_root . '/includes/class-paxdesign-chat-knowle
 cx_assert_true(strpos($ccs_chat, 'TWO interfaces on the SAME CCS case') !== false, 'Live Chat must write into the real CCS case');
 cx_assert_true(strpos($ccs_chat, 'Never restart the questionnaire') !== false, 'Assistant must stay on the existing reference');
 cx_assert_true(strpos($ccs_chat, 'Do not ask for information that is already listed') !== false, 'Assistant must not re-ask saved fields');
+cx_assert_true(strpos($ccs_chat, 'never greet as a new visitor') !== false, 'Assistant must not restart on follow-up status messages');
 
 $ccs_ai = file_get_contents($ccs_root . '/includes/class-paxdesign-cybercrime-ai-case.php');
 cx_assert_true(strpos($ccs_ai, 'class PAXdesign_Cybercrime_AI_Case') !== false, 'AI case sync class must exist');
 cx_assert_true(strpos($ccs_ai, 'ingest_chat_message') !== false, 'Chat must ingest facts into the CCS case');
 cx_assert_true(strpos($ccs_ai, 'login_required_payload') !== false, 'CCS chat must require authentication');
 cx_assert_true(strpos($ccs_ai, 'user_can_view_report') !== false, 'AI case writes must be ownership-checked');
+cx_assert_true(strpos($ccs_ai, 'get_reference_for_session') !== false, 'CCS chat must stay bound to the same case after follow-up messages');
+
+$ccs_ops_src = file_get_contents($ccs_root . '/includes/class-paxdesign-cybercrime-ai-operations.php');
+cx_assert_true(strpos($ccs_ops_src, 'class PAXdesign_Cybercrime_AI_Operations') !== false, 'AI operations class must exist');
+cx_assert_true(strpos($ccs_ops_src, 'start_document_check') !== false, 'File checks must create a tracked operation');
+cx_assert_true(strpos($ccs_ops_src, 'still_running_copy') !== false, 'Running operations must have a status reply');
+cx_assert_true(strpos($ccs_ops_src, 'Your files are still being checked') !== false, 'Status probe during a check must not restart the chat');
+cx_assert_true(strpos($ccs_ops_src, 'ai_operations') !== false, 'Operations must persist on the same CCS case payload');
 
 $ccs_chat_php = file_get_contents($ccs_root . '/includes/class-paxdesign-chat.php');
 cx_assert_true(strpos($ccs_chat_php, 'ingest_ccs_case_from_chat') !== false, 'Authenticated chat must persist CCS facts before the model replies');
 cx_assert_true(strpos($ccs_chat_php, 'ccs_case') !== false, 'Chat must emit case sync events to the page');
+cx_assert_true(strpos($ccs_chat_php, 'apply_ccs_operation_turn') !== false, 'Chat must load CCS operation state before replying');
+cx_assert_true(strpos($ccs_chat_php, 'ccs_operation') !== false, 'Chat must emit a visible processing operation to the conversation');
 
 $ccs_intake = file_get_contents($ccs_root . '/includes/class-paxdesign-cybercrime-intake.php');
 cx_assert_true(strpos($ccs_intake, 'document_checks') !== false, 'Intake must store document check results on the case');
@@ -332,11 +343,14 @@ cx_assert_true(strpos($ccs_page, 'pax-ccs-continue-form') !== false, 'Existing c
 $ccs_widget = file_get_contents($ccs_root . '/assets/js/chat-script.js');
 cx_assert_true(strpos($ccs_widget, 'isCybercrimeCaseChat') !== false, 'CCS chat must force the Sign In gate');
 cx_assert_true(strpos($ccs_widget, 'dispatchCcsCaseUpdate') !== false, 'Chat must notify the case page after a save');
+cx_assert_true(strpos($ccs_widget, 'ccs_operation') !== false, 'Chat must render a processing state for CCS operations');
+cx_assert_true(strpos($ccs_widget, 'upsertCcsOperationMessage') !== false, 'Chat must keep the same processing message across follow-ups');
 
 $plugin_bootstrap = file_get_contents($ccs_root . '/paxdesign-booking.php');
-cx_assert_true(strpos($plugin_bootstrap, "define('PAXDESIGN_BOOKING_VERSION', '3.175.1')") !== false, 'Plugin version must be 3.175.1');
+cx_assert_true(strpos($plugin_bootstrap, "define('PAXDESIGN_BOOKING_VERSION', '3.175.2')") !== false, 'Plugin version must be 3.175.2');
 cx_assert_true(strpos($plugin_bootstrap, 'class-paxdesign-cybercrime-document-checks.php') !== false, 'Plugin must load document checks');
 cx_assert_true(strpos($plugin_bootstrap, 'class-paxdesign-cybercrime-ai-case.php') !== false, 'Plugin must load AI case sync');
+cx_assert_true(strpos($plugin_bootstrap, 'class-paxdesign-cybercrime-ai-operations.php') !== false, 'Plugin must load AI operation state');
 cx_assert_true(strpos($plugin_bootstrap, 'PAXdesign_Cybercrime_Admin_Reminders::init') !== false, 'Plugin must boot admin review reminders');
 
 if (!defined('ABSPATH')) {
@@ -381,5 +395,40 @@ cx_assert_true(stripos((string) ($extracted['platforms'] ?? ''), 'Email') !== fa
 
 $merged = PAXdesign_Cybercrime_AI_Case::merge_platform_list('GitHub', array('Gmail'), false);
 cx_assert_true($merged === 'GitHub, Gmail' || strpos($merged, 'Gmail') !== false, 'Additional platforms must merge into the same case');
+
+if (!function_exists('mb_strlen')) {
+    function mb_strlen($string) {
+        return strlen((string) $string);
+    }
+}
+require_once $ccs_root . '/includes/class-paxdesign-cybercrime-ai-operations.php';
+cx_assert_true(PAXdesign_Cybercrime_AI_Operations::is_status_probe('?') === true, 'A lone ? must be treated as a status probe on the same case');
+cx_assert_true(PAXdesign_Cybercrime_AI_Operations::is_status_probe('still checking') === true, 'A checking follow-up must stay on the running operation');
+cx_assert_true(PAXdesign_Cybercrime_AI_Operations::is_status_probe('Guten Tag! Wie kann ich Ihnen helfen?') === false, 'A greeting must not be classified as a status probe');
+cx_assert_true(PAXdesign_Cybercrime_AI_Operations::is_check_request('Please check the uploaded files') === true, 'A verify-files request must start a tracked check');
+cx_assert_true(
+    PAXdesign_Cybercrime_AI_Operations::attachments_need_check(
+        array(array('name' => 'id.pdf', 'sha256' => 'aaa')),
+        array()
+    ) === true,
+    'New uploads without saved checks must start a document-check operation'
+);
+cx_assert_true(
+    PAXdesign_Cybercrime_AI_Operations::attachments_need_check(
+        array(array('name' => 'id.pdf', 'original_name' => 'id.pdf', 'sha256' => 'aaa')),
+        array('files' => array(array('filename' => 'id.pdf', 'sha256' => 'aaa')))
+    ) === false,
+    'Already checked files must not restart a new verification'
+);
+$public_op = PAXdesign_Cybercrime_AI_Operations::public_operation(array(
+    'id' => 'op-test',
+    'type' => 'document_check',
+    'status' => 'running',
+    'label' => 'Checking uploaded files…',
+    'reference_id' => 'CCS-20260815-18FF0B59',
+    'started_at' => '2026-08-15 17:00:00',
+));
+cx_assert_true(($public_op['status'] ?? '') === 'running', 'Public operation payload must expose running status');
+cx_assert_true(($public_op['reference_id'] ?? '') === 'CCS-20260815-18FF0B59', 'Public operation payload must stay on the same CCS reference');
 
 echo "OK: customer platform static verification passed (" . count($files) . " modules)\n";

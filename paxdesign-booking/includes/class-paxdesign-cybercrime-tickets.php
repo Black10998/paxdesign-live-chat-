@@ -474,6 +474,12 @@ class PAXdesign_Cybercrime_Tickets {
         $out['is_draft'] = ($raw_status === 'draft' || $workflow_status === 'draft');
         $out['missing_fields'] = self::missing_case_fields($out, $row, $payload);
         $out['case_summary'] = self::build_case_summary_text($out);
+        if (class_exists('PAXdesign_Cybercrime_AI_Operations') && !empty($payload['ai_operations']) && is_array($payload['ai_operations'])) {
+            $last = end($payload['ai_operations']);
+            if (is_array($last)) {
+                $out['ai_operation'] = PAXdesign_Cybercrime_AI_Operations::public_operation($last);
+            }
+        }
 
         if ($with_timeline) {
             if ($timeline_audience === 'admin') {
@@ -1507,6 +1513,13 @@ class PAXdesign_Cybercrime_Tickets {
 
         $lines[] = '- AI assistant chat is a separate channel and is NOT part of this official timeline.';
         $lines[] = '- Never invent reference numbers, staff messages, or status changes not listed above.';
+        if (class_exists('PAXdesign_Cybercrime_AI_Operations')) {
+            $op_block = PAXdesign_Cybercrime_AI_Operations::prompt_state_block($report);
+            if ($op_block !== '') {
+                $lines[] = '';
+                $lines[] = $op_block;
+            }
+        }
 
         return implode("\n", $lines);
     }

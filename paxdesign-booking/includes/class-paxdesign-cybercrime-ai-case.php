@@ -82,6 +82,20 @@ class PAXdesign_Cybercrime_AI_Case {
             return true;
         }
 
+        if ($session_id !== '' && class_exists('PAXdesign_Cybercrime_Tickets')) {
+            $bound = PAXdesign_Cybercrime_Tickets::get_reference_for_session($session_id);
+            if (is_string($bound) && $bound !== '') {
+                return true;
+            }
+        }
+
+        if ($session_id !== '') {
+            $stored_ref = get_transient('pax_chat_page_ref_' . md5($session_id));
+            if (is_string($stored_ref) && $stored_ref !== '') {
+                return true;
+            }
+        }
+
         return false;
     }
 
@@ -497,14 +511,24 @@ class PAXdesign_Cybercrime_AI_Case {
         }
 
         $field = self::guess_attachment_field($kind, $caption, (string) ($upload['name'] ?? ''));
+        $path = (string) ($upload['file'] ?? $upload['path'] ?? '');
+        $sha256 = (string) ($upload['sha256'] ?? '');
+        if ($sha256 === '' && $path !== '' && is_readable($path)) {
+            $sha256 = hash_file('sha256', $path);
+        }
+        $size = (string) ($upload['size'] ?? '');
+        if ($size === '' && $path !== '' && is_file($path)) {
+            $size = (string) filesize($path);
+        }
         $record = array(
             'field'         => $field,
             'name'          => sanitize_file_name((string) ($upload['name'] ?? 'file')),
             'original_name' => sanitize_file_name((string) ($upload['name'] ?? 'file')),
             'url'           => esc_url_raw((string) ($upload['url'] ?? '')),
+            'path'          => $path,
             'type'          => sanitize_text_field((string) ($upload['mime'] ?? $upload['type'] ?? '')),
-            'size'          => (string) ($upload['size'] ?? ''),
-            'sha256'        => (string) ($upload['sha256'] ?? ''),
+            'size'          => $size,
+            'sha256'        => $sha256,
             'source'        => 'ai_chat',
         );
         if ($record['url'] === '' && $record['name'] === 'file') {
@@ -522,6 +546,7 @@ class PAXdesign_Cybercrime_AI_Case {
             $payload = array();
         }
         $payload['last_chat_update_at'] = current_time('mysql', true);
+        $payload['pending_document_check'] = true;
 
         global $wpdb;
         $wpdb->update(
@@ -569,7 +594,7 @@ class PAXdesign_Cybercrime_AI_Case {
             return array();
         }
         $original = is_array($report['original_request'] ?? null) ? $report['original_request'] : array();
-        return array(
+        $out = array(
             'reference_id'     => (string) ($report['reference_id'] ?? ''),
             'status'           => (string) ($report['status'] ?? ''),
             'status_label'     => (string) ($report['status_label'] ?? ''),
@@ -587,6 +612,22 @@ class PAXdesign_Cybercrime_AI_Case {
             'created_at'       => (string) ($report['created_at'] ?? ''),
             'updated_at'       => (string) ($report['updated_at'] ?? ''),
         );
+        if (class_exists('PAXdesign_Cybercrime_AI_Operations')) {
+            $operation = is_array($report['ai_operation'] ?? null) ? $report['ai_operation'] : null;
+            if (!$operation) {
+                $payload = json_decode((string) ($report['payload'] ?? ''), true);
+                if (is_array($payload) && !empty($payload['ai_operations']) && is_array($payload['ai_operations'])) {
+                    $last = end($payload['ai_operations']);
+                    if (is_array($last)) {
+                        $operation = $last;
+                    }
+                }
+            }
+            if (is_array($operation) && !empty($operation['id'])) {
+                $out['ai_operation'] = PAXdesign_Cybercrime_AI_Operations::public_operation($operation);
+            }
+        }
+        return $out;
     }
 
     /**

@@ -2505,6 +2505,38 @@ body.paxdesign-agent-profile-open {
   30%           { opacity: 1; transform: scale(1); }
 }
 
+#paxdesign-booking-root .paxdesign-booking-chat-ccs-op {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  min-height: 20px;
+}
+
+#paxdesign-booking-root .paxdesign-booking-chat-ccs-op__spinner {
+  width: 14px;
+  height: 14px;
+  border-radius: 50%;
+  border: 1.5px solid rgba(255, 255, 255, 0.18);
+  border-top-color: rgba(255, 255, 255, 0.92);
+  flex: 0 0 14px;
+  animation: paxdesign-chat-ccs-spin 0.8s linear infinite;
+}
+
+#paxdesign-booking-root .paxdesign-booking-chat-ccs-op__label {
+  font-size: 14px;
+  letter-spacing: -0.01em;
+  color: inherit;
+  line-height: 1.4;
+}
+
+#paxdesign-booking-root .paxdesign-booking-chat-message--ccs-complete .paxdesign-booking-chat-ccs-op__spinner {
+  display: none;
+}
+
+@keyframes paxdesign-chat-ccs-spin {
+  to { transform: rotate(360deg); }
+}
+
 #paxdesign-booking-root .paxdesign-booking-chat-quick-actions {
   display: grid;
   grid-template-columns: repeat(2, minmax(0, 1fr));

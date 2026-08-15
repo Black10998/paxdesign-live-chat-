@@ -1,6 +1,6 @@
 /**
  * PAXdesign AI Chat — Sales & Booking Assistant
- * Version: 3.174.91
+ * Version: 3.175.2
  */
 (function () {
   'use strict';
@@ -866,6 +866,53 @@
     try {
       window.dispatchEvent(new CustomEvent('pax-ccs-case-updated', { detail: { report: report } }));
     } catch (e) {}
+  }
+
+  function setCcsOperationMessageStatus(msgEl, status) {
+    if (!msgEl) return;
+    status = status || '';
+    msgEl.setAttribute('data-ccs-op-status', status);
+    msgEl.classList.toggle('paxdesign-booking-chat-message--ccs-running', status === 'running');
+    msgEl.classList.toggle('paxdesign-booking-chat-message--ccs-complete', status === 'complete' || status === 'failed');
+    var op = msgEl.querySelector('.paxdesign-booking-chat-ccs-op');
+    if (op) op.setAttribute('data-ccs-op-status', status);
+    if (status !== 'running') {
+      var spinner = msgEl.querySelector('.paxdesign-booking-chat-ccs-op__spinner');
+      if (spinner) spinner.style.display = 'none';
+    }
+  }
+
+  function upsertCcsOperationMessage(msg) {
+    if (!msg) return null;
+    var opId = msg.ccs_operation_id || '';
+    if (msg.id) {
+      var existingById = threadEl.querySelector('[data-msg-id="' + msg.id + '"]');
+      if (existingById) {
+        if (msg.ccs_operation_status) {
+          setCcsOperationMessageStatus(existingById, msg.ccs_operation_status);
+        }
+        return existingById;
+      }
+    }
+    if (opId && msg.ccs_operation_status && msg.ccs_operation_status !== 'running') {
+      var running = threadEl.querySelector('[data-ccs-op-id="' + opId + '"][data-ccs-op-status="running"]');
+      if (running) setCcsOperationMessageStatus(running, msg.ccs_operation_status);
+    }
+    if (msg.role === 'user') return null;
+    rememberMessageIdentity(msg);
+    var rendered = renderMessageDom(
+      msg.role || 'assistant',
+      messageText(msg.content),
+      msg.id || nextLocalId(),
+      messageRenderOpts(msg, { skipPush: true })
+    );
+    messages.push({
+      role: msg.role || 'assistant',
+      content: messageText(msg.content),
+      id: msg.id,
+      client_msg_id: msg.client_msg_id || newClientMessageId()
+    });
+    return rendered ? rendered.messageEl : null;
   }
 
   function getAuthUserId() {
@@ -3589,6 +3636,10 @@
       sender_avatar: msg.sender_avatar || '',
       sender_role: msg.sender_role || '',
       ts: msg.ts || 0,
+      ccs_operation_id: msg.ccs_operation_id || '',
+      ccs_operation_status: msg.ccs_operation_status || '',
+      ccs_operation_type: msg.ccs_operation_type || '',
+      ccs_operation_label: msg.ccs_operation_label || '',
     }, extra);
   }
 
@@ -3600,12 +3651,17 @@
       if (isMessagePermanentlyDeleted(msg.id)) return;
       if (isDuplicateMessage(msg)) return;
       if (msg.role === 'user') return;
-      if (msg.role === 'assistant' && isStreaming) return;
+      if (msg.role === 'assistant' && isStreaming && !msg.ccs_operation_id) return;
       if (msg.role === 'assistant' && streamingMsgId && msg.id === streamingMsgId) return;
 
       rememberMessageIdentity(msg);
       if (msg.reaction) messageReactions[msg.id] = msg.reaction;
       indexChatMessage(msg);
+
+      if (msg.ccs_operation_id) {
+        upsertCcsOperationMessage(msg);
+        return;
+      }
 
       if (msg.role === 'admin') {
         stopTypingSound();
@@ -4370,6 +4426,14 @@
     if (opts.image_url) {
       html += '<div class="paxdesign-booking-chat-message-image"><img src="' + escapeHtml(opts.image_url) + '" alt="Foto" loading="lazy" decoding="async"></div>';
     }
+    if (opts.ccs_operation_status === 'running' || (opts.ccs_operation_id && opts.ccs_operation_status === 'running')) {
+      var opLabel = opts.ccs_operation_label || content || 'Checking uploaded files…';
+      html += '<div class="paxdesign-booking-chat-ccs-op" data-ccs-op-status="running" role="status" aria-live="polite">' +
+        '<span class="paxdesign-booking-chat-ccs-op__spinner" aria-hidden="true"></span>' +
+        '<span class="paxdesign-booking-chat-ccs-op__label">' + escapeHtml(opLabel) + '</span>' +
+        '</div>';
+      return html;
+    }
     if (opts.attachment_type === 'link_card' || opts.link_url) {
       html += buildLinkCardHtml(opts);
     } else if (role === 'assistant' || role === 'admin') {
@@ -4394,6 +4458,15 @@
     var msg = document.createElement('div');
     msg.className = 'paxdesign-booking-chat-message paxdesign-booking-chat-message--' + role;
     if (msgId) msg.setAttribute('data-msg-id', String(msgId));
+    if (opts.ccs_operation_id) {
+      msg.setAttribute('data-ccs-op-id', String(opts.ccs_operation_id));
+      msg.setAttribute('data-ccs-op-status', String(opts.ccs_operation_status || ''));
+      if (opts.ccs_operation_status === 'running') {
+        msg.classList.add('paxdesign-booking-chat-message--ccs-running');
+      } else if (opts.ccs_operation_status === 'complete' || opts.ccs_operation_status === 'failed') {
+        msg.classList.add('paxdesign-booking-chat-message--ccs-complete');
+      }
+    }
 
     if (role === 'admin') {
       renderAdminMessageHeader(msg, opts);
@@ -4890,8 +4963,21 @@
     if (data && data.ccs_case) {
       dispatchCcsCaseUpdate(data.ccs_case);
     }
+    if (data && data.ccs_operation && data.processing) {
+      upsertCcsOperationMessage(data.processing);
+    }
+    if (data && data.ccs_operation && data.assistant && data.processing) {
+      setCcsOperationMessageStatus(
+        threadEl.querySelector('[data-ccs-op-id="' + (data.ccs_operation.id || '') + '"]'),
+        data.ccs_operation.status || 'complete'
+      );
+    }
     if (data && data.assistant) {
       var assistantPayload = data.assistant;
+      if (assistantPayload.ccs_operation_id) {
+        upsertCcsOperationMessage(assistantPayload);
+        playNotificationSound(false);
+      } else {
       var assistantText = messageText(assistantPayload);
       var assistantId = assistantPayload.id || nextLocalId();
       if (assistantText && !isDuplicateMessage(assistantPayload)) {
@@ -4904,6 +4990,7 @@
           client_msg_id: assistantPayload.client_msg_id || newClientMessageId(),
         });
         playNotificationSound(false);
+      }
       }
     }
     syncChatLog();
@@ -5114,6 +5201,8 @@
         var fullText = '';
         var streamError = false;
         var gotFirstChunk = false;
+        var ccsOpHandled = false;
+        var thisAbort = abortCtrl;
 
         var contentType = response.headers.get('content-type') || '';
         if (contentType.indexOf('text/event-stream') === -1) {
@@ -5203,6 +5292,22 @@
               }
             } else if (data.type === 'ccs_case' && data.report) {
               dispatchCcsCaseUpdate(data.report);
+            } else if (data.type === 'ccs_operation') {
+              ccsOpHandled = true;
+              removeTyping();
+              if (data.message) {
+                upsertCcsOperationMessage(data.message);
+              }
+              if (data.operation && data.operation.id) {
+                var runningEl = threadEl.querySelector('[data-ccs-op-id="' + data.operation.id + '"][data-ccs-op-status="running"]');
+                if (runningEl && data.operation.status && data.operation.status !== 'running') {
+                  setCcsOperationMessageStatus(runningEl, data.operation.status);
+                }
+              }
+              if (data.operation && data.operation.status === 'running' && abortCtrl === thisAbort) {
+                isStreaming = false;
+                updateSendButton();
+              }
             } else if (data.type === 'handoff') {
               if (data.handler) applyHandlerState(data.handler, '');
               if (data.assistant) {
@@ -5234,7 +5339,7 @@
                 });
               } else if (!streamError) {
                 removeTyping();
-                if (!gotFirstChunk) {
+                if (!gotFirstChunk && !ccsOpHandled) {
                   showError('Keine Antwort erhalten. Bitte versuchen Sie es erneut.');
                 } else if (messageEl && messageEl.parentElement && !bubble.textContent.trim()) {
                   messageEl.parentElement.remove();
@@ -5242,9 +5347,11 @@
                   streamingMsgId = 0;
                 }
               }
-              isStreaming = false;
-              pendingMessageEl = null;
-              updateSendButton();
+              if (abortCtrl === thisAbort) {
+                isStreaming = false;
+                pendingMessageEl = null;
+                updateSendButton();
+              }
               return;
             }
             buffer += decoder.decode(result.value, { stream: true });

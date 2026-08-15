@@ -33,11 +33,14 @@ on:
       - 'paxdesign-booking/assets/js/booking-script.js'
       - 'paxdesign-booking/assets/js/cybercrime-admin.js'
       - 'paxdesign-booking/assets/js/cybercrime-admin-notifications.js'
+      - 'paxdesign-booking/assets/css/booking-styles.css'
       - 'paxdesign-booking/includes/class-paxdesign-cybercrime-intake.php'
       - 'paxdesign-booking/includes/class-paxdesign-cybercrime-tickets.php'
       - 'paxdesign-booking/includes/class-paxdesign-cybercrime-document-checks.php'
       - 'paxdesign-booking/includes/class-paxdesign-cybercrime-admin-reminders.php'
       - 'paxdesign-booking/includes/class-paxdesign-cybercrime-ai-case.php'
+      - 'paxdesign-booking/includes/class-paxdesign-cybercrime-ai-operations.php'
+      - 'paxdesign-booking/includes/class-paxdesign-message-store.php'
       - 'paxdesign-booking/includes/class-paxdesign-link-scan-service.php'
       - 'paxdesign-booking/includes/class-paxdesign-widget-performance.php'
       - '.gitignore'
@@ -168,7 +171,9 @@ jobs:
             paxdesign-booking/includes/class-paxdesign-cybercrime-document-checks.php \
             paxdesign-booking/includes/class-paxdesign-cybercrime-admin-reminders.php \
             paxdesign-booking/includes/class-paxdesign-cybercrime-ai-case.php \
+            paxdesign-booking/includes/class-paxdesign-cybercrime-ai-operations.php \
             paxdesign-booking/includes/class-paxdesign-chat-live.php \
+            paxdesign-booking/includes/class-paxdesign-message-store.php \
             paxdesign-booking/includes/class-paxdesign-link-scan-service.php \
             paxdesign-booking/includes/class-paxdesign-widget-performance.php \
             "${REMOTE}:${PLUGIN}/includes/"
@@ -188,6 +193,10 @@ jobs:
             paxdesign-booking/assets/js/cybercrime-admin.js \
             paxdesign-booking/assets/js/cybercrime-admin-notifications.js \
             "${REMOTE}:${PLUGIN}/assets/js/"
+
+          retry_ssh rsync -az -e "ssh ${SSH_OPTS[*]}" \
+            paxdesign-booking/assets/css/booking-styles.css \
+            "${REMOTE}:${PLUGIN}/assets/css/"
 
           retry_ssh rsync -az -e "ssh ${SSH_OPTS[*]}" \
             paxdesign-booking/assets/customer-auth/css/pdx-auth.css \
