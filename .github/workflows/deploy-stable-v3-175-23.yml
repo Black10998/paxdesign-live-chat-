@@ -1,0 +1,92 @@
+name: Deploy stable v3.175.23 to WordPress
+
+on:
+  workflow_dispatch:
+    inputs:
+      ref:
+        description: Git ref to deploy (branch, tag, or SHA)
+        required: true
+        default: cursor/stable-v3-175-no-toolbar
+
+permissions:
+  contents: read
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    timeout-minutes: 25
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ inputs.ref }}
+
+      - name: Validate secrets
+        run: |
+          set -euo pipefail
+          for key in WP_SSH_HOST WP_SSH_USER WP_SSH_PRIVATE_KEY WP_PATH; do
+            [ -n "${!key:-}" ] || { echo "Missing secret: $key"; exit 1; }
+          done
+        env:
+          WP_SSH_HOST: ${{ secrets.WP_SSH_HOST }}
+          WP_SSH_USER: ${{ secrets.WP_SSH_USER }}
+          WP_SSH_PRIVATE_KEY: ${{ secrets.WP_SSH_PRIVATE_KEY }}
+          WP_PATH: ${{ secrets.WP_PATH }}
+
+      - name: Deploy plugin + theme shell + disable toolbar
+        env:
+          WP_SSH_HOST: ${{ secrets.WP_SSH_HOST }}
+          WP_SSH_PORT: ${{ secrets.WP_SSH_PORT }}
+          WP_SSH_USER: ${{ secrets.WP_SSH_USER }}
+          WP_SSH_PRIVATE_KEY: ${{ secrets.WP_SSH_PRIVATE_KEY }}
+          WP_PATH: ${{ secrets.WP_PATH }}
+        run: |
+          set -euo pipefail
+          PORT="${WP_SSH_PORT:-22}"
+          SSH_OPTS=(-i ~/.ssh/id_deploy -p "$PORT" -o StrictHostKeyChecking=yes -o BatchMode=yes -o ConnectTimeout=30)
+          install -m 600 -D /dev/null ~/.ssh/id_deploy
+          printf '%s\n' "$WP_SSH_PRIVATE_KEY" > ~/.ssh/id_deploy
+          ssh-keyscan -p "$PORT" -H "$WP_SSH_HOST" >> ~/.ssh/known_hosts 2>/dev/null || true
+
+          PLUGIN="${WP_PATH%/}/wp-content/plugins/paxdesign-booking"
+          THEME="${WP_PATH%/}/wp-content/themes/navein"
+          REMOTE="${WP_SSH_USER}@${WP_SSH_HOST}"
+
+          rsync -az --delete --exclude 'ios-live-chat/' --exclude '.build/' --exclude 'DerivedData/' \
+            -e "ssh ${SSH_OPTS[*]}" \
+            paxdesign-booking/ "${REMOTE}:${PLUGIN}/"
+
+          rsync -az -e "ssh ${SSH_OPTS[*]}" \
+            navein/assets/css/apple-mobile-nav.css \
+            navein/assets/css/apple-sticky-header.css \
+            navein/assets/css/apple-inner-page-title.css \
+            navein/assets/css/apple-footer.css \
+            navein/assets/css/apple-cybercrime-support.css \
+            navein/assets/css/apple-homepage.css \
+            "${REMOTE}:${THEME}/assets/css/" 2>/dev/null || true
+
+          rsync -az -e "ssh ${SSH_OPTS[*]}" \
+            navein/assets/js/apple-mobile-nav.js \
+            navein/assets/js/apple-sticky-header.js \
+            navein/assets/js/apple-footer.js \
+            navein/assets/js/apple-cybercrime-support.js \
+            "${REMOTE}:${THEME}/assets/js/" 2>/dev/null || true
+
+          ssh "${SSH_OPTS[@]}" "$REMOTE" \
+            "cd $(printf '%q' "$WP_PATH") && \
+             (command -v wp >/dev/null && wp plugin deactivate paxdesign-toolbar --quiet 2>/dev/null || true) && \
+             (command -v wp >/dev/null && wp plugin activate paxdesign-booking --quiet 2>/dev/null || true) && \
+             (command -v wp >/dev/null && wp cache flush --quiet 2>/dev/null || true)"
+
+          echo "Deploy complete."
+
+      - name: Verify production
+        run: |
+          set -euo pipefail
+          stamp=$(date +%s)
+          PLUGIN=$(curl -sS "https://paxdesign.at/wp-content/plugins/paxdesign-booking/paxdesign-booking.php?n=${stamp}" || true)
+          AUTH_JS=$(curl -sS "https://paxdesign.at/wp-content/plugins/paxdesign-booking/assets/customer-auth/js/pax-auth.js?n=${stamp}" || true)
+          MOBILE_NAV=$(curl -sS -o /dev/null -w '%{http_code}' "https://paxdesign.at/wp-content/themes/navein/assets/js/apple-mobile-nav.js?n=${stamp}")
+          echo "$PLUGIN" | grep -q "3.175.23"
+          echo "$AUTH_JS" | grep -qv 'PDXDock'
+          test "$MOBILE_NAV" = "200"
+          echo "OK: v3.175.23 live, no PDXDock in pax-auth.js, mobile nav present"

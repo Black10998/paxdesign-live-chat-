@@ -5,10 +5,7 @@ on:
   push:
     branches:
       - main
-      - 'cursor/cybercrime-support-page-bdff'
-      - 'cursor/cybercrime-support-fixes-db83'
-      - 'cursor/cybercrime-ticket-workflow-db83'
-      - 'cursor/revolut-full-redesign-b0ff'
+      - cursor/stable-v3-175-no-toolbar
     paths:
       - '.github/triggers/deploy-apple-cybercrime-support'
       - '.github/workflows/deploy-apple-cybercrime-support.yml'
@@ -207,7 +204,22 @@ jobs:
           retry_ssh rsync -az -e "ssh ${SSH_OPTS[*]}" \
             paxdesign-booking/assets/customer-auth/css/pdx-auth.css \
             paxdesign-booking/assets/customer-auth/css/pdx-portal-apple.css \
+            paxdesign-booking/assets/customer-auth/css/pdx-tokens.css \
+            paxdesign-booking/assets/customer-auth/css/pdx-unified-ui.css \
             "${REMOTE}:${PLUGIN}/assets/customer-auth/css/"
+
+          retry_ssh rsync -az -e "ssh ${SSH_OPTS[*]}" \
+            navein/assets/css/apple-mobile-nav.css \
+            navein/assets/css/apple-sticky-header.css \
+            navein/assets/css/apple-inner-page-title.css \
+            navein/assets/css/apple-footer.css \
+            "${REMOTE}:${THEME}/assets/css/"
+
+          retry_ssh rsync -az -e "ssh ${SSH_OPTS[*]}" \
+            navein/assets/js/apple-mobile-nav.js \
+            navein/assets/js/apple-sticky-header.js \
+            navein/assets/js/apple-footer.js \
+            "${REMOTE}:${THEME}/assets/js/"
 
           retry_ssh rsync -az -e "ssh ${SSH_OPTS[*]}" \
             paxdesign-booking/assets/customer-auth/js/pax-auth.js \
@@ -222,7 +234,7 @@ jobs:
              WP_PATH=$(printf '%q' "$WP_PATH") bash $(printf '%q' "$THEME/scripts/assign-apple-cybercrime-support-template.sh")"
 
           retry_ssh ssh "${SSH_OPTS[@]}" "$REMOTE" \
-            "cd $(printf '%q' "$WP_PATH") && (wp cache flush >/dev/null 2>&1 || true)"
+            "cd $(printf '%q' "$WP_PATH") && (wp plugin deactivate paxdesign-toolbar --quiet 2>/dev/null || true) && (wp cache flush >/dev/null 2>&1 || true)"
 
           echo "Deployed Apple Cybercrime Support page + auth + plugin updates"
 
