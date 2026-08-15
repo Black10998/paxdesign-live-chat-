@@ -364,6 +364,8 @@ cx_assert_true(strpos($ccs_js, 'applyIncomingReport') !== false, 'Live admin sta
 cx_assert_true(strpos($ccs_js, 'pollActiveReport') !== false, 'The open CCS case must keep polling while it is on screen');
 cx_assert_true(strpos($ccs_js, 'REPORT_POLL_MS') !== false, 'Customer case polling interval must be defined');
 cx_assert_true(strpos($ccs_js, 'caseSyncTimestamp') !== false, 'Live case updates must ignore stale overlapping responses');
+cx_assert_true(strpos($ccs_js, 'statusLabelForReport') !== false, 'Customer status labels must follow the selected portal language');
+cx_assert_true(strpos($ccs_js, 'appendLocale(body)') !== false, 'Customer AJAX must send the selected portal language');
 cx_assert_true(strpos($ccs_js, 'continueDraftOnPage') !== false, 'Draft cases must remain completable on the existing page');
 cx_assert_true(strpos($ccs_js, 'isStructuredCaseDescription') !== false, 'Case dossier must hide pasted chat paragraphs');
 cx_assert_true(strpos($ccs_js, 'rejected') !== false, 'Customer case view must treat Rejected as a closed status');
@@ -386,7 +388,7 @@ cx_assert_true(strpos($ccs_widget, 'ccs_operation') !== false, 'Chat must render
 cx_assert_true(strpos($ccs_widget, 'upsertCcsOperationMessage') !== false, 'Chat must keep the same processing message across follow-ups');
 
 $plugin_bootstrap = file_get_contents($ccs_root . '/paxdesign-booking.php');
-cx_assert_true(strpos($plugin_bootstrap, "define('PAXDESIGN_BOOKING_VERSION', '3.175.5')") !== false, 'Plugin version must be 3.175.5');
+cx_assert_true(strpos($plugin_bootstrap, "define('PAXDESIGN_BOOKING_VERSION', '3.175.6')") !== false, 'Plugin version must be 3.175.6');
 cx_assert_true(strpos($plugin_bootstrap, 'class-paxdesign-cybercrime-i18n.php') !== false, 'Plugin must load CCS localization');
 cx_assert_true(strpos($plugin_bootstrap, 'class-paxdesign-cybercrime-document-checks.php') !== false, 'Plugin must load document checks');
 cx_assert_true(strpos($plugin_bootstrap, 'class-paxdesign-cybercrime-ai-case.php') !== false, 'Plugin must load AI case sync');
@@ -440,6 +442,9 @@ cx_assert_true(PAXdesign_Cybercrime_I18n::t('status.resolved', 'ar') === 'تمت
 cx_assert_true(PAXdesign_Cybercrime_I18n::t('status.in_review', 'de') === 'In Prüfung', 'German under-review status must remain available');
 cx_assert_true(strpos(PAXdesign_Cybercrime_I18n::status_icon_svg('rejected'), '<circle') !== false, 'Rejected status must use a circular SVG icon');
 cx_assert_true(strpos(PAXdesign_Cybercrime_I18n::rejection_reason_text('unclear_document', 'ar'), 'غير واضح') !== false, 'Arabic rejection reason must explain the decision');
+cx_assert_true(PAXdesign_Cybercrime_I18n::t('next.rejected', 'ar') !== PAXdesign_Cybercrime_I18n::t('next.rejected', 'en'), 'Rejected next-action copy must be localized');
+cx_assert_true(strpos(PAXdesign_Cybercrime_I18n::status_changed_text('rejected', 'ar'), 'مرفوض') !== false, 'Arabic timeline must say the case was rejected');
+cx_assert_true(PAXdesign_Cybercrime_I18n::localize_canned('Please sign in.', 'ar') === PAXdesign_Cybercrime_I18n::t('error.login', 'ar'), 'Canned English customer errors must localize');
 $extracted = PAXdesign_Cybercrime_AI_Case::extract_fields_from_message(
     'My account was compromised on August 12. GitHub and my email were affected. I did not lose any money.',
     array()

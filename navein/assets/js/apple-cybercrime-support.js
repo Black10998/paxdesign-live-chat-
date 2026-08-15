@@ -334,6 +334,81 @@
     return lang === 'de' || lang === 'en' ? lang : 'ar';
   }
 
+  function appendLocale(body) {
+    if (body && typeof body.append === 'function') {
+      body.append('locale', getLang());
+    }
+    return body;
+  }
+
+  function pickLangMap(map, fallback) {
+    if (map && typeof map === 'object') {
+      if (map[getLang()]) {
+        return map[getLang()];
+      }
+      if (getLang() !== 'en' && map.ar) {
+        return map.ar;
+      }
+    }
+    return fallback || '';
+  }
+
+  function statusLabelForReport(report) {
+    if (!report) {
+      return '';
+    }
+    var packed = pickLangMap(report.status_label_i18n, '');
+    if (packed) {
+      return packed;
+    }
+    var badgeKey = report.customer_status || statusBadgeKey(report.status || '');
+    var badges = i18nBundle().statusBadges || {};
+    var badge = badges[badgeKey] || {};
+    if (badge.label && badge.label[getLang()]) {
+      return badge.label[getLang()];
+    }
+    if (badge.label && badge.label.ar && getLang() !== 'en') {
+      return badge.label.ar;
+    }
+    return '';
+  }
+
+  function localizedNextAction(report) {
+    if (!report) {
+      return '';
+    }
+    var packed = pickLangMap(report.next_action_i18n, '');
+    if (packed) {
+      return packed;
+    }
+    if ((report.status || '') === 'rejected') {
+      return activeReportText('rejected_next', '');
+    }
+    return report.next_action || '';
+  }
+
+  function localizedTimelineBody(entry) {
+    if (!entry) {
+      return '';
+    }
+    var packed = pickLangMap(entry.body_i18n, '');
+    if (packed) {
+      return packed;
+    }
+    var meta = entry.meta && typeof entry.meta === 'object' ? entry.meta : {};
+    if (meta.event === 'status_change' && meta.to) {
+      var label = statusLabelForReport({ status: meta.to, customer_status: statusBadgeKey(meta.to), status_label_i18n: entry.status_label_i18n });
+      var tpl = i18nText('timeline.statusChanged', '');
+      if (tpl && label) {
+        return tpl.replace('%s', label);
+      }
+      if (label) {
+        return label;
+      }
+    }
+    return entry.body || '';
+  }
+
   function i18nBundle() {
     return (config && config.i18n) || {};
   }
@@ -440,7 +515,7 @@
     var badgeKey = report.customer_status || statusBadgeKey(report.status || '');
     var badges = i18nBundle().statusBadges || {};
     var badge = badges[badgeKey] || {};
-    var label = (badge.label && badge.label[getLang()]) || report.status_label || report.status || '';
+    var label = statusLabelForReport(report);
     activeStatusBadgeEl.className = 'pax-ccs-portal__status-hero pax-ccs-portal__status-hero--' + badgeKey;
     if (activeStatusIconEl) {
       activeStatusIconEl.innerHTML = statusIconSvg(badgeKey);
@@ -462,9 +537,9 @@
     var rejection = report.rejection && typeof report.rejection === 'object' ? report.rejection : {};
     var lang = getLang();
     var reasonI18n = rejection.reason_i18n || {};
-    var reason = reasonI18n[lang] || rejection.reason || '';
+    var reason = pickLangMap(reasonI18n, rejection.reason || '');
     var explanation = (rejection.explanation || '').trim();
-    var next = activeReportText('rejected_next', report.next_action || '');
+    var next = localizedNextAction(report) || activeReportText('rejected_next', '');
     decisionCardEl.hidden = false;
     decisionCardEl.className = 'pax-ccs-portal__decision pax-ccs-portal__decision--rejected';
     if (decisionIconEl) {
@@ -674,6 +749,7 @@
     body.append('action', 'paxdesign_cybercrime_mark_read');
     body.append('nonce', config.nonce);
     body.append('reference_id', referenceId);
+    appendLocale(body);
     return fetch(config.ajaxUrl, { method: 'POST', body: body, credentials: 'same-origin' })
       .then(function (res) { return res.json(); })
       .then(function (json) {
@@ -693,6 +769,7 @@
     var body = new FormData();
     body.append('action', 'paxdesign_cybercrime_report_list');
     body.append('nonce', config.nonce);
+    appendLocale(body);
     return fetch(url, { method: 'POST', body: body, credentials: 'same-origin', cache: 'no-store' })
       .then(function (res) { return res.json(); })
       .then(function (json) {
@@ -722,7 +799,7 @@
     reportHistoryEl.hidden = false;
     historyListEl.innerHTML = closed.map(function (report) {
       var ref = escapeHtml(report.reference_id || '');
-      var statusLabel = escapeHtml(report.status_label || report.status || '');
+      var statusLabel = escapeHtml(statusLabelForReport(report) || report.status || '');
       var category = escapeHtml(report.category_label || report.category || '');
       var when = escapeHtml(formatDate(report.updated_at || report.created_at || ''));
       var unread = parseInt(report.unread_count, 10) || 0;
@@ -773,6 +850,7 @@
     } else {
       body.append('action', 'paxdesign_cybercrime_active_report');
     }
+    appendLocale(body);
     return fetch(config.ajaxUrl, {
       method: 'POST',
       body: body,
@@ -1042,7 +1120,7 @@
       var isOpen = entryId === openId;
       var sender = timelineSenderLabel(entry);
       var when = formatDate(entry.created_at || '');
-      var body = escapeHtml(entry.body || '').replace(/\n/g, '<br>');
+      var body = escapeHtml(localizedTimelineBody(entry) || '').replace(/\n/g, '<br>');
       var panelId = 'pax-ccs-acc-panel-' + entryId;
       var triggerId = 'pax-ccs-acc-trigger-' + entryId;
 
@@ -1208,9 +1286,9 @@
     caseDossierEl.hidden = false;
     if (nextActionEl) {
       if ((report.status || '') === 'rejected') {
-        nextActionEl.textContent = activeReportText('rejected_next', report.next_action || '');
+        nextActionEl.textContent = localizedNextAction(report) || activeReportText('rejected_next', '');
       } else {
-        nextActionEl.textContent = report.next_action || '';
+        nextActionEl.textContent = localizedNextAction(report);
       }
     }
     if (continueFormBtn) {
@@ -1908,6 +1986,7 @@
     var data = new FormData(form);
     data.append('action', 'paxdesign_cybercrime_report');
     data.append('nonce', config.nonce);
+    appendLocale(data);
     var chatSid = getChatSessionId();
     if (chatSid) {
       data.append('chat_session_id', chatSid);
@@ -2017,6 +2096,7 @@
       body.append('nonce', config.nonce);
       body.append('reference', activeReport.reference_id);
       body.append('message', message);
+      appendLocale(body);
       fetch(config.ajaxUrl, { method: 'POST', body: body, credentials: 'same-origin' })
         .then(function (res) { return res.json(); })
         .then(function (json) {
@@ -2074,6 +2154,7 @@
           body.append('evidence_other[]', file);
         });
       }
+      appendLocale(body);
       fetch(config.ajaxUrl, { method: 'POST', body: body, credentials: 'same-origin' })
         .then(function (res) { return res.json(); })
         .then(function (json) {

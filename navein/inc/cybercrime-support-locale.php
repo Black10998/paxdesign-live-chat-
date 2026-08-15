@@ -239,6 +239,9 @@ if ( ! function_exists( 'pax_ccs_portal_i18n' ) ) {
 			'supportTeam'     => $pick( $copy['timeline_i18n']['support_team'] ?? array() ),
 			'customerFallback'=> $pick( $copy['timeline_i18n']['customer_fallback'] ?? array() ),
 			'emptyTimeline'   => $pick( $copy['timeline_i18n']['empty_timeline'] ?? array() ),
+			'timeline'        => array(
+				'statusChanged' => $pick( $copy['timeline_i18n']['status_changed'] ?? array() ),
+			),
 			'subjects'        => $subjects,
 			'statusBadges'    => $status_badges,
 			'statusBadgeMap'  => (array) ( $copy['status_badge_map'] ?? array() ),

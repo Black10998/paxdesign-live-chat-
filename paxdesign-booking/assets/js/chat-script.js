@@ -1,6 +1,6 @@
 /**
  * PAXdesign AI Chat — Sales & Booking Assistant
- * Version: 3.175.5
+ * Version: 3.175.6
  */
 (function () {
   'use strict';
@@ -2759,8 +2759,18 @@
     if (ctx.intent) {
       formData.append('page_context', ctx.intent);
     }
-    if (ctx.language) {
-      formData.append('page_language', ctx.language);
+    var lang = ctx.language || '';
+    if (!lang) {
+      try {
+        var portal = document.querySelector('.pax-ccs-portal');
+        lang = (portal && portal.getAttribute('data-ccs-lang')) || '';
+      } catch (e) {
+        lang = '';
+      }
+    }
+    if (lang) {
+      formData.append('page_language', lang);
+      formData.append('locale', lang);
     }
     if (ctx.referenceId) {
       formData.append('page_reference', ctx.referenceId);

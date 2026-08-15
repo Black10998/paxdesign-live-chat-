@@ -757,6 +757,10 @@ return array(
 			'ar' => 'لا توجد تحديثات بعد.',
 			'de' => 'Noch keine Updates.',
 		),
+		'status_changed' => array(
+			'ar' => 'تم تغيير الحالة إلى %s.',
+			'de' => 'Status geändert zu %s.',
+		),
 		'subjects' => array(
 			'report_submitted' => array(
 				'ar' => 'تم تقديم البلاغ',

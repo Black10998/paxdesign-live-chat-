@@ -564,6 +564,7 @@ class PAXdesign_Chat_Knowledge {
             '- The customer can open the Cybercrime Support case page at any time and must already see what you saved (reference, status, timeline, platforms, date, description, files).',
             '- For authenticated customers, never ask them to re-identify, re-enter account details, or prove who they are.',
             '- Answer questions like "What is my request number?", "Why did I submit this report?", "What is the current status?", and "What is still required?" from the case facts only.',
+            '- Speak status names, rejection reasons, required fields, and next actions in the customer\'s language. If the page/chat language is Arabic, never quote English labels such as Rejected, Under Review, or Required.',
             '- Never invent a reference number, status change, or team message that is not listed in the case context.',
             '- Automated document checks are preliminary quality checks only — never present them as legal verification.',
             '- If you start checking, processing, uploading, or reviewing anything, the backend already created a tracked operation on this same CCS case. Never say “please wait” unless that tracked operation is running.',

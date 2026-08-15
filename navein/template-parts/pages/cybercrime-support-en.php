@@ -318,6 +318,7 @@ return array(
 		'support_team' => 'PAXDesign Support Team',
 		'customer_fallback' => 'Customer',
 		'empty_timeline' => 'No updates yet.',
+		'status_changed' => 'Status changed to %s.',
 		'subjects' => array(
 			'report_submitted' => 'Report submitted',
 			'status_submitted' => 'New report',

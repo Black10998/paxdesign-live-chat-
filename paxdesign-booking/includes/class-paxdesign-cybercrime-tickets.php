@@ -192,10 +192,10 @@ class PAXdesign_Cybercrime_Tickets {
      * @param string $status
      * @return string
      */
-    public static function status_label($status) {
+    public static function status_label($status, $lang = '') {
         $status = self::normalize_workflow_status($status);
         if (class_exists('PAXdesign_Cybercrime_I18n')) {
-            return PAXdesign_Cybercrime_I18n::status_label($status);
+            return PAXdesign_Cybercrime_I18n::status_label($status, $lang);
         }
         $steps = self::workflow_steps();
         if (isset($steps[$status]['label'])) {
@@ -425,18 +425,32 @@ class PAXdesign_Cybercrime_Tickets {
 
         $raw_status = sanitize_key((string) ($row['status'] ?? ''));
         $workflow_status = self::normalize_workflow_status($raw_status);
+        $lang = 'en';
+        if (class_exists('PAXdesign_Cybercrime_I18n')) {
+            $lang = $timeline_audience === 'admin'
+                ? PAXdesign_Cybercrime_I18n::lang()
+                : PAXdesign_Cybercrime_I18n::customer_lang((int) ($row['customer_user_id'] ?? 0));
+        }
+        $status_label_i18n = class_exists('PAXdesign_Cybercrime_I18n')
+            ? PAXdesign_Cybercrime_I18n::pack('status.' . $workflow_status)
+            : array();
+        if (isset($status_label_i18n['en']) && $status_label_i18n['en'] === 'status.' . $workflow_status) {
+            $status_label_i18n = array();
+        }
 
         $out = array(
             'reference_id'    => (string) ($row['reference_id'] ?? ''),
             'status'          => $workflow_status,
             'status_raw'      => $raw_status !== $workflow_status ? $raw_status : '',
-            'status_label'    => self::status_label($raw_status),
+            'status_label'    => self::status_label($raw_status, $lang),
+            'status_label_i18n' => $status_label_i18n,
             'customer_status' => self::customer_status_key($raw_status),
             'is_active'       => self::is_active_status($raw_status),
             'category'        => (string) ($row['category'] ?? ''),
-            'category_label'  => (class_exists('PAXdesign_Cybercrime_I18n') && $timeline_audience === 'admin')
-                ? PAXdesign_Cybercrime_I18n::category_label((string) ($row['category'] ?? ''))
+            'category_label'  => class_exists('PAXdesign_Cybercrime_I18n')
+                ? PAXdesign_Cybercrime_I18n::category_label((string) ($row['category'] ?? ''), $lang)
                 : PAXdesign_Cybercrime_Intake::category_label((string) ($row['category'] ?? '')),
+            'locale'          => $lang,
             'urgency'         => (string) ($row['urgency'] ?? ''),
             'reporter_name'   => (string) ($row['reporter_name'] ?? ''),
             'reporter_email'  => (string) ($row['reporter_email'] ?? ''),
@@ -470,7 +484,7 @@ class PAXdesign_Cybercrime_Tickets {
         $checks = is_array($payload['document_checks'] ?? null) ? $payload['document_checks'] : array();
         $guided = is_array($payload['guided_case'] ?? null) ? $payload['guided_case'] : array();
         $customer_checks = class_exists('PAXdesign_Cybercrime_Document_Checks')
-            ? PAXdesign_Cybercrime_Document_Checks::customer_view($checks)
+            ? PAXdesign_Cybercrime_Document_Checks::customer_view($checks, $lang)
             : array();
 
         $out['original_request'] = array(
@@ -495,23 +509,55 @@ class PAXdesign_Cybercrime_Tickets {
 
         $next_action = (string) ($guided['next_action'] ?? $checks['next_action'] ?? '');
         if ($workflow_status === 'draft') {
-            $next_action = self::draft_next_action($out['original_request'], $attachments);
+            $next_action = self::draft_next_action($out['original_request'], $attachments, $lang);
         } elseif ($next_action === '') {
-            $next_action = self::default_next_action($workflow_status, $customer_checks);
+            $next_action = self::default_next_action($workflow_status, $customer_checks, $lang);
+        } elseif (class_exists('PAXdesign_Cybercrime_I18n')) {
+            $next_action = PAXdesign_Cybercrime_I18n::localize_canned($next_action, $lang);
         }
         $out['checks'] = $timeline_audience === 'admin' ? $checks : $customer_checks;
         $out['needs_human_review'] = !empty($row['needs_human_review']) || !empty($checks['needs_human_review']);
         $out['next_action'] = $next_action;
-        $out['correction_required'] = array_values((array) ($customer_checks['customer_corrections'] ?? array()));
+        $out['correction_required'] = class_exists('PAXdesign_Cybercrime_I18n')
+            ? PAXdesign_Cybercrime_I18n::localize_list(array_values((array) ($customer_checks['customer_corrections'] ?? array())), $lang)
+            : array_values((array) ($customer_checks['customer_corrections'] ?? array()));
         $out['can_resubmit'] = self::is_active_status($raw_status);
         $out['is_draft'] = ($raw_status === 'draft' || $workflow_status === 'draft');
-        $out['missing_fields'] = self::missing_case_fields($out, $row, $payload);
+        $missing_keys = self::missing_case_fields($out, $row, $payload);
+        $out['missing_fields'] = array();
+        foreach ($missing_keys as $item) {
+            $out['missing_fields'][] = class_exists('PAXdesign_Cybercrime_I18n')
+                ? PAXdesign_Cybercrime_I18n::missing_field_label($item, $lang)
+                : $item;
+        }
         $out['case_summary'] = self::build_case_summary_text($out);
-        $out['rejection'] = self::public_rejection($payload, $workflow_status);
+        $out['rejection'] = self::public_rejection($payload, $workflow_status, $lang);
         if ($workflow_status === 'rejected' && is_array($out['rejection'])) {
-            $reject_next = self::customer_rejection_next_action($out['rejection']);
+            $reject_next = self::customer_rejection_next_action($out['rejection'], $lang);
             if ($reject_next !== '') {
                 $out['next_action'] = $reject_next;
+            }
+        }
+        if (class_exists('PAXdesign_Cybercrime_I18n')) {
+            if ($workflow_status === 'rejected') {
+                $out['next_action_i18n'] = PAXdesign_Cybercrime_I18n::pack('decision.next_action');
+            } elseif ($workflow_status === 'draft') {
+                $out['next_action_i18n'] = array(
+                    'ar' => self::draft_next_action($out['original_request'], $attachments, 'ar'),
+                    'de' => self::draft_next_action($out['original_request'], $attachments, 'de'),
+                    'en' => self::draft_next_action($out['original_request'], $attachments, 'en'),
+                );
+            } elseif (!empty($customer_checks['customer_corrections'])) {
+                $out['next_action_i18n'] = PAXdesign_Cybercrime_I18n::pack('next.corrections');
+            } else {
+                $out['next_action_i18n'] = array(
+                    'ar' => PAXdesign_Cybercrime_I18n::next_action_text($workflow_status, 'ar'),
+                    'de' => PAXdesign_Cybercrime_I18n::next_action_text($workflow_status, 'de'),
+                    'en' => PAXdesign_Cybercrime_I18n::next_action_text($workflow_status, 'en'),
+                );
+            }
+            if (!empty($out['next_action_i18n'][$lang])) {
+                $out['next_action'] = $out['next_action_i18n'][$lang];
             }
         }
         if ($timeline_audience === 'admin' && class_exists('PAXdesign_Cybercrime_I18n')) {
@@ -552,9 +598,18 @@ class PAXdesign_Cybercrime_Tickets {
      * @param array<string, mixed> $checks
      * @return string
      */
-    public static function default_next_action($status, $checks = array()) {
+    public static function default_next_action($status, $checks = array(), $lang = '') {
         $status = self::normalize_workflow_status($status);
         $corrections = (array) ($checks['customer_corrections'] ?? array());
+        if (class_exists('PAXdesign_Cybercrime_I18n')) {
+            if ($lang === '') {
+                $lang = PAXdesign_Cybercrime_I18n::customer_lang();
+            }
+            if (!empty($corrections)) {
+                return PAXdesign_Cybercrime_I18n::t('next.corrections', $lang);
+            }
+            return PAXdesign_Cybercrime_I18n::next_action_text($status, $lang);
+        }
         if (!empty($corrections)) {
             return __('Replace the rejected files on this same case, then wait for administrator review.', 'paxdesign-booking');
         }
@@ -600,16 +655,23 @@ class PAXdesign_Cybercrime_Tickets {
      * @param array<int, array<string, mixed>>   $attachments
      * @return string
      */
-    public static function draft_next_action($original, $attachments = array()) {
+    public static function draft_next_action($original, $attachments = array(), $lang = '') {
         $missing = self::missing_case_fields(array('original_request' => $original, 'attachments' => $attachments), array(), array());
         if (empty($missing)) {
-            return __('Review the saved details on this page, then submit the case or add evidence.', 'paxdesign-booking');
+            return class_exists('PAXdesign_Cybercrime_I18n')
+                ? PAXdesign_Cybercrime_I18n::t('next.draft', $lang)
+                : __('Review the saved details on this page, then submit the case or add evidence.', 'paxdesign-booking');
         }
-        return sprintf(
-            /* translators: %s: comma-separated missing fields */
-            __('Still needed on this same case: %s.', 'paxdesign-booking'),
-            implode(', ', $missing)
-        );
+        $labels = array();
+        foreach ($missing as $item) {
+            $labels[] = class_exists('PAXdesign_Cybercrime_I18n')
+                ? PAXdesign_Cybercrime_I18n::missing_field_label($item, $lang)
+                : $item;
+        }
+        $tpl = class_exists('PAXdesign_Cybercrime_I18n')
+            ? PAXdesign_Cybercrime_I18n::t('missing.still_needed', $lang)
+            : __('Still needed on this same case: %s.', 'paxdesign-booking');
+        return sprintf($tpl, implode(', ', $labels));
     }
 
     /**
@@ -922,7 +984,23 @@ class PAXdesign_Cybercrime_Tickets {
 
         $customer_display_name = trim(sanitize_text_field((string) $customer_display_name));
         $entry['status'] = $status_key;
-        $entry['status_label'] = $status_key !== '' ? self::status_label($status_key) : '';
+        $lang = 'en';
+        if (class_exists('PAXdesign_Cybercrime_I18n')) {
+            $lang = $audience === 'admin'
+                ? PAXdesign_Cybercrime_I18n::lang()
+                : PAXdesign_Cybercrime_I18n::customer_lang();
+        }
+        $entry['status_label'] = $status_key !== '' ? self::status_label($status_key, $lang) : '';
+        if ($event === 'status_change' && $status_key !== '' && class_exists('PAXdesign_Cybercrime_I18n')) {
+            $entry['body'] = PAXdesign_Cybercrime_I18n::status_changed_text($status_key, $lang);
+            $entry['body_i18n'] = array(
+                'ar' => PAXdesign_Cybercrime_I18n::status_changed_text($status_key, 'ar'),
+                'de' => PAXdesign_Cybercrime_I18n::status_changed_text($status_key, 'de'),
+                'en' => PAXdesign_Cybercrime_I18n::status_changed_text($status_key, 'en'),
+            );
+        } elseif ($author === 'system' && class_exists('PAXdesign_Cybercrime_I18n')) {
+            $entry['body'] = PAXdesign_Cybercrime_I18n::localize_canned((string) ($entry['body'] ?? ''), $lang);
+        }
         $entry['sender_key'] = $author === 'customer' ? 'customer' : 'support';
         $entry['customer_name'] = $author === 'customer' ? $customer_display_name : '';
         $entry['customer_visible'] = self::is_customer_visible_timeline_entry($entry);
@@ -1249,7 +1327,7 @@ class PAXdesign_Cybercrime_Tickets {
      * @param string               $status
      * @return array<string, mixed>|null
      */
-    public static function public_rejection($payload, $status = '') {
+    public static function public_rejection($payload, $status = '', $lang = '') {
         $payload = is_array($payload) ? $payload : array();
         $rejection = is_array($payload['rejection'] ?? null) ? $payload['rejection'] : array();
         if (empty($rejection) && self::normalize_workflow_status($status) !== 'rejected') {
@@ -1260,22 +1338,27 @@ class PAXdesign_Cybercrime_Tickets {
         }
         $reason_key = sanitize_key((string) ($rejection['reason_key'] ?? ''));
         $reason_i18n = is_array($rejection['reason_i18n'] ?? null) ? $rejection['reason_i18n'] : array();
+        if (class_exists('PAXdesign_Cybercrime_I18n')) {
+            foreach (array('ar', 'de', 'en') as $pack_lang) {
+                if (empty($reason_i18n[$pack_lang])) {
+                    $reason_i18n[$pack_lang] = $reason_key !== ''
+                        ? PAXdesign_Cybercrime_I18n::rejection_reason_text($reason_key, $pack_lang)
+                        : (string) ($rejection['reason'] ?? '');
+                }
+            }
+        }
+        if ($lang === '' && class_exists('PAXdesign_Cybercrime_I18n')) {
+            $lang = PAXdesign_Cybercrime_I18n::customer_lang();
+        }
         $reason = '';
-        if (!empty($reason_i18n['en'])) {
+        if ($lang !== '' && !empty($reason_i18n[$lang])) {
+            $reason = (string) $reason_i18n[$lang];
+        } elseif (!empty($reason_i18n['ar'])) {
+            $reason = (string) $reason_i18n['ar'];
+        } elseif (!empty($reason_i18n['en'])) {
             $reason = (string) $reason_i18n['en'];
         } elseif (!empty($rejection['reason'])) {
             $reason = (string) $rejection['reason'];
-        } elseif ($reason_key !== '' && class_exists('PAXdesign_Cybercrime_I18n')) {
-            $reason = PAXdesign_Cybercrime_I18n::rejection_reason_text($reason_key, 'en');
-        }
-        if (class_exists('PAXdesign_Cybercrime_I18n')) {
-            foreach (array('ar', 'de', 'en') as $lang) {
-                if (empty($reason_i18n[$lang])) {
-                    $reason_i18n[$lang] = $reason_key !== ''
-                        ? PAXdesign_Cybercrime_I18n::rejection_reason_text($reason_key, $lang)
-                        : $reason;
-                }
-            }
         }
         return array(
             'reason_key'    => $reason_key,
@@ -1297,10 +1380,10 @@ class PAXdesign_Cybercrime_Tickets {
      * @param array<string, mixed> $rejection
      * @return string
      */
-    public static function customer_rejection_next_action($rejection) {
+    public static function customer_rejection_next_action($rejection, $lang = '') {
         unset($rejection);
         return class_exists('PAXdesign_Cybercrime_I18n')
-            ? PAXdesign_Cybercrime_I18n::t('decision.next_action')
+            ? PAXdesign_Cybercrime_I18n::t('decision.next_action', $lang)
             : __('No further action is required on this reference unless you start a new report for a new incident.', 'paxdesign-booking');
     }
 
@@ -1360,7 +1443,19 @@ class PAXdesign_Cybercrime_Tickets {
             $reference_id = sanitize_text_field((string) ($item['reference_id'] ?? ''));
             $message = (string) ($item['message'] ?? '');
             $status = sanitize_key((string) ($item['status'] ?? ''));
-            $title = sanitize_text_field((string) ($item['title'] ?? ''));
+            $lang = class_exists('PAXdesign_Cybercrime_I18n')
+                ? PAXdesign_Cybercrime_I18n::customer_lang($customer_id)
+                : 'ar';
+            $copy = class_exists('PAXdesign_Cybercrime_I18n')
+                ? PAXdesign_Cybercrime_I18n::notification_copy($reference_id, $status, $lang)
+                : array(
+                    'title' => (string) ($item['title'] ?? ''),
+                    'body'  => (string) ($item['message'] ?? ''),
+                    'email_subject' => '',
+                    'email_body' => '',
+                );
+            $title = sanitize_text_field((string) ($copy['title'] ?? ''));
+            $message = (string) ($copy['body'] ?? '');
 
             PAXdesign_Customer_Notifications::notify_user(
                 $customer_id,
@@ -1371,7 +1466,7 @@ class PAXdesign_Cybercrime_Tickets {
                 $reference_id,
                 '/cybercrime/' . $reference_id
             );
-            self::email_customer_update($row, $reference_id, $message, $status);
+            self::email_customer_update($row, $reference_id, $message, $status, $lang, $copy);
         }
     }
 
@@ -1381,18 +1476,19 @@ class PAXdesign_Cybercrime_Tickets {
      * @param string               $message
      * @param string               $status
      */
-    private static function email_customer_update($row, $reference_id, $message, $status) {
+    private static function email_customer_update($row, $reference_id, $message, $status, $lang = 'ar', $copy = array()) {
         $email = sanitize_email((string) ($row['reporter_email'] ?? ''));
         if (!is_email($email)) {
             return;
         }
-        $subject = sprintf('[Cybercrime Report %s] %s', $reference_id, self::status_label($status));
-        $body = "Cybercrime Support update\n\n"
-            . "Reference: {$reference_id}\n"
-            . 'Status: ' . self::status_label($status) . "\n\n"
-            . $message . "\n\n"
-            . 'View your report: ' . home_url('/cybercrime-support/?ref=' . rawurlencode($reference_id)) . "\n\n"
-            . "Reply to this email to add a message to your report.\n";
+        $subject = is_array($copy) && !empty($copy['email_subject'])
+            ? (string) $copy['email_subject']
+            : sprintf('[Cybercrime Report %s] %s', $reference_id, self::status_label($status, $lang));
+        $body = is_array($copy) && !empty($copy['email_body'])
+            ? (string) $copy['email_body'] . "\n\n" . $message . "\n"
+            : $message . "\n";
+        $view = home_url('/cybercrime-support/?ref=' . rawurlencode($reference_id));
+        $body .= "\n" . $view . "\n";
         wp_mail($email, $subject, $body, array(
             'Content-Type: text/plain; charset=UTF-8',
             'Reply-To: cybercrime+' . rawurlencode($reference_id) . '@paxdesign.at',
@@ -2202,7 +2298,7 @@ class PAXdesign_Cybercrime_Tickets {
 
     public static function ajax_customer_reply() {
         if (!is_user_logged_in()) {
-            wp_send_json_error(array('message' => __('Please sign in.', 'paxdesign-booking'), 'code' => 'login_required'), 401);
+            wp_send_json_error(array('message' => self::customer_i18n('error.login', __('Please sign in.', 'paxdesign-booking')), 'code' => 'login_required'), 401);
         }
         check_ajax_referer(PAXdesign_Cybercrime_Intake::NONCE_ACTION, 'nonce');
 
@@ -2223,7 +2319,7 @@ class PAXdesign_Cybercrime_Tickets {
 
     public static function ajax_customer_resubmit() {
         if (!is_user_logged_in()) {
-            wp_send_json_error(array('message' => __('Please sign in.', 'paxdesign-booking'), 'code' => 'login_required'), 401);
+            wp_send_json_error(array('message' => self::customer_i18n('error.login', __('Please sign in.', 'paxdesign-booking')), 'code' => 'login_required'), 401);
         }
         check_ajax_referer(PAXdesign_Cybercrime_Intake::NONCE_ACTION, 'nonce');
 
@@ -2478,6 +2574,13 @@ class PAXdesign_Cybercrime_Tickets {
      * @param string $fallback
      * @return string
      */
+    private static function customer_i18n($key, $fallback = '') {
+        if (class_exists('PAXdesign_Cybercrime_I18n')) {
+            return PAXdesign_Cybercrime_I18n::t($key, PAXdesign_Cybercrime_I18n::customer_lang());
+        }
+        return $fallback !== '' ? $fallback : $key;
+    }
+
     private static function admin_i18n($key, $fallback = '') {
         if (class_exists('PAXdesign_Cybercrime_I18n')) {
             return PAXdesign_Cybercrime_I18n::t($key);
@@ -2582,7 +2685,7 @@ class PAXdesign_Cybercrime_Tickets {
         if ($reference !== '') {
             $report = self::get_report_for_admin($reference);
             if (!$report) {
-                wp_send_json_error(array('message' => __('Report not found.', 'paxdesign-booking')), 404);
+                wp_send_json_error(array('message' => self::admin_i18n('error.not_found', __('Report not found.', 'paxdesign-booking'))), 404);
             }
             wp_send_json_success(array(
                 'report'  => $report,
@@ -2603,12 +2706,12 @@ class PAXdesign_Cybercrime_Tickets {
 
         $reference = sanitize_text_field(wp_unslash($_POST['reference_id'] ?? ''));
         if ($reference === '') {
-            wp_send_json_error(array('message' => __('Report not found.', 'paxdesign-booking')), 404);
+            wp_send_json_error(array('message' => self::admin_i18n('error.not_found', __('Report not found.', 'paxdesign-booking'))), 404);
         }
 
         $row = self::get_report_row($reference);
         if (!$row) {
-            wp_send_json_error(array('message' => __('Report not found.', 'paxdesign-booking')), 404);
+            wp_send_json_error(array('message' => self::admin_i18n('error.not_found', __('Report not found.', 'paxdesign-booking'))), 404);
         }
 
         self::mark_read_for_audience($reference, 'staff', get_current_user_id());
@@ -2628,7 +2731,7 @@ class PAXdesign_Cybercrime_Tickets {
         $reference = sanitize_text_field(wp_unslash($_POST['reference_id'] ?? $_POST['reference'] ?? ''));
         $row = self::get_report_row($reference);
         if (!$row || !self::user_can_view_report($row, get_current_user_id())) {
-            wp_send_json_error(array('message' => __('Report not found.', 'paxdesign-booking')), 404);
+            wp_send_json_error(array('message' => self::customer_i18n('error.not_found', __('Report not found.', 'paxdesign-booking'))), 404);
         }
 
         self::mark_read_for_audience($reference, 'customer', get_current_user_id());
@@ -2653,7 +2756,7 @@ class PAXdesign_Cybercrime_Tickets {
 
     public static function ajax_report_list() {
         if (!is_user_logged_in()) {
-            wp_send_json_error(array('message' => __('Please sign in.', 'paxdesign-booking'), 'code' => 'login_required'), 401);
+            wp_send_json_error(array('message' => self::customer_i18n('error.login', __('Please sign in.', 'paxdesign-booking')), 'code' => 'login_required'), 401);
         }
         check_ajax_referer(PAXdesign_Cybercrime_Intake::NONCE_ACTION, 'nonce');
         self::send_customer_nocache_headers();
@@ -2683,7 +2786,7 @@ class PAXdesign_Cybercrime_Tickets {
 
     public static function ajax_active_report() {
         if (!is_user_logged_in()) {
-            wp_send_json_error(array('message' => __('Please sign in.', 'paxdesign-booking'), 'code' => 'login_required'), 401);
+            wp_send_json_error(array('message' => self::customer_i18n('error.login', __('Please sign in.', 'paxdesign-booking')), 'code' => 'login_required'), 401);
         }
         check_ajax_referer(PAXdesign_Cybercrime_Intake::NONCE_ACTION, 'nonce');
         self::send_customer_nocache_headers();
@@ -2697,7 +2800,7 @@ class PAXdesign_Cybercrime_Tickets {
 
     public static function ajax_report_detail() {
         if (!is_user_logged_in()) {
-            wp_send_json_error(array('message' => __('Please sign in.', 'paxdesign-booking'), 'code' => 'login_required'), 401);
+            wp_send_json_error(array('message' => self::customer_i18n('error.login', __('Please sign in.', 'paxdesign-booking')), 'code' => 'login_required'), 401);
         }
         check_ajax_referer(PAXdesign_Cybercrime_Intake::NONCE_ACTION, 'nonce');
         self::send_customer_nocache_headers();
@@ -2705,7 +2808,7 @@ class PAXdesign_Cybercrime_Tickets {
         $reference = sanitize_text_field(wp_unslash($_GET['reference'] ?? $_POST['reference'] ?? ''));
         $report = self::get_report_for_user($reference, get_current_user_id());
         if (!$report) {
-            wp_send_json_error(array('message' => __('Report not found.', 'paxdesign-booking')), 404);
+            wp_send_json_error(array('message' => self::customer_i18n('error.not_found', __('Report not found.', 'paxdesign-booking'))), 404);
         }
         wp_send_json_success(array('report' => $report));
     }

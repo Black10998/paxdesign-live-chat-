@@ -233,7 +233,7 @@ class PAXdesign_Customer_Admin {
             echo '<div class="notice notice-success is-dismissible"><p>' . esc_html(self::cc_t('notice.saved', __('Saved.', 'paxdesign-booking'))) . '</p></div>';
         }
         if (isset($_GET['synced'])) {
-            echo '<div class="notice notice-success is-dismissible"><p>' . esc_html__('Services catalog synced.', 'paxdesign-booking') . '</p></div>';
+            echo '<div class="notice notice-success is-dismissible"><p>' . esc_html(self::cc_t('portal.synced', __('Services catalog synced.', 'paxdesign-booking'))) . '</p></div>';
         }
 
         switch ($tab) {
@@ -268,12 +268,12 @@ class PAXdesign_Customer_Admin {
         $orders = (int) $wpdb->get_var('SELECT COUNT(1) FROM ' . PAXdesign_Customer_DB::table('orders'));
         $news = (int) $wpdb->get_var("SELECT COUNT(1) FROM " . PAXdesign_Customer_DB::table('news') . " WHERE status = 'published'");
         $services = (int) $wpdb->get_var('SELECT COUNT(1) FROM ' . PAXdesign_Customer_DB::table('services') . ' WHERE is_active = 1');
-        echo '<p>' . esc_html__('Manage customer-facing projects, news, and the services catalog. Authentication uses the PAXDesign booking auth module.', 'paxdesign-booking') . '</p>';
+        echo '<p>' . esc_html(self::cc_t('portal.overview.intro', __('Manage customer-facing projects, news, and the services catalog. Authentication uses the PAXDesign booking auth module.', 'paxdesign-booking'))) . '</p>';
         echo '<ul style="list-style:disc;margin-left:1.5em">';
-        printf('<li>%s</li>', esc_html(sprintf(__('Active projects: %d', 'paxdesign-booking'), $projects)));
-        printf('<li>%s</li>', esc_html(sprintf(__('Service requests: %d', 'paxdesign-booking'), $orders)));
-        printf('<li>%s</li>', esc_html(sprintf(__('Published news: %d', 'paxdesign-booking'), $news)));
-        printf('<li>%s</li>', esc_html(sprintf(__('Catalog services: %d', 'paxdesign-booking'), $services)));
+        printf('<li>%s</li>', esc_html(sprintf(self::cc_t('portal.overview.projects_count', __('Active projects: %d', 'paxdesign-booking')), $projects)));
+        printf('<li>%s</li>', esc_html(sprintf(self::cc_t('portal.overview.orders_count', __('Service requests: %d', 'paxdesign-booking')), $orders)));
+        printf('<li>%s</li>', esc_html(sprintf(self::cc_t('portal.overview.news_count', __('Published news: %d', 'paxdesign-booking')), $news)));
+        printf('<li>%s</li>', esc_html(sprintf(self::cc_t('portal.overview.services_count', __('Catalog services: %d', 'paxdesign-booking')), $services)));
         echo '</ul>';
         echo '<p><code>/wp-json/pdx/v1/customer/*</code></p>';
     }
@@ -287,34 +287,34 @@ class PAXdesign_Customer_Admin {
 
         global $wpdb;
         $rows = $wpdb->get_results('SELECT p.*, u.display_name AS customer_name FROM ' . PAXdesign_Customer_DB::table('projects') . ' p LEFT JOIN ' . $wpdb->users . ' u ON u.ID = p.customer_user_id ORDER BY p.updated_at DESC LIMIT 50', ARRAY_A);
-        echo '<h2>' . esc_html__('Projects', 'paxdesign-booking') . '</h2>';
-        echo '<table class="widefat striped"><thead><tr><th>' . esc_html__('Ref', 'paxdesign-booking') . '</th><th>' . esc_html__('Title', 'paxdesign-booking') . '</th><th>' . esc_html__('Customer', 'paxdesign-booking') . '</th><th>' . esc_html__('Status', 'paxdesign-booking') . '</th><th>' . esc_html__('Progress', 'paxdesign-booking') . '</th></tr></thead><tbody>';
+        echo '<h2>' . esc_html(self::cc_t('nav.projects', __('Projects', 'paxdesign-booking'))) . '</h2>';
+        echo '<table class="widefat striped"><thead><tr><th>' . esc_html(self::cc_t('portal.ref', __('Ref', 'paxdesign-booking'))) . '</th><th>' . esc_html(self::cc_t('portal.title', __('Title', 'paxdesign-booking'))) . '</th><th>' . esc_html(self::cc_t('portal.customer', __('Customer', 'paxdesign-booking'))) . '</th><th>' . esc_html(self::cc_t('portal.status', __('Status', 'paxdesign-booking'))) . '</th><th>' . esc_html(self::cc_t('portal.progress', __('Progress', 'paxdesign-booking'))) . '</th></tr></thead><tbody>';
         foreach ($rows ?: array() as $row) {
             $detail_url = admin_url('admin.php?page=' . self::MENU_SLUG . '&tab=projects&project_id=' . (int) $row['id']);
             echo '<tr>';
             echo '<td><a href="' . esc_url($detail_url) . '">' . esc_html($row['project_ref']) . '</a></td>';
             echo '<td>' . esc_html($row['title']) . '</td>';
             echo '<td>' . esc_html($row['customer_name'] ?: ('#' . $row['customer_user_id'])) . '</td>';
-            echo '<td>' . esc_html($row['status']) . '</td>';
+            echo '<td>' . esc_html(self::cc_t('portal.' . sanitize_key((string) $row['status']), (string) $row['status'])) . '</td>';
             echo '<td>' . esc_html((string) $row['progress']) . '%</td>';
             echo '</tr>';
         }
         if (empty($rows)) {
-            echo '<tr><td colspan="5">' . esc_html__('No projects yet.', 'paxdesign-booking') . '</td></tr>';
+            echo '<tr><td colspan="5">' . esc_html(self::cc_t('portal.no_projects', __('No projects yet.', 'paxdesign-booking'))) . '</td></tr>';
         }
         echo '</tbody></table>';
 
-        echo '<h3>' . esc_html__('Create project', 'paxdesign-booking') . '</h3>';
+        echo '<h3>' . esc_html(self::cc_t('portal.create_project', __('Create project', 'paxdesign-booking'))) . '</h3>';
         echo '<form method="post" action="' . esc_url(admin_url('admin-post.php')) . '">';
         wp_nonce_field('paxdesign_customer_save_project');
         echo '<input type="hidden" name="action" value="paxdesign_customer_save_project" />';
         echo '<table class="form-table"><tbody>';
-        echo '<tr><th><label for="customer_user_id">' . esc_html__('Customer user ID', 'paxdesign-booking') . '</label></th><td><input type="number" name="customer_user_id" id="customer_user_id" class="regular-text" required /></td></tr>';
-        echo '<tr><th><label for="title">' . esc_html__('Title', 'paxdesign-booking') . '</label></th><td><input type="text" name="title" id="title" class="regular-text" required /></td></tr>';
-        echo '<tr><th><label for="description">' . esc_html__('Description', 'paxdesign-booking') . '</label></th><td><textarea name="description" id="description" class="large-text" rows="4"></textarea></td></tr>';
-        echo '<tr><th><label for="status">' . esc_html__('Status', 'paxdesign-booking') . '</label></th><td><select name="status" id="status"><option value="planning">planning</option><option value="in_progress">in_progress</option><option value="review">review</option><option value="completed">completed</option></select></td></tr>';
+        echo '<tr><th><label for="customer_user_id">' . esc_html(self::cc_t('portal.customer_user_id', __('Customer user ID', 'paxdesign-booking'))) . '</label></th><td><input type="number" name="customer_user_id" id="customer_user_id" class="regular-text" required /></td></tr>';
+        echo '<tr><th><label for="title">' . esc_html(self::cc_t('portal.title', __('Title', 'paxdesign-booking'))) . '</label></th><td><input type="text" name="title" id="title" class="regular-text" required /></td></tr>';
+        echo '<tr><th><label for="description">' . esc_html(self::cc_t('portal.description', __('Description', 'paxdesign-booking'))) . '</label></th><td><textarea name="description" id="description" class="large-text" rows="4"></textarea></td></tr>';
+        echo '<tr><th><label for="status">' . esc_html(self::cc_t('portal.status', __('Status', 'paxdesign-booking'))) . '</label></th><td><select name="status" id="status"><option value="planning">' . esc_html(self::cc_t('portal.planning', 'planning')) . '</option><option value="in_progress">' . esc_html(self::cc_t('portal.in_progress', 'in_progress')) . '</option><option value="review">' . esc_html(self::cc_t('portal.review', 'review')) . '</option><option value="completed">' . esc_html(self::cc_t('portal.completed', 'completed')) . '</option></select></td></tr>';
         echo '</tbody></table>';
-        submit_button(__('Create project', 'paxdesign-booking'));
+        submit_button(self::cc_t('portal.create_project', __('Create project', 'paxdesign-booking')));
         echo '</form>';
     }
 
@@ -324,8 +324,8 @@ class PAXdesign_Customer_Admin {
             'SELECT o.*, u.display_name AS customer_name FROM ' . PAXdesign_Customer_DB::table('orders') . ' o LEFT JOIN ' . $wpdb->users . ' u ON u.ID = o.customer_user_id ORDER BY o.updated_at DESC LIMIT 50',
             ARRAY_A
         );
-        echo '<h2>' . esc_html__('Service requests', 'paxdesign-booking') . '</h2>';
-        echo '<table class="widefat striped"><thead><tr><th>' . esc_html__('Ref', 'paxdesign-booking') . '</th><th>' . esc_html__('Customer', 'paxdesign-booking') . '</th><th>' . esc_html__('Service', 'paxdesign-booking') . '</th><th>' . esc_html__('Status', 'paxdesign-booking') . '</th><th></th></tr></thead><tbody>';
+        echo '<h2>' . esc_html(self::cc_t('portal.orders', __('Service requests', 'paxdesign-booking'))) . '</h2>';
+        echo '<table class="widefat striped"><thead><tr><th>' . esc_html(self::cc_t('portal.ref', __('Ref', 'paxdesign-booking'))) . '</th><th>' . esc_html(self::cc_t('portal.customer', __('Customer', 'paxdesign-booking'))) . '</th><th>' . esc_html(self::cc_t('portal.service', __('Service', 'paxdesign-booking'))) . '</th><th>' . esc_html(self::cc_t('portal.status', __('Status', 'paxdesign-booking'))) . '</th><th></th></tr></thead><tbody>';
         foreach ($rows ?: array() as $row) {
             echo '<tr>';
             echo '<td>' . esc_html($row['order_ref']) . '</td>';
@@ -360,7 +360,7 @@ class PAXdesign_Customer_Admin {
             $edit_meta = array();
         }
 
-        echo '<h2>' . esc_html__('News & announcements', 'paxdesign-booking') . '</h2>';
+        echo '<h2>' . esc_html(self::cc_t('portal.news', __('News & announcements', 'paxdesign-booking'))) . '</h2>';
         echo '<p class="description">' . esc_html__('Published items appear in the mobile app immediately. Deleting an item removes it from the app on the next refresh.', 'paxdesign-booking') . '</p>';
         echo '<table class="widefat striped"><thead><tr><th>' . esc_html__('Title', 'paxdesign-booking') . '</th><th>' . esc_html__('Slug', 'paxdesign-booking') . '</th><th>' . esc_html__('Status', 'paxdesign-booking') . '</th><th>' . esc_html__('Published', 'paxdesign-booking') . '</th><th></th></tr></thead><tbody>';
         foreach ($items as $item) {
@@ -444,7 +444,7 @@ class PAXdesign_Customer_Admin {
 
     private static function render_services_tab() {
         $services = PAXdesign_Customer_Services::list_services(array());
-        echo '<h2>' . esc_html__('Services catalog', 'paxdesign-booking') . '</h2>';
+        echo '<h2>' . esc_html(self::cc_t('portal.services_catalog', __('Services catalog', 'paxdesign-booking'))) . '</h2>';
         echo '<form method="post" action="' . esc_url(admin_url('admin-post.php')) . '" style="margin-bottom:1em">';
         wp_nonce_field('paxdesign_customer_sync_services');
         echo '<input type="hidden" name="action" value="paxdesign_customer_sync_services" />';
@@ -639,8 +639,8 @@ class PAXdesign_Customer_Admin {
     }
 
     private static function render_notifications_tab() {
-        echo '<h2>' . esc_html__('Customer notifications', 'paxdesign-booking') . '</h2>';
-        echo '<p>' . esc_html__('Send a notification to a specific customer. Push delivery requires a registered device token.', 'paxdesign-booking') . '</p>';
+        echo '<h2>' . esc_html(self::cc_t('nav.notifications', __('Customer notifications', 'paxdesign-booking'))) . '</h2>';
+        echo '<p>' . esc_html(self::cc_t('portal.notify_intro', __('Send a notification to a specific customer. Push delivery requires a registered device token.', 'paxdesign-booking'))) . '</p>';
         echo '<form method="post" action="' . esc_url(admin_url('admin-post.php')) . '">';
         wp_nonce_field('paxdesign_customer_send_notification');
         echo '<input type="hidden" name="action" value="paxdesign_customer_send_notification" />';

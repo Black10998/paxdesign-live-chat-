@@ -402,10 +402,19 @@ class PAXdesign_Cybercrime_Document_Checks {
      * @param array<string, mixed> $summary
      * @return array<string, mixed>
      */
-    public static function customer_view($summary) {
+    public static function customer_view($summary, $lang = '') {
         if (!is_array($summary)) {
             return array();
         }
+        if ($lang === '' && class_exists('PAXdesign_Cybercrime_I18n')) {
+            $lang = PAXdesign_Cybercrime_I18n::customer_lang();
+        }
+        $localize = function ($items) use ($lang) {
+            if (!class_exists('PAXdesign_Cybercrime_I18n')) {
+                return array_values((array) $items);
+            }
+            return PAXdesign_Cybercrime_I18n::localize_list($items, $lang);
+        };
         $files = array();
         foreach ((array) ($summary['files'] ?? array()) as $file) {
             if (!is_array($file)) {
@@ -421,22 +430,29 @@ class PAXdesign_Cybercrime_Document_Checks {
                 'type_ok'              => !empty($file['type_ok']),
                 'appears_expired'      => !empty($file['appears_expired']),
                 'expiry_date'          => (string) ($file['expiry_date'] ?? ''),
-                'issues'               => array_values((array) ($file['issues'] ?? array())),
-                'customer_corrections' => array_values((array) ($file['customer_corrections'] ?? array())),
+                'issues'               => $localize($file['issues'] ?? array()),
+                'customer_corrections' => $localize($file['customer_corrections'] ?? array()),
                 'legal_verification'   => false,
             );
         }
 
+        $disclaimer = (string) ($summary['disclaimer'] ?? '');
+        $next = (string) ($summary['next_action'] ?? '');
+        if (class_exists('PAXdesign_Cybercrime_I18n')) {
+            $disclaimer = PAXdesign_Cybercrime_I18n::t('checks.disclaimer', $lang);
+            $next = PAXdesign_Cybercrime_I18n::localize_canned($next, $lang);
+        }
+
         return array(
             'legal_verification'   => false,
-            'disclaimer'           => (string) ($summary['disclaimer'] ?? ''),
+            'disclaimer'           => $disclaimer,
             'files'                => $files,
             'needs_human_review'   => !empty($summary['needs_human_review']),
-            'customer_corrections' => array_values((array) ($summary['customer_corrections'] ?? array())),
-            'missing'              => array_values((array) ($summary['missing'] ?? array())),
+            'customer_corrections' => $localize($summary['customer_corrections'] ?? array()),
+            'missing'              => $localize($summary['missing'] ?? array()),
             'rejected_count'       => (int) ($summary['rejected_count'] ?? 0),
             'accepted_count'       => (int) ($summary['accepted_count'] ?? 0),
-            'next_action'          => (string) ($summary['next_action'] ?? ''),
+            'next_action'          => $next,
             'checked_at'           => (string) ($summary['checked_at'] ?? ''),
         );
     }
