@@ -151,7 +151,7 @@
   }
 
   function removeLegacyAuthControls() {
-    document.querySelectorAll('.pdx-auth-trigger, .pdx-auth-signout-btn, #pdx-account-header-signout').forEach(function (node) {
+    document.querySelectorAll('.pdx-auth-trigger, .pdx-auth-signup-btn, .pdx-auth-signout-btn, #pdx-account-header-signout').forEach(function (node) {
       if (node && node.parentNode) node.parentNode.removeChild(node);
     });
     document.querySelectorAll('#pdx-auth-bar').forEach(function (bar, index) {
@@ -180,7 +180,6 @@
     syncingHeaderAuth = true;
     try {
       var signinBtn = authBar ? authBar.querySelector('.pdx-auth-signin-btn') : null;
-      var signupBtn = authBar ? authBar.querySelector('.pdx-auth-signup-btn') : null;
       var loggedOut = !user.logged_in;
       if (signinBtn) {
         setHeaderCtaLabel(signinBtn, 'pdx-auth-signin-btn__label', 'Sign In');
@@ -188,12 +187,9 @@
         signinBtn.classList.toggle('pdx-is-hidden', !loggedOut);
         signinBtn.setAttribute('data-pdx-header-cta', 'login');
       }
-      if (signupBtn) {
-        setHeaderCtaLabel(signupBtn, 'pdx-auth-signup-btn__label', 'Sign Up');
-        signupBtn.hidden = !loggedOut;
-        signupBtn.classList.toggle('pdx-is-hidden', !loggedOut);
-        signupBtn.setAttribute('data-pdx-header-cta', 'register');
-      }
+      document.querySelectorAll('.pdx-auth-signup-btn').forEach(function (node) {
+        if (node && node.parentNode) node.parentNode.removeChild(node);
+      });
     } finally {
       syncingHeaderAuth = false;
     }
@@ -918,7 +914,6 @@
     authBar.className = 'pdx-cx-shell';
     authBar.innerHTML =
       '<div class="pdx-auth-bar-inner">' +
-        '<button type="button" class="pdx-auth-signup-btn pdx-cx-btn pdx-cx-btn--ghost pdx-auth-header-btn" data-pdx-header-cta="register"><span class="pdx-auth-signup-btn__label">Sign Up</span></button>' +
         '<button type="button" class="pdx-auth-signin-btn pdx-cx-btn pdx-auth-header-btn" data-pdx-header-cta="login"><span class="pdx-auth-signin-btn__label">Sign In</span></button>' +
         '<button type="button" class="pdx-auth-account-btn pdx-cx-btn pdx-cx-btn--ghost pdx-auth-header-btn" aria-haspopup="true" aria-expanded="false" hidden>' +
           '<span class="pdx-auth-account-identity"></span>' +
@@ -956,12 +951,8 @@
       });
     });
 
-    var signupBtn = authBar.querySelector('.pdx-auth-signup-btn');
     var signinBtn = authBar.querySelector('.pdx-auth-signin-btn');
     var portalBtn = authBar.querySelector('.pdx-auth-portal-btn');
-    if (signupBtn) {
-      signupBtn.addEventListener('click', function () { navigateToAuthPage('register'); });
-    }
     if (signinBtn) {
       signinBtn.addEventListener('click', function () { navigateToAuthPage('login'); });
     }
@@ -1012,15 +1003,10 @@
     var accountBtn = authBar ? authBar.querySelector('.pdx-auth-account-btn') : null;
     var identityEl = accountBtn ? accountBtn.querySelector('.pdx-auth-account-identity') : null;
     var head = authMenu.querySelector('.pdx-auth-menu-head');
-    var signupBtn = authBar ? authBar.querySelector('.pdx-auth-signup-btn') : null;
     var signinBtn = authBar ? authBar.querySelector('.pdx-auth-signin-btn') : null;
     var portalBtn = authBar ? authBar.querySelector('.pdx-auth-portal-btn') : null;
     var label = user.logged_in ? headerDisplayName() : t('account', 'Account');
 
-    if (signupBtn) {
-      signupBtn.hidden = !!user.logged_in;
-      signupBtn.classList.toggle('pdx-is-hidden', !!user.logged_in);
-    }
     if (signinBtn) {
       signinBtn.hidden = !!user.logged_in;
       signinBtn.classList.toggle('pdx-is-hidden', !!user.logged_in);

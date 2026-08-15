@@ -652,7 +652,7 @@ body.page-template-template-apple-homepage-php .dtr-page-title--section {
   background: #fff;
 }
 
-/* Header Sign In — primary CTA; Sign Up stays secondary */
+/* Header Sign In — only authentication button */
 html body.home #pdx-auth-bar.pdx-auth-bar--header .pdx-auth-signin-btn.pdx-auth-header-btn,
 html body.home #pdx-auth-bar.pdx-auth-bar--header .pdx-auth-signin-btn,
 html body.page-template-template-apple-homepage #pdx-auth-bar .pdx-auth-signin-btn.pdx-auth-header-btn,
@@ -681,17 +681,15 @@ html body.page-template-template-apple-homepage #pdx-auth-bar .pdx-auth-signin-b
   outline: none !important;
 }
 
-html body.home #pdx-auth-bar.pdx-auth-bar--header .pdx-auth-signup-btn.pdx-auth-header-btn,
-html body.home #pdx-auth-bar.pdx-auth-bar--header .pdx-auth-signup-btn,
-html body.page-template-template-apple-homepage #pdx-auth-bar .pdx-auth-signup-btn.pdx-auth-header-btn,
+html body.home #pdx-auth-bar .pdx-auth-signup-btn,
 html body.page-template-template-apple-homepage #pdx-auth-bar .pdx-auth-signup-btn {
-  background: transparent !important;
-  background-color: transparent !important;
-  background-image: none !important;
-  color: inherit !important;
-  -webkit-text-fill-color: currentColor !important;
-  border: 0 !important;
-  box-shadow: none !important;
+  display: none !important;
+  visibility: hidden !important;
+  pointer-events: none !important;
+  width: 0 !important;
+  height: 0 !important;
+  overflow: hidden !important;
+  opacity: 0 !important;
 }
 
 /* Footer subscribe — Apple clean form on homepage */

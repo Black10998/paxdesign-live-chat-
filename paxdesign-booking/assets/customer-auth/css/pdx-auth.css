@@ -68,26 +68,21 @@
 }
 
 #pdx-auth-bar.pdx-auth-bar--header .pdx-auth-signin-btn::before,
-#pdx-auth-bar.pdx-auth-bar--header .pdx-auth-signin-btn::after,
-#pdx-auth-bar.pdx-auth-bar--header .pdx-auth-signup-btn::before,
-#pdx-auth-bar.pdx-auth-bar--header .pdx-auth-signup-btn::after {
+#pdx-auth-bar.pdx-auth-bar--header .pdx-auth-signin-btn::after {
   content: none !important;
   display: none !important;
 }
 
-#pdx-auth-bar.pdx-auth-bar--header .pdx-auth-signup-btn {
-  border: 0;
-  background: transparent;
-  background-color: transparent;
-  background-image: none;
-  color: inherit;
-  box-shadow: none;
-  border-radius: 980px;
-  max-width: none;
-  overflow: visible;
-  text-overflow: clip;
-  white-space: nowrap;
-  font-weight: 600;
+html body .pdx-auth-signup-btn,
+html body #pdx-auth-bar .pdx-auth-signup-btn,
+html body #pdx-auth-bar.pdx-auth-bar--header .pdx-auth-signup-btn {
+  display: none !important;
+  visibility: hidden !important;
+  pointer-events: none !important;
+  width: 0 !important;
+  height: 0 !important;
+  overflow: hidden !important;
+  opacity: 0 !important;
 }
 
 #pdx-auth-bar .pdx-is-hidden,
@@ -105,14 +100,6 @@
   background-image: none;
   color: #fff;
   box-shadow: none;
-  outline: none;
-  text-decoration: none;
-}
-
-#pdx-auth-bar.pdx-auth-bar--header .pdx-auth-signup-btn:hover,
-#pdx-auth-bar.pdx-auth-bar--header .pdx-auth-signup-btn:focus {
-  background: rgba(0, 0, 0, 0.06);
-  color: inherit;
   outline: none;
   text-decoration: none;
 }
@@ -403,12 +390,6 @@ html body.dtr-apple-sticky-header #pdx-auth-bar.pdx-auth-bar--header .pdx-auth-s
   background: #000 !important;
 }
 
-html body.dtr-apple-sticky-header #pdx-auth-bar.pdx-auth-bar--header .pdx-auth-signup-btn {
-  color: #000 !important;
-  -webkit-text-fill-color: #000 !important;
-  background: transparent !important;
-}
-
 .pdx-auth-account-label {
   display: inline-block;
   max-width: 100%;
@@ -576,9 +557,7 @@ html body.dtr-apple-sticky-header #pdx-auth-bar.pdx-auth-bar--header .pdx-auth-s
   }
 
   html body #pdx-auth-bar.pdx-auth-bar--header .pdx-auth-signin-btn:not([hidden]),
-  html body #pdx-auth-bar .pdx-auth-signin-btn:not([hidden]),
-  html body #pdx-auth-bar.pdx-auth-bar--header .pdx-auth-signup-btn:not([hidden]),
-  html body #pdx-auth-bar .pdx-auth-signup-btn:not([hidden]) {
+  html body #pdx-auth-bar .pdx-auth-signin-btn:not([hidden]) {
     display: inline-flex !important;
     align-items: center;
     justify-content: center;
@@ -595,11 +574,6 @@ html body.dtr-apple-sticky-header #pdx-auth-bar.pdx-auth-bar--header .pdx-auth-s
 
   html body #pdx-auth-bar .pdx-auth-signin-btn:not([hidden]) {
     padding: 0 14px !important;
-  }
-
-  html body #pdx-auth-bar .pdx-auth-signup-btn:not([hidden]) {
-    padding: 0 10px !important;
-    font-weight: 600 !important;
   }
 
   #pdx-auth-bar.pdx-auth-bar--header .pdx-auth-portal-btn,
@@ -633,12 +607,6 @@ html body.dtr-apple-sticky-header #pdx-auth-bar.pdx-auth-bar--header .pdx-auth-s
   html body #pdx-auth-bar.pdx-auth-bar--header .pdx-auth-signin-btn:not([hidden]) {
     font-size: 13px !important;
     padding: 0 14px !important;
-    max-width: none !important;
-  }
-
-  html body #pdx-auth-bar.pdx-auth-bar--header .pdx-auth-signup-btn:not([hidden]) {
-    font-size: 12px !important;
-    padding: 0 8px !important;
     max-width: none !important;
   }
 }
@@ -1579,20 +1547,6 @@ html body #pdx-auth-bar.pdx-auth-bar--header .pdx-auth-signin-btn:focus {
   box-shadow: none !important;
   text-decoration: none !important;
   outline: none !important;
-}
-
-html body #pdx-auth-bar.pdx-auth-bar--header .pdx-auth-signup-btn.pdx-cx-btn.pdx-auth-header-btn,
-html body #pdx-auth-bar.pdx-auth-bar--header button.pdx-auth-signup-btn,
-html body #pdx-auth-bar.pdx-auth-bar--header .pdx-auth-signup-btn,
-html body.home #pdx-auth-bar.pdx-auth-bar--header .pdx-auth-signup-btn,
-html body.page-template-template-apple-homepage #pdx-auth-bar .pdx-auth-signup-btn {
-  background: transparent !important;
-  background-color: transparent !important;
-  background-image: none !important;
-  color: inherit !important;
-  -webkit-text-fill-color: currentColor !important;
-  border: 0 !important;
-  box-shadow: none !important;
 }
 
 @media (prefers-color-scheme: dark) {
