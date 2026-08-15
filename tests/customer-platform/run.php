@@ -392,7 +392,7 @@ cx_assert_true(strpos($ccs_widget, 'ccs_operation') !== false, 'Chat must render
 cx_assert_true(strpos($ccs_widget, 'upsertCcsOperationMessage') !== false, 'Chat must keep the same processing message across follow-ups');
 
 $plugin_bootstrap = file_get_contents($ccs_root . '/paxdesign-booking.php');
-cx_assert_true(strpos($plugin_bootstrap, "define('PAXDESIGN_BOOKING_VERSION', '3.175.9')") !== false, 'Plugin version must be 3.175.9');
+cx_assert_true(strpos($plugin_bootstrap, "define('PAXDESIGN_BOOKING_VERSION', '3.175.10')") !== false, 'Plugin version must be 3.175.10');
 cx_assert_true(strpos($plugin_bootstrap, 'class-paxdesign-cybercrime-i18n.php') !== false, 'Plugin must load CCS localization');
 cx_assert_true(strpos($plugin_bootstrap, 'class-paxdesign-cybercrime-document-checks.php') !== false, 'Plugin must load document checks');
 cx_assert_true(strpos($plugin_bootstrap, 'class-paxdesign-cybercrime-ai-case.php') !== false, 'Plugin must load AI case sync');
@@ -497,8 +497,27 @@ cx_assert_true(PAXdesign_Cybercrime_AI_Operations::is_same_case_continuation('م
 cx_assert_true(PAXdesign_Cybercrime_AI_Case::is_explicit_new_case_request('Start a new case') === true, 'Start a new case must be recognized as an explicit new-case request');
 cx_assert_true(PAXdesign_Cybercrime_AI_Case::is_explicit_new_case_request('New report') === true, 'New report must be recognized as an explicit new-case request');
 cx_assert_true(PAXdesign_Cybercrime_AI_Case::is_explicit_new_case_request('أريد فتح بلاغ جديد') === true, 'أريد فتح بلاغ جديد must be recognized as an explicit new-case request');
+cx_assert_true(PAXdesign_Cybercrime_AI_Case::is_explicit_new_case_request('ابدأ من الصفر') === true, 'ابدأ من الصفر must open a brand-new CCS reference');
+cx_assert_true(PAXdesign_Cybercrime_AI_Case::is_explicit_new_case_request('أبدأ من الصفر') === true, 'أبدأ من الصفر must open a brand-new CCS reference');
+cx_assert_true(PAXdesign_Cybercrime_AI_Case::is_explicit_new_case_request('Start from scratch') === true, 'Start from scratch must open a brand-new CCS reference');
+cx_assert_true(PAXdesign_Cybercrime_AI_Case::is_explicit_new_case_request('Submit a new report') === true, 'Submit a new report must open a brand-new CCS reference');
+cx_assert_true(PAXdesign_Cybercrime_AI_Case::is_explicit_new_case_request('Von vorne') === true, 'Von vorne must open a brand-new CCS reference');
 cx_assert_true(PAXdesign_Cybercrime_AI_Case::is_explicit_new_case_request('arabic') === false, 'A language switch must not open a new CCS case');
 cx_assert_true(PAXdesign_Cybercrime_AI_Case::is_explicit_new_case_request('My GitHub account was taken over') === false, 'Incident facts must not be treated as a new-case command');
+cx_assert_true(PAXdesign_Cybercrime_AI_Case::is_explicit_new_case_request('Help me submit a report') === false, 'Help submitting the current report must not create a new CCS reference');
+cx_assert_true(PAXdesign_Cybercrime_AI_Case::is_explicit_new_case_request('أريد تقديم بلاغ') === false, 'أريد تقديم بلاغ without جديد must continue the current case');
+cx_assert_true(PAXdesign_Cybercrime_AI_Operations::is_same_case_continuation('ابدأ من الصفر') === false, 'ابدأ من الصفر must not continue the previous CCS reference');
+cx_assert_true(PAXdesign_Cybercrime_AI_Operations::is_same_case_continuation('تابع') === true, 'تابع must continue the current CCS reference');
+$ensure_src = file_get_contents($ccs_root . '/includes/class-paxdesign-cybercrime-ai-case.php');
+$intake_src = file_get_contents($ccs_root . '/includes/class-paxdesign-cybercrime-intake.php');
+$ticket_src = file_get_contents($ccs_root . '/includes/class-paxdesign-cybercrime-tickets.php');
+$chat_src = file_get_contents($ccs_root . '/includes/class-paxdesign-chat.php');
+cx_assert_true(strpos($ensure_src, 'create_draft_for_user($user_id, $session_id, $explicit_new)') !== false, 'Explicit new-case requests must force a new CCS draft');
+cx_assert_true(strpos($intake_src, '$force_new = false') !== false && strpos($intake_src, 'supersede_open_draft_for_user') !== false, 'Creating a draft with force_new must close the previous draft instead of reusing it');
+cx_assert_true(strpos($ticket_src, 'ORDER BY updated_at DESC, created_at DESC LIMIT 1') !== false, 'Session binding must prefer the newest CCS reference');
+cx_assert_true(strpos($ticket_src, 'function detach_chat_session') !== false, 'A new case must unbind the chat session from the previous CCS reference');
+cx_assert_true(strpos($chat_src, 'reset_ccs_conversation_epoch') !== false, 'A new case must drop previous conversation context from the model prompt');
+cx_assert_true(strpos($chat_src, 'explicitly started a NEW Cybercrime Support case') !== false, 'The model prompt for a new case must forbid reusing the previous CCS reference');
 $prompt_state = PAXdesign_Cybercrime_AI_Operations::prompt_state_block(array(
     'payload' => json_encode(array(
         'ai_workflow' => array('step' => 'review'),
@@ -650,6 +669,23 @@ cx_assert_true(strpos($chat_knowledge, 'Identity → Incident → Evidence → R
 $ccs_js_src = file_get_contents(dirname(__DIR__, 2) . '/navein/assets/js/apple-cybercrime-support.js');
 cx_assert_true(strpos($ccs_js_src, 'workflow.step') !== false, 'The CCS page must follow the AI workflow step without replacing the 4-step form');
 cx_assert_true(strpos($ccs_js_src, 'setPhoneFromStored') !== false, 'The CCS page must prefill phone from the same AI-filled case');
+cx_assert_true(strpos($ccs_page, 'data-step="1"') !== false && strpos($ccs_page, 'data-step="4"') !== false, 'The existing 4-step page must remain the source of truth');
+$fresh_copy = PAXdesign_Cybercrime_AI_Workflow::new_case_opened_copy(
+    array(
+        'reference_id' => 'CCS-20260815-NEWCASE01',
+        'step' => 1,
+        'step_label' => 'الهوية',
+        'missing_labels' => array('الاسم القانوني الكامل'),
+        'missing' => array('full_name'),
+        'review' => array(),
+    ),
+    array('fresh_start' => true),
+    'ar'
+);
+cx_assert_true(strpos($fresh_copy, 'CCS-20260815-NEWCASE01') !== false, 'A new-case reply must use the new CCS reference');
+cx_assert_true(strpos($fresh_copy, 'CCS-20260815-18FF0B59') === false, 'A new-case reply must never reuse the previous CCS reference');
+cx_assert_true(strpos($fresh_copy, 'بلاغ جديد') !== false || strpos($fresh_copy, 'تم فتح') !== false, 'Arabic new-case copy must say a new report was opened');
+cx_assert_true(strpos($fresh_copy, 'ما زلنا على نفس') === false, 'A new-case reply must not say this is still the previous case');
 cx_assert_true(strpos($ccs_page, 'data-step="1"') !== false && strpos($ccs_page, 'data-step="4"') !== false, 'The existing 4-step page must remain the source of truth');
 cx_assert_true(strpos(file_get_contents($ccs_root . '/includes/class-paxdesign-cybercrime-ai-operations.php'), '$is_draft && class_exists(\'PAXdesign_Cybercrime_AI_Workflow\')') !== false, 'Draft CCS turns must run the website workflow before document checks');
 

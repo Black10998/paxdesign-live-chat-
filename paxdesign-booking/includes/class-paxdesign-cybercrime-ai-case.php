@@ -154,7 +154,12 @@ class PAXdesign_Cybercrime_AI_Case {
         $reference = (string) $row['reference_id'];
         self::bind_session($reference, $session_id, $user_id);
 
-        $skip_extract = self::is_explicit_new_case_request($message);
+        $explicit_new = self::is_explicit_new_case_request($message);
+        if ($explicit_new && class_exists('PAXdesign_Chat')) {
+            PAXdesign_Chat::get_instance()->reset_ccs_conversation_epoch($session_id);
+        }
+
+        $skip_extract = $explicit_new;
         if (
             !$skip_extract
             && class_exists('PAXdesign_Cybercrime_AI_Operations')
@@ -254,11 +259,14 @@ class PAXdesign_Cybercrime_AI_Case {
             }
         }
 
-        return PAXdesign_Cybercrime_Intake::create_draft_for_user($user_id, $session_id);
+        return PAXdesign_Cybercrime_Intake::create_draft_for_user($user_id, $session_id, $explicit_new);
     }
 
     /**
      * A new CCS case/conversation starts only on an explicit customer request.
+     *
+     * Follow-ups, language switches, and “help me submit a report” stay on the
+     * current reference. “ابدأ من الصفر” / “Start a new case” must not.
      *
      * @param string $text
      * @return bool
@@ -273,15 +281,15 @@ class PAXdesign_Cybercrime_AI_Case {
             return false;
         }
         $len = function_exists('mb_strlen') ? mb_strlen($normalized) : strlen($normalized);
-        if ($len > 96) {
+        if ($len > 140) {
             return false;
         }
         $explicit = (bool) preg_match(
-            '/(?:start a new (?:case|report|conversation|chat)|open a new (?:case|report)|أريد فتح بلاغ جديد|افتح بلاغ جديد|neuen fall (?:starten|eröffnen))/u',
+            '/(?:start (?:a |the )?(?:brand )?new (?:case|report|conversation|chat)|open (?:a |the )?new (?:case|report)|submit (?:a |the )?new (?:case|report)|file (?:a |the )?new (?:case|report)|start (?:over|from scratch)|from scratch|brand new (?:case|report)|want (?:a |to (?:start|open|file|submit) (?:a )?)?new (?:case|report)|أريد (?:فتح|تقديم|إرسال|ارسال) بلاغ جديد|اريد (?:فتح|تقديم|ارسال) بلاغ جديد|افتح بلاغ جديد|أبدأ (?:من الصفر|من جديد|بلاغ جديد)|ابدأ (?:من الصفر|من جديد|بلاغ جديد)|ابدا (?:من الصفر|من جديد|بلاغ جديد)|ابدئي (?:من الصفر|من جديد)|من الصفر|حالة جديدة تماما|تقرير جديد تماما|neuen fall (?:starten|eroffnen|eröffnen)|neuen bericht|von vorne|von neuem|neu beginnen|neuer fall|neue meldung)/u',
             $normalized
         );
-        $short = $len <= 40 && (bool) preg_match(
-            '/^(?:new report|new case|بلاغ جديد|تقرير جديد|حالة جديدة|neuen fall|neuen bericht|neues (?:gespräch|ticket))$/u',
+        $short = $len <= 48 && (bool) preg_match(
+            '/^(?:new report|new case|start over|start from scratch|from scratch|بلاغ جديد|تقرير جديد|حالة جديدة|من الصفر|أبدأ من الصفر|ابدأ من الصفر|ابدا من الصفر|ابدأ من جديد|neuen fall|neuen bericht|neues (?:gespräch|ticket)|von vorne|von neuem|neu beginnen)$/u',
             $normalized
         );
         return $explicit || $short;

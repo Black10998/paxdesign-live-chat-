@@ -124,6 +124,7 @@ class PAXdesign_Cybercrime_AI_Workflow {
             'decl_verification'  => !empty($declarations['verification']),
             'locale'             => sanitize_key((string) ($payload['locale'] ?? '')),
             'chat_session_id'    => (string) ($row['chat_session_id'] ?? ''),
+            'fresh_start'        => !empty($payload['fresh_start']),
         );
     }
 
@@ -545,6 +546,20 @@ class PAXdesign_Cybercrime_AI_Workflow {
         }
 
         $language = self::normalize_lang($language);
+        if (class_exists('PAXdesign_Cybercrime_AI_Case') && PAXdesign_Cybercrime_AI_Case::is_explicit_new_case_request($user_message)) {
+            $snapshot = self::snapshot($row, $language);
+            $row = self::persist_snapshot($row, $snapshot);
+            $state = self::state_from_row($row);
+            return array(
+                'action'    => 'continue_case',
+                'skip_llm'  => true,
+                'operation' => null,
+                'reply'     => self::new_case_opened_copy($snapshot, $state, $language),
+                'report'    => $row,
+                'snapshot'  => $snapshot,
+            );
+        }
+
         $state = self::state_from_row($row);
         $extracted = self::extract_from_message($user_message, $state);
         if (!empty($extracted) && $user_id > 0 && class_exists('PAXdesign_Cybercrime_AI_Case')) {
@@ -777,13 +792,22 @@ class PAXdesign_Cybercrime_AI_Workflow {
         $lines = array();
 
         if ($lang === 'ar') {
-            $lines[] = 'ما زلنا على نفس حالة الدعم الخاصة بالجرائم الإلكترونية' . ($ref !== '' ? ' ' . $ref : '') . '.';
+            $fresh = !empty($state['fresh_start']);
+            $lines[] = $fresh
+                ? ('تم فتح بلاغ جديد' . ($ref !== '' ? ' ' . $ref : '') . '. لن نستخدم بيانات أو ملفات أو مرجع الحالة السابقة.')
+                : ('ما زلنا على نفس حالة الدعم الخاصة بالجرائم الإلكترونية' . ($ref !== '' ? ' ' . $ref : '') . '.');
             $lines[] = 'الخطوة الحالية من نموذج الموقع: ' . $label . ' (' . $step . '/4).';
         } elseif ($lang === 'de') {
-            $lines[] = 'Wir bleiben beim selben Cybercrime-Support-Fall' . ($ref !== '' ? ' ' . $ref : '') . '.';
+            $fresh = !empty($state['fresh_start']);
+            $lines[] = $fresh
+                ? ('Ein neuer Cybercrime-Support-Fall' . ($ref !== '' ? ' ' . $ref : '') . ' wurde eröffnet. Vorherige Daten, Dateien und die alte Referenz werden nicht verwendet.')
+                : ('Wir bleiben beim selben Cybercrime-Support-Fall' . ($ref !== '' ? ' ' . $ref : '') . '.');
             $lines[] = 'Aktueller Schritt des Website-Formulars: ' . $label . ' (' . $step . '/4).';
         } else {
-            $lines[] = 'This is still the same Cybercrime Support case' . ($ref !== '' ? ' ' . $ref : '') . '.';
+            $fresh = !empty($state['fresh_start']);
+            $lines[] = $fresh
+                ? ('A new Cybercrime Support case' . ($ref !== '' ? ' ' . $ref : '') . ' was opened. Previous case data, files, and the previous reference are not used.')
+                : ('This is still the same Cybercrime Support case' . ($ref !== '' ? ' ' . $ref : '') . '.');
             $lines[] = 'Current website workflow step: ' . $label . ' (' . $step . '/4).';
         }
 
@@ -917,6 +941,19 @@ class PAXdesign_Cybercrime_AI_Workflow {
             ),
         );
         return $prompts[$key][$lang] ?? $prompts[$key]['en'] ?? '';
+    }
+
+    /**
+     * @param array<string, mixed> $snapshot
+     * @param array<string, mixed> $state
+     * @param string               $lang
+     * @return string
+     */
+    public static function new_case_opened_copy($snapshot, $state, $lang = '') {
+        $lang = self::normalize_lang($lang);
+        $snapshot = is_array($snapshot) ? $snapshot : array();
+        $state = is_array($state) ? array_merge($state, array('fresh_start' => true)) : array('fresh_start' => true);
+        return self::assistant_copy($snapshot, $state, $lang, false);
     }
 
     /**

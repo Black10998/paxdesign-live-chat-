@@ -918,9 +918,10 @@ class PAXdesign_Cybercrime_Intake {
      *
      * @param int    $user_id
      * @param string $session_id
+     * @param bool   $force_new When true, never reuse an existing CCS reference.
      * @return array<string, mixed>|WP_Error
      */
-    public static function create_draft_for_user($user_id, $session_id = '') {
+    public static function create_draft_for_user($user_id, $session_id = '', $force_new = false) {
         $user_id = absint($user_id);
         if ($user_id <= 0) {
             return new WP_Error(
@@ -930,13 +931,22 @@ class PAXdesign_Cybercrime_Intake {
             );
         }
 
+        $session_id = sanitize_text_field((string) $session_id);
+        $force_new = (bool) $force_new;
+        $replaced_reference = '';
+
         if (class_exists('PAXdesign_Cybercrime_Tickets')) {
             PAXdesign_Cybercrime_Tickets::ensure_schema();
-            $active = PAXdesign_Cybercrime_Tickets::get_active_report_for_user($user_id);
-            if (is_array($active) && !empty($active['reference_id'])) {
-                $row = PAXdesign_Cybercrime_Tickets::get_report_row((string) $active['reference_id']);
-                if (is_array($row)) {
-                    return $row;
+            if ($force_new) {
+                PAXdesign_Cybercrime_Tickets::detach_chat_session($session_id);
+                $replaced_reference = self::supersede_open_draft_for_user($user_id);
+            } else {
+                $active = PAXdesign_Cybercrime_Tickets::get_active_report_for_user($user_id);
+                if (is_array($active) && !empty($active['reference_id'])) {
+                    $row = PAXdesign_Cybercrime_Tickets::get_report_row((string) $active['reference_id']);
+                    if (is_array($row)) {
+                        return $row;
+                    }
                 }
             }
         }
@@ -957,6 +967,8 @@ class PAXdesign_Cybercrime_Intake {
             'financial_currency' => 'EUR',
             'locale'             => 'ar',
             'source'             => 'ai_chat',
+            'fresh_start'        => $force_new,
+            'replaces_reference' => $replaced_reference,
             'incident_date'      => '',
             'incident_time'      => '',
             'document_checks'    => array(),
@@ -1036,6 +1048,70 @@ class PAXdesign_Cybercrime_Intake {
             ? PAXdesign_Cybercrime_Tickets::get_report_row($reference)
             : null;
         return is_array($row) ? $row : $insert_row;
+    }
+
+    /**
+     * Close a leftover draft so an explicit new-case request cannot reuse it.
+     * Does not close the live chat session and does not notify the customer.
+     *
+     * @param int $user_id
+     * @return string Previous draft reference, or empty.
+     */
+    private static function supersede_open_draft_for_user($user_id) {
+        $user_id = absint($user_id);
+        if ($user_id <= 0 || !class_exists('PAXdesign_Cybercrime_Tickets')) {
+            return '';
+        }
+        $active = PAXdesign_Cybercrime_Tickets::get_active_report_for_user($user_id);
+        $reference = is_array($active) ? sanitize_text_field((string) ($active['reference_id'] ?? '')) : '';
+        if ($reference === '') {
+            return '';
+        }
+        $row = PAXdesign_Cybercrime_Tickets::get_report_row($reference);
+        if (!is_array($row) || sanitize_key((string) ($row['status'] ?? '')) !== 'draft') {
+            return '';
+        }
+
+        $payload = json_decode((string) ($row['payload'] ?? ''), true);
+        if (!is_array($payload)) {
+            $payload = array();
+        }
+        $payload['superseded'] = true;
+        $payload['superseded_at'] = function_exists('current_time') ? current_time('mysql', true) : gmdate('Y-m-d H:i:s');
+        $encoded = function_exists('wp_json_encode') ? wp_json_encode($payload) : json_encode($payload);
+
+        global $wpdb;
+        $wpdb->update(
+            self::table_name(),
+            array(
+                'status'           => 'closed',
+                'chat_session_id'  => '',
+                'payload'          => is_string($encoded) ? $encoded : '',
+                'updated_at'       => $payload['superseded_at'],
+            ),
+            array('reference_id' => $reference),
+            array('%s', '%s', '%s', '%s'),
+            array('%s')
+        );
+
+        PAXdesign_Cybercrime_Tickets::add_message(
+            $reference,
+            'system',
+            sprintf(
+                /* translators: %s: CCS reference */
+                __('Draft %s was closed because the customer started a new report.', 'paxdesign-booking'),
+                $reference
+            ),
+            'portal',
+            $user_id,
+            array(
+                'event'                => 'draft_superseded',
+                'visible_to_customer'  => false,
+                'source'               => 'ai_chat',
+            )
+        );
+
+        return $reference;
     }
 
     /**

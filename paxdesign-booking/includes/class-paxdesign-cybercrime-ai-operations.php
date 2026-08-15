@@ -525,7 +525,7 @@ class PAXdesign_Cybercrime_AI_Operations {
             '- At Review, summarize what will be submitted and what is still missing. Submit this same CCS case when all requirements are satisfied and the customer confirms.',
             '- A language-preference message (arabic / English / Deutsch / العربية) only switches reply language. Keep this same case. Do not greet. Do not restart intake. Recap the last result in the requested language.',
             '- Short follow-ups (?, نعم, تابع, ماذا حدث؟, ماذا بقي؟) continue this same case. They never start a new conversation.',
-            '- Start a new case or conversation only when the customer explicitly asks (Start a new case / New report / أريد فتح بلاغ جديد).',
+            '- Start a new case or conversation only when the customer explicitly asks (Start a new case / New report / Start from scratch / أريد فتح بلاغ جديد / ابدأ من الصفر). Then the live case context is the NEW reference only.',
             '- Never restart the questionnaire. Never ask for facts already saved on this case.',
             '- Never claim you are checking, processing, uploading, or reviewing unless a tracked operation below is status=running.',
             '- If a tracked operation is running, tell the customer it is still running and that results will appear in this same conversation.',

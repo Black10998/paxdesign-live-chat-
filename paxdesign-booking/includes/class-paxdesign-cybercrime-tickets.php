@@ -1952,10 +1952,28 @@ class PAXdesign_Cybercrime_Tickets {
             return '';
         }
         $reference = $wpdb->get_var($wpdb->prepare(
-            'SELECT reference_id FROM ' . PAXdesign_Cybercrime_Intake::table_name() . ' WHERE chat_session_id = %s LIMIT 1',
+            'SELECT reference_id FROM ' . PAXdesign_Cybercrime_Intake::table_name() . ' WHERE chat_session_id = %s ORDER BY updated_at DESC, created_at DESC LIMIT 1',
             $session_id
         ));
         return is_string($reference) ? sanitize_text_field($reference) : '';
+    }
+
+    /**
+     * Remove a chat session from every CCS row so a new case can bind it.
+     *
+     * @param string $session_id
+     */
+    public static function detach_chat_session($session_id) {
+        $session_id = sanitize_text_field((string) $session_id);
+        if ($session_id === '' || !class_exists('PAXdesign_Cybercrime_Intake')) {
+            return;
+        }
+        global $wpdb;
+        $wpdb->query($wpdb->prepare(
+            'UPDATE ' . PAXdesign_Cybercrime_Intake::table_name() . ' SET chat_session_id = %s WHERE chat_session_id = %s',
+            '',
+            $session_id
+        ));
     }
 
     /**

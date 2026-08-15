@@ -569,6 +569,33 @@ class PAXdesign_Chat {
     }
 
     /**
+     * After an explicit new CCS case, ignore earlier chat turns in the model prompt.
+     *
+     * @param string $session_id
+     */
+    public function reset_ccs_conversation_epoch($session_id) {
+        $session_id = sanitize_text_field((string) $session_id);
+        if ($session_id === '') {
+            return;
+        }
+        set_transient('pax_ccs_history_after_' . md5($session_id), (string) time(), DAY_IN_SECONDS);
+    }
+
+    /**
+     * @param string $session_id
+     * @return int
+     */
+    private function ccs_conversation_epoch($session_id) {
+        $session_id = sanitize_text_field((string) $session_id);
+        if ($session_id === '') {
+            return 0;
+        }
+        $stored = get_transient('pax_ccs_history_after_' . md5($session_id));
+        $epoch = absint($stored);
+        return $epoch > 0 ? $epoch : 0;
+    }
+
+    /**
      * @param string $session_id
      */
     private function persist_page_context_from_request($session_id) {
@@ -1904,8 +1931,12 @@ class PAXdesign_Chat {
         }
 
         $rows = PAXdesign_Message_Store::all_messages($session_id, 'customer');
+        $epoch = $this->ccs_conversation_epoch($session_id);
         $messages = array();
         foreach ($rows as $row) {
+            if ($epoch > 0 && isset($row['ts']) && absint($row['ts']) > 0 && absint($row['ts']) < $epoch) {
+                continue;
+            }
             $role = isset($row['role']) ? (string) $row['role'] : '';
             if ($role === 'admin') {
                 $role = 'assistant';
@@ -1936,6 +1967,22 @@ class PAXdesign_Chat {
      * @return array<int, array{role:string,content:string}>|WP_Error
      */
     private function prepare_authenticated_llm_messages($session_id, $user_message, $ccs_report = null) {
+        $new_case = class_exists('PAXdesign_Cybercrime_AI_Case')
+            && PAXdesign_Cybercrime_AI_Case::is_explicit_new_case_request($user_message);
+        if ($new_case) {
+            $reference = '';
+            if (is_array($ccs_report) && !empty($ccs_report['reference_id'])) {
+                $reference = sanitize_text_field((string) $ccs_report['reference_id']);
+            }
+            $prompt = 'The customer explicitly started a NEW Cybercrime Support case'
+                . ($reference !== '' ? ' ' . $reference : '')
+                . '. Do not reuse any previous CCS reference, case data, uploaded files, workflow progress, or earlier conversation about the old case. Start Identity (step 1 of 4) on this new draft. Customer message: '
+                . trim((string) $user_message);
+            return $this->validate_messages(array(
+                array('role' => 'user', 'content' => $prompt),
+            ));
+        }
+
         $history = $this->trim_conversation_history($this->build_openai_messages_from_session($session_id), 24);
         $validated = $this->validate_messages($history);
         if (!is_wp_error($validated) && !empty($validated)) {
