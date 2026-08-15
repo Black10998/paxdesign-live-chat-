@@ -151,7 +151,7 @@
   }
 
   function removeLegacyAuthControls() {
-    document.querySelectorAll('.pdx-auth-trigger, .pdx-auth-signout-btn, #pdx-account-header-signout').forEach(function (node) {
+    document.querySelectorAll('.pdx-auth-trigger, .pdx-auth-signout-btn, .pdx-auth-signin-btn, #pdx-account-header-signout').forEach(function (node) {
       if (node && node.parentNode) node.parentNode.removeChild(node);
     });
     document.querySelectorAll('#pdx-auth-bar').forEach(function (bar, index) {
@@ -159,6 +159,72 @@
       if (!authBar && index === 0) return;
       if (bar && bar.parentNode) bar.parentNode.removeChild(bar);
     });
+  }
+
+  function isProtectedAuthSurface(el) {
+    return !!(el && el.closest && el.closest(
+      '#pdx-auth-overlay, #pdx-auth-page, #pdx-auth-isolated-shell, #paxdesign-booking-root, .pdx-auth-form, .pdx-auth-page-segment, .pdx-auth-apple-btn, .pdx-auth-github-btn'
+    ));
+  }
+
+  function isStandaloneSignInLabel(text) {
+    return /^(sign[\s-]*in|log[\s-]*in|login|anmelden)$/i.test(String(text || '').replace(/\s+/g, ' ').trim());
+  }
+
+  var sanitizingHeaderAuth = false;
+
+  function sanitizeHeaderAuthControls() {
+    if (sanitizingHeaderAuth) return;
+    sanitizingHeaderAuth = true;
+    try {
+      var signupBtn = authBar ? authBar.querySelector('.pdx-auth-signup-btn') : null;
+      if (signupBtn) {
+        var label = signupBtn.querySelector('.pdx-auth-signup-btn__label');
+        if (!label) {
+          signupBtn.textContent = '';
+          label = document.createElement('span');
+          label.className = 'pdx-auth-signup-btn__label';
+          signupBtn.appendChild(label);
+        }
+        if (!user.logged_in) {
+          if (label.textContent !== 'Sign Up') label.textContent = 'Sign Up';
+          signupBtn.hidden = false;
+          signupBtn.classList.remove('pdx-is-hidden');
+          signupBtn.setAttribute('data-pdx-header-cta', 'register');
+        } else {
+          signupBtn.hidden = true;
+          signupBtn.classList.add('pdx-is-hidden');
+        }
+      }
+
+      var scopes = document.querySelectorAll('#pdx-auth-bar, header, #dtr-main-header, #dtr-responsive-header, #dtr-header-global');
+      scopes.forEach(function (root) {
+        root.querySelectorAll('a, button').forEach(function (el) {
+          if (el === signupBtn || (el.classList && el.classList.contains('pdx-auth-signup-btn'))) return;
+          if (isProtectedAuthSurface(el)) return;
+          if (el.getAttribute && (el.getAttribute('data-pdx-apple-signin') || el.getAttribute('data-pdx-github-signin'))) return;
+          var text = String(el.innerText || el.textContent || '').replace(/\s+/g, ' ').trim();
+          if (
+            isStandaloneSignInLabel(text) ||
+            (el.classList && (el.classList.contains('pdx-auth-signin-btn') || el.classList.contains('pdx-auth-trigger')))
+          ) {
+            if (el.parentNode) el.parentNode.removeChild(el);
+          }
+        });
+      });
+    } finally {
+      sanitizingHeaderAuth = false;
+    }
+  }
+
+  function watchHeaderAuthSanitizer() {
+    if (window._pdxHeaderAuthObserver || typeof MutationObserver === 'undefined') return;
+    var target = document.getElementById('dtr-main-header') || document.body;
+    if (!target) return;
+    window._pdxHeaderAuthObserver = new MutationObserver(function () {
+      sanitizeHeaderAuthControls();
+    });
+    window._pdxHeaderAuthObserver.observe(target, { childList: true, subtree: true, characterData: true });
   }
 
   function looksLikeEmail(value) {
@@ -870,7 +936,7 @@
     authBar.className = 'pdx-cx-shell';
     authBar.innerHTML =
       '<div class="pdx-auth-bar-inner">' +
-        '<button type="button" class="pdx-auth-signup-btn pdx-cx-btn pdx-auth-header-btn">Sign Up</button>' +
+        '<button type="button" class="pdx-auth-signup-btn pdx-cx-btn pdx-auth-header-btn" data-pdx-header-cta="register"><span class="pdx-auth-signup-btn__label">Sign Up</span></button>' +
         '<button type="button" class="pdx-auth-account-btn pdx-cx-btn pdx-cx-btn--ghost pdx-auth-header-btn" aria-haspopup="true" aria-expanded="false" hidden>' +
           '<span class="pdx-auth-account-identity"></span>' +
         '</button>' +
@@ -942,6 +1008,7 @@
 
     mountAuthBar();
     updateAuthBar();
+    watchHeaderAuthSanitizer();
   }
 
   function accountStatusLabel() {
@@ -962,10 +1029,20 @@
     var portalBtn = authBar ? authBar.querySelector('.pdx-auth-portal-btn') : null;
     var label = user.logged_in ? headerDisplayName() : t('account', 'Account');
 
-    if (signupBtn) signupBtn.hidden = !!user.logged_in;
-    if (accountBtn) accountBtn.hidden = !user.logged_in;
+    if (signupBtn) {
+      signupBtn.hidden = !!user.logged_in;
+      signupBtn.classList.toggle('pdx-is-hidden', !!user.logged_in);
+    }
+    if (accountBtn) {
+      accountBtn.hidden = !user.logged_in;
+      accountBtn.classList.toggle('pdx-is-hidden', !user.logged_in);
+    }
     /* Portal is in the account dropdown on desktop; standalone btn is compact-header only. */
-    if (portalBtn) portalBtn.hidden = !user.logged_in || !isCompactSiteHeader();
+    if (portalBtn) {
+      var hidePortal = !user.logged_in || !isCompactSiteHeader();
+      portalBtn.hidden = hidePortal;
+      portalBtn.classList.toggle('pdx-is-hidden', hidePortal);
+    }
 
     if (accountBtn) {
       cleanupLegacyHeaderIdentityNodes(accountBtn);
@@ -1039,6 +1116,7 @@
       authMenu.setAttribute('hidden', 'hidden');
     }
     removeLegacyAuthControls();
+    sanitizeHeaderAuthControls();
     if (authBar) bindAccountAvatarFallbacks(authBar);
     if (authMenu) bindAccountAvatarFallbacks(authMenu);
   }

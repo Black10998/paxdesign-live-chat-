@@ -168,7 +168,9 @@ cx_assert_true(strpos($auth_js, 'headerDisplayName') !== false, 'Header must use
 cx_assert_true(strpos($auth_js, "showName: true") !== false, 'Logged-in header must show name and membership on all viewports');
 cx_assert_true(strpos($auth_js, 'githubSignInButtonInnerHtml') !== false, 'GitHub login button must remain in web auth');
 cx_assert_true(strpos($auth_js, 'appleSignInButtonInnerHtml') !== false, 'Apple login button must remain in web auth');
-cx_assert_true(strpos($auth_js, 'removeLegacyAuthControls') !== false, 'Mobile header must strip leftover Sign/trigger controls');
+cx_assert_true(strpos($auth_js, 'sanitizeHeaderAuthControls') !== false, 'Mobile header must strip leftover Sign In controls');
+cx_assert_true(strpos($auth_js, 'pdx-auth-signup-btn__label') !== false, 'Sign Up label must be an explicit header control');
+cx_assert_true(strpos($auth_js, "label.textContent !== 'Sign Up'") !== false, 'Logged-out header must force the Sign Up label');
 cx_assert_true(strpos($auth_js, 'syncAccountHeaderOffset') !== false, 'Account drawer must sit below the measured header');
 cx_assert_true(strpos($auth_js, 'class="pdx-auth-trigger"') === false, 'Auth bar markup must not include the legacy Sign trigger');
 cx_assert_true(strpos($auth_js, 'Sign Up') !== false, 'Logged-out header must keep the Sign Up control');

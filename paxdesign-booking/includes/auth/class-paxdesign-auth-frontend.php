@@ -11,7 +11,7 @@ class PAXdesign_Auth_Frontend {
 
     public static function init() {
         add_action('wp_enqueue_scripts', array(__CLASS__, 'enqueue'), 20);
-        add_action('wp_footer', array(__CLASS__, 'print_mobile_header_overrides'), 99999);
+        add_action('wp_footer', array(__CLASS__, 'print_mobile_header_overrides'), PHP_INT_MAX);
     }
 
     private static function asset_version($relative_path) {
@@ -116,6 +116,11 @@ class PAXdesign_Auth_Frontend {
             . 'html body #pdx-auth-bar.pdx-auth-bar--header .pdx-auth-signup-btn:not([hidden]){'
             . 'display:inline-flex!important;max-width:none!important;overflow:visible!important;'
             . 'text-overflow:clip!important;white-space:nowrap!important;font-size:13px!important}'
+            . 'html body #pdx-auth-bar .pdx-auth-signup-btn::before,html body #pdx-auth-bar .pdx-auth-signup-btn::after{'
+            . 'content:none!important;display:none!important}'
+            . 'html body #pdx-auth-bar .pdx-is-hidden,html body #pdx-auth-bar [hidden],'
+            . 'html body #pdx-auth-bar .pdx-auth-signin-btn{'
+            . 'display:none!important;visibility:hidden!important}'
             . 'html body #pdx-auth-bar .pdx-auth-menu:not(.is-open),html body #pdx-auth-bar .pdx-auth-menu[hidden]{'
             . 'display:none!important;visibility:hidden!important}'
             . '}'

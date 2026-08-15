@@ -67,6 +67,20 @@
   white-space: nowrap;
 }
 
+#pdx-auth-bar.pdx-auth-bar--header .pdx-auth-signup-btn::before,
+#pdx-auth-bar.pdx-auth-bar--header .pdx-auth-signup-btn::after {
+  content: none !important;
+  display: none !important;
+}
+
+#pdx-auth-bar .pdx-is-hidden,
+#pdx-auth-bar [hidden],
+#pdx-auth-bar .pdx-auth-signin-btn {
+  display: none !important;
+  visibility: hidden !important;
+  pointer-events: none !important;
+}
+
 #pdx-auth-bar.pdx-auth-bar--header .pdx-auth-signup-btn:hover,
 #pdx-auth-bar.pdx-auth-bar--header .pdx-auth-signup-btn:focus {
   border: 0;
