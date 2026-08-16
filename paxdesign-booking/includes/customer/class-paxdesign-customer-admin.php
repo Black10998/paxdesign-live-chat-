@@ -806,6 +806,21 @@ class PAXdesign_Customer_Admin {
         .pax-cc-activity__chip--info{background:#f0f6fc;color:#135e96;border-color:#c5d9ed}
         .pax-cc-admin__grid{display:grid;grid-template-columns:1fr 340px;gap:16px;align-items:start}
         @media(max-width:960px){.pax-cc-admin__grid{grid-template-columns:1fr}}
+        .pax-cc-attachments{display:grid;grid-template-columns:repeat(auto-fill,minmax(120px,1fr));gap:12px}
+        .pax-cc-attachment{display:flex;flex-direction:column;align-items:stretch;border:1px solid #dcdcde;border-radius:8px;overflow:hidden;background:#f6f7f7;text-decoration:none;color:inherit;min-height:120px}
+        .pax-cc-attachment:hover{border-color:#2271b1;box-shadow:0 1px 4px rgba(0,0,0,.08)}
+        .pax-cc-attachment__thumb{display:block;width:100%;aspect-ratio:1;object-fit:cover;background:#fff}
+        .pax-cc-attachment__file{display:flex;flex:1;flex-direction:column;align-items:center;justify-content:center;padding:16px 8px;text-align:center;gap:6px}
+        .pax-cc-attachment__icon{font-size:28px;line-height:1;opacity:.75}
+        .pax-cc-attachment__name{display:block;padding:8px;font-size:11px;line-height:1.35;word-break:break-word;border-top:1px solid #dcdcde;background:#fff}
+        .pax-cc-timeline__attachments{display:flex;flex-wrap:wrap;gap:8px;margin-top:10px}
+        .pax-cc-timeline__attachment{display:inline-flex;align-items:center;gap:6px;padding:4px 8px;border:1px solid #dcdcde;border-radius:6px;background:#f6f7f7;font-size:12px;text-decoration:none;color:inherit}
+        .pax-cc-timeline__attachment img{width:40px;height:40px;object-fit:cover;border-radius:4px}
+        .pax-cc-lightbox{position:fixed;inset:0;z-index:100000;display:none;align-items:center;justify-content:center;background:rgba(0,0,0,.82);padding:24px}
+        .pax-cc-lightbox.is-open{display:flex}
+        .pax-cc-lightbox__img{max-width:min(96vw,1200px);max-height:90vh;object-fit:contain;border-radius:6px;box-shadow:0 8px 32px rgba(0,0,0,.35)}
+        .pax-cc-lightbox__close{position:absolute;top:16px;right:16px;width:40px;height:40px;border:none;border-radius:999px;background:rgba(255,255,255,.15);color:#fff;font-size:24px;line-height:1;cursor:pointer}
+        .pax-cc-lightbox__close:hover{background:rgba(255,255,255,.28)}
         .pax-cc-timeline{border-left:3px solid #dcdcde;margin:0;padding:0 0 0 14px;list-style:none}
         .pax-cc-timeline__item{margin:0 0 14px;padding:0}
         .pax-cc-timeline__meta{font-size:12px;color:#646970;margin:0 0 4px}
@@ -949,21 +964,11 @@ class PAXdesign_Customer_Admin {
         }
 
         if (!empty($report['attachments']) && is_array($report['attachments'])) {
-            echo '<div class="pax-cc-admin__card">';
-            echo '<h3 class="pax-cc-admin__card-title">' . esc_html__('Attachments', 'paxdesign-booking') . '</h3><ul style="margin:0">';
-            foreach ($report['attachments'] as $file) {
-                if (!is_array($file)) {
-                    continue;
-                }
-                $name = (string) ($file['name'] ?? 'file');
-                $url = (string) ($file['url'] ?? '');
-                if ($url !== '') {
-                    echo '<li><a href="' . esc_url($url) . '" target="_blank" rel="noopener">' . esc_html($name) . '</a></li>';
-                } else {
-                    echo '<li>' . esc_html($name) . '</li>';
-                }
-            }
-            echo '</ul></div>';
+            echo '<div class="pax-cc-admin__card" id="pax-cc-admin-attachments-card">';
+            echo '<h3 class="pax-cc-admin__card-title">' . esc_html__('Attachments', 'paxdesign-booking') . '</h3>';
+            echo '<div class="pax-cc-attachments" id="pax-cc-admin-attachments">';
+            self::render_cybercrime_attachment_gallery($report['attachments']);
+            echo '</div></div>';
         }
 
         echo '<div class="pax-cc-admin__grid">';
@@ -1031,6 +1036,34 @@ class PAXdesign_Customer_Admin {
         echo '</form></div>';
 
         echo '</div></div></div>';
+        echo '<div class="pax-cc-lightbox" id="pax-cc-lightbox" hidden aria-hidden="true"><button type="button" class="pax-cc-lightbox__close" id="pax-cc-lightbox-close" aria-label="' . esc_attr__('Close', 'paxdesign-booking') . '">&times;</button><img class="pax-cc-lightbox__img" id="pax-cc-lightbox-img" alt=""></div>';
+    }
+
+    /**
+     * @param array<int, array<string, mixed>> $attachments
+     */
+    private static function render_cybercrime_attachment_gallery($attachments) {
+        foreach ($attachments as $file) {
+            if (!is_array($file)) {
+                continue;
+            }
+            $name = sanitize_file_name((string) ($file['name'] ?? 'file'));
+            $url = esc_url((string) ($file['url'] ?? ''));
+            $is_image = !empty($file['is_image']) || PAXdesign_Cybercrime_Intake::is_image_mime((string) ($file['type'] ?? ''));
+            if ($url === '') {
+                echo '<div class="pax-cc-attachment"><span class="pax-cc-attachment__name">' . esc_html($name) . '</span></div>';
+                continue;
+            }
+            if ($is_image) {
+                echo '<a class="pax-cc-attachment pax-cc-attachment--image" href="' . $url . '" data-pax-cc-lightbox target="_blank" rel="noopener">';
+                echo '<img class="pax-cc-attachment__thumb" src="' . $url . '" alt="' . esc_attr($name) . '" loading="lazy">';
+                echo '<span class="pax-cc-attachment__name">' . esc_html($name) . '</span></a>';
+            } else {
+                echo '<a class="pax-cc-attachment pax-cc-attachment--file" href="' . $url . '" target="_blank" rel="noopener">';
+                echo '<span class="pax-cc-attachment__file"><span class="pax-cc-attachment__icon" aria-hidden="true">📄</span></span>';
+                echo '<span class="pax-cc-attachment__name">' . esc_html($name) . '</span></a>';
+            }
+        }
     }
 
     private static function render_cybercrime_timeline_item($entry) {
@@ -1047,6 +1080,26 @@ class PAXdesign_Customer_Admin {
         }
         echo '</p>';
         echo '<div class="pax-cc-timeline__body">' . nl2br(esc_html((string) ($entry['body'] ?? ''))) . '</div>';
+        if (!empty($entry['attachments']) && is_array($entry['attachments'])) {
+            echo '<div class="pax-cc-timeline__attachments">';
+            foreach ($entry['attachments'] as $file) {
+                if (!is_array($file)) {
+                    continue;
+                }
+                $name = sanitize_file_name((string) ($file['name'] ?? 'file'));
+                $url = esc_url((string) ($file['url'] ?? ''));
+                if ($url === '') {
+                    continue;
+                }
+                $is_image = !empty($file['is_image']);
+                echo '<a class="pax-cc-timeline__attachment" href="' . $url . '"' . ($is_image ? ' data-pax-cc-lightbox' : '') . ' target="_blank" rel="noopener">';
+                if ($is_image) {
+                    echo '<img src="' . $url . '" alt="' . esc_attr($name) . '" loading="lazy">';
+                }
+                echo '<span>' . esc_html($name) . '</span></a>';
+            }
+            echo '</div>';
+        }
         echo '</li>';
     }
 

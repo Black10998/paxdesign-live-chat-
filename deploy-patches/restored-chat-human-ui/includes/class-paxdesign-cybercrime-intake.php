@@ -11,6 +11,7 @@ class PAXdesign_Cybercrime_Intake {
 
     const TABLE_SUFFIX = 'paxdesign_cybercrime_reports';
     const NONCE_ACTION = 'paxdesign_cybercrime_report';
+    const ATTACHMENT_ACTION = 'paxdesign_cybercrime_attachment';
     const UPLOAD_SUBDIR = 'pax-cybercrime-intake';
     const SCHEMA_VERSION = '2';
     const MAX_FILES = 20;
@@ -34,6 +35,7 @@ class PAXdesign_Cybercrime_Intake {
     public static function init() {
         add_action('init', array(__CLASS__, 'maybe_create_table'));
         add_action('wp_ajax_paxdesign_cybercrime_report', array(__CLASS__, 'handle_submit'));
+        add_action('wp_ajax_paxdesign_cybercrime_attachment', array(__CLASS__, 'ajax_download_attachment'));
     }
 
     /**
@@ -429,6 +431,15 @@ class PAXdesign_Cybercrime_Intake {
     }
 
     /**
+     * Process $_FILES for cybercrime intake/resubmit (authenticated callers only).
+     *
+     * @return array<int, array<string, string>>|WP_Error
+     */
+    public static function handle_request_uploads() {
+        return self::handle_uploads();
+    }
+
+    /**
      * @return array<int, array<string, string>>|WP_Error
      */
     private static function handle_uploads() {
@@ -514,10 +525,14 @@ class PAXdesign_Cybercrime_Intake {
                         return new WP_Error('upload_failed', $upload['error']);
                     }
 
+                    $upload_dir = wp_upload_dir();
+                    $rel_path = str_replace(trailingslashit($upload_dir['basedir']), '', $upload['file']);
+                    $rel_path = ltrim(str_replace('\\', '/', $rel_path), '/');
+
                     $saved[] = array(
                         'field' => sanitize_key((string) $field),
                         'name'  => basename($upload['file']),
-                        'url'   => $upload['url'],
+                        'path'  => $rel_path,
                         'type'  => $upload['type'] ?? '',
                         'size'  => (string) filesize($upload['file']),
                     );
@@ -983,5 +998,210 @@ class PAXdesign_Cybercrime_Intake {
         $lines[] = '- If the customer asks for updates and none are listed above, say the report is recorded and the team will contact them when there is news.';
 
         return implode("\n", $lines);
+    }
+
+    /**
+     * @param array<string, string> $attachment
+     * @return string Absolute filesystem path or empty string.
+     */
+    public static function resolve_attachment_path($attachment) {
+        if (!is_array($attachment)) {
+            return '';
+        }
+
+        $upload_dir = wp_upload_dir();
+        if (!empty($attachment['path'])) {
+            $path = trailingslashit($upload_dir['basedir']) . ltrim(str_replace('\\', '/', (string) $attachment['path']), '/');
+            if (is_file($path)) {
+                return $path;
+            }
+        }
+
+        if (!empty($attachment['url'])) {
+            $baseurl = trailingslashit($upload_dir['baseurl']);
+            $url = (string) $attachment['url'];
+            if (strpos($url, $baseurl) === 0) {
+                $rel = ltrim(substr($url, strlen(rtrim($upload_dir['baseurl'], '/'))), '/');
+                $path = trailingslashit($upload_dir['basedir']) . $rel;
+                if (is_file($path)) {
+                    return $path;
+                }
+            }
+        }
+
+        return '';
+    }
+
+    /**
+     * @param string $mime
+     * @return bool
+     */
+    public static function is_image_mime($mime) {
+        $mime = strtolower(sanitize_mime_type((string) $mime));
+        return strpos($mime, 'image/') === 0;
+    }
+
+    /**
+     * @param string $reference_id
+     * @param array<string, string> $attachment
+     * @return string
+     */
+    public static function attachment_nonce($reference_id, $attachment) {
+        $reference_id = sanitize_text_field((string) $reference_id);
+        $name = sanitize_file_name((string) ($attachment['name'] ?? ''));
+        if ($reference_id === '' || $name === '') {
+            return '';
+        }
+        return wp_create_nonce('pax_ccs_att_' . $reference_id . '_' . md5($name));
+    }
+
+    /**
+     * Authenticated download URL for a protected intake attachment.
+     *
+     * @param string               $reference_id
+     * @param array<string, string> $attachment
+     * @return string
+     */
+    public static function attachment_download_url($reference_id, $attachment) {
+        $reference_id = sanitize_text_field((string) $reference_id);
+        $name = sanitize_file_name((string) ($attachment['name'] ?? ''));
+        if ($reference_id === '' || $name === '') {
+            return '';
+        }
+        $nonce = self::attachment_nonce($reference_id, $attachment);
+        if ($nonce === '') {
+            return '';
+        }
+        return add_query_arg(
+            array(
+                'action'    => self::ATTACHMENT_ACTION,
+                'reference' => $reference_id,
+                'file'      => $name,
+                '_wpnonce'  => $nonce,
+            ),
+            admin_url('admin-ajax.php')
+        );
+    }
+
+    /**
+     * @param string                         $reference_id
+     * @param array<int, array<string, mixed>> $attachments
+     * @return array<int, array<string, mixed>>
+     */
+    public static function enrich_attachments($reference_id, $attachments) {
+        if (!is_array($attachments)) {
+            return array();
+        }
+        $out = array();
+        foreach ($attachments as $attachment) {
+            if (!is_array($attachment)) {
+                continue;
+            }
+            $name = sanitize_file_name((string) ($attachment['name'] ?? ''));
+            if ($name === '') {
+                continue;
+            }
+            $type = (string) ($attachment['type'] ?? '');
+            $item = array(
+                'field'     => sanitize_key((string) ($attachment['field'] ?? '')),
+                'name'      => $name,
+                'type'      => $type,
+                'size'      => (string) ($attachment['size'] ?? ''),
+                'is_image'  => self::is_image_mime($type),
+                'url'       => self::attachment_download_url($reference_id, $attachment),
+            );
+            if (!empty($attachment['path'])) {
+                $item['path'] = (string) $attachment['path'];
+            }
+            $out[] = $item;
+        }
+        return $out;
+    }
+
+    /**
+     * Stream a protected attachment after auth checks.
+     */
+    public static function ajax_download_attachment() {
+        $reference = sanitize_text_field(wp_unslash($_GET['reference'] ?? ''));
+        $file = sanitize_file_name(wp_unslash($_GET['file'] ?? ''));
+        $nonce = sanitize_text_field(wp_unslash($_GET['_wpnonce'] ?? ''));
+
+        if ($reference === '' || $file === '' || $nonce === '') {
+            wp_die(esc_html__('Invalid attachment request.', 'paxdesign-booking'), '', array('response' => 400));
+        }
+
+        if (!wp_verify_nonce($nonce, 'pax_ccs_att_' . $reference . '_' . md5($file))) {
+            wp_die(esc_html__('Invalid or expired link.', 'paxdesign-booking'), '', array('response' => 403));
+        }
+
+        if (!is_user_logged_in()) {
+            wp_die(esc_html__('Please sign in.', 'paxdesign-booking'), '', array('response' => 401));
+        }
+
+        $row = class_exists('PAXdesign_Cybercrime_Tickets')
+            ? PAXdesign_Cybercrime_Tickets::get_report_row($reference)
+            : null;
+        if (!$row) {
+            wp_die(esc_html__('Report not found.', 'paxdesign-booking'), '', array('response' => 404));
+        }
+
+        $user_id = get_current_user_id();
+        $allowed = current_user_can('manage_options');
+        if (!$allowed && class_exists('PAXdesign_Cybercrime_Tickets')) {
+            $allowed = PAXdesign_Cybercrime_Tickets::user_can_view_report($row, $user_id);
+        }
+        if (!$allowed) {
+            wp_die(esc_html__('You cannot access this file.', 'paxdesign-booking'), '', array('response' => 403));
+        }
+
+        $attachments = json_decode((string) ($row['attachments'] ?? ''), true);
+        if (!is_array($attachments)) {
+            $attachments = array();
+        }
+
+        $match = null;
+        foreach ($attachments as $attachment) {
+            if (!is_array($attachment)) {
+                continue;
+            }
+            if (sanitize_file_name((string) ($attachment['name'] ?? '')) === $file) {
+                $match = $attachment;
+                break;
+            }
+        }
+
+        if (!$match) {
+            wp_die(esc_html__('Attachment not found.', 'paxdesign-booking'), '', array('response' => 404));
+        }
+
+        $path = self::resolve_attachment_path($match);
+        if ($path === '' || !is_readable($path)) {
+            wp_die(esc_html__('File is unavailable.', 'paxdesign-booking'), '', array('response' => 404));
+        }
+
+        $mime = !empty($match['type']) ? (string) $match['type'] : (function_exists('mime_content_type') ? mime_content_type($path) : 'application/octet-stream');
+        $mime = sanitize_mime_type($mime);
+        if ($mime === '') {
+            $mime = 'application/octet-stream';
+        }
+
+        nocache_headers();
+        header('Content-Type: ' . $mime);
+        header('Content-Disposition: inline; filename="' . rawurlencode($file) . '"');
+        header('Content-Length: ' . (string) filesize($path));
+        header('X-Content-Type-Options: nosniff');
+
+        $handle = fopen($path, 'rb');
+        if ($handle === false) {
+            wp_die(esc_html__('Could not read file.', 'paxdesign-booking'), '', array('response' => 500));
+        }
+        while (!feof($handle)) {
+            echo fread($handle, 8192);
+            if (function_exists('flush')) {
+                flush();
+            }
+        }
+        fclose($handle);
+        exit;
     }
 }

@@ -40,6 +40,7 @@ class PAXdesign_Cybercrime_Tickets {
         add_action('wp_ajax_paxdesign_cybercrime_active_report', array(__CLASS__, 'ajax_active_report'));
         add_action('wp_ajax_paxdesign_cybercrime_report_detail', array(__CLASS__, 'ajax_report_detail'));
         add_action('wp_ajax_paxdesign_cybercrime_customer_reply', array(__CLASS__, 'ajax_customer_reply'));
+        add_action('wp_ajax_paxdesign_cybercrime_customer_resubmit', array(__CLASS__, 'ajax_customer_resubmit'));
         add_action('rest_api_init', array(__CLASS__, 'register_rest_routes'), 25);
         add_action('paxdesign_chat_message_appended', array(__CLASS__, 'on_chat_message'), 10, 4);
         add_action('admin_post_paxdesign_cybercrime_update_status', array(__CLASS__, 'admin_update_status'));
@@ -403,6 +404,12 @@ class PAXdesign_Cybercrime_Tickets {
         if (!is_array($attachments)) {
             $attachments = array();
         }
+        if (class_exists('PAXdesign_Cybercrime_Intake')) {
+            $attachments = PAXdesign_Cybercrime_Intake::enrich_attachments(
+                (string) ($row['reference_id'] ?? ''),
+                $attachments
+            );
+        }
 
         $raw_status = sanitize_key((string) ($row['status'] ?? ''));
         $workflow_status = self::normalize_workflow_status($raw_status);
@@ -533,6 +540,7 @@ class PAXdesign_Cybercrime_Tickets {
             if (!is_array($entry) || !self::is_official_timeline_entry($entry)) {
                 continue;
             }
+            $entry['reference_id'] = $reference_id;
             $official[] = self::format_timeline_entry($entry, $customer_display_name, $audience, $lang);
         }
         return $official;
@@ -563,6 +571,7 @@ class PAXdesign_Cybercrime_Tickets {
             if (!is_array($entry) || !self::is_customer_visible_timeline_entry($entry)) {
                 continue;
             }
+            $entry['reference_id'] = $reference_id;
             $visible[] = self::format_timeline_entry($entry, $customer_display_name, 'customer', $lang);
         }
         return $visible;
@@ -729,7 +738,35 @@ class PAXdesign_Cybercrime_Tickets {
         $entry['subject_key'] = $subject_key;
         $entry['subject'] = $audience === 'customer' ? '' : $subject;
 
+        if (!empty($meta['attachments']) && is_array($meta['attachments']) && class_exists('PAXdesign_Cybercrime_Intake')) {
+            $reference_id = sanitize_text_field((string) ($entry['reference_id'] ?? ''));
+            if ($reference_id === '' && !empty($entry['report_id'])) {
+                $report_row = self::get_report_row_by_id((int) $entry['report_id']);
+                $reference_id = is_array($report_row) ? (string) ($report_row['reference_id'] ?? '') : '';
+            }
+            if ($reference_id !== '') {
+                $entry['attachments'] = PAXdesign_Cybercrime_Intake::enrich_attachments($reference_id, $meta['attachments']);
+            }
+        }
+
         return $entry;
+    }
+
+    /**
+     * @param int $report_id
+     * @return array<string, mixed>|null
+     */
+    private static function get_report_row_by_id($report_id) {
+        global $wpdb;
+        $report_id = absint($report_id);
+        if ($report_id <= 0) {
+            return null;
+        }
+        $row = $wpdb->get_row($wpdb->prepare(
+            'SELECT * FROM ' . PAXdesign_Cybercrime_Intake::table_name() . ' WHERE id = %d LIMIT 1',
+            $report_id
+        ), ARRAY_A);
+        return is_array($row) ? $row : null;
     }
 
     /**
@@ -1197,6 +1234,82 @@ class PAXdesign_Cybercrime_Tickets {
         $message_id = self::add_message($reference_id, 'customer', $body, 'portal', $user_id, array('event' => 'customer_reply'));
         if (!$message_id) {
             return new WP_Error('save_failed', __('Could not save your message.', 'paxdesign-booking'));
+        }
+
+        self::update_status($reference_id, 'in_review', $user_id, '', false, false);
+        self::notify_staff_reply($row, $reference_id, $body);
+
+        return $message_id;
+    }
+
+    /**
+     * Customer evidence upload + optional message (resubmit flow).
+     *
+     * @param string $reference_id
+     * @param string $body
+     * @param int    $user_id
+     * @return int|WP_Error
+     */
+    public static function add_customer_evidence($reference_id, $body, $user_id) {
+        $row = self::get_report_row($reference_id);
+        if (!$row || !self::user_can_view_report($row, $user_id)) {
+            return new WP_Error('forbidden', __('You cannot update this report.', 'paxdesign-booking'));
+        }
+        if (!self::is_active_status((string) ($row['status'] ?? ''))) {
+            return new WP_Error('closed', __('This report is closed.', 'paxdesign-booking'));
+        }
+
+        if (!class_exists('PAXdesign_Cybercrime_Intake')) {
+            return new WP_Error('config', __('Uploads are unavailable.', 'paxdesign-booking'));
+        }
+
+        $uploads = PAXdesign_Cybercrime_Intake::handle_request_uploads();
+        if (is_wp_error($uploads)) {
+            return $uploads;
+        }
+
+        $body = trim((string) $body);
+        $has_files = !empty($uploads);
+        if (!$has_files && $body === '') {
+            return new WP_Error('message_required', __('Please attach a file or add a message.', 'paxdesign-booking'), array('code' => 'message_required'));
+        }
+
+        if ($has_files) {
+            $existing = json_decode((string) ($row['attachments'] ?? ''), true);
+            if (!is_array($existing)) {
+                $existing = array();
+            }
+            $merged = array_merge($existing, $uploads);
+            global $wpdb;
+            $wpdb->update(
+                PAXdesign_Cybercrime_Intake::table_name(),
+                array(
+                    'attachments' => wp_json_encode($merged),
+                    'updated_at'  => current_time('mysql', true),
+                ),
+                array('reference_id' => sanitize_text_field((string) $reference_id)),
+                array('%s', '%s'),
+                array('%s')
+            );
+        }
+
+        if ($body === '') {
+            $lang = class_exists('PAXdesign_Cybercrime_I18n')
+                ? PAXdesign_Cybercrime_I18n::from_report($row)
+                : 'de';
+            $body = class_exists('PAXdesign_Cybercrime_I18n')
+                ? PAXdesign_Cybercrime_I18n::t('evidence.uploaded', $lang)
+                : __('Customer uploaded evidence.', 'paxdesign-booking');
+        }
+
+        $meta = array('event' => 'customer_evidence');
+        if ($has_files) {
+            $meta['attachments'] = $uploads;
+        }
+
+        $message_id = self::add_message($reference_id, 'customer', $body, 'portal', $user_id, $meta);
+        if (!$message_id) {
+            return new WP_Error('save_failed', __('Could not save your update.', 'paxdesign-booking'));
         }
 
         self::update_status($reference_id, 'in_review', $user_id, '', false, false);
@@ -1817,6 +1930,44 @@ class PAXdesign_Cybercrime_Tickets {
 
         $report = self::get_report_for_user($reference, get_current_user_id());
         wp_send_json_success(array('message_id' => $result, 'report' => $report));
+    }
+
+    public static function ajax_customer_resubmit() {
+        if (!is_user_logged_in()) {
+            wp_send_json_error(array('message' => __('Please sign in.', 'paxdesign-booking'), 'code' => 'login_required'), 401);
+        }
+        check_ajax_referer(PAXdesign_Cybercrime_Intake::NONCE_ACTION, 'nonce');
+
+        if (!empty($_POST['website_trap'])) {
+            wp_send_json_error(array('message' => __('Request rejected.', 'paxdesign-booking'), 'code' => 'request_rejected'), 403);
+        }
+
+        $reference = sanitize_text_field(wp_unslash($_POST['reference'] ?? ''));
+        $body = sanitize_textarea_field(wp_unslash($_POST['message'] ?? ''));
+
+        $result = self::add_customer_evidence($reference, $body, get_current_user_id());
+        if (is_wp_error($result)) {
+            $data = array('message' => $result->get_error_message());
+            $code = $result->get_error_code();
+            if ($code !== '') {
+                $data['code'] = $code;
+            }
+            wp_send_json_error($data, 400);
+        }
+
+        $report = self::get_report_for_user($reference, get_current_user_id());
+        $lang = is_array($report) && class_exists('PAXdesign_Cybercrime_I18n')
+            ? PAXdesign_Cybercrime_I18n::from_report($report)
+            : 'de';
+        $success = class_exists('PAXdesign_Cybercrime_I18n')
+            ? PAXdesign_Cybercrime_I18n::t('evidence.success', $lang)
+            : __('Your evidence was uploaded successfully.', 'paxdesign-booking');
+
+        wp_send_json_success(array(
+            'message_id' => $result,
+            'message'    => $success,
+            'report'     => $report,
+        ));
     }
 
     public static function admin_update_status() {
