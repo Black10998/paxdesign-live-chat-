@@ -74,6 +74,26 @@ function wp_create_nonce($action)
     return hash('sha256', (string) $action);
 }
 
+function wp_salt($scheme = 'auth')
+{
+    return 'test-salt-' . (string) $scheme;
+}
+
+function get_current_user_id()
+{
+    return Test_Cybercrime_Tickets::$current_user_id;
+}
+
+function is_user_logged_in()
+{
+    return Test_Cybercrime_Tickets::$current_user_id > 0;
+}
+
+function current_user_can($cap)
+{
+    return Test_Cybercrime_Tickets::$current_user_id === 1;
+}
+
 function add_query_arg(array $args, $url)
 {
     $query = http_build_query($args);
@@ -171,6 +191,8 @@ class Test_Cybercrime_Tickets extends PAXdesign_Cybercrime_Tickets
 
     /** @var array<int, array<string, mixed>> */
     public static $test_messages = array();
+
+    public static $current_user_id = 1;
 
     public static function get_report_row($reference_id)
     {
@@ -286,10 +308,40 @@ foreach ($enriched as $item) {
 ap_assert($imageCount >= 2, 'image uploads remain marked as images');
 ap_assert($pdfCount === 1, 'pdf upload remains available as document');
 
+$heicName = 'ccs-mobile.heic';
+file_put_contents($uploadSubdir . '/' . $heicName, 'fake-heic-bytes');
+$heicAttachment = array(
+    'field' => 'evidence_files',
+    'name' => $heicName,
+    'path' => 'pax-cybercrime-intake/' . $heicName,
+    'type' => 'image/heic',
+    'size' => (string) filesize($uploadSubdir . '/' . $heicName),
+);
+$heicEnriched = PAXdesign_Cybercrime_Intake::enrich_attachments($reference, array($heicAttachment));
+ap_assert(count($heicEnriched) === 1, 'HEIC attachment enriches');
+ap_assert(empty($heicEnriched[0]['is_image']), 'HEIC is not marked browser-previewable');
+ap_assert(!empty($heicEnriched[0]['url']), 'HEIC still gets secure download URL');
+
+$token = PAXdesign_Cybercrime_Intake::attachment_access_token($reference, array('name' => $legacyName), 1);
+ap_assert($token !== '', 'attachment access token is generated');
+ap_assert(
+    PAXdesign_Cybercrime_Intake::verify_attachment_access_token($reference, $legacyName, $token, 1),
+    'attachment access token verifies for same user'
+);
+ap_assert(
+    !PAXdesign_Cybercrime_Intake::verify_attachment_access_token($reference, $legacyName, $token, 2),
+    'attachment access token rejects other users'
+);
+ap_assert(
+    PAXdesign_Cybercrime_Intake::attachment_access_token($reference, array('name' => $legacyName), 1) === $token,
+    'attachment access token is stable across calls'
+);
+
 $foundLegacy = Test_Cybercrime_Tickets::find_stored_attachment($reference, $legacyName, Test_Cybercrime_Tickets::$test_row);
 $foundNew = Test_Cybercrime_Tickets::find_stored_attachment($reference, $newName, Test_Cybercrime_Tickets::$test_row);
 ap_assert(is_array($foundLegacy) && is_array($foundNew), 'find_stored_attachment resolves legacy and new files');
 
+@unlink($uploadSubdir . '/' . $heicName);
 @unlink($uploadSubdir . '/' . $legacyName);
 @unlink($uploadSubdir . '/' . $newName);
 @unlink($uploadSubdir . '/' . $pdfName);

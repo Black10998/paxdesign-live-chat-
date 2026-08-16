@@ -444,6 +444,10 @@
     if (!lightboxEl || !lightboxImgEl || !url) {
       return;
     }
+    lightboxImgEl.onerror = function () {
+      window.open(url, '_blank', 'noopener');
+      closeLightbox();
+    };
     lightboxImgEl.src = url;
     lightboxImgEl.alt = alt || '';
     lightboxEl.hidden = false;

@@ -36,6 +36,7 @@ ccs_evidence_assert(strpos($tickets, 'add_customer_evidence') !== false, 'ticket
 ccs_evidence_assert(strpos($tickets, 'ajax_customer_resubmit') !== false, 'tickets implements ajax_customer_resubmit');
 
 ccs_evidence_assert(strpos($admin, 'render_cybercrime_attachment_gallery') !== false, 'admin renders attachment gallery');
+ccs_evidence_assert(strpos($admin, "is_image']) || PAXdesign_Cybercrime_Intake::is_image_mime") === false, 'admin gallery trusts enriched is_image only');
 ccs_evidence_assert(strpos($admin, 'pax-cc-lightbox') !== false, 'admin includes lightbox markup');
 
 ccs_evidence_assert(strpos($adminJs, 'renderAttachments') !== false, 'admin JS renders attachments');
@@ -70,7 +71,10 @@ ccs_evidence_assert(strpos($tickets, 'evidence_request_active') !== false, 'tick
 ccs_evidence_assert(strpos($intake, 'normalized_upload_files') !== false, 'intake normalizes mobile and desktop multipart uploads');
 ccs_evidence_assert(strpos($intake, 'recover_attachment_record') !== false, 'intake recovers legacy attachment paths from stored URLs');
 ccs_evidence_assert(strpos($portalJs, 'entryHasEvidenceRequest') !== false, 'portal JS detects evidence request from entry + meta');
-ccs_evidence_assert(strpos($intake, 'verify_image_file') !== false, 'intake verifies image content before preview');
+ccs_evidence_assert(strpos($intake, 'can_browser_preview_image') !== false, 'intake distinguishes browser-previewable images');
+ccs_evidence_assert(strpos($intake, 'attachment_access_token') !== false, 'intake uses stable attachment access tokens');
+ccs_evidence_assert(strpos($intake, 'verify_attachment_access_token') !== false, 'intake verifies attachment access tokens');
+ccs_evidence_assert(strpos($intake, 'readfile') !== false, 'intake streams attachments with readfile');
 ccs_evidence_assert(strpos($intake, 'find_stored_attachment') !== false, 'intake download checks timeline message attachments');
 ccs_evidence_assert(strpos($adminJs, 'pax-cc-request-evidence') !== false, 'admin JS handles request evidence checkbox');
 ccs_evidence_assert(strpos($adminJs, 'request_evidence') !== false, 'admin JS sends request_evidence flag');

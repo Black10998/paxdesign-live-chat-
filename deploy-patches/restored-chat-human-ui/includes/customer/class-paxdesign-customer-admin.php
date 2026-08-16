@@ -1110,7 +1110,7 @@ class PAXdesign_Customer_Admin {
             }
             $name = sanitize_file_name((string) ($file['name'] ?? 'file'));
             $url = esc_url((string) ($file['url'] ?? ''));
-            $is_image = !empty($file['is_image']) || PAXdesign_Cybercrime_Intake::is_image_mime((string) ($file['type'] ?? ''));
+            $is_image = !empty($file['is_image']);
             if ($url === '') {
                 echo '<div class="pax-cc-attachment"><span class="pax-cc-attachment__name">' . esc_html($name) . '</span></div>';
                 continue;
