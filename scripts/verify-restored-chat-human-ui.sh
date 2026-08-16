@@ -29,17 +29,25 @@ curl -fsSL "${SITE}/wp-content/plugins/paxdesign-booking/assets/js/cybercrime-ad
 curl -fsSL "${SITE}/wp-content/plugins/paxdesign-booking/paxdesign-booking.php?v=${STAMP}" \
   -o "${tmpdir}/paxdesign-booking.php" || true
 
-grep -q "Version: 3.174.99" "${tmpdir}/chat-script.js" \
-  && ok "chat-script.js cache-bust version 3.174.99" \
-  || fail "chat-script.js is not the patched 3.174.99 file"
+grep -q "Version: 3.174.100" "${tmpdir}/chat-script.js" \
+  && ok "chat-script.js cache-bust version 3.174.100" \
+  || fail "chat-script.js is not the patched 3.174.100 file"
 
 grep -q "function pinToLatestMessage" "${tmpdir}/chat-script.js" \
   && ok "instant pin-to-latest is present" \
   || fail "pinToLatestMessage missing"
 
-grep -q -- "min(84svh, calc(100svh - 20px))" "${tmpdir}/booking-styles.css" \
-  && ok "mobile chat uses a compact svh sheet" \
-  || fail "mobile chat is not using compact svh height"
+grep -q -- "min(460px, 62svh" "${tmpdir}/booking-styles.css" \
+  && ok "mobile chat uses a compact svh card" \
+  || fail "mobile chat is not using compact svh card height"
+
+grep -q 'data-widget-mode="booking"' "${tmpdir}/chat-script.js" \
+  && ok "plus menu contains Termin buchen" \
+  || fail "plus menu is missing Termin buchen"
+
+grep -q "function isFixedLayoutRelative" "${tmpdir}/booking-script.js" \
+  && ok "keyboard fit detects iOS visual-viewport fixed positioning" \
+  || fail "isFixedLayoutRelative missing from live booking-script.js"
 
 grep -q "function visualViewportBox" "${tmpdir}/booking-script.js" \
   && ok "mobile layout reads the visual viewport box" \

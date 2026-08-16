@@ -5,7 +5,7 @@ name: Deploy restored chat human UI
 on:
   push:
     branches:
-      - cursor/chat-mobile-fit-9e84
+      - cursor/chat-compact-size-9e84
     paths:
       - 'deploy-patches/restored-chat-human-ui/**'
       - '.github/workflows/deploy-restored-chat-human-ui.yml'

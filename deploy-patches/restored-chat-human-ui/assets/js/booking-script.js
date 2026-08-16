@@ -692,7 +692,7 @@
         mobileViewportBound = true;
 
         var onViewportChange = function() {
-            scheduleMobileLayout(false);
+            scheduleMobileLayout(composerOrAuthFocused());
         };
 
         if (window.visualViewport) {
@@ -756,6 +756,7 @@
 
     function keepPagePinned() {
         if (!$('html').hasClass('paxdesign-scroll-lock')) return;
+        if (keyboardOcclusionPx() > 24) return;
         var y = scrollLockY || 0;
         if ((window.scrollY || window.pageYOffset || 0) !== y) {
             window.scrollTo(0, y);
@@ -770,27 +771,42 @@
         });
     }
 
+    function isFixedLayoutRelative() {
+        var vv = window.visualViewport;
+        if (!vv || (vv.offsetTop || 0) < 2) return true;
+        var probe = document.createElement('div');
+        probe.style.cssText = 'position:fixed;top:0;left:0;width:1px;height:1px;opacity:0;pointer-events:none;';
+        document.body.appendChild(probe);
+        var rectTop = probe.getBoundingClientRect().top;
+        if (probe.parentNode) probe.parentNode.removeChild(probe);
+        return rectTop < -2;
+    }
+
     function fitWidgetToVisualViewport(keyboardOpen) {
         var $widget = $in('.paxdesign-booking-widget');
         var box = visualViewportBox();
-        var side = 10;
-        var topPad = keyboardOpen ? 6 : 10;
-        var bottomPad = keyboardOpen ? 0 : Math.max(10, 0);
-        var left = box.left + side;
+        var layoutRelative = isFixedLayoutRelative();
+        var originTop = layoutRelative ? box.top : 0;
+        var originLeft = layoutRelative ? box.left : 0;
+        var side = 12;
+        var topPad = keyboardOpen ? 4 : 10;
+        var bottomPad = keyboardOpen ? 0 : 10;
+        var left = originLeft + side;
         var width = Math.max(240, box.width - side * 2);
-        var available = Math.max(220, box.height - topPad - bottomPad);
+        var available = Math.max(200, box.height - topPad - bottomPad);
         var height = keyboardOpen
             ? available
-            : Math.min(available, Math.max(440, Math.round(box.height * 0.84)));
+            : Math.min(available, 460, Math.max(300, Math.round(box.height * 0.62)));
         var top = keyboardOpen
-            ? (box.top + topPad)
-            : (box.top + Math.max(topPad, box.height - bottomPad - height));
+            ? (originTop + topPad)
+            : (originTop + Math.max(topPad, box.height - bottomPad - height));
+        var viewBottom = originTop + box.height - bottomPad;
 
-        if (top < box.top) {
-            top = box.top + topPad;
+        if (top < originTop + topPad) {
+            top = originTop + topPad;
         }
-        if (top + height > box.top + box.height - bottomPad) {
-            height = Math.max(220, box.top + box.height - bottomPad - top);
+        if (top + height > viewBottom) {
+            height = Math.max(200, viewBottom - top);
         }
 
         $widget.css({
@@ -803,7 +819,8 @@
             maxWidth: Math.round(width) + 'px',
             height: Math.round(height) + 'px',
             maxHeight: Math.round(height) + 'px',
-            minHeight: '0'
+            minHeight: '0',
+            transform: 'none'
         });
     }
 
@@ -832,7 +849,8 @@
                 height: '',
                 minHeight: '',
                 maxHeight: '',
-                maxWidth: ''
+                maxWidth: '',
+                transform: ''
             });
             root().removeClass('paxdesign-keyboard-open');
             return;
@@ -842,7 +860,7 @@
 
         var focused = forceKeyboard === true || composerOrAuthFocused();
         var occluded = keyboardOcclusionPx();
-        var keyboardOpen = occluded > 80 || (focused && occluded > 24);
+        var keyboardOpen = occluded > 40 || (focused && occluded > 10) || forceKeyboard === true;
         var flushToKeyboard = focused || keyboardOpen;
 
         if (flushToKeyboard) {
@@ -1009,7 +1027,8 @@
             height: '',
             minHeight: '',
             maxHeight: '',
-            maxWidth: ''
+            maxWidth: '',
+            transform: ''
         });
         root().removeClass('paxdesign-widget-open paxdesign-mobile-chat-mode paxdesign-keyboard-open');
         unlockPageScroll();

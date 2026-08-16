@@ -1,6 +1,6 @@
 <?php
 /**
- * Guard: GitHub paxdesign-booking must match the live 3.174.99 baseline.
+ * Guard: GitHub paxdesign-booking must match the live 3.174.100 baseline.
  * Rejects the later 3.176.x chat rewrite and CCS AI form-fill classes.
  */
 $root = dirname(__DIR__, 2);
@@ -24,8 +24,8 @@ $knowledge = file_get_contents($plugin . '/includes/class-paxdesign-chat-knowled
 $css = file_get_contents($plugin . '/assets/css/booking-styles.css');
 $widget = file_get_contents($plugin . '/templates/booking-widget.php');
 
-pb_ok(strpos($boot, "define('PAXDESIGN_BOOKING_VERSION', '3.174.99')") !== false, 'plugin version 3.174.99');
-pb_ok(strpos($js, 'Version: 3.174.99') !== false, 'chat-script cache-bust 3.174.99');
+pb_ok(strpos($boot, "define('PAXDESIGN_BOOKING_VERSION', '3.174.100')") !== false, 'plugin version 3.174.100');
+pb_ok(strpos($js, 'Version: 3.174.100') !== false, 'chat-script cache-bust 3.174.100');
 pb_ok(strpos($js, 'skipping stacked sync') === false, 'chat-script is not the 3.176 freeze/unfreeze rewrite');
 pb_ok(strpos($js, 'var openInstant') === false, 'chat-script does not use the 3.176 instant-open rewrite');
 pb_ok(strpos($js, 'var stickToBottom') !== false, 'WhatsApp stick-to-bottom is present');
@@ -45,8 +45,11 @@ pb_ok(strpos($knowledge, 'Immer auf Deutsch') === false, 'knowledge prompt does 
 pb_ok(strpos($knowledge, 'ONE clear step at a time') !== false, 'CCS one-step guidance is present');
 pb_ok(strpos($js, 'Gespräch beenden') === false, 'chat JS has no Gespräch beenden label');
 pb_ok(strpos($css, '--pax-mobile-widget-max-chat: none') !== false, 'mobile chat is not capped at 380px');
-pb_ok(strpos($css, 'min(84svh, calc(100svh - 20px))') !== false, 'mobile sheet uses compact svh height');
+pb_ok(strpos($css, 'min(460px, 62svh') !== false, 'mobile sheet uses compact svh card height');
 pb_ok(strpos($css, 'top: auto') !== false, 'mobile sheet is not stretched from the top of the layout viewport');
+pb_ok(strpos($css, 'display: none !important') !== false && strpos($css, 'paxdesign-booking-mode-switch') !== false, 'top Live Chat/Termin buchen tabs are hidden');
+pb_ok(strpos($js, "data-widget-mode=\"booking\"") !== false, 'plus menu contains Termin buchen');
+pb_ok(strpos($js, "data-widget-mode=\"chat\"") !== false, 'plus menu contains Live Chat');
 pb_ok(strpos($css, '#paxdesign-booking-root .paxdesign-booking-chat-auth-gate') !== false && strpos($css, "background: #fff") !== false, 'chat login panel uses Apple light background');
 pb_ok(strpos($widget, 'pdx-auth-page-form-wrap') !== false, 'chat login mounts the account-page form styles');
 pb_ok(strpos($js, "context: 'page'") !== false, 'chat login uses the account-page auth form');
@@ -56,6 +59,8 @@ pb_ok(strpos($css, 'font-size: 22px') !== false, 'chat login title matches the A
 $booking_js = file_get_contents($plugin . '/assets/js/booking-script.js');
 pb_ok(strpos($booking_js, 'function fitWidgetToVisualViewport') !== false, 'mobile chat sizes to the visual viewport');
 pb_ok(strpos($booking_js, 'function keyboardOcclusionPx') !== false, 'keyboard occlusion is measured from visualViewport');
+pb_ok(strpos($booking_js, 'function isFixedLayoutRelative') !== false, 'keyboard fit detects iOS visual-viewport fixed positioning');
+pb_ok(strpos($booking_js, 'box.height * 0.62') !== false, 'closed keyboard chat is a compact card, not 84% of the screen');
 pb_ok(strpos($js, 'pinToLatestMessage: pinToLatestMessage') !== false, 'chat exposes pinToLatestMessage for keyboard resize');
 pb_ok(strpos($css, 'border-radius: 12px 12px 0 0') !== false, 'keyboard-open sheet sits flush above the keyboard');
 
@@ -93,4 +98,4 @@ if ($fail > 0) {
     fwrite(STDERR, "$fail production-baseline assertion(s) failed\n");
     exit(1);
 }
-echo "Production baseline 3.174.99 guards passed.\n";
+echo "Production baseline 3.174.100 guards passed.\n";
