@@ -778,6 +778,7 @@
     var COMPACT_HEIGHT = 420;
     var DESKTOP_BOTTOM = 76;
     var DESKTOP_RIGHT = 20;
+    var mobileKeyboardWasOpen = false;
 
     function applyCompactWidgetFrame() {
         var $widget = $in('.paxdesign-booking-widget');
@@ -815,25 +816,48 @@
         }
 
         var side = 12;
-        var bottomGutter = keyboardOpen ? 0 : 12;
-        var topPad = keyboardOpen ? 4 : 10;
-        var width = Math.max(240, box.width - side * 2);
-        var available = Math.max(220, box.height - topPad - bottomGutter);
-        var height = keyboardOpen ? available : Math.min(available, COMPACT_HEIGHT);
-        var bottom = kb + bottomGutter;
+        var width = Math.max(240, Math.round(box.width - side * 2));
+        var left = Math.max(0, Math.round(box.left + Math.max(0, (box.width - width) / 2)));
+
+        if (keyboardOpen) {
+            // Shrink the sheet to the visible viewport above the keyboard (WhatsApp-style).
+            var top = Math.max(0, Math.round(box.top));
+            var height = Math.max(180, Math.round(box.height));
+
+            $widget.css({
+                position: 'fixed',
+                top: top + 'px',
+                bottom: 'auto',
+                left: left + 'px',
+                right: 'auto',
+                width: width + 'px',
+                maxWidth: width + 'px',
+                height: height + 'px',
+                maxHeight: height + 'px',
+                minHeight: '0',
+                transform: 'none',
+                transition: 'none'
+            });
+            return;
+        }
+
+        var bottomGutter = 12;
+        var available = Math.max(220, box.height - bottomGutter - 10);
+        var height = Math.min(available, COMPACT_HEIGHT);
 
         $widget.css({
             position: 'fixed',
             top: 'auto',
+            bottom: Math.round(bottomGutter) + 'px',
+            left: left + 'px',
             right: 'auto',
-            bottom: Math.round(bottom) + 'px',
-            left: Math.round(side) + 'px',
-            width: Math.round(width) + 'px',
-            maxWidth: Math.round(width) + 'px',
+            width: width + 'px',
+            maxWidth: width + 'px',
             height: Math.round(height) + 'px',
             maxHeight: Math.round(height) + 'px',
             minHeight: '0',
-            transform: 'none'
+            transform: 'none',
+            transition: 'none'
         });
     }
 
@@ -849,17 +873,24 @@
         });
     }
 
-    function adjustMobileLayout() {
+    function adjustMobileLayout(opts) {
+        opts = opts || {};
         var $widget = $in('.paxdesign-booking-widget');
         if (!$widget.hasClass('paxdesign-is-active')) {
             applyCompactWidgetFrame();
+            mobileKeyboardWasOpen = false;
             return;
         }
         if (isMobileViewport()) {
             keepPagePinned();
         }
+        var wasKeyboardOpen = mobileKeyboardWasOpen;
         applyCompactWidgetFrame();
-        pinChatToLatest();
+        var isKeyboardOpen = root().hasClass('paxdesign-keyboard-open');
+        mobileKeyboardWasOpen = isKeyboardOpen;
+        if (opts.pin || (!wasKeyboardOpen && isKeyboardOpen)) {
+            pinChatToLatest();
+        }
     }
 
     window.PAXdesignBookingMobile = {
@@ -1010,6 +1041,7 @@
         $in('.paxdesign-booking-widget').removeClass('paxdesign-is-active').attr('aria-hidden', 'true');
         applyCompactWidgetFrame();
         root().removeClass('paxdesign-widget-open paxdesign-mobile-chat-mode paxdesign-keyboard-open');
+        mobileKeyboardWasOpen = false;
         unlockPageScroll();
         resetWidgetMode();
         

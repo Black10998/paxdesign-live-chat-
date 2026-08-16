@@ -29,9 +29,9 @@ curl -fsSL "${SITE}/wp-content/plugins/paxdesign-booking/assets/js/cybercrime-ad
 curl -fsSL "${SITE}/wp-content/plugins/paxdesign-booking/paxdesign-booking.php?v=${STAMP}" \
   -o "${tmpdir}/paxdesign-booking.php" || true
 
-grep -q "Version: 3.174.102" "${tmpdir}/chat-script.js" \
-  && ok "chat-script.js cache-bust version 3.174.102" \
-  || fail "chat-script.js is not the patched 3.174.102 file"
+grep -q "Version: 3.174.103" "${tmpdir}/chat-script.js" \
+  && ok "chat-script.js cache-bust version 3.174.103" \
+  || fail "chat-script.js is not the patched 3.174.103 file"
 
 grep -q "paxdesign-chat-auth-locked .paxdesign-booking-container" "${tmpdir}/booking-styles.css" \
   && grep -q "flex-direction: column" "${tmpdir}/booking-styles.css" \
@@ -92,9 +92,18 @@ grep -q "paxdesign-chat-mode-active.paxdesign-mobile-chat-mode" "${tmpdir}/booki
   && ok "mobile sheet overrides the 520px desktop chat height" \
   || fail "mobile sheet still loses to the 520px desktop chat height"
 
-grep -q "bottom: Math.round" "${tmpdir}/booking-script.js" \
-  && ok "widget is bottom-pinned instead of jumping via offsetTop" \
-  || fail "bottom-pinned compact frame missing from live booking-script.js"
+grep -q "mobileKeyboardWasOpen" "${tmpdir}/booking-script.js" \
+  && ok "mobile keyboard resize does not force pin-to-latest on every viewport event" \
+  || fail "mobileKeyboardWasOpen guard missing from live booking-script.js"
+
+grep -q "top: top + 'px'" "${tmpdir}/booking-script.js" \
+  && ok "mobile keyboard-open sheet anchors to the visual viewport top" \
+  || fail "visual-viewport top anchoring missing from live booking-script.js"
+
+grep -q "paxdesign-keyboard-open .paxdesign-booking-container" "${tmpdir}/booking-styles.css" \
+  && grep -q "max-height: none" "${tmpdir}/booking-styles.css" \
+  && ok "keyboard-open chat can shrink below the 420px container cap" \
+  || fail "keyboard-open container cap override missing"
 
 grep -q "paxdesign-booking-chat-auth-gate" "${tmpdir}/booking-styles.css" \
   && grep -q "background: #fff" "${tmpdir}/booking-styles.css" \

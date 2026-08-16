@@ -1,6 +1,6 @@
 <?php
 /**
- * Guard: GitHub paxdesign-booking must match the live 3.174.102 baseline.
+ * Guard: GitHub paxdesign-booking must match the live 3.174.103 baseline.
  * Rejects the later 3.176.x chat rewrite and CCS AI form-fill classes.
  */
 $root = dirname(__DIR__, 2);
@@ -24,8 +24,8 @@ $knowledge = file_get_contents($plugin . '/includes/class-paxdesign-chat-knowled
 $css = file_get_contents($plugin . '/assets/css/booking-styles.css');
 $widget = file_get_contents($plugin . '/templates/booking-widget.php');
 
-pb_ok(strpos($boot, "define('PAXDESIGN_BOOKING_VERSION', '3.174.102')") !== false, 'plugin version 3.174.102');
-pb_ok(strpos($js, 'Version: 3.174.102') !== false, 'chat-script cache-bust 3.174.102');
+pb_ok(strpos($boot, "define('PAXDESIGN_BOOKING_VERSION', '3.174.103')") !== false, 'plugin version 3.174.103');
+pb_ok(strpos($js, 'Version: 3.174.103') !== false, 'chat-script cache-bust 3.174.103');
 pb_ok(strpos($js, 'skipping stacked sync') === false, 'chat-script is not the 3.176 freeze/unfreeze rewrite');
 pb_ok(strpos($js, 'var openInstant') === false, 'chat-script does not use the 3.176 instant-open rewrite');
 pb_ok(strpos($js, 'var stickToBottom') !== false, 'WhatsApp stick-to-bottom is present');
@@ -67,9 +67,12 @@ pb_ok(strpos($booking_js, 'function applyCompactWidgetFrame') !== false, 'chat s
 pb_ok(strpos($booking_js, 'function keyboardOcclusionPx') !== false, 'keyboard occlusion is measured from visualViewport');
 pb_ok(strpos($booking_js, 'COMPACT_HEIGHT = 420') !== false, 'closed keyboard chat is a 420px compact card, not 84% of the screen');
 pb_ok(strpos($booking_js, 'kb > 50') !== false, 'keyboard-open layout waits for real visualViewport occlusion');
-pb_ok(strpos($booking_js, 'bottom: Math.round') !== false, 'widget is bottom-pinned instead of jumping via offsetTop');
+pb_ok(strpos($booking_js, 'mobileKeyboardWasOpen') !== false, 'mobile keyboard resize does not force pin-to-latest on every viewport event');
+pb_ok(strpos($booking_js, "top: top + 'px'") !== false, 'mobile keyboard-open sheet anchors to the visual viewport top');
+pb_ok(strpos($css, 'paxdesign-keyboard-open .paxdesign-booking-container') !== false && strpos($css, 'max-height: none') !== false, 'keyboard-open chat can shrink below the 420px container cap');
+pb_ok(strpos($css, 'paxdesign-booking-body.paxdesign-booking-chat-body') !== false && strpos($css, 'overflow: hidden') !== false, 'only the message list scrolls, not the whole chat body');
 pb_ok(strpos($js, 'pinToLatestMessage: pinToLatestMessage') !== false, 'chat exposes pinToLatestMessage for keyboard resize');
-pb_ok(strpos($css, 'border-radius: 12px 12px 0 0') !== false, 'keyboard-open sheet sits flush above the keyboard');
+pb_ok(strpos($css, 'paxdesign-keyboard-open .paxdesign-booking-widget') !== false && strpos($css, 'border-radius: 0') !== false, 'keyboard-open sheet fills the visual viewport flush above the keyboard');
 
 $overlay_files = array(
     'paxdesign-booking.php',
@@ -105,4 +108,4 @@ if ($fail > 0) {
     fwrite(STDERR, "$fail production-baseline assertion(s) failed\n");
     exit(1);
 }
-echo "Production baseline 3.174.102 guards passed.\n";
+echo "Production baseline 3.174.103 guards passed.\n";

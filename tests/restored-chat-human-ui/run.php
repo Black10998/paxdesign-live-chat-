@@ -32,8 +32,8 @@ $i18n = file_get_contents($root . '/includes/class-paxdesign-cybercrime-i18n.php
 $admin = file_get_contents($root . '/includes/customer/class-paxdesign-customer-admin.php');
 $adminJs = file_get_contents($root . '/assets/js/cybercrime-admin.js');
 
-assert_true(strpos($boot, "define('PAXDESIGN_BOOKING_VERSION', '3.174.102')") !== false, 'plugin version 3.174.102');
-assert_true(strpos($js, 'Version: 3.174.102') !== false, 'chat-script cache-bust 3.174.102');
+assert_true(strpos($boot, "define('PAXDESIGN_BOOKING_VERSION', '3.174.103')") !== false, 'plugin version 3.174.103');
+assert_true(strpos($js, 'Version: 3.174.103') !== false, 'chat-script cache-bust 3.174.103');
 assert_true(strpos($js, 'uploadHumanAttachFile') !== false, 'JS upload handler');
 assert_true(strpos($js, 'paxdesign-chat-admin-active') !== false, 'JS human takeover class');
 assert_true(strpos($js, 'paxdesign_chat_live_user_attach') !== false, 'JS posts attach action');
@@ -61,10 +61,12 @@ assert_true(strpos($css, 'font-size: 22px') !== false, 'in-chat login title matc
 assert_true(strpos($css, 'paxdesign-chat-auth-locked .paxdesign-booking-container') !== false && strpos($css, 'flex-direction: column') !== false, 'login panel stacks below the header instead of overlapping it');
 assert_true(strpos($css, '.paxdesign-booking-chat-auth-gate-inner:has(.paxdesign-booking-chat-auth-inline .pdx-auth-form) .paxdesign-booking-chat-auth-gate-intro') !== false, 'duplicate login headline is hidden once the inline form is mounted');
 assert_true(strpos($css, 'overflow-wrap: anywhere') !== false, 'login labels and links wrap instead of overlapping');
-assert_true(strpos($bookingJs, 'bottom: Math.round') !== false, 'widget is bottom-pinned instead of jumping via offsetTop');
+assert_true(strpos($bookingJs, 'mobileKeyboardWasOpen') !== false, 'mobile keyboard resize does not force pin-to-latest on every viewport event');
+assert_true(strpos($bookingJs, "top: top + 'px'") !== false, 'mobile keyboard-open sheet anchors to the visual viewport top');
+assert_true(strpos($css, 'paxdesign-keyboard-open .paxdesign-booking-container') !== false && strpos($css, 'max-height: none') !== false, 'keyboard-open chat can shrink below the 420px container cap');
 assert_true(strpos($bookingJs, 'function keyboardOcclusionPx') !== false, 'keyboard occlusion uses visualViewport');
 assert_true(strpos($js, 'pinToLatestMessage: pinToLatestMessage') !== false, 'keyboard resize can pin to the latest message');
-assert_true(strpos($css, 'border-radius: 12px 12px 0 0') !== false, 'keyboard-open composer sits flush above the keyboard');
+assert_true(strpos($css, 'paxdesign-keyboard-open .paxdesign-booking-widget') !== false && strpos($css, 'border-radius: 0') !== false, 'keyboard-open sheet fills the visual viewport flush above the keyboard');
 assert_true(strpos($css, '#063226') !== false, 'CSS dark green composer');
 assert_true(strpos($css, 'paxdesign-booking-chat-attach-menu') !== false, 'CSS attach menu');
 assert_true(strpos($css, 'display: none !important') !== false && strpos($css, 'paxdesign-booking-chat-end-wrap') !== false, 'end-chat CSS hidden');
