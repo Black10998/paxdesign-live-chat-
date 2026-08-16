@@ -27,9 +27,19 @@ curl -fsSL "${SITE}/wp-content/plugins/paxdesign-booking/assets/js/cybercrime-ad
 curl -fsSL "${SITE}/wp-content/plugins/paxdesign-booking/paxdesign-booking.php?v=${STAMP}" \
   -o "${tmpdir}/paxdesign-booking.php" || true
 
-grep -q "Version: 3.174.92" "${tmpdir}/chat-script.js" \
-  && ok "chat-script.js cache-bust version 3.174.92" \
-  || fail "chat-script.js is not the patched 3.174.92 file"
+grep -q "Version: 3.174.93" "${tmpdir}/chat-script.js" \
+  && ok "chat-script.js cache-bust version 3.174.93" \
+  || fail "chat-script.js is not the patched 3.174.93 file"
+
+grep -q "function pinToLatestMessage" "${tmpdir}/chat-script.js" \
+  && ok "instant pin-to-latest is present" \
+  || fail "pinToLatestMessage missing"
+
+if grep -q "scroll-behavior: smooth" "${tmpdir}/booking-styles.css"; then
+  fail "live CSS still uses smooth history scrolling"
+else
+  ok "live CSS pins instantly without smooth scroll"
+fi
 
 grep -q "uploadHumanAttachFile" "${tmpdir}/chat-script.js" \
   && ok "plus-button upload handler present" \
@@ -74,6 +84,13 @@ if grep -q "skipping stacked sync" "${tmpdir}/chat-script.js"; then
   fail "live chat-script.js looks like a newer GitHub chat rewrite"
 else
   ok "live chat-script.js is not the later GitHub chat rewrite"
+fi
+
+curl -fsSL "${SITE}/?pax_chat_ui=${STAMP}" -o "${tmpdir}/home.html" || true
+if grep -q "KI-generierte Antworten" "${tmpdir}/home.html" 2>/dev/null; then
+  fail "live homepage still contains KI disclaimer"
+else
+  ok "live homepage has no KI disclaimer"
 fi
 
 if [ "$FAIL" -ne 0 ]; then

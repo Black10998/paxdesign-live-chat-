@@ -1,6 +1,6 @@
 /**
  * PAXdesign AI Chat — Sales & Booking Assistant
- * Version: 3.174.92
+ * Version: 3.174.93
  */
 (function () {
   'use strict';
@@ -702,6 +702,25 @@
 
   function pollIsFresh(ms) {
     return lastReadinessPollAt > 0 && (Date.now() - lastReadinessPollAt) < (ms || 800);
+  }
+
+  function concealThreadUntilPinned() {
+    if (messagesEl) messagesEl.classList.add('paxdesign-chat-unpinned');
+  }
+
+  function pinToLatestMessage() {
+    if (!messagesEl) return;
+    stickToBottom = true;
+    if (scrollRaf) {
+      cancelAnimationFrame(scrollRaf);
+      scrollRaf = 0;
+    }
+    messagesEl.scrollTop = messagesEl.scrollHeight;
+  }
+
+  function revealPinnedThread() {
+    pinToLatestMessage();
+    if (messagesEl) messagesEl.classList.remove('paxdesign-chat-unpinned');
   }
 
   function paintCachedThreadIfNeeded() {
@@ -1686,23 +1705,25 @@
     }
     hideAuthGate();
     hideReadinessOverlay();
+    concealThreadUntilPinned();
     paintCachedThreadIfNeeded();
     stickToBottom = true;
     updateInputState();
     updateEntryUi();
-    scrollToBottom(true);
+    revealPinnedThread();
     notifyLayout();
     scheduleLivePolling();
     if (getSessionId()) startCustomerStream();
     beginChatReadiness({ reuseSession: true, background: true, blockUi: false }).then(function (ready) {
       if (!ready) return;
-      stickToBottom = true;
-      scrollToBottom(true);
+      revealPinnedThread();
       if (chatHandler === 'closed' && isSessionArchived(getSessionId()) && !isPersistentAccountChat()) {
         fetchSessionFromServer(true).then(function () {
           var hasHistory = messages.length > 0 || (config && config.chatMessageCount > 0);
           if (!hasHistory) {
             beginFreshSessionSilently();
+          } else {
+            revealPinnedThread();
           }
         });
       }
@@ -4790,19 +4811,15 @@
 
   function autoResizeInput() {
     input.style.height = 'auto';
-    input.style.height = Math.min(input.scrollHeight, 120) + 'px';
+    input.style.height = Math.min(input.scrollHeight, 56) + 'px';
   }
 
   function scrollToBottom(force) {
     if (!messagesEl) return;
     if (!force && !stickToBottom) return;
     stickToBottom = true;
-    if (scrollRaf) cancelAnimationFrame(scrollRaf);
-    scrollRaf = requestAnimationFrame(function () {
-      scrollRaf = 0;
-      if (!messagesEl) return;
-      messagesEl.scrollTop = messagesEl.scrollHeight;
-    });
+    pinToLatestMessage();
+    if (force) revealPinnedThread();
   }
 
   function escapeHtml(str) {
