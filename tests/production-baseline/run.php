@@ -1,6 +1,6 @@
 <?php
 /**
- * Guard: GitHub paxdesign-booking must match the live 3.174.92 baseline.
+ * Guard: GitHub paxdesign-booking must match the live 3.174.93 baseline.
  * Rejects the later 3.176.x chat rewrite and CCS AI form-fill classes.
  */
 $root = dirname(__DIR__, 2);
@@ -21,14 +21,18 @@ function pb_ok($cond, $message) {
 $boot = file_get_contents($plugin . '/paxdesign-booking.php');
 $js = file_get_contents($plugin . '/assets/js/chat-script.js');
 $knowledge = file_get_contents($plugin . '/includes/class-paxdesign-chat-knowledge.php');
+$css = file_get_contents($plugin . '/assets/css/booking-styles.css');
+$widget = file_get_contents($plugin . '/templates/booking-widget.php');
 
-pb_ok(strpos($boot, "define('PAXDESIGN_BOOKING_VERSION', '3.174.92')") !== false, 'plugin version 3.174.92');
-pb_ok(strpos($js, 'Version: 3.174.92') !== false, 'chat-script cache-bust 3.174.92');
+pb_ok(strpos($boot, "define('PAXDESIGN_BOOKING_VERSION', '3.174.93')") !== false, 'plugin version 3.174.93');
+pb_ok(strpos($js, 'Version: 3.174.93') !== false, 'chat-script cache-bust 3.174.93');
 pb_ok(strpos($js, 'skipping stacked sync') === false, 'chat-script is not the 3.176 freeze/unfreeze rewrite');
 pb_ok(strpos($js, 'var openInstant') === false, 'chat-script does not use the 3.176 instant-open rewrite');
 pb_ok(strpos($js, 'var stickToBottom') !== false, 'WhatsApp stick-to-bottom is present');
 pb_ok(strpos($js, 'var pollInFlight') !== false, 'overlapping poll lock is present');
-pb_ok(strpos($js, 'background: true, blockUi: false') !== false, 'open does not block on history/sync');
+pb_ok(strpos($js, 'function pinToLatestMessage') !== false, 'open pins to latest message without animation');
+pb_ok(strpos($css, 'scroll-behavior: smooth') === false, 'messages do not use smooth history scrolling');
+pb_ok(strpos($widget, 'KI-generierte Antworten') === false, 'disclaimer text is removed from chat UI');
 pb_ok(strpos($js, 'clearHistoryDomState();') !== false && strpos($js, 'if (full && !hasPaintedThread)') !== false, 'full history fetch does not wipe a painted thread');
 pb_ok(strpos($boot, 'class-paxdesign-cybercrime-ai-workflow.php') === false, 'bootstrap does not load CCS AI workflow');
 pb_ok(strpos($boot, 'class-paxdesign-cybercrime-ai-case.php') === false, 'bootstrap does not load CCS AI case');
@@ -64,4 +68,4 @@ if ($fail > 0) {
     fwrite(STDERR, "$fail production-baseline assertion(s) failed\n");
     exit(1);
 }
-echo "Production baseline 3.174.92 guards passed.\n";
+echo "Production baseline 3.174.93 guards passed.\n";

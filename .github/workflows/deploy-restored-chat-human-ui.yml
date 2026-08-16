@@ -5,7 +5,7 @@ name: Deploy restored chat human UI
 on:
   push:
     branches:
-      - cursor/chat-whatsapp-speed-9e84
+      - cursor/chat-ui-compact-9e84
     paths:
       - 'deploy-patches/restored-chat-human-ui/**'
       - '.github/workflows/deploy-restored-chat-human-ui.yml'
