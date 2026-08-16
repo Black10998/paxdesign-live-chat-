@@ -1,5 +1,6 @@
 #!/usr/bin/env bash
 # Verify the surgically deployed restored-baseline chat / CCS patch on paxdesign.at.
+# Baseline: 3.174.104 (compact login, single Close button).
 set -euo pipefail
 
 SITE="${PAX_SITE:-https://paxdesign.at}"
