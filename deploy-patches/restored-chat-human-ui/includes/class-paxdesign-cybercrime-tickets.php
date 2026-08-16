@@ -347,8 +347,17 @@ class PAXdesign_Cybercrime_Tickets {
      * @return array<string, mixed>|null
      */
     public static function get_report_for_user($reference_id, $user_id) {
+        $reference_id = sanitize_text_field((string) $reference_id);
+        if ($reference_id === '') {
+            return null;
+        }
         $row = self::get_report_row($reference_id);
         if (!$row || !self::user_can_view_report($row, $user_id)) {
+            return null;
+        }
+        self::sync_report_attachments_column($reference_id);
+        $row = self::get_report_row($reference_id);
+        if (!$row) {
             return null;
         }
         return self::format_report_row($row, true);
@@ -2113,6 +2122,11 @@ class PAXdesign_Cybercrime_Tickets {
      * @return array<string, mixed>|null
      */
     public static function get_report_for_admin($reference_id) {
+        $reference_id = sanitize_text_field((string) $reference_id);
+        if ($reference_id === '') {
+            return null;
+        }
+        self::sync_report_attachments_column($reference_id);
         $row = self::get_report_row($reference_id);
         if (!$row) {
             return null;

@@ -948,6 +948,7 @@ class PAXdesign_Customer_Admin {
         }
 
         PAXdesign_Cybercrime_Tickets::mark_read_for_audience($reference, 'staff', get_current_user_id());
+        PAXdesign_Cybercrime_Tickets::sync_report_attachments_column($reference);
 
         $row = PAXdesign_Cybercrime_Tickets::get_report_row($reference);
         if (!$row) {
@@ -1012,13 +1013,16 @@ class PAXdesign_Customer_Admin {
             echo '</div>';
         }
 
-        if (!empty($report['attachments']) && is_array($report['attachments'])) {
-            echo '<div class="pax-cc-admin__card" id="pax-cc-admin-attachments-card">';
-            echo '<h3 class="pax-cc-admin__card-title">' . esc_html__('Attachments', 'paxdesign-booking') . '</h3>';
-            echo '<div class="pax-cc-attachments" id="pax-cc-admin-attachments">';
-            self::render_cybercrime_attachment_gallery($report['attachments']);
-            echo '</div></div>';
+        $attachment_items = (!empty($report['attachments']) && is_array($report['attachments']))
+            ? $report['attachments']
+            : array();
+        echo '<div class="pax-cc-admin__card" id="pax-cc-admin-attachments-card"' . (empty($attachment_items) ? ' hidden' : '') . '>';
+        echo '<h3 class="pax-cc-admin__card-title">' . esc_html__('Attachments', 'paxdesign-booking') . '</h3>';
+        echo '<div class="pax-cc-attachments" id="pax-cc-admin-attachments">';
+        if (!empty($attachment_items)) {
+            self::render_cybercrime_attachment_gallery($attachment_items);
         }
+        echo '</div></div>';
 
         echo '<div class="pax-cc-admin__grid">';
 

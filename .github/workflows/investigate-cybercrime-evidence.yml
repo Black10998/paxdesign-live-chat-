@@ -2,6 +2,12 @@ name: Investigate cybercrime evidence production
 
 on:
   workflow_dispatch:
+  push:
+    branches:
+      - main
+    paths:
+      - 'scripts/investigate-cybercrime-evidence-production.sh'
+      - '.github/workflows/investigate-cybercrime-evidence.yml'
 
 permissions:
   contents: read

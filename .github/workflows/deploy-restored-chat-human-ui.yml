@@ -195,7 +195,26 @@ jobs:
              rm -f .maintenance && \
              (command -v wp >/dev/null && wp maintenance-mode deactivate 2>/dev/null || true) && \
              (command -v wp >/dev/null && wp cache flush || true) && \
-             (command -v wp >/dev/null && wp litespeed-purge all || true)"
+             (command -v wp >/dev/null && wp litespeed-purge all || true) && \
+             (php -r 'if (function_exists(\"opcache_reset\")) { opcache_reset(); echo \"opcache_reset=ok\\n\"; } else { echo \"opcache_reset=skipped\\n\"; }' || true)"
+
+      - name: Verify deployed PHP evidence handlers on server
+        env:
+          WP_SSH_HOST: ${{ secrets.WP_SSH_HOST }}
+          WP_SSH_PORT: ${{ secrets.WP_SSH_PORT }}
+          WP_SSH_USER: ${{ secrets.WP_SSH_USER }}
+          WP_SSH_PRIVATE_KEY: ${{ secrets.WP_SSH_PRIVATE_KEY }}
+          WP_PATH: ${{ secrets.WP_PATH }}
+        run: |
+          set -euo pipefail
+          PORT="${WP_SSH_PORT:-22}"
+          SSH_OPTS=(-i ~/.ssh/id_deploy -p "$PORT" -o StrictHostKeyChecking=yes -o BatchMode=yes)
+          REMOTE="${WP_SSH_USER}@${WP_SSH_HOST}"
+          TARGET="${WP_PATH%/}/wp-content/plugins/paxdesign-booking/includes/class-paxdesign-cybercrime-tickets.php"
+          install -m 600 -D /dev/null ~/.ssh/id_deploy
+          printf '%s\n' "$WP_SSH_PRIVATE_KEY" > ~/.ssh/id_deploy
+          ssh-keyscan -p "$PORT" -H "$WP_SSH_HOST" >> ~/.ssh/known_hosts 2>/dev/null || true
+          ssh "${SSH_OPTS[@]}" "$REMOTE" "grep -q append_report_attachments '$(printf '%q' "$TARGET")' && grep -q collect_message_attachments '$(printf '%q' "$TARGET")' && grep -q mark_evidence_requests_fulfilled '$(printf '%q' "$TARGET")' && echo 'OK: live tickets.php includes evidence attachment handlers'"
 
       - name: Verify live chat assets
         run: |

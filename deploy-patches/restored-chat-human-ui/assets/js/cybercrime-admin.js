@@ -381,7 +381,28 @@
       + '<span class="pax-cc-attachment__name">' + name + '</span></a>';
   }
 
+  function ensureAttachmentsShell() {
+    if (attachmentsEl && attachmentsCardEl) {
+      return;
+    }
+    var grid = document.querySelector('.pax-cc-admin__grid');
+    if (!grid || !grid.parentNode) {
+      return;
+    }
+    if (!attachmentsCardEl) {
+      attachmentsCardEl = document.createElement('div');
+      attachmentsCardEl.className = 'pax-cc-admin__card';
+      attachmentsCardEl.id = 'pax-cc-admin-attachments-card';
+      attachmentsCardEl.hidden = true;
+      attachmentsCardEl.innerHTML = '<h3 class="pax-cc-admin__card-title">' + escapeHtml(text('attachments', 'Attachments')) + '</h3>'
+        + '<div class="pax-cc-attachments" id="pax-cc-admin-attachments"></div>';
+      grid.parentNode.insertBefore(attachmentsCardEl, grid);
+    }
+    attachmentsEl = document.getElementById('pax-cc-admin-attachments');
+  }
+
   function renderAttachments(attachments) {
+    ensureAttachmentsShell();
     if (!attachmentsEl) {
       return;
     }
