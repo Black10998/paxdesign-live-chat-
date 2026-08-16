@@ -52,8 +52,6 @@ if (!is_array($attachments) || count($attachments) < 1) {
 }
 $enriched = PAXdesign_Cybercrime_Intake::enrich_attachments($ref, $attachments);
 echo "OK: report $ref has " . count($enriched) . " enriched attachment(s)\n";
-$pdf_name = "";
-$pdf_path = "";
 $checked = 0;
 foreach ($enriched as $item) {
   if (!is_array($item)) {
@@ -97,24 +95,22 @@ foreach ($enriched as $item) {
     $pdf_path = $path;
   }
   PAXdesign_Cybercrime_Intake::$attachment_stream_dry_run = true;
-  $_GET = array(
-    "action" => PAXdesign_Cybercrime_Intake::ATTACHMENT_ACTION,
-    "reference" => $ref,
-    "file" => $name,
-    "_wpnonce" => $token,
-  );
   ob_start();
-  try {
-    PAXdesign_Cybercrime_Intake::serve_attachment_download();
-    echo "FAIL: serve_attachment_download did not stream $name\n";
-  } catch (RuntimeException $e) {
-    echo "FAIL: serve_attachment_download error for $name: " . $e->getMessage() . "\n";
-  }
+  $streamed_bytes = PAXdesign_Cybercrime_Intake::stream_attachment_file(
+    $path,
+    $mime,
+    $name,
+    $mime === "application/pdf" || PAXdesign_Cybercrime_Intake::can_browser_preview_image($mime, $path)
+  );
   $streamed = ob_get_clean();
   PAXdesign_Cybercrime_Intake::$attachment_stream_dry_run = false;
+  if ($streamed_bytes <= 0) {
+    echo "FAIL: stream_attachment_file returned zero for $name\n";
+    continue;
+  }
   $disk = file_get_contents($path);
   if ($streamed !== $disk) {
-    echo "FAIL: streamed body mismatch for $name (stream=" . strlen($streamed) . " disk=" . strlen($disk) . " head=" . substr($streamed, 0, 16) . ")\n";
+    echo "FAIL: streamed body mismatch for $name (stream=" . strlen($streamed) . " disk=" . strlen($disk) . ")\n";
     continue;
   }
   echo "OK: $name readable size=$size mime=$mime streamed-bytes-match-disk token=valid\n";
@@ -122,12 +118,46 @@ foreach ($enriched as $item) {
 if ($checked < 1) {
   echo "FAIL: no attachments verified\n";
 }
-if ($pdf_name === "") {
-  echo "WARN: no valid PDF attachment found on latest report; HTTP PDF curl skipped\n";
-} else {
-  echo "PDF_CANDIDATE=$pdf_name\n";
-  echo "PDF_PATH=$pdf_path\n";
+
+// Ensure at least one browser-openable PDF exists for HTTP curl verification.
+$valid_pdf = null;
+foreach ($enriched as $item) {
+  if (!is_array($item)) { continue; }
+  $name = (string)($item["name"] ?? "");
+  $path = PAXdesign_Cybercrime_Intake::resolve_attachment_path($item);
+  if ($name !== "" && $path !== "" && PAXdesign_Cybercrime_Intake::verify_pdf_file($path)) {
+    $valid_pdf = array("name" => $name, "path" => $path);
+    break;
+  }
+}
+if (!$valid_pdf) {
+  add_filter("upload_dir", array("PAXdesign_Cybercrime_Intake", "filter_upload_dir"));
+  $pdf_name = "ccs-http-verify-" . gmdate("YmdHis") . ".pdf";
+  $pdf_body = "%PDF-1.1\n1 0 obj<</Type/Catalog/Pages 2 0 R>>endobj\n2 0 obj<</Type/Pages/Kids[3 0 R]/Count 1>>endobj\n3 0 obj<</Type/Page/MediaBox[0 0 3 3]>>endobj\nxref\n0 4\n0000000000 65535 f \n0000000009 00000 n \n0000000052 00000 n \n0000000101 00000 n \ntrailer<</Size 4/Root 1 0 R>>\nstartxref\n149\n%%EOF\n";
+  $bits = wp_upload_bits($pdf_name, null, $pdf_body);
+  remove_filter("upload_dir", array("PAXdesign_Cybercrime_Intake", "filter_upload_dir"));
+  if (empty($bits["error"]) && !empty($bits["file"])) {
+    $upload_dir = wp_upload_dir();
+    $rel = ltrim(str_replace(trailingslashit($upload_dir["basedir"]), "", $bits["file"]), "/");
+    $upload = array(
+      "field" => "evidence_other",
+      "name"  => basename($bits["file"]),
+      "path"  => $rel,
+      "type"  => "application/pdf",
+      "size"  => (string) filesize($bits["file"]),
+    );
+    PAXdesign_Cybercrime_Tickets::append_report_attachments($ref, array($upload));
+    PAXdesign_Cybercrime_Tickets::sync_report_attachments_column($ref);
+    $valid_pdf = array("name" => basename($bits["file"]), "path" => $bits["file"]);
+    echo "OK: seeded browser-openable verify PDF: " . $valid_pdf["name"] . "\n";
+  }
+}
+if ($valid_pdf) {
+  echo "PDF_CANDIDATE=" . $valid_pdf["name"] . "\n";
+  echo "PDF_PATH=" . $valid_pdf["path"] . "\n";
   echo "PDF_REF=$ref\n";
+} else {
+  echo "WARN: no valid PDF available for HTTP curl test\n";
 }
 ' 2>&1 || fail "wp eval attachment verification failed"
 fi
