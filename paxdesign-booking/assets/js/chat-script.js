@@ -70,7 +70,10 @@
   var historyScrollBound = false;
   var stickToBottom      = true;
   var historyLoadedAt = 0;
-  var HISTORY_REUSE_MS = 8000;
+  var HISTORY_REUSE_MS = 120000;
+  var pollInFlight = null;
+  var pollIntervalCurrent = 0;
+  var snapshotSaveTimer = null;
   var localMsgId         = 0;
   var domMsgIds          = {};
   var domClientMsgIds    = {};
@@ -171,11 +174,11 @@
     'Einen kleinen Moment bitte …',
   ];
   var LIVE_QUALIFY_TEXT   = 'Gerne. Damit ich Sie richtig weiterleiten kann: Worum geht es kurz — Website, AI Chatbot, Booking, Support oder ein anderes Thema?';
-  var POLL_INTERVAL_MS    = 1200;
-  var POLL_INTERVAL_OPEN_MS = 450;
-  var POLL_INTERVAL_HUMAN_MS = 800;
-  var POLL_INTERVAL_BACKGROUND_MS = 2000;
-  var POLL_INTERVAL_SSE_MS = 10000;
+  var POLL_INTERVAL_MS    = 2000;
+  var POLL_INTERVAL_OPEN_MS = 2500;
+  var POLL_INTERVAL_HUMAN_MS = 1500;
+  var POLL_INTERVAL_BACKGROUND_MS = 4000;
+  var POLL_INTERVAL_SSE_MS = 12000;
   var STREAM_RECONNECT_BASE_MS = 1500;
   var STREAM_RECONNECT_MAX_MS = 30000;
   var EDGE_BLOCK_PAUSE_MS = 300000;
@@ -715,6 +718,9 @@
     if (options.skipHistory) {
       return true;
     }
+    if (shouldPreserveHistoryDom() && pollSeq > 0) {
+      return true;
+    }
     if (!options.reuseSession) {
       return false;
     }
@@ -782,7 +788,7 @@
           logReadiness(READINESS_STEPS.history, 'OK', { reused: true, skipped: true });
           return true;
         }
-        return fetchSessionFromServer(true, true);
+        return fetchSessionFromServer(true, false);
       })
       .then(function () {
         abortIfReadinessStale(generation);
@@ -790,7 +796,7 @@
         if (chatHandler === 'closed' && isPersistentAccountChat()) {
           return reopenAuthenticatedSessionIfNeeded().then(function () {
             abortIfReadinessStale(generation);
-            return fetchSessionFromServer(true, true);
+            return fetchSessionFromServer(true, false);
           });
         }
         return true;
@@ -806,7 +812,7 @@
       .then(function () {
         abortIfReadinessStale(generation);
         setReadinessPhase('readinessSyncing', 'Synchronizing chat status…');
-        return pollUpdatesOnce(true);
+        return pollUpdatesOnce(false);
       })
       .then(function () {
         abortIfReadinessStale(generation);
@@ -832,18 +838,12 @@
     // overlay. Every CCS/messaging sync still runs — it just no longer freezes
     // the UI on open. The blocking overlay is reserved for a genuine cold start
     // (no session yet) or when a refresh is explicitly forced.
-    var openInstant = !options.force && (
-      widgetOpen ||
-      (!!options.reuseSession && !!getSessionId() && (sessionRestored || shouldPreserveHistoryDom()))
-    );
+    var openInstant = !options.force;
     hideReadinessOverlay();
     updateEntryUi();
     updateInputState();
-    if (openInstant && input && !input.disabled) {
+    if (widgetOpen && input && !input.disabled) {
       try { input.focus({ preventScroll: true }); } catch (focusErr) {}
-    }
-    if (!openInstant) {
-      showReadinessOverlay();
     }
     readinessPromise = runChatReadinessChecks(options)
       .then(function () {
@@ -1681,11 +1681,9 @@
       updateEntryUi();
       updateInputState();
     } else {
-      var boot = restoreCustomerSession();
-      boot.then(function () {
-        if (!sessionRestored) updateEntryUi();
-        updateInputState();
-      });
+      restoreCustomerSessionLocally();
+      updateEntryUi();
+      updateInputState();
     }
   }
 
@@ -1703,6 +1701,15 @@
   }
 
   function saveSessionSnapshot() {
+    if (isPersistentAccountChat()) return;
+    if (snapshotSaveTimer) return;
+    snapshotSaveTimer = window.setTimeout(function () {
+      snapshotSaveTimer = null;
+      persistSessionSnapshotNow();
+    }, 400);
+  }
+
+  function persistSessionSnapshotNow() {
     var sid = getSessionId();
     if (isPersistentAccountChat()) return;
     try {
@@ -1786,7 +1793,6 @@
 
   function onWidgetOpen() {
     widgetOpen = true;
-    playAvailableSoundOnce();
     hideReadinessOverlay();
     initAuthGate();
     if (!canUseChat()) {
@@ -1795,27 +1801,24 @@
       return;
     }
     hideAuthGate();
+    restoreCustomerSessionLocally();
     updateInputState();
     flushScrollToBottom(true);
     if (input && !input.disabled) {
       try { input.focus({ preventScroll: true }); } catch (focusErr) {}
     }
-    beginChatReadiness({ reuseSession: true }).then(function (ready) {
+    startCustomerStream();
+    scheduleLivePolling();
+    window.setTimeout(playAvailableSoundOnce, 0);
+    beginChatReadiness({
+      reuseSession: true,
+      skipHistory: shouldPreserveHistoryDom() && pollSeq > 0,
+    }).then(function (ready) {
       if (!ready) return;
       if (isCybercrimeCaseChat()) {
         ensureCcsOpeningPrompt();
       }
-      scrollToBottom(true);
-      if (chatHandler === 'closed' && isSessionArchived(getSessionId()) && !isPersistentAccountChat()) {
-        fetchSessionFromServer(true).then(function () {
-          var hasHistory = messages.length > 0 || (config && config.chatMessageCount > 0);
-          if (!hasHistory) {
-            beginFreshSessionSilently();
-          } else {
-            scrollToBottom(true);
-          }
-        });
-      }
+      flushScrollToBottom(true);
     });
   }
 
@@ -2152,17 +2155,36 @@
     });
   }
 
-  function restoreCustomerSession() {
+  function restoreCustomerSessionLocally() {
     var sid = getSessionId();
     consultationLogged = loadConsultationLogged(sid);
     if (isPersistentAccountChat()) {
-      if (config && config.chatSessionHasMessages) {
-        sessionRestored = true;
-      }
+      if (config && config.chatSessionHasMessages) sessionRestored = true;
       if (config && config.chatSessionId) {
-        adoptSessionId(config.chatSessionId, { fromServer: true, preserveUi: false });
+        adoptSessionId(config.chatSessionId, { fromServer: true, preserveUi: true });
       }
-      return fetchSessionFromServer(true).then(function (restored) {
+      return !!sessionRestored;
+    }
+    if (isSessionArchived(sid)) {
+      return false;
+    }
+    var snap = loadSessionSnapshot(sid);
+    if (snap && snap.chatHandler === 'closed' && snap.customerEndedChat) {
+      return false;
+    }
+    if (snap && Array.isArray(snap.messages) && snap.messages.length) {
+      applyRestoredSnapshot(snap);
+      sessionRestored = true;
+      historyLoadedAt = Date.now();
+      return true;
+    }
+    return false;
+  }
+
+  function restoreCustomerSession() {
+    restoreCustomerSessionLocally();
+    if (isPersistentAccountChat()) {
+      return fetchSessionFromServer(!shouldPreserveHistoryDom()).then(function (restored) {
         if (chatHandler === 'closed') {
           return reopenAuthenticatedSessionIfNeeded().then(function () {
             return fetchSessionFromServer(true);
@@ -2174,6 +2196,7 @@
         updateEntryUi();
       });
     }
+    var sid = getSessionId();
     if (isSessionArchived(sid)) {
       beginFreshSessionSilently();
       return Promise.resolve();
@@ -2184,9 +2207,9 @@
       beginFreshSessionSilently();
       return Promise.resolve();
     }
-    if (snap && Array.isArray(snap.messages) && snap.messages.length) {
-      applyRestoredSnapshot(snap);
+    if (shouldPreserveHistoryDom() && pollSeq > 0) {
       sessionRestored = true;
+      return Promise.resolve();
     }
     return fetchSessionFromServer(true).then(function (restored) {
       if (chatHandler === 'closed' && customerEndedChat) {
@@ -2454,7 +2477,11 @@
         if (full) {
           historyLoadedAt = Date.now();
         }
-        flushScrollToBottom(true);
+        if (stickToBottom) {
+          requestAnimationFrame(function () {
+            flushScrollToBottom(false);
+          });
+        }
         return true;
       })
       .catch(function (err) {
@@ -3294,13 +3321,21 @@
   }
 
   function scheduleLivePolling() {
-    if (pollTimer) clearInterval(pollTimer);
     if (!pageVisible || !canUseChat() || isEdgeBlocked()) {
-      pollTimer = null;
+      if (pollTimer) {
+        clearInterval(pollTimer);
+        pollTimer = null;
+      }
+      pollIntervalCurrent = 0;
       return;
     }
-    pollUpdates();
-    pollTimer = window.setInterval(pollUpdates, effectivePollIntervalMs());
+    var interval = effectivePollIntervalMs();
+    if (pollTimer && pollIntervalCurrent === interval) {
+      return;
+    }
+    if (pollTimer) clearInterval(pollTimer);
+    pollIntervalCurrent = interval;
+    pollTimer = window.setInterval(pollUpdates, interval);
   }
 
   document.addEventListener('visibilitychange', function () {
@@ -3523,7 +3558,7 @@
       return false;
     }
     if (data.session_id && data.session_id !== getSessionId()) {
-      adoptSessionId(data.session_id, { fromServer: true, preserveUi: false });
+      adoptSessionId(data.session_id, { fromServer: true, preserveUi: true });
     }
     applyHandlerState(data.handler || 'ai', data.admin_name || '');
     syncSessionMetaFromPoll(data);
@@ -3576,6 +3611,9 @@
 
   function pollUpdatesOnce(strict) {
     var step = strict ? READINESS_STEPS.sync : READINESS_STEPS.finalSync;
+    if (pollInFlight) {
+      return pollInFlight;
+    }
     if (!config.ajaxUrl || !canUseChat()) {
       if (strict) return readinessReject(step, 'network', 'readinessNetworkFailed', { reason: 'poll_unavailable' });
       return Promise.resolve(null);
@@ -3591,7 +3629,7 @@
     formData.append('session_id', getSessionId());
     formData.append('since', String(pollSeq));
 
-    return fetch(config.ajaxUrl, { method: 'POST', body: formData, credentials: 'same-origin', cache: 'no-store' })
+    pollInFlight = fetch(config.ajaxUrl, { method: 'POST', body: formData, credentials: 'same-origin', cache: 'no-store' })
       .then(function (res) {
         return res.text().then(function (text) {
           if (isEdgeForbiddenResponse(res, text)) {
@@ -3627,7 +3665,15 @@
           }));
         }
         return null;
+      })
+      .then(function (data) {
+        pollInFlight = null;
+        return data;
+      }, function (err) {
+        pollInFlight = null;
+        throw err;
       });
+    return pollInFlight;
   }
 
   function pollUpdates() {
@@ -5282,23 +5328,11 @@
     if (!messagesEl) return;
     if (force) stickToBottom = true;
     if (!stickToBottom) return;
-    function applyScroll() {
+    messagesEl.scrollTop = messagesEl.scrollHeight;
+    requestAnimationFrame(function () {
       if (!messagesEl || !stickToBottom) return;
       messagesEl.scrollTop = messagesEl.scrollHeight;
-      if (threadEl && threadEl.lastElementChild) {
-        try {
-          threadEl.lastElementChild.scrollIntoView({ block: 'end', inline: 'nearest' });
-        } catch (scrollErr) {}
-      }
-    }
-    applyScroll();
-    requestAnimationFrame(function () {
-      applyScroll();
-      requestAnimationFrame(applyScroll);
     });
-    window.setTimeout(applyScroll, 0);
-    window.setTimeout(applyScroll, 48);
-    window.setTimeout(applyScroll, 160);
   }
 
   function escapeHtml(str) {
