@@ -577,6 +577,9 @@
   }
 
   function isDeletableEntry(entry) {
+    if (currentReport && isClosedStatus(currentReport.status || '')) {
+      return false;
+    }
     if (!entry) {
       return false;
     }
@@ -726,6 +729,9 @@
     }
     if (statusSelect) {
       statusSelect.disabled = closed;
+    }
+    if (internalNoteForm) {
+      internalNoteForm.hidden = closed;
     }
   }
 

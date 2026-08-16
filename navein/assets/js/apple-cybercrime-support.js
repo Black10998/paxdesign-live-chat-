@@ -51,7 +51,11 @@
   var activeReplyInput = document.getElementById('pax-ccs-active-reply');
   var activeReplySubmit = document.getElementById('pax-ccs-active-reply-submit');
   var activeReplyError = document.getElementById('pax-ccs-active-reply-error');
-  var activeClosedNote = document.getElementById('pax-ccs-active-closed-note');
+  var closedLockEl = document.getElementById('pax-ccs-closed-lock');
+  var closedLockTitleEl = document.getElementById('pax-ccs-closed-lock-title');
+  var closedLockTextEl = document.getElementById('pax-ccs-closed-lock-text');
+  var openNewReportBtn = document.getElementById('pax-ccs-open-new-report');
+  var activeAiBlock = document.querySelector('.pax-ccs-portal__ai-block');
   var activeChatBtn = document.getElementById('pax-ccs-active-chat');
   var refreshReportBtn = document.getElementById('pax-ccs-refresh-report');
   var backHistoryBtn = document.getElementById('pax-ccs-back-history');
@@ -696,11 +700,33 @@
     if (activeReplyWrap) {
       activeReplyWrap.hidden = !isActive;
     }
-    if (activeClosedNote) {
-      activeClosedNote.hidden = isActive;
+    if (closedLockEl) {
+      closedLockEl.hidden = isActive;
+    }
+    if (activeAiBlock) {
+      activeAiBlock.hidden = !isActive;
     }
     if (backHistoryBtn) {
       backHistoryBtn.hidden = isActive;
+    }
+    if (!isActive) {
+      if (closedLockTitleEl) {
+        closedLockTitleEl.textContent = activeReportText('closed_title', closedLockTitleEl.textContent || '');
+      }
+      if (closedLockTextEl) {
+        closedLockTextEl.textContent = activeReportText('read_only', closedLockTextEl.textContent || '');
+      }
+      if (activeReplyInput) {
+        activeReplyInput.value = '';
+      }
+      clearResubmitInputs();
+      if (activeReplyError) {
+        activeReplyError.hidden = true;
+        activeReplyError.textContent = '';
+      }
+      if (evidenceSuccessEl) {
+        evidenceSuccessEl.hidden = true;
+      }
     }
     updateEvidenceUi(report);
     updateStartButtonLabel();
@@ -2666,6 +2692,13 @@
       setPhase('welcome');
       fetchReportHistory();
       window.scrollTo({ top: (welcomeEl || root).offsetTop - 12, behavior: 'smooth' });
+    });
+  }
+
+  if (openNewReportBtn) {
+    openNewReportBtn.addEventListener('click', function () {
+      stopReportPolling();
+      startReporting();
     });
   }
 

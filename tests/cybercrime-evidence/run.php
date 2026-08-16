@@ -24,6 +24,7 @@ $adminJs = file_get_contents($root . '/assets/js/cybercrime-admin.js');
 $portalJs = file_get_contents($theme . '/assets/js/apple-cybercrime-support.js');
 $portalCss = file_get_contents($theme . '/assets/css/apple-cybercrime-support.css');
 $portalTpl = file_get_contents($theme . '/template-parts/pages/cybercrime-support.php');
+$portalData = file_get_contents($theme . '/template-parts/pages/cybercrime-support-data.php');
 
 ccs_evidence_assert(strpos($intake, 'ATTACHMENT_ACTION') !== false, 'intake defines attachment action');
 ccs_evidence_assert(strpos($intake, 'ajax_download_attachment') !== false, 'intake registers secure attachment download');
@@ -47,7 +48,15 @@ ccs_evidence_assert(strpos($portalJs, 'renderResubmitPreview') !== false, 'porta
 ccs_evidence_assert(strpos($portalJs, 'paxdesign_cybercrime_customer_resubmit') !== false, 'portal JS calls resubmit action');
 ccs_evidence_assert(strpos($portalJs, 'timelineEvidenceInlineHtml') !== false, 'portal JS renders inline evidence request CTA');
 ccs_evidence_assert(strpos($portalJs, 'evidence_request_active') !== false, 'portal JS respects server evidence_request_active flag');
-ccs_evidence_assert(strpos($portalJs, 'evidenceSuccessUntil') !== false, 'portal JS keeps evidence success confirmation visible after submit');
+ccs_evidence_assert(strpos($portalJs, 'pax-ccs-open-new-report') !== false, 'portal JS exposes Open New Report for closed tickets');
+ccs_evidence_assert(strpos($portalJs, 'pax-ccs-closed-lock') !== false, 'portal JS handles closed lock banner');
+ccs_evidence_assert(strpos($portalJs, 'openNewReportBtn') !== false, 'portal JS wires Open New Report button');
+ccs_evidence_assert(strpos($portalTpl, 'pax-ccs-closed-lock') !== false, 'portal template renders closed lock banner');
+ccs_evidence_assert(strpos($portalTpl, 'pax-ccs-open-new-report') !== false, 'portal template renders Open New Report button');
+ccs_evidence_assert(strpos($portalData, 'open_new_report') !== false, 'portal copy includes Open New Report label');
+ccs_evidence_assert(strpos($tickets, 'This report is closed and cannot be modified') !== false, 'tickets blocks status changes on closed reports');
+ccs_evidence_assert(strpos($adminJs, 'internalNoteForm.hidden = closed') !== false, 'admin JS hides internal notes on closed tickets');
+ccs_evidence_assert(strpos($adminJs, 'isClosedStatus(currentReport.status') !== false, 'admin JS blocks delete on closed tickets');
 ccs_evidence_assert(strpos($portalJs, 'timeline_evidence_signature') !== false, 'portal JS tracks timeline evidence signature for sync');
 ccs_evidence_assert(strpos($portalJs, 'pax-ccs-portal__evidence-request-btn') !== false, 'portal JS renders prominent evidence upload button');
 ccs_evidence_assert(strpos($portalCss, 'pax-ccs-portal__evidence-request-btn') !== false, 'portal CSS styles evidence upload button');

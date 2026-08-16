@@ -1475,6 +1475,9 @@ class PAXdesign_Cybercrime_Tickets {
         if ($old_status === $new_status) {
             return true;
         }
+        if (!self::is_active_status($old_status)) {
+            return new WP_Error('closed', __('This report is closed and cannot be modified.', 'paxdesign-booking'));
+        }
 
         global $wpdb;
         $now = current_time('mysql', true);
@@ -2031,6 +2034,9 @@ class PAXdesign_Cybercrime_Tickets {
         if (!$row) {
             return new WP_Error('not_found', __('Report not found.', 'paxdesign-booking'));
         }
+        if (!self::is_active_status((string) ($row['status'] ?? ''))) {
+            return new WP_Error('closed', __('This report is closed.', 'paxdesign-booking'));
+        }
 
         $meta = array('event' => 'staff_reply');
         if ($request_evidence) {
@@ -2084,6 +2090,9 @@ class PAXdesign_Cybercrime_Tickets {
         $row = self::get_report_row($reference_id);
         if (!$row) {
             return new WP_Error('not_found', __('Report not found.', 'paxdesign-booking'));
+        }
+        if (!self::is_active_status((string) ($row['status'] ?? ''))) {
+            return new WP_Error('closed', __('This report is closed.', 'paxdesign-booking'));
         }
 
         global $wpdb;
@@ -2150,6 +2159,9 @@ class PAXdesign_Cybercrime_Tickets {
         $row = self::get_report_row($reference_id);
         if (!$row) {
             return new WP_Error('not_found', __('Report not found.', 'paxdesign-booking'));
+        }
+        if (!self::is_active_status((string) ($row['status'] ?? ''))) {
+            return new WP_Error('closed', __('This report is closed.', 'paxdesign-booking'));
         }
 
         $message_id = self::add_message(

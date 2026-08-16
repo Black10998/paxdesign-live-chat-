@@ -305,10 +305,17 @@ return array(
 		'closed_title' => array(
 			'ar' => 'بلاغ مغلق (للقراءة فقط)',
 			'de' => 'Abgeschlossene Meldung (nur Lesen)',
+			'en' => 'Closed report (read-only)',
 		),
 		'read_only' => array(
 			'ar' => 'هذا البلاغ مغلق. يمكنك عرض السجل الكامل فقط.',
 			'de' => 'Diese Meldung ist abgeschlossen. Sie können nur den Verlauf ansehen.',
+			'en' => 'This report is closed. You can view the full record only.',
+		),
+		'open_new_report' => array(
+			'ar' => 'فتح بلاغ جديد',
+			'de' => 'Neue Meldung starten',
+			'en' => 'Open New Report',
 		),
 		'back_history' => array(
 			'ar' => 'العودة إلى سجل البلاغات',

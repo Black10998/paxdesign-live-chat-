@@ -304,7 +304,25 @@ if ( ! function_exists( 'pax_ccs_bilingual' ) ) {
 						</button>
 					</div>
 
-					<p id="pax-ccs-active-closed-note" class="pax-ccs-portal__closed-note" hidden><?php pax_ccs_bilingual( $copy['active_report']['closed_note'] ); ?></p>
+					<div id="pax-ccs-closed-lock" class="pax-ccs-portal__closed-lock" hidden aria-live="polite">
+						<div class="pax-ccs-portal__closed-lock-inner">
+							<div class="pax-ccs-portal__closed-lock-icon" aria-hidden="true">
+								<svg width="22" height="22" viewBox="0 0 24 24" fill="none" focusable="false">
+									<rect x="5" y="11" width="14" height="10" rx="2" stroke="currentColor" stroke-width="1.8"/>
+									<path d="M8 11V8a4 4 0 0 1 8 0v3" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/>
+								</svg>
+							</div>
+							<div class="pax-ccs-portal__closed-lock-copy">
+								<h3 class="pax-ccs-portal__closed-lock-title" id="pax-ccs-closed-lock-title"><?php pax_ccs_bilingual( $copy['active_report']['closed_title'] ); ?></h3>
+								<p class="pax-ccs-portal__closed-lock-text" id="pax-ccs-closed-lock-text"><?php pax_ccs_bilingual( $copy['active_report']['read_only'] ); ?></p>
+							</div>
+							<div class="pax-ccs-portal__closed-lock-actions">
+								<button type="button" class="pax-ccs-portal__btn pax-ccs-portal__btn--primary pax-ccs-portal__btn--open-new" id="pax-ccs-open-new-report">
+									<?php pax_ccs_bilingual( $copy['active_report']['open_new_report'] ); ?>
+								</button>
+							</div>
+						</div>
+					</div>
 				</div>
 			</div>
 		</section>

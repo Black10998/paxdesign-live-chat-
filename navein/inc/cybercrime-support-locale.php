@@ -286,6 +286,7 @@ if ( ! function_exists( 'pax_ccs_portal_i18n' ) ) {
 			'activeReport'    => array(
 				'closed_title'       => $pick( $copy['active_report']['closed_title'] ?? array() ),
 				'read_only'          => $pick( $copy['active_report']['read_only'] ?? array() ),
+				'open_new_report'    => $pick( $copy['active_report']['open_new_report'] ?? array() ),
 				'back_history'       => $pick( $copy['active_report']['back_history'] ?? array() ),
 				'original_heading'   => $pick( $copy['active_report']['original_heading'] ?? array() ),
 				'checks_heading'     => $pick( $copy['active_report']['checks_heading'] ?? array() ),
