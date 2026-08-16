@@ -341,60 +341,17 @@
     return '<span class="pdx-header-user-identity">' + avatarHtml + textHtml + '</span>';
   }
 
-  normalizeConfiguredAvatarPresets();
-
   function defaultAvatarUrl() {
-    var url = normalizeAvatarAssetUrl(C.defaultAvatarUrl || '');
-    if (url && /\.svg(\?|$)/i.test(url)) {
-      url = url.replace(/\.svg(\?.*)?$/i, '.gif');
-    }
-    if (!url || /\.svg(\?|$)/i.test(url)) {
-      url = accountAvatarPresetUrl('pax-01');
-    }
-    return url || '';
-  }
-
-  function refreshVisibleAvatarImages() {
-    var profile = accountProfileData();
-    var url = accountAvatarUrl(profile);
-    if (!url) return;
-    var fallbackUrl = accountAvatarFallbackUrl(profile);
-    document.querySelectorAll('.pdx-account-avatar__img').forEach(function (img) {
-      if (!img || !img.getAttribute) return;
-      img.removeAttribute('data-pdx-avatar-failed');
-      var nextUrl = normalizeAvatarAssetUrl(url);
-      if (img.src !== nextUrl) img.src = nextUrl;
-      if (fallbackUrl) img.setAttribute('data-avatar-fallback', normalizeAvatarAssetUrl(fallbackUrl));
-    });
+    return normalizeAvatarAssetUrl(C.defaultAvatarUrl || '');
   }
 
   function normalizeAvatarAssetUrl(url) {
     if (!url) return '';
-    var normalized = String(url).replace(/(\/avatars(?:-vip)?\/pax-(?:vip-)?\d{2,3})\.svg(\?.*)?$/i, '$1.gif');
-    if (/\/avatars(?:-vip)?\/pax-(?:vip-)?\d{2,3}\.gif(\?|$)/i.test(normalized) && normalized.indexOf('v=') === -1 && C.version) {
-      normalized += (normalized.indexOf('?') === -1 ? '?' : '&') + 'v=' + encodeURIComponent(C.version);
+    var normalized = String(url).replace(/(\/avatars\/pax-\d{2,3})\.svg(\?.*)?$/i, '$1.gif');
+    if (normalized.indexOf('/avatars/pax-') !== -1 && /\.gif(\?|$)/i.test(normalized) && normalized.indexOf('?') === -1 && C.version) {
+      normalized += '?v=' + encodeURIComponent(C.version);
     }
     return normalized;
-  }
-
-  function normalizeConfiguredAvatarPresets() {
-    if (Array.isArray(C.avatarPresets)) {
-      C.avatarPresets = C.avatarPresets.map(function (preset) {
-        if (!preset || preset.type === 'none' || preset.id === 'pax-none') return preset;
-        preset.url = normalizeAvatarAssetUrl(preset.url || '');
-        return preset;
-      });
-    }
-    if (Array.isArray(C.vipAvatarPresets)) {
-      C.vipAvatarPresets = C.vipAvatarPresets.map(function (preset) {
-        if (!preset) return preset;
-        preset.url = normalizeAvatarAssetUrl(preset.url || '');
-        return preset;
-      });
-    }
-    if (C.avatarUrl) C.avatarUrl = normalizeAvatarAssetUrl(C.avatarUrl);
-    if (C.avatarFallbackUrl) C.avatarFallbackUrl = normalizeAvatarAssetUrl(C.avatarFallbackUrl);
-    if (C.defaultAvatarUrl) C.defaultAvatarUrl = normalizeAvatarAssetUrl(C.defaultAvatarUrl);
   }
 
   function accountAvatarPresetUrl(presetId) {
@@ -462,7 +419,6 @@
         level_label: profile.level_label || '',
         level_title: profile.level_title || '',
         level_description: profile.level_description || '',
-        level_metal: profile.level_metal || '',
         has_customer_level: !!profile.has_customer_level,
       };
     }
@@ -471,7 +427,6 @@
       level_label: profile.level_label || user.level_label || (C.customerLevel && C.customerLevel.level_label) || '',
       level_title: profile.level_title || user.level_title || (C.customerLevel && C.customerLevel.level_title) || '',
       level_description: profile.level_description || user.level_description || (C.customerLevel && C.customerLevel.level_description) || '',
-      level_metal: profile.level_metal || user.level_metal || (C.customerLevel && C.customerLevel.level_metal) || '',
       has_customer_level: !!(profile.has_customer_level || user.has_customer_level || (C.customerLevel && C.customerLevel.has_customer_level)),
     };
   }
@@ -479,18 +434,9 @@
   function renderCustomerLevelBadge(profile, opts) {
     opts = opts || {};
     var level = accountLevelData(profile, opts);
-    if (!level.has_customer_level) return '';
+    if (!level.has_customer_level || !level.level_label) return '';
     var compact = opts.compact ? ' pdx-account-level-badge--compact' : '';
     var header = opts.header ? ' pdx-account-level-badge--header' : '';
-    // In the site header show ONLY the metal tier name (e.g. "Gold") next to the
-    // username — no "Level N", numbers, dashes, or extra text. This is a
-    // display-only choice; the Customer Levels backend is unchanged.
-    if (opts.header) {
-      var metal = level.level_metal || '';
-      if (!metal) return '';
-      return '<span class="pdx-account-level-badge' + compact + header + '">' + escHtml(metal) + '</span>';
-    }
-    if (!level.level_label) return '';
     var title = level.level_title ? ' title="' + escHtml(level.level_title + (level.level_description ? ' — ' + level.level_description : '')) + '"' : '';
     return '<span class="pdx-account-level-badge' + compact + header + '"' + title + '>' + escHtml(level.level_label) + '</span>';
   }
@@ -562,10 +508,7 @@
 
   function handleAccountAvatarImgError(img) {
     if (!img || img.dataset.pdxAvatarFailed === '1') return;
-    var fallback = normalizeAvatarAssetUrl(img.getAttribute('data-avatar-fallback') || defaultAvatarUrl());
-    if (!fallback || /\.svg(\?|$)/i.test(fallback)) {
-      fallback = accountAvatarPresetUrl('pax-01') || defaultAvatarUrl();
-    }
+    var fallback = img.getAttribute('data-avatar-fallback') || defaultAvatarUrl();
     if (!fallback) {
       var wrap = img.closest('.pdx-account-avatar');
       if (wrap) wrap.remove();
@@ -616,11 +559,8 @@
     var sizeClass = opts.sizeClass || 'pdx-account-avatar--sidebar';
     var px = ACCOUNT_AVATAR_PX[sizeClass] || 40;
     var alt = opts.alt || user.display_name || t('account', 'Account');
-    var eager = sizeClass === 'pdx-account-avatar--header' || sizeClass === 'pdx-account-avatar--menu';
-    var loadingAttr = eager ? 'eager' : 'lazy';
-    var fetchPriority = eager ? ' fetchpriority="high"' : '';
     return '<span class="pdx-account-avatar ' + sizeClass + '" style="width:' + px + 'px;height:' + px + 'px;max-width:' + px + 'px;max-height:' + px + 'px;flex:0 0 ' + px + 'px">' +
-      '<img class="pdx-account-avatar__img" src="' + escHtml(url) + '" data-avatar-fallback="' + escHtml(fallbackUrl) + '" alt="' + escHtml(alt) + '" width="' + px + '" height="' + px + '" loading="' + loadingAttr + '" decoding="async"' + fetchPriority + ' onerror="window.__pdxAvatarFallback&&window.__pdxAvatarFallback(this)" />' +
+      '<img class="pdx-account-avatar__img" src="' + escHtml(url) + '" data-avatar-fallback="' + escHtml(fallbackUrl) + '" alt="' + escHtml(alt) + '" width="' + px + '" height="' + px + '" loading="lazy" decoding="async" onerror="window.__pdxAvatarFallback&&window.__pdxAvatarFallback(this)" />' +
     '</span>';
   }
 
@@ -862,7 +802,6 @@
     }
     updateAuthBar();
     updateAuthPagePanels();
-    refreshVisibleAvatarImages();
     if (meta.reason === 'logout') {
       dashboardData = null;
       accountState.loaded = false;
@@ -4883,24 +4822,7 @@
     }
 
     function updateChatChrome() {
-      var tools = container.querySelector('.pdx-portal-chat-tools');
-      var formEl = container.querySelector('#pdx-portal-chat-form');
-      var textarea = formEl ? formEl.querySelector('textarea') : null;
-      var humanConnected = state.handler === 'admin';
-      var humanQueue = state.handler === 'admin' || state.handler === 'live_request';
-      if (formEl) {
-        formEl.classList.toggle('pdx-portal-chat-form--human-connected', humanConnected);
-        formEl.classList.toggle('pdx-portal-chat-form--human-queue', humanQueue);
-      }
-      if (textarea) {
-        textarea.placeholder = humanConnected
-          ? t('message_to_support', 'Message to support…')
-          : t('write_message', 'Write a message…');
-      }
-      if (tools) {
-        tools.hidden = !humanQueue;
-        tools.setAttribute('aria-hidden', humanQueue ? 'false' : 'true');
-      }
+      /* Persistent conversation — no end-chat control for signed-in customers. */
     }
 
     function renderMessages() {
@@ -4922,13 +4844,6 @@
       }
       logEl.innerHTML = html;
       logEl.scrollTop = logEl.scrollHeight;
-      requestAnimationFrame(function () {
-        logEl.scrollTop = logEl.scrollHeight;
-        var last = logEl.lastElementChild;
-        if (last) {
-          try { last.scrollIntoView({ block: 'end', inline: 'nearest' }); } catch (e) {}
-        }
-      });
     }
 
     function loadMessages(full) {
@@ -5175,22 +5090,13 @@
     init: function () {
       ensureAccountAvatarFallbackHandler();
       createAuthBar();
-      normalizeConfiguredAvatarPresets();
       if (isAuthPage()) {
         initAuthPage();
       } else {
         createOverlay();
       }
       handleUrlParams();
-      syncSessionFromServer('init', { cacheBust: true }).then(function () {
-        if (user.logged_in) {
-          return refreshAccountAvatarPresets().then(function () {
-            refreshVisibleAvatarImages();
-            updateAuthBar();
-          });
-        }
-        return false;
-      });
+      syncSessionFromServer('init', { cacheBust: true });
       bindSessionAutoSync();
       window.addEventListener('resize', function () {
         updateAuthBar();
@@ -5213,7 +5119,6 @@
     openAccountSection: setAccountSection,
     closeCustomerPortal: closeCustomerPortal,
     customerApiFetch: customerApiFetch,
-    customerApiFormData: customerApiFormData,
     customerApiStream: customerApiStream,
     refreshUser: refreshUser,
     syncSession: syncSessionFromServer,

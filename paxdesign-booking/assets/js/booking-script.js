@@ -506,7 +506,7 @@
             }, 120);
         });
 
-        // Toggle chat widget — open the panel immediately, then init chat.
+        // Toggle chat widget — refresh team data on every open for live availability
         $container.on('click', '.paxdesign-booking-button', function(e) {
             e.preventDefault();
             e.stopPropagation();
@@ -514,10 +514,7 @@
             var opening = !$widget.hasClass('paxdesign-is-active');
 
             if (opening) {
-                if (window.PAXdesignWidgetLoader && typeof window.PAXdesignWidgetLoader.preload === 'function') {
-                    window.PAXdesignWidgetLoader.preload();
-                }
-                openWidget();
+                ensureChatReady(openWidget);
             } else {
                 closeDialog();
             }
@@ -820,10 +817,7 @@
     window.PAXdesignBooking = {
         openFromChat: openBookingFromChat,
         open: function () {
-            if (window.PAXdesignWidgetLoader && typeof window.PAXdesignWidgetLoader.preload === 'function') {
-                window.PAXdesignWidgetLoader.preload();
-            }
-            openWidget();
+            ensureChatReady(openWidget);
         },
         switchMode: switchWidgetMode,
         close: closeDialog
@@ -847,6 +841,16 @@
         lockPageScroll();
         bindMobileViewportGuard();
         adjustMobileLayout(false);
+
+        refreshTeamMembers(function() {
+            renderTeamCards();
+            if ($in('#paxdesignCalendarDays').children().length === 0) {
+                renderCalendar();
+            }
+            setTimeout(function() {
+                applyPreselectedServiceFlow();
+            }, 50);
+        });
     }
 
     /** Open Live Chat panel and run entry organizer (Live Agent vs KI). */

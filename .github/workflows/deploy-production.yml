@@ -15,6 +15,12 @@ jobs:
   deploy:
     runs-on: ubuntu-latest
     steps:
+      - name: Block full plugin rsync over live baseline
+        run: |
+          echo "Full plugin rsync to paxdesign.at is disabled."
+          echo "Production baseline is the live WordPress plugin 3.174.91."
+          exit 1
+
       - name: Validate deployment secrets
         id: secrets
         run: |

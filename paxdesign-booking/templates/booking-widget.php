@@ -408,10 +408,7 @@ $team_members = PAXdesign_Booking::get_instance()->get_team_members();
 
           <div class="paxdesign-booking-chat-quick-actions" aria-label="Schnellaktionen" hidden></div>
 
-          <div class="paxdesign-booking-chat-input-area">
-            <div class="paxdesign-booking-chat-end-wrap" id="paxdesignChatEndWrap" hidden>
-              <button type="button" class="paxdesign-booking-chat-end-btn" id="paxdesignChatEndBtn"><?php echo esc_html__('Gespräch beenden', 'paxdesign-booking'); ?></button>
-            </div>
+            <div class="paxdesign-booking-chat-input-area">
             <div class="paxdesign-booking-chat-closed-bar" hidden>
               <p class="paxdesign-booking-chat-closed-text">Dieses Gespräch wurde beendet.</p>
               <div class="paxdesign-booking-chat-rating" id="paxdesignChatRating" hidden>
@@ -435,7 +432,6 @@ $team_members = PAXdesign_Booking::get_instance()->get_team_members();
                 <button type="button" class="paxdesign-booking-chat-reply-clear" aria-label="Antwort abbrechen">×</button>
               </div>
             </div>
-            <p class="paxdesign-booking-chat-support-status" id="paxdesignChatSupportStatus" hidden></p>
             <form class="paxdesign-booking-chat-form" autocomplete="off">
               <div class="paxdesign-booking-chat-composer">
                 <div class="paxdesign-booking-chat-plus-wrap">

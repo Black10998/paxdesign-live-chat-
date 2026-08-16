@@ -1907,14 +1907,31 @@ class PAXdesign_Chat_Live {
             wp_send_json_error(array('message' => __('Please choose a file to upload.', 'paxdesign-booking')), 400);
         }
 
+        $kind = $kind === 'image' ? 'image' : 'file';
+        $file = $_FILES['file'];
+        $name = isset($file['name']) ? (string) $file['name'] : '';
+        $ext  = strtolower((string) pathinfo($name, PATHINFO_EXTENSION));
+        $blocked_ext = array('php', 'phtml', 'phar', 'php5', 'php7', 'php8', 'js', 'mjs', 'html', 'htm', 'shtml', 'svg', 'exe', 'sh', 'bash', 'htaccess', 'cgi');
+        if ($ext === '' || in_array($ext, $blocked_ext, true)) {
+            wp_send_json_error(array('message' => __('File type is not allowed.', 'paxdesign-booking')), 400);
+        }
+
+        $max_bytes = $kind === 'image' ? 5242880 : 8388608;
+        if (!empty($file['size']) && (int) $file['size'] > $max_bytes) {
+            wp_send_json_error(array(
+                'message' => $kind === 'image'
+                    ? __('Images must be 5 MB or smaller.', 'paxdesign-booking')
+                    : __('Files must be 8 MB or smaller.', 'paxdesign-booking'),
+            ), 400);
+        }
+
         $user_id = get_current_user_id();
-        if ($user_id > 0 && class_exists('PAXdesign_Customer_Chat_Bridge')) {
-            $bridge_kind = $kind === 'image' ? 'image' : ($kind === 'voice' ? 'voice' : 'file');
+        if ($user_id > 0 && class_exists('PAXdesign_Customer_Chat_Bridge') && method_exists('PAXdesign_Customer_Chat_Bridge', 'send_user_attachment')) {
             $result = PAXdesign_Customer_Chat_Bridge::send_user_attachment(
                 $user_id,
                 $session_id,
-                $bridge_kind,
-                $_FILES['file'],
+                $kind,
+                $file,
                 '',
                 array('client_msg_id' => $client_id)
             );
@@ -1943,22 +1960,22 @@ class PAXdesign_Chat_Live {
             wp_send_json_error(array('message' => __('Uploads are unavailable.', 'paxdesign-booking')), 500);
         }
 
-        $upload_kind = $kind === 'image' ? 'image' : 'file';
-        $upload = PAXdesign_Customer_Media::handle_upload($_FILES['file'], $upload_kind);
+        $upload = PAXdesign_Customer_Media::handle_upload($file, $kind);
         if (is_wp_error($upload)) {
             wp_send_json_error(array('message' => $upload->get_error_message()), 400);
         }
 
-        $caption = sanitize_file_name((string) ($upload['name'] ?? ($_FILES['file']['name'] ?? 'file')));
+        $caption = sanitize_file_name((string) ($upload['name'] ?? ($file['name'] ?? 'file')));
         $extra = array(
             'client_msg_id' => $client_id,
         );
-        if ($upload_kind === 'image') {
+        if ($kind === 'image') {
             $extra['image_url'] = $upload['url'];
             $extra['attachment_type'] = 'image';
         } else {
             $extra['file_url'] = $upload['url'];
             $extra['file_name'] = $caption;
+            $extra['file_mime'] = (string) ($upload['mime'] ?? '');
             $extra['attachment_type'] = 'file';
         }
 
@@ -3295,15 +3312,6 @@ class PAXdesign_Chat_Live {
             if (!empty($msg['image_url'])) {
                 $entry['image_url'] = esc_url_raw($msg['image_url']);
             }
-            if (!empty($msg['file_url'])) {
-                $entry['file_url'] = esc_url_raw((string) $msg['file_url']);
-            }
-            if (!empty($msg['file_name'])) {
-                $entry['file_name'] = sanitize_file_name((string) $msg['file_name']);
-            }
-            if (!empty($msg['file_mime'])) {
-                $entry['file_mime'] = sanitize_text_field((string) $msg['file_mime']);
-            }
             if (!empty($msg['reply_to'])) {
                 $entry['reply_to'] = (int) $msg['reply_to'];
             }
@@ -3363,18 +3371,6 @@ class PAXdesign_Chat_Live {
             }
             if ($role === 'user' && !empty($msg['link_scan_original_content'])) {
                 $entry['link_scan_original_content'] = sanitize_textarea_field((string) $msg['link_scan_original_content']);
-            }
-            if (!empty($msg['ccs_operation_id'])) {
-                $entry['ccs_operation_id'] = sanitize_text_field((string) $msg['ccs_operation_id']);
-            }
-            if (!empty($msg['ccs_operation_status'])) {
-                $entry['ccs_operation_status'] = sanitize_key((string) $msg['ccs_operation_status']);
-            }
-            if (!empty($msg['ccs_operation_type'])) {
-                $entry['ccs_operation_type'] = sanitize_key((string) $msg['ccs_operation_type']);
-            }
-            if (!empty($msg['ccs_operation_label'])) {
-                $entry['ccs_operation_label'] = sanitize_text_field((string) $msg['ccs_operation_label']);
             }
             if ($role === 'admin') {
                 $sender_id = !empty($msg['sender_id']) ? absint($msg['sender_id']) : 0;
@@ -3473,7 +3469,7 @@ class PAXdesign_Chat_Live {
             ? PAXdesign_Message_Store::latest_seq($session_id, 'customer')
             : (isset($row->message_seq) ? (int) $row->message_seq : 0);
 
-        $detail = array(
+        return array(
             'session_id'       => isset($row->session_id) ? (string) $row->session_id : '',
             'handler'          => $handler,
             'handler_label'    => self::handler_label($handler, $agent['admin_name']),
@@ -3498,14 +3494,6 @@ class PAXdesign_Chat_Live {
                 ? PAXdesign_Language_Routing::session_language_from_row($row)
                 : '',
         );
-        if (class_exists('PAXdesign_Cybercrime_Tickets')) {
-            $ccs_user_id = isset($row->wp_user_id) ? (int) $row->wp_user_id : (int) get_current_user_id();
-            $ccs_case = PAXdesign_Cybercrime_Tickets::public_case_sync_for_session($session_id, $ccs_user_id);
-            if (is_array($ccs_case) && !empty($ccs_case['reference_id'])) {
-                $detail['ccs_case'] = $ccs_case;
-            }
-        }
-        return $detail;
     }
 
     /**
@@ -3663,13 +3651,6 @@ class PAXdesign_Chat_Live {
             'auth_user_id'     => $wp_user_id,
             'wp_user_id'       => $wp_user_id,
         );
-        if (class_exists('PAXdesign_Cybercrime_Tickets')) {
-            $ccs_user_id = $wp_user_id > 0 ? $wp_user_id : (int) get_current_user_id();
-            $ccs_case = PAXdesign_Cybercrime_Tickets::public_case_sync_for_session($session_id, $ccs_user_id);
-            if (is_array($ccs_case) && !empty($ccs_case['reference_id'])) {
-                $payload['ccs_case'] = $ccs_case;
-            }
-        }
         if ($history_window) {
             $payload['has_older'] = $has_older;
             $payload['oldest_seq'] = $oldest_seq;

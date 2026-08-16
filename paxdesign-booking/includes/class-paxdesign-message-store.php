@@ -264,6 +264,7 @@ class PAXdesign_Message_Store {
         $channel    = sanitize_key($channel);
         $content    = sanitize_textarea_field($content);
         $has_image    = !empty($extra['image_url']);
+        $has_file     = !empty($extra['file_url']);
         $has_audio    = !empty($extra['audio_url']);
         $has_location = isset($extra['location_lat'], $extra['location_lng'])
             && $extra['location_lat'] !== ''
@@ -271,7 +272,7 @@ class PAXdesign_Message_Store {
         if ($session_id === '' || !in_array($role, array('user', 'assistant', 'admin', 'system'), true)) {
             return new WP_Error('pax_message_invalid', 'Invalid message.', array('status' => 400));
         }
-        if ($content === '' && !$has_image && !$has_audio && !$has_location) {
+        if ($content === '' && !$has_image && !$has_file && !$has_audio && !$has_location) {
             return new WP_Error('pax_message_empty', 'Message cannot be empty.', array('status' => 400));
         }
 
@@ -885,51 +886,6 @@ class PAXdesign_Message_Store {
         return $message;
     }
 
-    /**
-     * Replace the stored text of an existing message (same seq / client id).
-     *
-     * @param string $session_id
-     * @param int    $msg_seq
-     * @param string $content
-     * @param string $channel
-     * @return array<string, mixed>|WP_Error
-     */
-    public static function update_message_content($session_id, $msg_seq, $content, $channel = 'customer') {
-        global $wpdb;
-        self::maybe_upgrade();
-        $session_id = sanitize_text_field((string) $session_id);
-        $msg_seq = absint($msg_seq);
-        $content = sanitize_textarea_field((string) $content);
-        if ($session_id === '' || $msg_seq <= 0 || $content === '') {
-            return new WP_Error('pax_message_invalid', 'Invalid message.', array('status' => 400));
-        }
-        $table = self::messages_table();
-        $updated = $wpdb->update(
-            $table,
-            array('content' => $content),
-            array(
-                'session_id' => $session_id,
-                'msg_seq'    => $msg_seq,
-            ),
-            array('%s'),
-            array('%s', '%d')
-        );
-        if ($updated === false) {
-            return new WP_Error('pax_message_update_failed', 'Message could not be updated.', array('status' => 500));
-        }
-        $row = $wpdb->get_row($wpdb->prepare(
-            "SELECT msg_seq, client_msg_id, role, content, meta_json, created_at
-             FROM $table WHERE session_id = %s AND msg_seq = %d LIMIT 1",
-            $session_id,
-            $msg_seq
-        ));
-        if (!$row) {
-            return new WP_Error('pax_message_not_found', 'Message not found.', array('status' => 404));
-        }
-        self::defer_customer_projection_rebuild($session_id, $channel);
-        return self::format_row($row);
-    }
-
     private static function register_shutdown_deferred() {
         if (self::$shutdown_deferred_registered) {
             return;
@@ -1232,8 +1188,7 @@ class PAXdesign_Message_Store {
 
     private static function sanitize_meta($extra) {
         $allowed = array(
-            'image_url', 'audio_url', 'audio_duration', 'audio_waveform', 'attachment_type', 'reply_to', 'reaction',
-            'file_url', 'file_name', 'file_mime',
+            'image_url', 'file_url', 'file_name', 'file_mime', 'audio_url', 'audio_duration', 'audio_waveform', 'attachment_type', 'reply_to', 'reaction',
             'location_lat', 'location_lng', 'location_label',
             'sender_id', 'sender_name', 'sender_avatar', 'sender_role', 'sender_email',
             'link_url', 'link_label', 'link_icon',
@@ -1242,7 +1197,6 @@ class PAXdesign_Message_Store {
             'link_scan_completed_at', 'link_scan_provider',
             'link_scan_frame', 'link_scan_label', 'link_scan_analysis',
             'link_scan_original_content',
-            'ccs_operation_id', 'ccs_operation_status', 'ccs_operation_type', 'ccs_operation_label',
         );
         $meta = array();
         foreach ($allowed as $key) {

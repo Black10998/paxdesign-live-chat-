@@ -1,6 +1,6 @@
 /**
  * PAXdesign AI Chat — Sales & Booking Assistant
- * Version: 3.175.22
+ * Version: 3.174.91
  */
 (function () {
   'use strict';
@@ -37,7 +37,6 @@
   var replyBar      = root.querySelector('.paxdesign-booking-chat-reply-bar');
   var replyPreview  = root.querySelector('.paxdesign-booking-chat-reply-preview');
   var replyClearBtn = root.querySelector('.paxdesign-booking-chat-reply-clear');
-  var supportStatusEl = root.querySelector('#paxdesignChatSupportStatus');
 
   var entryEl          = root.querySelector('#paxdesignChatEntry');
   var welcomeEl        = root.querySelector('.paxdesign-booking-chat-welcome');
@@ -68,12 +67,8 @@
   var hasOlderMessages   = false;
   var loadingOlderHistory = false;
   var historyScrollBound = false;
-  var stickToBottom      = true;
   var historyLoadedAt = 0;
-  var HISTORY_REUSE_MS = 120000;
-  var pollInFlight = null;
-  var pollIntervalCurrent = 0;
-  var snapshotSaveTimer = null;
+  var HISTORY_REUSE_MS = 8000;
   var localMsgId         = 0;
   var domMsgIds          = {};
   var domClientMsgIds    = {};
@@ -90,12 +85,8 @@
   var typingSoundActive  = false;
   var typingSoundLoopTimer = null;
   var typingSoundAudio   = null;
-  var typingSourceNode   = null;
-  var TYPING_SOUND_VOLUME = 0.16;
-  var AVAILABLE_SOUND_VOLUME = 0.18;
-  var decodedSoundBuffers = {};
-  var decodedSoundWaiters = {};
-  var availableSoundPlayed = false;
+  var TYPING_SOUND_VOLUME = 0.32;
+  var TYPING_SOUND_GAP_MS = 70;
   var messageReactions   = {};
   var chatMessageMap     = {};
   var replyToId          = 0;
@@ -114,7 +105,7 @@
 
   var SOUND_URLS = (config && config.sounds) ? config.sounds : {
     typing: 'https://paxdesign.at/wp-content/uploads/2026/06/freesound_community-writing-a-text-message-41141.mp3',
-    openClose: 'https://paxdesign.at/wp-content/plugins/paxdesign-booking/assets/sounds/pax-chat-available.wav',
+    openClose: 'https://paxdesign.at/wp-content/uploads/2026/06/u_8e8ungop1x-intro_cinematic-270840.mp3',
     incoming: ''
   };
 
@@ -150,7 +141,6 @@
   var RATING_DISLIKE = 1;
 
   var OPEN_CLOSE_SOUND_KEY = 'paxdesign-chat-openclose-sound';
-  var AVAILABLE_SOUND_KEY = 'paxdesign-chat-available-sound';
   var agentJoinSoundPlayed = false;
   var chatEndSoundPlayed   = false;
   var SESSION_KEY       = 'paxdesign-chat-session';
@@ -174,11 +164,11 @@
     'Einen kleinen Moment bitte …',
   ];
   var LIVE_QUALIFY_TEXT   = 'Gerne. Damit ich Sie richtig weiterleiten kann: Worum geht es kurz — Website, AI Chatbot, Booking, Support oder ein anderes Thema?';
-  var POLL_INTERVAL_MS    = 2000;
-  var POLL_INTERVAL_OPEN_MS = 2500;
-  var POLL_INTERVAL_HUMAN_MS = 1500;
-  var POLL_INTERVAL_BACKGROUND_MS = 4000;
-  var POLL_INTERVAL_SSE_MS = 12000;
+  var POLL_INTERVAL_MS    = 1200;
+  var POLL_INTERVAL_OPEN_MS = 450;
+  var POLL_INTERVAL_HUMAN_MS = 800;
+  var POLL_INTERVAL_BACKGROUND_MS = 2000;
+  var POLL_INTERVAL_SSE_MS = 10000;
   var STREAM_RECONNECT_BASE_MS = 1500;
   var STREAM_RECONNECT_MAX_MS = 30000;
   var EDGE_BLOCK_PAUSE_MS = 300000;
@@ -505,6 +495,7 @@
     readinessEl.setAttribute('aria-busy', 'true');
     if (readinessLoadingEl) readinessLoadingEl.hidden = false;
     if (readinessErrorEl) readinessErrorEl.hidden = true;
+    chatPanelEl.classList.add('paxdesign-chat-readiness-active');
     readinessState = 'loading';
     setReadinessPhase('readinessConnecting', 'Connecting to chat…');
   }
@@ -526,6 +517,7 @@
     if (!readinessEl || !chatPanelEl) return;
     readinessEl.hidden = true;
     readinessEl.setAttribute('aria-busy', 'false');
+    chatPanelEl.classList.remove('paxdesign-chat-readiness-active');
     readinessState = 'ready';
   }
 
@@ -670,12 +662,9 @@
     }
     notifyLayout();
     if (entryEl && !entryEl.hidden) {
-      if (messagesEl) messagesEl.scrollTop = 0;
-    } else {
-      flushScrollToBottom(true);
-    }
-    if (widgetOpen && input && !input.disabled) {
-      try { input.focus({ preventScroll: true }); } catch (focusErr) {}
+      try {
+        entryEl.scrollIntoView({ block: 'nearest', behavior: 'smooth' });
+      } catch (e) {}
     }
   }
 
@@ -716,9 +705,6 @@
       return false;
     }
     if (options.skipHistory) {
-      return true;
-    }
-    if (shouldPreserveHistoryDom() && pollSeq > 0) {
       return true;
     }
     if (!options.reuseSession) {
@@ -788,7 +774,7 @@
           logReadiness(READINESS_STEPS.history, 'OK', { reused: true, skipped: true });
           return true;
         }
-        return fetchSessionFromServer(true, false);
+        return fetchSessionFromServer(true, true);
       })
       .then(function () {
         abortIfReadinessStale(generation);
@@ -796,7 +782,7 @@
         if (chatHandler === 'closed' && isPersistentAccountChat()) {
           return reopenAuthenticatedSessionIfNeeded().then(function () {
             abortIfReadinessStale(generation);
-            return fetchSessionFromServer(true, false);
+            return fetchSessionFromServer(true, true);
           });
         }
         return true;
@@ -812,7 +798,7 @@
       .then(function () {
         abortIfReadinessStale(generation);
         setReadinessPhase('readinessSyncing', 'Synchronizing chat status…');
-        return pollUpdatesOnce(false);
+        return pollUpdatesOnce(true);
       })
       .then(function () {
         abortIfReadinessStale(generation);
@@ -832,19 +818,7 @@
     cancelChatReadiness();
     var generation = readinessGeneration;
     var attempt = typeof options.attempt === 'number' ? options.attempt : 0;
-    // Fast path: when a session is already restored the conversation is already
-    // rendered locally, so open the chat instantly and run the session/history/
-    // poll sync in the background instead of blocking behind the readiness
-    // overlay. Every CCS/messaging sync still runs — it just no longer freezes
-    // the UI on open. The blocking overlay is reserved for a genuine cold start
-    // (no session yet) or when a refresh is explicitly forced.
-    var openInstant = !options.force;
-    hideReadinessOverlay();
-    updateEntryUi();
-    updateInputState();
-    if (widgetOpen && input && !input.disabled) {
-      try { input.focus({ preventScroll: true }); } catch (focusErr) {}
-    }
+    showReadinessOverlay();
     readinessPromise = runChatReadinessChecks(options)
       .then(function () {
         if (generation !== readinessGeneration) return false;
@@ -855,158 +829,18 @@
       .catch(function (err) {
         if (err && err.silent) return false;
         if (generation !== readinessGeneration) return false;
+        showReadinessError(readinessErrorMessage(err));
         readinessPromise = null;
-        // In instant mode the chat is already usable, so keep a background sync
-        // failure quiet (retry silently) rather than covering a working chat
-        // with a blocking error overlay.
-        if (!openInstant) {
-          showReadinessError(readinessErrorMessage(err));
-        }
         if (attempt < READINESS_AUTO_RETRY_MAX && shouldAutoRetryReadiness(err)) {
           scheduleReadinessAutoRetry(attempt + 1);
         }
         return false;
       });
-    if (openInstant) {
-      // Resolve now so the UI is interactive immediately; the readiness chain
-      // above keeps syncing in the background and finalizes when it completes.
-      return Promise.resolve(true);
-    }
     return readinessPromise;
   }
 
   function isLoginGateEnabled() {
-    if (isCybercrimeCaseChat()) return true;
     return !!(config && config.requireLogin);
-  }
-
-  function isCybercrimeCaseChat() {
-    if (window.PAXdesignPageContext && window.PAXdesignPageContext.intent === 'cybercrime-support') {
-      return true;
-    }
-    try {
-      return window.location.pathname.indexOf('cybercrime-support') !== -1;
-    } catch (e) {
-      return false;
-    }
-  }
-
-  function latestAssistantElAfterLatestUser() {
-    if (!threadEl) return null;
-    var nodes = threadEl.querySelectorAll('.paxdesign-booking-chat-message');
-    var lastAsst = null;
-    for (var i = 0; i < nodes.length; i++) {
-      var el = nodes[i];
-      if (el.classList.contains('paxdesign-booking-chat-message--user')) {
-        lastAsst = null;
-      } else if (el.classList.contains('paxdesign-booking-chat-message--assistant') || el.classList.contains('paxdesign-booking-chat-message--admin')) {
-        lastAsst = el;
-      }
-    }
-    return lastAsst;
-  }
-
-  function assistantBubbleText(el) {
-    if (!el) return '';
-    var bubble = el.querySelector('.paxdesign-booking-chat-message-bubble');
-    return bubble ? (bubble.textContent || '').trim() : '';
-  }
-
-  function paintAssistantBubble(msgEl, text) {
-    if (!msgEl) return null;
-    var bubble = msgEl.querySelector('.paxdesign-booking-chat-message-bubble');
-    if (!bubble) return null;
-    text = messageText(text);
-    if (text) {
-      bubble.innerHTML = formatMarkdown(text);
-    }
-    return bubble;
-  }
-
-  function assistantAlreadyShownForLatestTurn(incoming) {
-    incoming = incoming || {};
-    var incomingId = incoming.id ? String(incoming.id) : '';
-    var incomingText = messageText(incoming.content || incoming).trim();
-    var existing = latestAssistantElAfterLatestUser();
-    if (existing) {
-      var shownId = existing.getAttribute('data-msg-id') || '';
-      var shownText = assistantBubbleText(existing);
-      if (incomingId && shownId && shownId === incomingId) return true;
-      if (incomingText && shownText && shownText === incomingText) return true;
-      return false;
-    }
-    for (var i = messages.length - 1; i >= 0; i--) {
-      if (!messages[i]) continue;
-      if (messages[i].role === 'user') return false;
-      if (messages[i].role === 'assistant' || messages[i].role === 'admin') {
-        if (incomingId && String(messages[i].id) === incomingId) return true;
-        if (incomingText && messageText(messages[i].content).trim() === incomingText) return true;
-        return false;
-      }
-    }
-    return false;
-  }
-
-  function dispatchCcsCaseUpdate(report) {
-    if (!report || !report.reference_id) return;
-    try {
-      window.PAXdesignPageContext = window.PAXdesignPageContext || {};
-      window.PAXdesignPageContext.intent = 'cybercrime-support';
-      window.PAXdesignPageContext.referenceId = report.reference_id;
-    } catch (e) {}
-    try {
-      window.dispatchEvent(new CustomEvent('pax-ccs-case-updated', { detail: { report: report } }));
-    } catch (e) {}
-  }
-
-  function setCcsOperationMessageStatus(msgEl, status) {
-    if (!msgEl) return;
-    status = status || '';
-    msgEl.setAttribute('data-ccs-op-status', status);
-    msgEl.classList.toggle('paxdesign-booking-chat-message--ccs-running', status === 'running');
-    msgEl.classList.toggle('paxdesign-booking-chat-message--ccs-complete', status === 'complete' || status === 'failed');
-    var op = msgEl.querySelector('.paxdesign-booking-chat-ccs-op');
-    if (op) op.setAttribute('data-ccs-op-status', status);
-    if (status !== 'running') {
-      var spinner = msgEl.querySelector('.paxdesign-booking-chat-ccs-op__spinner');
-      if (spinner) spinner.style.display = 'none';
-    }
-  }
-
-  function upsertCcsOperationMessage(msg) {
-    if (!msg) return null;
-    var opId = msg.ccs_operation_id || '';
-    if (msg.id) {
-      var existingById = threadEl.querySelector('[data-msg-id="' + msg.id + '"]');
-      if (existingById) {
-        if (msg.ccs_operation_status) {
-          setCcsOperationMessageStatus(existingById, msg.ccs_operation_status);
-        }
-        return existingById;
-      }
-    }
-    if (isDuplicateMessage(msg)) {
-      return null;
-    }
-    if (opId && msg.ccs_operation_status && msg.ccs_operation_status !== 'running') {
-      var running = threadEl.querySelector('[data-ccs-op-id="' + opId + '"][data-ccs-op-status="running"]');
-      if (running) setCcsOperationMessageStatus(running, msg.ccs_operation_status);
-    }
-    if (msg.role === 'user') return null;
-    rememberMessageIdentity(msg);
-    var rendered = renderMessageDom(
-      msg.role || 'assistant',
-      messageText(msg.content),
-      msg.id || nextLocalId(),
-      messageRenderOpts(msg, { skipPush: true })
-    );
-    messages.push({
-      role: msg.role || 'assistant',
-      content: messageText(msg.content),
-      id: msg.id,
-      client_msg_id: msg.client_msg_id || newClientMessageId()
-    });
-    return rendered ? rendered.messageEl : null;
   }
 
   function getAuthUserId() {
@@ -1493,12 +1327,6 @@
 
   function updateAuthGateUi() {
     if (!authGateEl) return;
-    if (isCybercrimeCaseChat()) {
-      var titleEl = root.querySelector('#paxdesignChatAuthGateTitle');
-      var subEl = root.querySelector('#paxdesignChatAuthGateSubtitle');
-      if (titleEl) titleEl.textContent = 'Sign in to use Cybercrime Support AI';
-      if (subEl) subEl.textContent = 'You must be signed in so we can save information to your own case. Guests cannot start this chat.';
-    }
     var needsVerify = isLoginGateEnabled() && isLoggedIn() && !isVerifiedAccount();
     if (authGateVerifyEl) authGateVerifyEl.hidden = !needsVerify;
     if (needsVerify) {
@@ -1515,6 +1343,10 @@
   function showAuthGate() {
     initAuthGate();
     if (!isLoginGateEnabled()) return;
+    if (isLoggedIn() && isVerifiedAccount()) {
+      hideAuthGate();
+      return;
+    }
     if (authGateEl) authGateEl.hidden = false;
     root.classList.add('paxdesign-chat-auth-locked');
     stopCustomerStream();
@@ -1659,13 +1491,11 @@
     initCustomerClose();
     initRatingUi();
     initSoundToggle();
-    if (isCybercrimeCaseChat() || !isPersistentAccountChat()) {
-      initComposerPlusButton();
-    } else {
+    initPlusToggle();
+    if (isPersistentAccountChat()) {
       root.classList.add('paxdesign-chat-direct-mode');
       if (entryEl) entryEl.hidden = true;
       if (quickActions) quickActions.hidden = true;
-      initComposerPlusButton();
     }
     initAuthGate();
     initHistoryScroll();
@@ -1681,9 +1511,11 @@
       updateEntryUi();
       updateInputState();
     } else {
-      restoreCustomerSessionLocally();
-      updateEntryUi();
-      updateInputState();
+      var boot = restoreCustomerSession();
+      boot.then(function () {
+        if (!sessionRestored) updateEntryUi();
+        updateInputState();
+      });
     }
   }
 
@@ -1701,15 +1533,6 @@
   }
 
   function saveSessionSnapshot() {
-    if (isPersistentAccountChat()) return;
-    if (snapshotSaveTimer) return;
-    snapshotSaveTimer = window.setTimeout(function () {
-      snapshotSaveTimer = null;
-      persistSessionSnapshotNow();
-    }, 400);
-  }
-
-  function persistSessionSnapshotNow() {
     var sid = getSessionId();
     if (isPersistentAccountChat()) return;
     try {
@@ -1793,7 +1616,6 @@
 
   function onWidgetOpen() {
     widgetOpen = true;
-    hideReadinessOverlay();
     initAuthGate();
     if (!canUseChat()) {
       showAuthGate();
@@ -1801,24 +1623,16 @@
       return;
     }
     hideAuthGate();
-    restoreCustomerSessionLocally();
-    updateInputState();
-    flushScrollToBottom(true);
-    if (input && !input.disabled) {
-      try { input.focus({ preventScroll: true }); } catch (focusErr) {}
-    }
-    startCustomerStream();
-    scheduleLivePolling();
-    window.setTimeout(playAvailableSoundOnce, 0);
-    beginChatReadiness({
-      reuseSession: true,
-      skipHistory: shouldPreserveHistoryDom() && pollSeq > 0,
-    }).then(function (ready) {
+    beginChatReadiness({ reuseSession: true }).then(function (ready) {
       if (!ready) return;
-      if (isCybercrimeCaseChat()) {
-        ensureCcsOpeningPrompt();
+      if (chatHandler === 'closed' && isSessionArchived(getSessionId()) && !isPersistentAccountChat()) {
+        fetchSessionFromServer(true).then(function () {
+          var hasHistory = messages.length > 0 || (config && config.chatMessageCount > 0);
+          if (!hasHistory) {
+            beginFreshSessionSilently();
+          }
+        });
       }
-      flushScrollToBottom(true);
     });
   }
 
@@ -1865,14 +1679,14 @@
     if (agentJoinSoundPlayed || !soundEnabled) return;
     agentJoinSoundPlayed = true;
     saveOpenCloseSoundFlags();
-    playMp3Sound('openClose', { volume: AVAILABLE_SOUND_VOLUME });
+    playMp3Sound('openClose', { volume: 0.42 });
   }
 
   function playChatEndedSoundOnce() {
     if (chatEndSoundPlayed || !soundEnabled) return;
     chatEndSoundPlayed = true;
     saveOpenCloseSoundFlags();
-    playMp3Sound('openClose', { volume: AVAILABLE_SOUND_VOLUME });
+    playMp3Sound('openClose', { volume: 0.42 });
   }
 
   function loadCustomerName() {
@@ -1948,110 +1762,15 @@
     unlockAudio();
     var url = SOUND_URLS[kind];
     if (!url) return;
-    var volume = typeof options.volume === 'number' ? options.volume : AVAILABLE_SOUND_VOLUME;
-    playSoftUrl(kind, url, volume);
-  }
-
-  function prepareHtmlAudio(audio) {
-    audio.preload = 'auto';
-    audio.setAttribute('playsinline', 'true');
-    audio.setAttribute('webkit-playsinline', 'true');
-    try { audio.playsInline = true; } catch (e) {}
-  }
-
-  function finishSoundDecode(kind, buffer) {
-    if (buffer) decodedSoundBuffers[kind] = buffer;
-    var waiters = decodedSoundWaiters[kind] || [];
-    decodedSoundWaiters[kind] = null;
-    waiters.forEach(function (cb) {
-      try { cb(buffer || null); } catch (e) {}
-    });
-  }
-
-  function decodeSoundBuffer(kind, url, cb) {
-    if (!url) {
-      cb(null);
-      return;
-    }
-    if (decodedSoundBuffers[kind]) {
-      cb(decodedSoundBuffers[kind]);
-      return;
-    }
-    if (decodedSoundWaiters[kind]) {
-      decodedSoundWaiters[kind].push(cb);
-      return;
-    }
-    decodedSoundWaiters[kind] = [cb];
-    fetch(url, { mode: 'cors', credentials: 'omit' }).then(function (res) {
-      if (!res.ok) throw new Error('sound-fetch-failed');
-      return res.arrayBuffer();
-    }).then(function (arr) {
-      if (!audioCtx) {
-        finishSoundDecode(kind, null);
-        return;
-      }
-      var settled = false;
-      var done = function (buf) {
-        if (settled) return;
-        settled = true;
-        finishSoundDecode(kind, buf || null);
-      };
-      try {
-        var result = audioCtx.decodeAudioData(arr, done, function () { done(null); });
-        if (result && typeof result.then === 'function') {
-          result.then(done).catch(function () { done(null); });
-        }
-      } catch (e) {
-        done(null);
-      }
-    }).catch(function () {
-      finishSoundDecode(kind, null);
-    });
-  }
-
-  function playHtmlAudioFallback(kind, url, volume) {
     try {
       if (!mp3AudioCache[kind]) {
         mp3AudioCache[kind] = new Audio(url);
-        prepareHtmlAudio(mp3AudioCache[kind]);
+        mp3AudioCache[kind].preload = 'auto';
       }
       var audio = mp3AudioCache[kind].cloneNode();
-      prepareHtmlAudio(audio);
-      audio.volume = volume;
+      audio.volume = typeof options.volume === 'number' ? options.volume : 0.45;
       audio.play().catch(function () {});
     } catch (e) {}
-  }
-
-  function playSoftUrl(kind, url, volume) {
-    decodeSoundBuffer(kind, url, function (buffer) {
-      if (buffer && audioCtx) {
-        try {
-          var src = audioCtx.createBufferSource();
-          var gain = audioCtx.createGain();
-          src.buffer = buffer;
-          gain.gain.setValueAtTime(volume, audioCtx.currentTime);
-          src.connect(gain);
-          gain.connect(audioCtx.destination);
-          src.start(0);
-          return;
-        } catch (e) {}
-      }
-      playHtmlAudioFallback(kind, url, volume);
-    });
-  }
-
-  function playAvailableSoundOnce() {
-    if (!soundEnabled) return;
-    if (availableSoundPlayed) return;
-    try {
-      if (sessionStorage.getItem(AVAILABLE_SOUND_KEY) === '1') {
-        availableSoundPlayed = true;
-        return;
-      }
-      sessionStorage.setItem(AVAILABLE_SOUND_KEY, '1');
-    } catch (e) {}
-    availableSoundPlayed = true;
-    playMp3Sound('openClose', { volume: AVAILABLE_SOUND_VOLUME });
   }
 
 
@@ -2148,43 +1867,24 @@
         beginLiveAgentRequest(inferServiceFromConversation()).catch(function (err) {
           showError(err && err.message ? err.message : localizedReadiness('readinessLiveFailed', 'Could not confirm your live agent request.'));
         });
-      } else if (choice === 'ai' && config.greeting && !isCybercrimeCaseChat()) {
+      } else if (choice === 'ai' && config.greeting) {
         appendLocalAssistant(config.greeting);
       }
       saveSessionSnapshot();
     });
   }
 
-  function restoreCustomerSessionLocally() {
+  function restoreCustomerSession() {
     var sid = getSessionId();
     consultationLogged = loadConsultationLogged(sid);
     if (isPersistentAccountChat()) {
-      if (config && config.chatSessionHasMessages) sessionRestored = true;
-      if (config && config.chatSessionId) {
-        adoptSessionId(config.chatSessionId, { fromServer: true, preserveUi: true });
+      if (config && config.chatSessionHasMessages) {
+        sessionRestored = true;
       }
-      return !!sessionRestored;
-    }
-    if (isSessionArchived(sid)) {
-      return false;
-    }
-    var snap = loadSessionSnapshot(sid);
-    if (snap && snap.chatHandler === 'closed' && snap.customerEndedChat) {
-      return false;
-    }
-    if (snap && Array.isArray(snap.messages) && snap.messages.length) {
-      applyRestoredSnapshot(snap);
-      sessionRestored = true;
-      historyLoadedAt = Date.now();
-      return true;
-    }
-    return false;
-  }
-
-  function restoreCustomerSession() {
-    restoreCustomerSessionLocally();
-    if (isPersistentAccountChat()) {
-      return fetchSessionFromServer(!shouldPreserveHistoryDom()).then(function (restored) {
+      if (config && config.chatSessionId) {
+        adoptSessionId(config.chatSessionId, { fromServer: true, preserveUi: false });
+      }
+      return fetchSessionFromServer(true).then(function (restored) {
         if (chatHandler === 'closed') {
           return reopenAuthenticatedSessionIfNeeded().then(function () {
             return fetchSessionFromServer(true);
@@ -2196,7 +1896,6 @@
         updateEntryUi();
       });
     }
-    var sid = getSessionId();
     if (isSessionArchived(sid)) {
       beginFreshSessionSilently();
       return Promise.resolve();
@@ -2207,9 +1906,9 @@
       beginFreshSessionSilently();
       return Promise.resolve();
     }
-    if (shouldPreserveHistoryDom() && pollSeq > 0) {
+    if (snap && Array.isArray(snap.messages) && snap.messages.length) {
+      applyRestoredSnapshot(snap);
       sessionRestored = true;
-      return Promise.resolve();
     }
     return fetchSessionFromServer(true).then(function (restored) {
       if (chatHandler === 'closed' && customerEndedChat) {
@@ -2242,7 +1941,7 @@
     snapMessages.forEach(function (msg) {
       if (isDuplicateMessage(msg)) return;
       rememberMessageIdentity(msg);
-      renderMessageDom(msg.role, messageOriginalContent(msg) || messageText(msg.content), msg.id, messageRenderOpts(msg, { skipPush: true, skipScroll: true }));
+      renderMessageDom(msg.role, messageOriginalContent(msg) || messageText(msg.content), msg.id, messageRenderOpts(msg, { skipPush: true }));
       if (msg.role === 'user' || msg.role === 'assistant' || msg.role === 'admin' || msg.role === 'system') {
         messages.push({
           role: msg.role,
@@ -2253,7 +1952,6 @@
       }
     });
     updateEntryUi();
-    scrollToBottom(true);
   }
 
   function syncSessionMetaFromPoll(data) {
@@ -2316,21 +2014,11 @@
     if (historyScrollBound || !messagesEl) return;
     historyScrollBound = true;
     messagesEl.addEventListener('scroll', function () {
-      if (!loadingOlderHistory) {
-        stickToBottom = isNearBottom();
-      }
       if (!hasOlderMessages || loadingOlderHistory) return;
       if (messagesEl.scrollTop <= 80) {
         fetchOlderMessages();
       }
     }, { passive: true });
-    var relayout = function () {
-      if (stickToBottom) scrollToBottom(true);
-    };
-    window.addEventListener('resize', relayout);
-    if (window.visualViewport) {
-      window.visualViewport.addEventListener('resize', relayout);
-    }
   }
 
   function fetchOlderMessages() {
@@ -2396,14 +2084,7 @@
     syncLocalMessageCursor(messages);
     if (messagesEl) {
       messagesEl.scrollTop = messagesEl.scrollHeight - prevScrollHeight;
-      stickToBottom = isNearBottom();
     }
-  }
-
-  function shouldPreserveHistoryDom() {
-    if (messages.length > 0) return true;
-    if (threadEl && threadEl.children.length > 0) return true;
-    return false;
   }
 
   function fetchSessionFromServer(full, strict) {
@@ -2412,7 +2093,7 @@
       if (strict) return readinessReject(step, 'network', 'readinessNetworkFailed', { reason: 'missing_ajax_url' });
       return Promise.resolve(false);
     }
-    if (full && !shouldPreserveHistoryDom()) {
+    if (full) {
       clearHistoryDomState();
     }
     var formData = new FormData();
@@ -2425,7 +2106,7 @@
       formData.append('full', '1');
       formData.append('history_limit', String(HISTORY_INITIAL));
     }
-    return fetch(config.ajaxUrl, { method: 'POST', body: formData, credentials: 'same-origin', cache: 'no-store' })
+    return fetch(config.ajaxUrl, { method: 'POST', body: formData, credentials: 'same-origin' })
       .then(function (res) { return safeJson(res).then(function (json) { return { res: res, json: json }; }); })
       .then(function (result) {
         var json = result.json;
@@ -2456,9 +2137,6 @@
         if (Array.isArray(data.messages) && data.messages.length) applyRestoredMessages(data.messages);
         syncHistoryPaginationFromPoll(data);
         if (data.reactions) applyReactionStates(data.reactions);
-        if (data.ccs_case) {
-          dispatchCcsCaseUpdate(data.ccs_case);
-        }
         if (typeof data.seq === 'number') {
           pollSeq = Math.max(pollSeq, data.seq);
           syncLocalMessageCursor(messages, data.seq);
@@ -2476,11 +2154,6 @@
         lastReadinessPollAt = Date.now();
         if (full) {
           historyLoadedAt = Date.now();
-        }
-        if (stickToBottom) {
-          requestAnimationFrame(function () {
-            flushScrollToBottom(false);
-          });
         }
         return true;
       })
@@ -2503,7 +2176,7 @@
       rememberMessageIdentity(msg);
       if (msg.reaction) messageReactions[msg.id] = msg.reaction;
       indexChatMessage(msg);
-      renderMessageDom(msg.role, messageOriginalContent(msg) || messageText(msg.content), msg.id, messageRenderOpts(msg, { skipPush: true, skipScroll: true }));
+      renderMessageDom(msg.role, messageOriginalContent(msg) || messageText(msg.content), msg.id, messageRenderOpts(msg, { skipPush: true }));
       if (msg.role === 'user' || msg.role === 'assistant' || msg.role === 'admin') {
         if (!messages.some(function (m) { return m.id === msg.id; })) {
           messages.push({
@@ -2524,7 +2197,6 @@
     });
     syncLocalMessageCursor(messages);
     updateEntryUi();
-    scrollToBottom(true);
   }
 
   function getLiveAgent() {
@@ -2619,12 +2291,13 @@
       localMsgId = maxId;
     }
     if (typeof serverSeq === 'number') {
-      pollSeq = Math.max(pollSeq, serverSeq);
+      pollSeq = Math.max(pollSeq, serverSeq, localMsgId);
     }
   }
 
   function nextLocalId() {
     localMsgId += 1;
+    pollSeq = Math.max(pollSeq, localMsgId);
     return localMsgId;
   }
 
@@ -2633,61 +2306,6 @@
       return window.crypto.randomUUID();
     }
     return 'web-' + Date.now().toString(36) + '-' + Math.random().toString(36).slice(2, 12);
-  }
-
-  function detectDeviceLanguage() {
-    var list = [];
-    if (navigator.languages && navigator.languages.length) {
-      for (var i = 0; i < navigator.languages.length; i++) {
-        list.push(navigator.languages[i]);
-      }
-    }
-    if (navigator.language) list.push(navigator.language);
-    if (navigator.userLanguage) list.push(navigator.userLanguage);
-    for (var j = 0; j < list.length; j++) {
-      var lang = String(list[j] || '').toLowerCase();
-      if (lang.indexOf('ar') === 0) return 'ar';
-      if (lang.indexOf('en') === 0) return 'en';
-      if (lang.indexOf('de') === 0) return 'de';
-    }
-    return 'de';
-  }
-
-  function localizedDeviceI18n(key) {
-    if (!config || !config.i18n || !config.i18n[key]) return '';
-    var bucket = config.i18n[key];
-    var lang = detectDeviceLanguage();
-    if (bucket[lang]) return String(bucket[lang]);
-    if (bucket.en) return String(bucket.en);
-    if (bucket.de) return String(bucket.de);
-    return '';
-  }
-
-  function supportConnectedText() {
-    var localized = localizedDeviceI18n('supportConnected');
-    if (localized) return localized;
-    var lang = detectDeviceLanguage();
-    if (lang === 'ar') return 'الدعم متصل';
-    if (lang === 'en') return 'Support is connected';
-    return 'Support ist verbunden';
-  }
-
-  function updateSupportConnectedUi() {
-    var connected = chatHandler === 'admin';
-    if (form) {
-      form.classList.toggle('paxdesign-chat-support-connected', connected);
-    }
-    if (!supportStatusEl) return;
-    if (!connected) {
-      supportStatusEl.hidden = true;
-      supportStatusEl.textContent = '';
-      return;
-    }
-    var lang = detectDeviceLanguage();
-    supportStatusEl.hidden = false;
-    supportStatusEl.textContent = supportConnectedText();
-    supportStatusEl.lang = lang;
-    supportStatusEl.dir = lang === 'ar' ? 'rtl' : 'ltr';
   }
 
   function detectChatLanguage() {
@@ -2789,78 +2407,15 @@
     var dedupKey = messageDedupKey(msg);
     if (dedupKey && domClientMsgIds[dedupKey]) return true;
     if (msg.role === 'system' && msg.content === 'Chat-Session gestartet.') return true;
-    var text = messageText(msg.content || msg);
-    if (msg.role === 'user' && text) {
-      for (var u = messages.length - 1; u >= 0; u--) {
-        if (messages[u] && messages[u].role === 'user') {
-          if (messageText(messages[u].content) === text) return true;
-          break;
-        }
-      }
-    }
-    if (msg.role === 'assistant' && isCybercrimeCaseChat()) {
-      return assistantAlreadyShownForLatestTurn(msg);
-    }
-    if (msg.role === 'assistant' || msg.role === 'admin') {
-      if (text) {
-        var lastAsst = null;
-        for (var i = messages.length - 1; i >= 0; i--) {
-          if (messages[i] && (messages[i].role === 'assistant' || messages[i].role === 'admin')) {
-            lastAsst = messages[i];
-            break;
-          }
-        }
-        if (lastAsst && messageText(lastAsst.content) === text) return true;
-        if (threadEl) {
-          var bubbles = threadEl.querySelectorAll('.paxdesign-booking-chat-message--assistant .paxdesign-booking-chat-message-bubble, .paxdesign-booking-chat-message--admin .paxdesign-booking-chat-message-bubble');
-          if (bubbles.length) {
-            var lastBubble = bubbles[bubbles.length - 1];
-            if (lastBubble && (lastBubble.textContent || '').trim() === text) return true;
-          }
-        }
-      }
-    }
     return false;
   }
 
-  function rememberMessageIdentity(msg, opts) {
-    if (!msg) return;
-    opts = opts || {};
-    if (msg.id) {
-      domMsgIds[msg.id] = true;
-      if (!opts.optimistic) seenMsgId(msg.id);
-    }
-    var dedupKey = messageDedupKey(msg);
-    if (dedupKey) domClientMsgIds[dedupKey] = msg.id || true;
-  }
-
-  function adoptServerMessageIdentity(msg) {
+  function rememberMessageIdentity(msg) {
     if (!msg || !msg.id) return;
-    rememberMessageIdentity(msg);
+    domMsgIds[msg.id] = true;
+    seenMsgId(msg.id);
     var dedupKey = messageDedupKey(msg);
-    var local = null;
-    if (dedupKey) {
-      local = messages.find(function (m) { return m.client_msg_id === dedupKey; });
-    }
-    if (!local && (msg.role === 'user' || msg.role === 'assistant')) {
-      var incomingText = messageText(msg.content || msg);
-      for (var i = messages.length - 1; i >= 0; i--) {
-        if (messages[i] && messages[i].role === msg.role && messageText(messages[i].content) === incomingText) {
-          local = messages[i];
-          break;
-        }
-      }
-    }
-    if (local && local.id !== msg.id) {
-      var el = threadEl && threadEl.querySelector('[data-msg-id="' + local.id + '"]');
-      if (el) {
-        el.setAttribute('data-msg-id', String(msg.id));
-        delete domMsgIds[local.id];
-        domMsgIds[msg.id] = true;
-      }
-      local.id = msg.id;
-      if (msg.client_msg_id) local.client_msg_id = msg.client_msg_id;
-    }
+    if (dedupKey) domClientMsgIds[dedupKey] = msg.id;
   }
 
   function loadConsultationLogged(sessionId) {
@@ -2973,18 +2528,8 @@
     if (ctx.intent) {
       formData.append('page_context', ctx.intent);
     }
-    var lang = ctx.language || '';
-    if (!lang) {
-      try {
-        var portal = document.querySelector('.pax-ccs-portal');
-        lang = (portal && portal.getAttribute('data-ccs-lang')) || '';
-      } catch (e) {
-        lang = '';
-      }
-    }
-    if (lang) {
-      formData.append('page_language', lang);
-      formData.append('locale', lang);
+    if (ctx.language) {
+      formData.append('page_language', ctx.language);
     }
     if (ctx.referenceId) {
       formData.append('page_reference', ctx.referenceId);
@@ -3115,8 +2660,6 @@
         source.connect(audioCtx.destination);
         source.start(0);
         audioUnlocked = true;
-        if (SOUND_URLS.openClose) decodeSoundBuffer('openClose', SOUND_URLS.openClose, function () {});
-        if (SOUND_URLS.typing) decodeSoundBuffer('typing', SOUND_URLS.typing, function () {});
       }
     } catch (e) {}
   }
@@ -3225,49 +2768,34 @@
     if (!SOUND_URLS.typing) return null;
     if (!typingSoundAudio) {
       typingSoundAudio = new Audio(SOUND_URLS.typing);
-      prepareHtmlAudio(typingSoundAudio);
+      typingSoundAudio.preload = 'auto';
     }
     return typingSoundAudio;
-  }
-
-  function stopTypingSource() {
-    if (typingSourceNode) {
-      try { typingSourceNode.stop(); } catch (e) {}
-      typingSourceNode = null;
-    }
   }
 
   function scheduleTypingSoundLoop() {
     if (!typingSoundActive || !soundEnabled) return;
     typingSoundLoopTimer = null;
+    var audio = ensureTypingSoundAudio();
+    if (!audio) return;
     unlockAudio();
-    decodeSoundBuffer('typing', SOUND_URLS.typing, function (buffer) {
-      if (!typingSoundActive || !soundEnabled) return;
-      stopTypingSource();
-      if (buffer && audioCtx) {
-        try {
-          var src = audioCtx.createBufferSource();
-          var gain = audioCtx.createGain();
-          src.buffer = buffer;
-          gain.gain.setValueAtTime(TYPING_SOUND_VOLUME, audioCtx.currentTime);
-          src.connect(gain);
-          gain.connect(audioCtx.destination);
-          typingSourceNode = src;
-          src.onended = function () {
-            if (typingSourceNode === src) typingSourceNode = null;
-          };
-          src.start(0);
-          return;
-        } catch (e) {}
-      }
-      var audio = ensureTypingSoundAudio();
-      if (!audio) return;
+    audio.onended = null;
+    audio.pause();
+    audio.currentTime = 0;
+    audio.volume = TYPING_SOUND_VOLUME;
+    audio.onended = function () {
       audio.onended = null;
-      audio.pause();
-      audio.currentTime = 0;
-      audio.volume = TYPING_SOUND_VOLUME;
-      audio.play().catch(function () {});
-    });
+      if (!typingSoundActive || !soundEnabled) return;
+      typingSoundLoopTimer = window.setTimeout(scheduleTypingSoundLoop, TYPING_SOUND_GAP_MS);
+    };
+    var playPromise = audio.play();
+    if (playPromise && typeof playPromise.catch === 'function') {
+      playPromise.catch(function () {
+        if (typingSoundActive && soundEnabled) {
+          typingSoundLoopTimer = window.setTimeout(scheduleTypingSoundLoop, 420);
+        }
+      });
+    }
   }
 
   function syncTypingSound(shouldPlay) {
@@ -3282,7 +2810,6 @@
       clearTimeout(typingSoundLoopTimer);
       typingSoundLoopTimer = null;
     }
-    stopTypingSource();
     if (typingSoundAudio) {
       typingSoundAudio.onended = null;
       typingSoundAudio.pause();
@@ -3321,21 +2848,13 @@
   }
 
   function scheduleLivePolling() {
-    if (!pageVisible || !canUseChat() || isEdgeBlocked()) {
-      if (pollTimer) {
-        clearInterval(pollTimer);
-        pollTimer = null;
-      }
-      pollIntervalCurrent = 0;
-      return;
-    }
-    var interval = effectivePollIntervalMs();
-    if (pollTimer && pollIntervalCurrent === interval) {
-      return;
-    }
     if (pollTimer) clearInterval(pollTimer);
-    pollIntervalCurrent = interval;
-    pollTimer = window.setInterval(pollUpdates, interval);
+    if (!pageVisible || !canUseChat() || isEdgeBlocked()) {
+      pollTimer = null;
+      return;
+    }
+    pollUpdates();
+    pollTimer = window.setInterval(pollUpdates, effectivePollIntervalMs());
   }
 
   document.addEventListener('visibilitychange', function () {
@@ -3415,20 +2934,14 @@
     root.classList.toggle('paxdesign-chat-admin-active', chatHandler === 'admin');
     root.classList.toggle('paxdesign-chat-live-request', chatHandler === 'live_request');
     root.classList.toggle('paxdesign-chat-closed', chatHandler === 'closed');
-    root.classList.toggle('paxdesign-chat-human-queue', isHumanMode());
-    updateSupportConnectedUi();
+    updateHumanStaffStatus();
     updateComposerPlusUi();
   }
 
   function updateInputState() {
     var closed = chatHandler === 'closed' && !isPersistentAccountChat();
     var showForm = !closed;
-    if (input) {
-      input.disabled = closed;
-      input.readOnly = false;
-      input.removeAttribute('readonly');
-      input.setAttribute('aria-disabled', closed ? 'true' : 'false');
-    }
+    input.disabled = closed;
     if (sendBtn) {
       sendBtn.classList.toggle('paxdesign-is-disabled', closed || (!input.value.trim() && !isStreaming));
       sendBtn.setAttribute('aria-disabled', closed ? 'true' : sendBtn.getAttribute('aria-disabled'));
@@ -3558,7 +3071,7 @@
       return false;
     }
     if (data.session_id && data.session_id !== getSessionId()) {
-      adoptSessionId(data.session_id, { fromServer: true, preserveUi: true });
+      adoptSessionId(data.session_id, { fromServer: true, preserveUi: false });
     }
     applyHandlerState(data.handler || 'ai', data.admin_name || '');
     syncSessionMetaFromPoll(data);
@@ -3593,14 +3106,10 @@
 
     if (hadNewMessages || incomingAdmin) {
       ensureAdminMessageChrome();
-      scrollToBottom();
     }
 
     if (data.reactions && typeof data.reactions === 'object') {
       applyReactionStates(data.reactions);
-    }
-    if (data.ccs_case) {
-      dispatchCcsCaseUpdate(data.ccs_case);
     }
     if (typeof data.seq === 'number') {
       pollSeq = Math.max(pollSeq, data.seq);
@@ -3611,9 +3120,6 @@
 
   function pollUpdatesOnce(strict) {
     var step = strict ? READINESS_STEPS.sync : READINESS_STEPS.finalSync;
-    if (pollInFlight) {
-      return pollInFlight;
-    }
     if (!config.ajaxUrl || !canUseChat()) {
       if (strict) return readinessReject(step, 'network', 'readinessNetworkFailed', { reason: 'poll_unavailable' });
       return Promise.resolve(null);
@@ -3629,7 +3135,7 @@
     formData.append('session_id', getSessionId());
     formData.append('since', String(pollSeq));
 
-    pollInFlight = fetch(config.ajaxUrl, { method: 'POST', body: formData, credentials: 'same-origin', cache: 'no-store' })
+    return fetch(config.ajaxUrl, { method: 'POST', body: formData, credentials: 'same-origin' })
       .then(function (res) {
         return res.text().then(function (text) {
           if (isEdgeForbiddenResponse(res, text)) {
@@ -3665,15 +3171,7 @@
           }));
         }
         return null;
-      })
-      .then(function (data) {
-        pollInFlight = null;
-        return data;
-      }, function (err) {
-        pollInFlight = null;
-        throw err;
       });
-    return pollInFlight;
   }
 
   function pollUpdates() {
@@ -3883,7 +3381,6 @@
       image_url: msg.image_url || '',
       file_url: msg.file_url || '',
       file_name: msg.file_name || '',
-      file_mime: msg.file_mime || '',
       attachment_type: msg.attachment_type || '',
       link_url: msg.link_url || '',
       link_label: msg.link_label || '',
@@ -3896,10 +3393,6 @@
       sender_avatar: msg.sender_avatar || '',
       sender_role: msg.sender_role || '',
       ts: msg.ts || 0,
-      ccs_operation_id: msg.ccs_operation_id || '',
-      ccs_operation_status: msg.ccs_operation_status || '',
-      ccs_operation_type: msg.ccs_operation_type || '',
-      ccs_operation_label: msg.ccs_operation_label || '',
     }, extra);
   }
 
@@ -3909,25 +3402,14 @@
       if (!msg || !msg.id) return;
       msg = maskCustomerLinkScanMessage(msg);
       if (isMessagePermanentlyDeleted(msg.id)) return;
-      if (isDuplicateMessage(msg)) {
-        adoptServerMessageIdentity(msg);
-        return;
-      }
-      if (msg.role === 'assistant' && isStreaming && !msg.ccs_operation_id) {
-        rememberMessageIdentity(msg);
-        adoptServerMessageIdentity(msg);
-        if (latestAssistantElAfterLatestUser()) return;
-      }
+      if (isDuplicateMessage(msg)) return;
+      if (msg.role === 'user') return;
+      if (msg.role === 'assistant' && isStreaming) return;
       if (msg.role === 'assistant' && streamingMsgId && msg.id === streamingMsgId) return;
 
       rememberMessageIdentity(msg);
       if (msg.reaction) messageReactions[msg.id] = msg.reaction;
       indexChatMessage(msg);
-
-      if (msg.ccs_operation_id) {
-        upsertCcsOperationMessage(msg);
-        return;
-      }
 
       if (msg.role === 'admin') {
         stopTypingSound();
@@ -3953,13 +3435,8 @@
         renderMessageDom(msg.role, messageText(msg.content), msg.id, messageRenderOpts(msg));
       }
 
-      if (msg.role === 'assistant' || msg.role === 'admin' || msg.role === 'user') {
-        messages.push({
-          role: msg.role,
-          content: messageText(msg.content),
-          id: msg.id,
-          client_msg_id: msg.client_msg_id || ''
-        });
+      if (msg.role === 'assistant' || msg.role === 'admin') {
+        messages.push({ role: msg.role, content: messageText(msg.content), id: msg.id });
       } else if (msg.role === 'system') {
         messages.push({ role: 'system', content: messageText(msg.content), id: msg.id });
       }
@@ -4315,6 +3792,7 @@
         updateReactionUi(msgId, normalizedReaction);
       }
     }
+    scrollToBottom();
   }
 
   function showAdminTypingIndicator() {
@@ -4698,25 +4176,17 @@
     }
     if (opts.file_url || (opts.attachment_type === 'file' && opts.file_name)) {
       var fileHref = opts.file_url && opts.file_url !== '#' ? opts.file_url : '';
-      var fileName = opts.file_name || 'Document';
+      var fileName = opts.file_name || content || 'Datei';
       html += '<a class="paxdesign-booking-chat-file-chip"' + (fileHref ? ' href="' + escapeHtml(fileHref) + '" target="_blank" rel="noopener"' : '') + '>' +
         '<span class="paxdesign-booking-chat-file-chip__icon" aria-hidden="true"></span>' +
         '<span class="paxdesign-booking-chat-file-chip__name">' + escapeHtml(fileName) + '</span>' +
-        '</a>';
-    }
-    if (opts.ccs_operation_status === 'running' || (opts.ccs_operation_id && opts.ccs_operation_status === 'running')) {
-      var opLabel = opts.ccs_operation_label || content || 'Checking uploaded files…';
-      html += '<div class="paxdesign-booking-chat-ccs-op" data-ccs-op-status="running" role="status" aria-live="polite">' +
-        '<span class="paxdesign-booking-chat-ccs-op__spinner" aria-hidden="true"></span>' +
-        '<span class="paxdesign-booking-chat-ccs-op__label">' + escapeHtml(opLabel) + '</span>' +
-        '</div>';
-      return html;
+      '</a>';
     }
     if (opts.attachment_type === 'link_card' || opts.link_url) {
       html += buildLinkCardHtml(opts);
     } else if (role === 'assistant' || role === 'admin') {
       if (content) html += formatMarkdown(content);
-    } else if (role !== 'system' && content) {
+    } else if (role !== 'system' && content && opts.attachment_type !== 'file') {
       html += '<span class="paxdesign-booking-chat-message-text">' + wrapUrlsForScanHtml(content) + '</span>';
     }
     if (role === 'user') {
@@ -4736,15 +4206,6 @@
     var msg = document.createElement('div');
     msg.className = 'paxdesign-booking-chat-message paxdesign-booking-chat-message--' + role;
     if (msgId) msg.setAttribute('data-msg-id', String(msgId));
-    if (opts.ccs_operation_id) {
-      msg.setAttribute('data-ccs-op-id', String(opts.ccs_operation_id));
-      msg.setAttribute('data-ccs-op-status', String(opts.ccs_operation_status || ''));
-      if (opts.ccs_operation_status === 'running') {
-        msg.classList.add('paxdesign-booking-chat-message--ccs-running');
-      } else if (opts.ccs_operation_status === 'complete' || opts.ccs_operation_status === 'failed') {
-        msg.classList.add('paxdesign-booking-chat-message--ccs-complete');
-      }
-    }
 
     if (role === 'admin') {
       renderAdminMessageHeader(msg, opts);
@@ -4793,7 +4254,10 @@
         role: role,
         content: content,
         reply_to: opts.reply_to || 0,
-        image_url: opts.image_url || ''
+        image_url: opts.image_url || '',
+        file_url: opts.file_url || '',
+        file_name: opts.file_name || '',
+        attachment_type: opts.attachment_type || ''
       });
     }
     if (opts.prepend && threadEl.firstChild) {
@@ -4802,7 +4266,7 @@
       threadEl.appendChild(msg);
     }
     if (!opts.skipScroll) {
-      scrollToBottom(!!opts.forceScroll);
+      scrollToBottom();
     }
     if (role === 'user' && opts.link_scan_status) {
       refreshMessageScanState({ id: msgId, link_scan_status: opts.link_scan_status, content: content });
@@ -4814,203 +4278,99 @@
     return { bubble: bubble, messageEl: msg };
   }
 
-  function ccsAttachLabel() {
-    var lang = '';
-    try {
-      lang = (window.PAXdesignPageContext && window.PAXdesignPageContext.language) || '';
-    } catch (e) {}
-    if (lang === 'de') return 'Nachweis anhängen';
-    if (lang === 'ar') return 'إرفاق دليل';
-    return 'Attach evidence';
+  function attachUiLang() {
+    var lang = ((navigator.language || navigator.userLanguage || '') + '').toLowerCase();
+    if (lang.indexOf('ar') === 0) return 'ar';
+    if (lang.indexOf('en') === 0) return 'en';
+    return 'de';
   }
 
-  function initCcsAttachButton() {
-    if (!plusBtn) return;
-    root.classList.add('paxdesign-ccs-attach');
-    var label = ccsAttachLabel();
-    plusBtn.setAttribute('aria-label', label);
-    plusBtn.setAttribute('title', label);
-    plusBtn.removeAttribute('aria-expanded');
-    var tip = plusBtn.querySelector('.paxdesign-booking-chat-plus-tooltip');
-    if (tip) tip.textContent = label;
-    if (quickActions) quickActions.hidden = true;
-
-    var input = root.querySelector('#paxdesignCcsChatAttach');
-    if (!input) {
-      input = document.createElement('input');
-      input.type = 'file';
-      input.id = 'paxdesignCcsChatAttach';
-      input.className = 'paxdesign-ccs-chat-attach-input';
-      input.accept = 'image/jpeg,image/png,image/webp,image/gif,image/heic,image/heif,.pdf,.doc,.docx,.jpg,.jpeg,.png,.webp,.gif,.heic,.heif,.txt';
-      input.setAttribute('aria-hidden', 'true');
-      input.tabIndex = -1;
-      plusBtn.parentNode.appendChild(input);
+  function attachMenuLabel(key) {
+    var lang = attachUiLang();
+    if (key === 'image') {
+      if (lang === 'ar') return 'إرفاق صورة';
+      if (lang === 'en') return 'Attach image';
+      return 'Bild anhängen';
     }
-    plusBtn.addEventListener('click', function (e) {
-      e.preventDefault();
-      unlockAudio();
-      if (!canUseChat()) {
-        showAuthGate();
-        return;
-      }
-      input.click();
-    });
-    input.addEventListener('change', function () {
-      var file = input.files && input.files[0];
-      input.value = '';
-      if (!file) return;
-      uploadCcsChatFile(file);
-    });
-  }
-
-  function uploadCcsChatFile(file) {
-    if (!file || isStreaming) return;
-    if (!isLoggedIn()) {
-      showAuthGate();
-      return;
+    if (key === 'file') {
+      if (lang === 'ar') return 'إرفاق ملف';
+      if (lang === 'en') return 'Attach file';
+      return 'Datei anhängen';
     }
-    var isImage = /^image\//.test(file.type) || /\.(jpe?g|png|gif|webp|heic|heif)$/i.test(file.name || '');
-    var localUrl = '';
-    try {
-      if (isImage) localUrl = URL.createObjectURL(file);
-    } catch (e) {}
-    var clientMsgId = newClientMessageId();
-    var localId = nextLocalId();
-    var caption = file.name || 'file';
-    renderMessageDom('user', isImage ? '' : caption, localId, {
-      image_url: localUrl,
-      file_url: isImage ? '' : '#',
-      file_name: caption,
-      attachment_type: isImage ? 'image' : 'file',
-      client_msg_id: clientMsgId,
-      ts: Math.floor(Date.now() / 1000)
-    });
-    messages.push({
-      role: 'user',
-      content: caption,
-      id: localId,
-      client_msg_id: clientMsgId,
-      image_url: localUrl,
-      file_name: caption,
-      attachment_type: isImage ? 'image' : 'file'
-    });
-    rememberMessageIdentity({ id: localId, role: 'user', content: caption, client_msg_id: clientMsgId });
-    scrollToBottom(true);
-
-    var formData = new FormData();
-    formData.append('action', 'paxdesign_chat_ccs_attach');
-    formData.append('nonce', config.nonce);
-    stampChatRequest(formData);
-    formData.append('session_id', getSessionId());
-    formData.append('client_msg_id', clientMsgId);
-    formData.append('caption', caption);
-    formData.append('file', file, file.name);
-
-    fetch(config.ajaxUrl, { method: 'POST', body: formData, credentials: 'same-origin' })
-      .then(function (res) { return safeJson(res); })
-      .then(function (json) {
-        if (handleAuthGateResponse(json)) {
-          throw new Error('login_required');
-        }
-        if (!json || !json.success) {
-          throw new Error(json && json.data && json.data.message ? json.data.message : 'Upload failed.');
-        }
-        var data = json.data || {};
-        if (data.message && data.message.id) {
-          var localEl = threadEl.querySelector('[data-msg-id="' + localId + '"]');
-          if (localEl) localEl.setAttribute('data-msg-id', String(data.message.id));
-          rememberMessageIdentity(data.message);
-          indexChatMessage(data.message);
-          pollSeq = Math.max(pollSeq, data.message.id);
-        }
-        handleAuthenticatedChatJsonSuccess(data);
-        saveSessionSnapshot();
-      })
-      .catch(function (err) {
-        var failed = threadEl.querySelector('[data-msg-id="' + localId + '"]');
-        if (failed) {
-          var bubble = failed.querySelector('.paxdesign-booking-chat-message-bubble');
-          if (bubble) {
-            bubble.insertAdjacentHTML('beforeend', '<span class="paxdesign-ccs-attach-error">' + escapeHtml(err && err.message ? err.message : 'Upload failed.') + '</span>');
-          }
-        }
-      });
-  }
-
-  function initComposerPlusButton() {
-    if (!plusBtn || plusBtn.dataset.composerPlusBound === '1') return;
-    plusBtn.dataset.composerPlusBound = '1';
-    var plusWrap = root.querySelector('.paxdesign-booking-chat-plus-wrap');
-    if (plusWrap) plusWrap.hidden = false;
-
-    if (isCybercrimeCaseChat()) {
-      initCcsAttachButton();
-      return;
+    if (key === 'attach') {
+      if (lang === 'ar') return 'إرفاق';
+      if (lang === 'en') return 'Attach';
+      return 'Anhängen';
     }
-
-    ensureHumanAttachInputs();
-    ensureComposerAttachMenu();
-
-    plusBtn.addEventListener('click', function (e) {
-      e.preventDefault();
-      e.stopPropagation();
-      unlockAudio();
-      if (!canUseChat()) {
-        showAuthGate();
-        return;
-      }
-      if (isHumanMode()) {
-        toggleComposerAttachMenu();
-        return;
-      }
-      if (quickActions && config.quickActions && config.quickActions.length) {
-        var open = root.classList.toggle('paxdesign-chat-quick-open');
-        quickActions.classList.toggle('paxdesign-is-open', open);
-        plusBtn.setAttribute('aria-expanded', open ? 'true' : 'false');
-        plusBtn.classList.toggle('paxdesign-is-active', open);
-        closeComposerAttachMenu();
-        notifyLayout();
-        return;
-      }
-      toggleComposerAttachMenu(true);
-    });
-
-    document.addEventListener('pointerdown', function (e) {
-      if (!root.classList.contains('paxdesign-chat-attach-open')) return;
-      var menu = root.querySelector('.paxdesign-booking-chat-attach-menu');
-      if (!menu || menu.hidden) return;
-      if (menu.contains(e.target) || plusBtn.contains(e.target)) return;
-      closeComposerAttachMenu();
-    }, true);
-
-    updateComposerPlusUi();
+    if (key === 'tooLargeImage') {
+      if (lang === 'ar') return 'الصورة أكبر من 5 ميغابايت.';
+      if (lang === 'en') return 'Images must be 5 MB or smaller.';
+      return 'Bilder dürfen höchstens 5 MB groß sein.';
+    }
+    if (key === 'tooLargeFile') {
+      if (lang === 'ar') return 'الملف أكبر من 8 ميغابايت.';
+      if (lang === 'en') return 'Files must be 8 MB or smaller.';
+      return 'Dateien dürfen höchstens 8 MB groß sein.';
+    }
+    if (key === 'badType') {
+      if (lang === 'ar') return 'نوع الملف غير مسموح.';
+      if (lang === 'en') return 'This file type is not allowed.';
+      return 'Dieser Dateityp ist nicht erlaubt.';
+    }
+    if (lang === 'ar') return 'المرفقات متاحة أثناء الدعم البشري.';
+    if (lang === 'en') return 'Attachments are available during human support.';
+    return 'Anhänge sind während des Live-Chats verfügbar.';
   }
 
-  function triggerHiddenFileInput(input) {
-    if (!input) return;
+  function updateHumanStaffStatus() {
+    var inputArea = root.querySelector('.paxdesign-booking-chat-input-area');
+    var statusEl = root.querySelector('#paxdesignChatSupportStatus');
+    if (!statusEl && inputArea && form) {
+      statusEl = document.createElement('p');
+      statusEl.id = 'paxdesignChatSupportStatus';
+      statusEl.className = 'paxdesign-booking-chat-support-status';
+      statusEl.hidden = true;
+      inputArea.insertBefore(statusEl, form);
+    }
+    if (!statusEl) return;
+    if (chatHandler === 'admin') {
+      var name = (assignedAgent && assignedAgent.name) || adminName || '';
+      var lang = attachUiLang();
+      if (lang === 'ar') statusEl.textContent = name ? ('تم اتصال الموظف: ' + name) : 'موظف حقيقي متصل';
+      else if (lang === 'en') statusEl.textContent = name ? ('Staff connected: ' + name) : 'A team member has joined';
+      else statusEl.textContent = name ? ('Mitarbeiter verbunden: ' + name) : 'Mitarbeiter verbunden';
+      statusEl.hidden = false;
+    } else {
+      statusEl.textContent = '';
+      statusEl.hidden = true;
+    }
+  }
+
+  function triggerHiddenFileInput(inputEl) {
+    if (!inputEl) return;
     try {
-      if (typeof input.showPicker === 'function') {
-        input.showPicker();
+      if (typeof inputEl.showPicker === 'function') {
+        inputEl.showPicker();
         return;
       }
     } catch (pickerErr) {}
-    input.click();
+    inputEl.click();
   }
 
   function ensureHumanAttachInputs() {
-    if (root.querySelector('#paxdesignChatHumanImageAttach')) return;
+    if (document.getElementById('paxdesignChatHumanImageAttach')) return;
     var imageInput = document.createElement('input');
     imageInput.type = 'file';
     imageInput.id = 'paxdesignChatHumanImageAttach';
     imageInput.className = 'paxdesign-chat-human-attach-input';
-    imageInput.accept = 'image/jpeg,image/png,image/webp,image/gif,image/heic,image/heif';
+    imageInput.accept = 'image/jpeg,image/png,image/webp,image/gif';
     imageInput.setAttribute('aria-hidden', 'true');
     imageInput.tabIndex = -1;
     var fileInput = document.createElement('input');
     fileInput.type = 'file';
     fileInput.id = 'paxdesignChatHumanFileAttach';
     fileInput.className = 'paxdesign-chat-human-attach-input';
-    fileInput.accept = '.pdf,.doc,.docx,.txt,.zip,.jpg,.jpeg,.png,.webp,.gif,.heic,.heif';
+    fileInput.accept = '.pdf,.doc,.docx,.txt,.zip,.jpg,.jpeg,.png,.webp,.gif';
     fileInput.setAttribute('aria-hidden', 'true');
     fileInput.tabIndex = -1;
     document.body.appendChild(imageInput);
@@ -5051,7 +4411,7 @@
         showError(attachMenuLabel('humanOnly'));
         return;
       }
-      var inputEl = document.querySelector(kind === 'image' ? '#paxdesignChatHumanImageAttach' : '#paxdesignChatHumanFileAttach');
+      var inputEl = document.getElementById(kind === 'image' ? 'paxdesignChatHumanImageAttach' : 'paxdesignChatHumanFileAttach');
       window.setTimeout(function () {
         triggerHiddenFileInput(inputEl);
       }, 0);
@@ -5060,31 +4420,16 @@
     host.appendChild(menu);
   }
 
-  function attachMenuLabel(key) {
-    var lang = detectDeviceLanguage();
-    if (key === 'image') {
-      if (lang === 'ar') return 'إرفاق صورة';
-      if (lang === 'en') return 'Attach image';
-      return 'Bild anhängen';
-    }
-    if (key === 'file') {
-      if (lang === 'ar') return 'إرفاق ملف';
-      if (lang === 'en') return 'Attach file';
-      return 'Datei anhängen';
-    }
-    if (lang === 'ar') return 'المرفقات متاحة أثناء الدعم البشري.';
-    if (lang === 'en') return 'Attachments are available during human support.';
-    return 'Anhänge sind während des Live-Chats verfügbar.';
-  }
-
   function toggleComposerAttachMenu(forceOpen) {
     var menu = root.querySelector('.paxdesign-booking-chat-attach-menu');
     if (!menu) return;
     var shouldOpen = forceOpen === true ? true : (forceOpen === false ? false : menu.hidden);
     menu.hidden = !shouldOpen;
     root.classList.toggle('paxdesign-chat-attach-open', shouldOpen);
-    plusBtn.setAttribute('aria-expanded', shouldOpen ? 'true' : 'false');
-    plusBtn.classList.toggle('paxdesign-is-active', shouldOpen);
+    if (plusBtn) {
+      plusBtn.setAttribute('aria-expanded', shouldOpen ? 'true' : 'false');
+      plusBtn.classList.toggle('paxdesign-is-active', shouldOpen);
+    }
     if (shouldOpen && quickActions) {
       root.classList.remove('paxdesign-chat-quick-open');
       quickActions.classList.remove('paxdesign-is-open');
@@ -5110,22 +4455,29 @@
     var humanQueue = isHumanMode();
     plusBtn.classList.toggle('paxdesign-booking-chat-plus--human', humanQueue);
     plusBtn.classList.toggle('paxdesign-booking-chat-plus--connected', humanConnected);
-    var label = humanQueue ? attachMenuLabel('image').replace(/ .*/, '') : (isCybercrimeCaseChat() ? ccsAttachLabel() : 'Schnellaktionen');
-    if (humanQueue) {
-      label = detectDeviceLanguage() === 'ar' ? 'إرفاق' : (detectDeviceLanguage() === 'en' ? 'Attach' : 'Anhängen');
-    }
+    var label = humanQueue ? attachMenuLabel('attach') : 'Schnellaktionen';
     plusBtn.setAttribute('aria-label', label);
     var tip = plusBtn.querySelector('.paxdesign-booking-chat-plus-tooltip');
     if (tip) tip.textContent = label;
-    var menu = root.querySelector('.paxdesign-booking-chat-attach-menu');
-    if (menu) {
-      menu.querySelectorAll('[data-attach-kind]').forEach(function (btn) {
-        btn.removeAttribute('disabled');
-        btn.classList.remove('paxdesign-is-disabled');
-        btn.setAttribute('aria-disabled', humanQueue ? 'false' : 'true');
-      });
-    }
     if (!humanQueue) closeComposerAttachMenu();
+  }
+
+  function validateAttachFile(file, kind) {
+    var name = ((file && file.name) || '').toLowerCase();
+    var ext = name.split('.').pop() || '';
+    var imageExts = { jpg: 1, jpeg: 1, png: 1, webp: 1, gif: 1 };
+    var fileExts = { pdf: 1, doc: 1, docx: 1, txt: 1, zip: 1, jpg: 1, jpeg: 1, png: 1, webp: 1, gif: 1 };
+    var isImage = kind === 'image' || (file && /^image\//.test(file.type));
+    if (isImage) {
+      if (!imageExts[ext] && !(file.type && /^image\/(jpeg|png|webp|gif)$/.test(file.type))) {
+        return attachMenuLabel('badType');
+      }
+      if (file.size > 5 * 1024 * 1024) return attachMenuLabel('tooLargeImage');
+    } else {
+      if (!fileExts[ext]) return attachMenuLabel('badType');
+      if (file.size > 8 * 1024 * 1024) return attachMenuLabel('tooLargeFile');
+    }
+    return '';
   }
 
   function uploadHumanAttachFile(file, kind) {
@@ -5134,8 +4486,13 @@
       showError(attachMenuLabel('humanOnly'));
       return;
     }
-    if (!isLoggedIn() && !config.ajaxUrl) {
+    if (!canUseChat()) {
       showAuthGate();
+      return;
+    }
+    var validationError = validateAttachFile(file, kind);
+    if (validationError) {
+      showError(validationError);
       return;
     }
 
@@ -5165,30 +4522,10 @@
       attachment_type: isImage ? 'image' : 'file'
     });
     rememberMessageIdentity({ id: localId, role: 'user', content: caption, client_msg_id: clientMsgId });
-    scrollToBottom(true);
+    scrollToBottom();
 
-    if (isPersistentAccountChat() && window.PDXAuth && typeof window.PDXAuth.customerApiFormData === 'function') {
-      var fd = new FormData();
-      fd.append(isImage ? 'image' : 'file', file, file.name);
-      fd.append('session_id', getSessionId());
-      fd.append('client_msg_id', clientMsgId);
-      var restPath = isImage ? '/customer/chat/messages/image' : '/customer/chat/messages/file';
-      window.PDXAuth.customerApiFormData(restPath, fd).then(function (data) {
-        if (!data || data._ok === false) {
-          throw new Error(data && data.message ? data.message : 'Upload failed.');
-        }
-        if (data.message && data.message.id) {
-          var localEl = threadEl.querySelector('[data-msg-id="' + localId + '"]');
-          if (localEl) localEl.setAttribute('data-msg-id', String(data.message.id));
-          rememberMessageIdentity(data.message);
-          indexChatMessage(data.message);
-          pollSeq = Math.max(pollSeq, data.message.id);
-        }
-        pollUpdatesOnce(false);
-        saveSessionSnapshot();
-      }).catch(function (err) {
-        markHumanAttachFailed(localId, err && err.message ? err.message : 'Upload failed.');
-      });
+    if (!config.ajaxUrl) {
+      markHumanAttachFailed(localId, attachMenuLabel('humanOnly'));
       return;
     }
 
@@ -5236,7 +4573,46 @@
   }
 
   function initPlusToggle() {
-    initComposerPlusButton();
+    if (!plusBtn || plusBtn.dataset.composerPlusBound === '1') return;
+    plusBtn.dataset.composerPlusBound = '1';
+    var plusWrap = root.querySelector('.paxdesign-booking-chat-plus-wrap');
+    if (plusWrap) plusWrap.hidden = false;
+    ensureHumanAttachInputs();
+    ensureComposerAttachMenu();
+
+    plusBtn.addEventListener('click', function (e) {
+      e.preventDefault();
+      e.stopPropagation();
+      unlockAudio();
+      if (!canUseChat()) {
+        showAuthGate();
+        return;
+      }
+      if (isHumanMode()) {
+        toggleComposerAttachMenu();
+        return;
+      }
+      if (quickActions && config.quickActions && config.quickActions.length) {
+        closeComposerAttachMenu();
+        var open = root.classList.toggle('paxdesign-chat-quick-open');
+        quickActions.classList.toggle('paxdesign-is-open', open);
+        plusBtn.setAttribute('aria-expanded', open ? 'true' : 'false');
+        plusBtn.classList.toggle('paxdesign-is-active', open);
+        notifyLayout();
+        return;
+      }
+      showError(attachMenuLabel('humanOnly'));
+    });
+
+    document.addEventListener('pointerdown', function (e) {
+      if (!root.classList.contains('paxdesign-chat-attach-open')) return;
+      var menu = root.querySelector('.paxdesign-booking-chat-attach-menu');
+      if (!menu || menu.hidden) return;
+      if (menu.contains(e.target) || plusBtn.contains(e.target)) return;
+      closeComposerAttachMenu();
+    }, true);
+
+    updateComposerPlusUi();
   }
 
   function notifyLayout() {
@@ -5244,11 +4620,6 @@
       var active = document.activeElement;
       var keyboardLikely = active && active.classList && active.classList.contains('paxdesign-booking-chat-input');
       window.PAXdesignBookingMobile.adjustLayout(keyboardLikely);
-    }
-    if (stickToBottom) {
-      requestAnimationFrame(function () {
-        scrollToBottom(true);
-      });
     }
   }
 
@@ -5314,25 +4685,21 @@
     input.style.height = Math.min(input.scrollHeight, 120) + 'px';
   }
 
-  function isNearBottom(threshold) {
-    if (!messagesEl) return true;
-    threshold = typeof threshold === 'number' ? threshold : 96;
-    return (messagesEl.scrollHeight - messagesEl.scrollTop - messagesEl.clientHeight) <= threshold;
-  }
-
-  function scrollToBottom(force) {
-    flushScrollToBottom(force);
-  }
-
-  function flushScrollToBottom(force) {
+  function scrollToBottom() {
     if (!messagesEl) return;
-    if (force) stickToBottom = true;
-    if (!stickToBottom) return;
-    messagesEl.scrollTop = messagesEl.scrollHeight;
-    requestAnimationFrame(function () {
-      if (!messagesEl || !stickToBottom) return;
+    var run = function () {
+      var anchor = threadEl && threadEl.lastElementChild;
+      if (anchor && typeof anchor.scrollIntoView === 'function') {
+        anchor.scrollIntoView({ block: 'end', inline: 'nearest', behavior: 'auto' });
+      }
       messagesEl.scrollTop = messagesEl.scrollHeight;
+    };
+    requestAnimationFrame(function () {
+      run();
+      requestAnimationFrame(run);
     });
+    window.setTimeout(run, 80);
+    window.setTimeout(run, 220);
   }
 
   function escapeHtml(str) {
@@ -5525,10 +4892,10 @@
 
   function appendUserMessage(text, opts) {
     opts = opts || {};
-    stickToBottom = true;
     var userId = nextLocalId();
     var clientMsgId = opts.clientMsgId || newClientMessageId();
     domMsgIds[userId] = true;
+    seenMsgId(userId);
     var urls = extractUrlsFromText(text);
     var renderOpts = {};
     if (urls.length) {
@@ -5536,7 +4903,6 @@
     }
     renderMessageDom('user', text, userId, renderOpts);
     messages.push({ role: 'user', content: text, id: userId, client_msg_id: clientMsgId });
-    rememberMessageIdentity({ id: userId, role: 'user', content: text, client_msg_id: clientMsgId }, { optimistic: true });
     if (!opts.skipSync) {
       lastUserSyncPromise = syncChatLog();
     }
@@ -5563,19 +4929,12 @@
         pendingMessageEl.setAttribute('data-msg-id', String(id));
         attachMessageChrome(pendingMessageEl, pendingBubble, 'assistant', cleanText, id, '');
       }
-      var alreadyStored = messages.some(function (m) {
-        if (!m || m.role !== 'assistant') return false;
-        if (m.id === id) return true;
-        return messageText(m.content) === cleanText;
+      messages.push({
+        role: 'assistant',
+        content: cleanText,
+        id: id,
+        client_msg_id: meta.clientMsgId || newClientMessageId()
       });
-      if (!alreadyStored) {
-        messages.push({
-          role: 'assistant',
-          content: cleanText,
-          id: id,
-          client_msg_id: (meta.serverMessage && meta.serverMessage.client_msg_id) || meta.clientMsgId || newClientMessageId()
-        });
-      }
     }
 
     streamingMsgId = 0;
@@ -5649,11 +5008,11 @@
 
   function handleAuthGateResponse(json) {
     if (!isLoginRequiredResponse(json)) return false;
-    showAuthGate();
-    var loginUrl = json && json.data && json.data.login_url;
-    if (isCybercrimeCaseChat() && loginUrl && !(window.PDXAuth && typeof window.PDXAuth.mountInlineAuth === 'function')) {
-      window.location.href = loginUrl;
+    if (isLoggedIn() && isVerifiedAccount()) {
+      hideAuthGate();
+      return false;
     }
+    showAuthGate();
     return true;
   }
 
@@ -5667,30 +5026,13 @@
     if (data && data.handler) {
       applyHandlerState(data.handler, data.admin_name || '');
     }
-    if (data && data.ccs_case) {
-      dispatchCcsCaseUpdate(data.ccs_case);
-    }
-    if (data && data.ccs_operation && data.processing) {
-      upsertCcsOperationMessage(data.processing);
-    }
-    if (data && data.ccs_operation && data.assistant && data.processing) {
-      setCcsOperationMessageStatus(
-        threadEl.querySelector('[data-ccs-op-id="' + (data.ccs_operation.id || '') + '"]'),
-        data.ccs_operation.status || 'complete'
-      );
-    }
     if (data && data.assistant) {
       var assistantPayload = data.assistant;
-      if (assistantPayload.ccs_operation_id) {
-        upsertCcsOperationMessage(assistantPayload);
-        playNotificationSound(false);
-        scrollToBottom(true);
-      } else {
       var assistantText = messageText(assistantPayload);
       var assistantId = assistantPayload.id || nextLocalId();
       if (assistantText && !isDuplicateMessage(assistantPayload)) {
         rememberMessageIdentity(assistantPayload);
-        renderMessageDom('assistant', assistantText, assistantId, messageRenderOpts(assistantPayload, { skipPush: true, forceScroll: true }));
+        renderMessageDom('assistant', assistantText, assistantId, messageRenderOpts(assistantPayload, { skipPush: true }));
         messages.push({
           role: 'assistant',
           content: assistantText,
@@ -5698,17 +5040,6 @@
           client_msg_id: assistantPayload.client_msg_id || newClientMessageId(),
         });
         playNotificationSound(false);
-      } else if (assistantText) {
-        var existingReply = latestAssistantElAfterLatestUser();
-        if (existingReply && !assistantBubbleText(existingReply)) {
-          paintAssistantBubble(existingReply, assistantText);
-          if (assistantPayload.id) {
-            existingReply.setAttribute('data-msg-id', String(assistantPayload.id));
-            rememberMessageIdentity(assistantPayload);
-          }
-        }
-        scrollToBottom(true);
-      }
       }
     }
     syncChatLog();
@@ -5848,12 +5179,11 @@
 
     if (handleLiveAgentFlow(text)) return;
 
-    isStreaming = true;
-    updateSendButton();
-
     if (isHumanMode()) {
       var clientMsgId = newClientMessageId();
       var userMsgId = appendUserMessage(text, { skipSync: true, clientMsgId: clientMsgId });
+      isStreaming = true;
+      updateSendButton();
       sendHumanModeMessage(text, clientMsgId)
         .then(function (serverMessage) {
           clearMessageFailed(threadEl.querySelector('[data-msg-id="' + userMsgId + '"]'));
@@ -5880,22 +5210,21 @@
       return;
     }
 
-    var clientMsgId = newClientMessageId();
-    var assistantClientMsgId = newClientMessageId();
-    appendUserMessage(text, { skipSync: true, clientMsgId: clientMsgId });
-    showTyping();
-    syncChatLog();
+    appendUserMessage(text);
+    lastUserSyncPromise.then(function () {
+      isStreaming = true;
+      updateSendButton();
+      showTyping();
+      var assistantClientMsgId = newClientMessageId();
 
-    var formData = new FormData();
-    formData.append('action', 'paxdesign_chat');
-    formData.append('nonce', config.nonce);
-    stampChatRequest(formData);
-    formData.append('session_id', getSessionId());
-    formData.append('message', text);
-    formData.append('client_msg_id', clientMsgId);
-    formData.append('assistant_client_msg_id', assistantClientMsgId);
-    formData.append('messages', JSON.stringify(messages.filter(function (m) {
-      return m.role === 'user' || m.role === 'assistant';
+      var formData = new FormData();
+      formData.append('action', 'paxdesign_chat');
+      formData.append('nonce', config.nonce);
+      stampChatRequest(formData);
+      formData.append('session_id', getSessionId());
+      formData.append('assistant_client_msg_id', assistantClientMsgId);
+      formData.append('messages', JSON.stringify(messages.filter(function (m) {
+        return m.role === 'user' || m.role === 'assistant';
     })));
     formData.append('website', honeypot ? honeypot.value : '');
     abortCtrl = new AbortController();
@@ -5921,8 +5250,6 @@
         var fullText = '';
         var streamError = false;
         var gotFirstChunk = false;
-        var ccsOpHandled = false;
-        var thisAbort = abortCtrl;
 
         var contentType = response.headers.get('content-type') || '';
         if (contentType.indexOf('text/event-stream') === -1) {
@@ -5956,6 +5283,7 @@
           removeTyping();
           streamingMsgId = nextLocalId();
           domMsgIds[streamingMsgId] = true;
+          seenMsgId(streamingMsgId);
           var rendered = renderMessageDom('assistant', '', streamingMsgId);
           bubble = rendered.bubble;
           messageEl = rendered.messageEl;
@@ -5969,9 +5297,6 @@
           try {
             var data = JSON.parse(line.slice(6));
             if (data.type === 'text' && data.text) {
-              if (persistedAssistantMessage) {
-                return;
-              }
               if (!gotFirstChunk) {
                 gotFirstChunk = true;
                 ensureAssistantBubble();
@@ -6000,72 +5325,17 @@
                 scheduleStreamUpdate(bubble, fullText);
               }
             } else if (data.type === 'done' && data.message) {
-              var doneText = messageText(data.message);
               persistedAssistantMessage = data.message;
-              rememberMessageIdentity(data.message);
-              removeTyping();
-              var existingAsst = latestAssistantElAfterLatestUser();
-              var existingText = assistantBubbleText(existingAsst);
-              var canReuse = existingAsst && (
-                (streamingMsgId && existingAsst.getAttribute('data-msg-id') === String(streamingMsgId)) ||
-                !existingText ||
-                (doneText && existingText === doneText)
-              );
-              if (canReuse) {
-                gotFirstChunk = true;
-                if (data.message.id) {
-                  existingAsst.setAttribute('data-msg-id', String(data.message.id));
-                  domMsgIds[data.message.id] = true;
-                }
-                paintAssistantBubble(existingAsst, doneText);
-                bubble = existingAsst.querySelector('.paxdesign-booking-chat-message-bubble') || bubble;
-                messageEl = existingAsst;
-                pendingMessageEl = existingAsst;
-                pendingBubble = bubble;
-                streamingMsgId = data.message.id || streamingMsgId;
-                fullText = doneText || fullText;
-              } else if (doneText && !isDuplicateMessage(data.message)) {
-                gotFirstChunk = true;
-                ensureAssistantBubble();
-                paintAssistantBubble(messageEl, doneText);
-                if (data.message.id && messageEl) {
-                  if (streamingMsgId && streamingMsgId !== data.message.id) {
-                    delete domMsgIds[streamingMsgId];
-                  }
-                  streamingMsgId = data.message.id;
-                  messageEl.setAttribute('data-msg-id', String(data.message.id));
-                  domMsgIds[data.message.id] = true;
-                }
-                fullText = doneText;
-              } else if (doneText) {
-                var shown = latestAssistantElAfterLatestUser();
-                if (shown && !assistantBubbleText(shown)) {
-                  paintAssistantBubble(shown, doneText);
-                  messageEl = shown;
-                  bubble = shown.querySelector('.paxdesign-booking-chat-message-bubble') || bubble;
-                  pendingMessageEl = shown;
+              if (!gotFirstChunk && data.message) {
+                var doneText = messageText(data.message);
+                if (doneText) {
+                  gotFirstChunk = true;
+                  ensureAssistantBubble();
+                  fullText = doneText;
                   pendingBubble = bubble;
+                  pendingText = fullText;
+                  flushStreamBubble();
                 }
-                fullText = doneText;
-              }
-              scrollToBottom(true);
-            } else if (data.type === 'ccs_case' && data.report) {
-              dispatchCcsCaseUpdate(data.report);
-            } else if (data.type === 'ccs_operation') {
-              ccsOpHandled = true;
-              removeTyping();
-              if (data.message) {
-                upsertCcsOperationMessage(data.message);
-              }
-              if (data.operation && data.operation.id) {
-                var runningEl = threadEl.querySelector('[data-ccs-op-id="' + data.operation.id + '"][data-ccs-op-status="running"]');
-                if (runningEl && data.operation.status && data.operation.status !== 'running') {
-                  setCcsOperationMessageStatus(runningEl, data.operation.status);
-                }
-              }
-              if (data.operation && data.operation.status === 'running' && abortCtrl === thisAbort) {
-                isStreaming = false;
-                updateSendButton();
               }
             } else if (data.type === 'handoff') {
               if (data.handler) applyHandlerState(data.handler, '');
@@ -6098,7 +5368,7 @@
                 });
               } else if (!streamError) {
                 removeTyping();
-                if (!gotFirstChunk && !ccsOpHandled) {
+                if (!gotFirstChunk) {
                   showError('Keine Antwort erhalten. Bitte versuchen Sie es erneut.');
                 } else if (messageEl && messageEl.parentElement && !bubble.textContent.trim()) {
                   messageEl.parentElement.remove();
@@ -6106,11 +5376,9 @@
                   streamingMsgId = 0;
                 }
               }
-              if (abortCtrl === thisAbort) {
-                isStreaming = false;
-                pendingMessageEl = null;
-                updateSendButton();
-              }
+              isStreaming = false;
+              pendingMessageEl = null;
+              updateSendButton();
               return;
             }
             buffer += decoder.decode(result.value, { stream: true });
@@ -6132,6 +5400,7 @@
         pendingMessageEl = null;
         updateSendButton();
       });
+    });
   }
 
   function handleSend(e) {
@@ -6188,11 +5457,6 @@
     if (opts.referenceId) {
       window.PAXdesignPageContext.referenceId = opts.referenceId;
     }
-    initAuthGate();
-    updateAuthGateUi();
-    if (!canUseChat()) {
-      showAuthGate();
-    }
     setEntryChoice('ai');
     if (window.PAXdesignBooking && typeof window.PAXdesignBooking.open === 'function') {
       window.PAXdesignBooking.open();
@@ -6202,31 +5466,6 @@
     if (launcher) {
       launcher.click();
     }
-  }
-
-  var ccsBootstrapInFlight = false;
-  function ensureCcsOpeningPrompt() {
-    if (!isCybercrimeCaseChat() || !canUseChat() || ccsBootstrapInFlight) return;
-    if (latestAssistantElAfterLatestUser()) return;
-    ccsBootstrapInFlight = true;
-    var formData = new FormData();
-    formData.append('action', 'paxdesign_chat_ccs_bootstrap');
-    formData.append('nonce', config.nonce);
-    stampChatRequest(formData);
-    formData.append('session_id', getSessionId());
-    fetch(config.ajaxUrl, { method: 'POST', body: formData, credentials: 'same-origin' })
-      .then(function (res) { return safeJson(res); })
-      .then(function (json) {
-        ccsBootstrapInFlight = false;
-        if (!json || !json.success || !json.data) return;
-        if (json.data.ccs_case) dispatchCcsCaseUpdate(json.data.ccs_case);
-        if (json.data.assistant && !isDuplicateMessage(json.data.assistant) && !latestAssistantElAfterLatestUser()) {
-          handleAuthenticatedChatJsonSuccess({ assistant: json.data.assistant, ccs_case: json.data.ccs_case });
-        }
-      })
-      .catch(function () {
-        ccsBootstrapInFlight = false;
-      });
   }
 
   window.PAXdesignChat = {

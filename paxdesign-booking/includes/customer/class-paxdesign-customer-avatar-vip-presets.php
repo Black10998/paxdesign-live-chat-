@@ -132,7 +132,7 @@ class PAXdesign_Customer_Avatar_Vip_Presets {
             return '';
         }
         $url = PAXDESIGN_BOOKING_PLUGIN_URL . 'assets/customer-auth/images/avatars-vip/' . $id . '.gif';
-        return PAXdesign_Customer_Avatar_Presets::normalize_asset_url($url);
+        return esc_url_raw(add_query_arg('v', PAXDESIGN_BOOKING_VERSION, $url));
     }
 
     /**

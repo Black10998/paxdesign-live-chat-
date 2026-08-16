@@ -31,6 +31,12 @@ jobs:
       - name: Checkout
         uses: actions/checkout@v4
 
+      - name: Block full plugin rsync over live baseline
+        run: |
+          echo "Full plugin rsync to paxdesign.at is disabled."
+          echo "Production baseline is the live WordPress plugin 3.174.91."
+          exit 1
+
       - name: Read plugin version
         id: version
         run: |
