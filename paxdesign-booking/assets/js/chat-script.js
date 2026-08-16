@@ -1,6 +1,6 @@
 /**
  * PAXdesign AI Chat — Sales & Booking Assistant
- * Version: 3.174.125
+ * Version: 3.174.126
  */
 (function () {
   'use strict';
@@ -3082,6 +3082,13 @@
     return tracks.length > 0 && tracks[0].readyState === 'live';
   }
 
+  function shouldUseDesktopSpeechFlow() {
+    var ua = navigator.userAgent || '';
+    var isWindows = /Windows/i.test(ua);
+    var isMobileUA = /Android|iPhone|iPad|iPod|Mobile/i.test(ua);
+    return isWindows && !isMobileUA;
+  }
+
   function acquireMicrophoneStream(options) {
     options = options || {};
     if (!navigator.mediaDevices || typeof navigator.mediaDevices.getUserMedia !== 'function') {
@@ -3106,8 +3113,15 @@
     });
   }
 
-  function requestMicrophoneFromUserGesture() {
-    return acquireMicrophoneStream({ forceNew: !hasLiveVoiceMicStream() });
+  function requestMicrophoneFromUserGesture(options) {
+    options = options || {};
+    var forceNew = !!options.forceNew || !hasLiveVoiceMicStream();
+    return acquireMicrophoneStream({ forceNew: forceNew }).then(function (stream) {
+      if (options.releaseAfterGrant) {
+        releaseVoiceMicStream();
+      }
+      return stream;
+    });
   }
 
   function startVoiceWaveformFromHeldStream() {
@@ -3187,7 +3201,9 @@
         voiceBtn.classList.remove('paxdesign-is-pending');
         voiceBtn.classList.add('paxdesign-is-active');
       }
-      startVoiceWaveformFromHeldStream();
+      if (!options.skipHeldStreamWaveform) {
+        startVoiceWaveformFromHeldStream();
+      }
     };
     voiceRecognition.onend = function () {
       if (!voiceListening) return;
@@ -3208,7 +3224,7 @@
           }, 140);
           return;
         }
-        if (hasLiveVoiceMicStream()) {
+        if (hasLiveVoiceMicStream() || options.skipHeldStreamWaveform) {
           showError(speechRecognitionBlockedMessage());
         } else {
           showError(microphoneDeniedRecoveryMessage());
@@ -3253,8 +3269,12 @@
     if (voiceBtn) voiceBtn.classList.add('paxdesign-is-pending');
     refreshVoiceMicPermissionHint();
 
-    requestMicrophoneFromUserGesture().then(function () {
-      beginSpeechRecognition();
+    var desktopSpeechFlow = shouldUseDesktopSpeechFlow();
+    requestMicrophoneFromUserGesture({
+      forceNew: desktopSpeechFlow,
+      releaseAfterGrant: desktopSpeechFlow
+    }).then(function () {
+      beginSpeechRecognition({ skipHeldStreamWaveform: desktopSpeechFlow });
     }).catch(function (err) {
       if (voiceBtn) voiceBtn.classList.remove('paxdesign-is-pending');
       showError(microphoneAccessErrorMessage(err));
