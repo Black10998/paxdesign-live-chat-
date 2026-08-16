@@ -111,7 +111,7 @@ $team_members = PAXdesign_Booking::get_instance()->get_team_members();
               <button type="button" class="paxdesign-booking-chat-auth-gate-btn" id="paxdesignChatAuthSignIn" data-auth-view="login"><?php echo esc_html__('Sign In', 'paxdesign-booking'); ?></button>
               <button type="button" class="paxdesign-booking-chat-auth-gate-btn paxdesign-booking-chat-auth-gate-btn--primary" id="paxdesignChatAuthRegister" data-auth-view="register"><?php echo esc_html__('Create Account', 'paxdesign-booking'); ?></button>
             </div>
-            <div class="paxdesign-booking-chat-auth-inline" id="paxdesignChatAuthInline" aria-live="polite"></div>
+            <div class="paxdesign-booking-chat-auth-inline pdx-auth-page-form-wrap" id="paxdesignChatAuthInline" aria-live="polite"></div>
           </div>
         </div>
         <?php endif; ?>

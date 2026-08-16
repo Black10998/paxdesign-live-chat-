@@ -5,7 +5,7 @@
 | Field | Value |
 | --- | --- |
 | GitHub default branch | `main` |
-| Plugin version | `3.174.93` |
+| Plugin version | `3.174.99` |
 | Source | Restored WordPress site (2026-08-08 16:26), then surgical chat/CCS patches |
 | Restored git ancestor | `2f06a39e` (`3.174.85`) |
 | Live overlay copy | `deploy-patches/restored-chat-human-ui/` (must stay identical to `paxdesign-booking/` files listed below) |

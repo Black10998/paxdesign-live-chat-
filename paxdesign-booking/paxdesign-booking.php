@@ -2,7 +2,7 @@
 /*
 Plugin Name: PAXdesign Booking System
 Description: Professional booking system with minimal chat-style interface and team management
-Version: 3.174.93
+Version: 3.174.99
 Author: PAXdesign
 Author URI: https://paxdesign.at
 License: GPL v2 or later
@@ -21,7 +21,7 @@ if (defined('PAXDESIGN_BOOKING_VERSION')) {
 }
 
 // Define plugin constants (customer platform)
-define('PAXDESIGN_BOOKING_VERSION', '3.174.93');
+define('PAXDESIGN_BOOKING_VERSION', '3.174.99');
 define('PAXDESIGN_BOOKING_DB_VERSION', '2.1');
 define('PAXDESIGN_BOOKING_PLUGIN_DIR', plugin_dir_path(__FILE__));
 define('PAXDESIGN_BOOKING_PLUGIN_URL', plugin_dir_url(__FILE__));
@@ -32,6 +32,7 @@ require_once PAXDESIGN_BOOKING_PLUGIN_DIR . 'includes/class-paxdesign-admin-comp
 require_once PAXDESIGN_BOOKING_PLUGIN_DIR . 'includes/class-paxdesign-update-checker.php';
 require_once PAXDESIGN_BOOKING_PLUGIN_DIR . 'includes/class-paxdesign-email-templates.php';
 require_once PAXDESIGN_BOOKING_PLUGIN_DIR . 'includes/class-paxdesign-service-icons.php';
+require_once PAXDESIGN_BOOKING_PLUGIN_DIR . 'includes/class-paxdesign-chat-intent.php';
 require_once PAXDESIGN_BOOKING_PLUGIN_DIR . 'includes/class-paxdesign-chat-knowledge.php';
 require_once PAXDESIGN_BOOKING_PLUGIN_DIR . 'includes/class-paxdesign-chat-log.php';
 require_once PAXDESIGN_BOOKING_PLUGIN_DIR . 'includes/class-paxdesign-api-time.php';
@@ -1049,6 +1050,18 @@ class PAXdesign_Booking {
         register_setting('paxdesign_booking_settings', 'paxdesign_apple_web_key_p8', array(
             'sanitize_callback' => function ($value) {
                 return is_string($value) ? trim($value) : '';
+            },
+        ));
+        register_setting('paxdesign_booking_settings', 'paxdesign_github_oauth_client_id', array(
+            'sanitize_callback' => 'sanitize_text_field',
+        ));
+        register_setting('paxdesign_booking_settings', 'paxdesign_github_oauth_client_secret', array(
+            'sanitize_callback' => function ($value) {
+                $value = is_string($value) ? trim($value) : '';
+                if ($value === '') {
+                    return (string) get_option('paxdesign_github_oauth_client_secret', '');
+                }
+                return $value;
             },
         ));
         register_setting(
