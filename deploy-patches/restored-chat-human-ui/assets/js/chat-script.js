@@ -1,6 +1,6 @@
 /**
  * PAXdesign AI Chat — Sales & Booking Assistant
- * Version: 3.174.124
+ * Version: 3.174.125
  */
 (function () {
   'use strict';
@@ -3123,6 +3123,10 @@
     return 'Mikrofon-Zugriff verweigert. Klicken Sie in Chrome oder Edge auf das Schlosssymbol in der Adressleiste, erlauben Sie das Mikrofon für paxdesign.at und drücken Sie das Mikrofon erneut.';
   }
 
+  function speechRecognitionBlockedMessage() {
+    return 'Mikrofon ist erlaubt, aber die Spracherkennung wurde vom Browser blockiert. Bitte schließen Sie andere Apps, die das Mikrofon verwenden, und drücken Sie das Mikrofon erneut.';
+  }
+
   function microphoneAccessErrorMessage(err) {
     if (!err) return 'Mikrofon-Zugriff nicht verfügbar.';
     if (err.code === 'unsupported') return 'Mikrofon wird in diesem Browser nicht unterstützt.';
@@ -3195,7 +3199,20 @@
     };
     voiceRecognition.onerror = function (event) {
       if (event.error === 'not-allowed') {
-        showError(microphoneDeniedRecoveryMessage());
+        if (hasLiveVoiceMicStream() && !options.retriedNotAllowed) {
+          options.retriedNotAllowed = true;
+          stopVoiceAnalyser();
+          window.setTimeout(function () {
+            if (!voiceListening) return;
+            beginSpeechRecognition({ retried: true, retriedNotAllowed: true });
+          }, 140);
+          return;
+        }
+        if (hasLiveVoiceMicStream()) {
+          showError(speechRecognitionBlockedMessage());
+        } else {
+          showError(microphoneDeniedRecoveryMessage());
+        }
         stopVoiceInput(false);
         return;
       }
@@ -3264,12 +3281,13 @@
     voiceBtn.hidden = false;
     var voicePointerHandled = false;
     voiceBtn.addEventListener('pointerdown', function (e) {
-      if (e.pointerType === 'mouse' && e.button !== 0) return;
+      if (e.pointerType === 'mouse') return;
       voicePointerHandled = true;
       window.setTimeout(function () { voicePointerHandled = false; }, 450);
       toggleVoiceInput(e);
     });
     voiceBtn.addEventListener('click', function (e) {
+      if (typeof e.button === 'number' && e.button !== 0) return;
       if (voicePointerHandled) {
         e.preventDefault();
         return;
