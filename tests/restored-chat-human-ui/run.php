@@ -32,8 +32,8 @@ $i18n = file_get_contents($root . '/includes/class-paxdesign-cybercrime-i18n.php
 $admin = file_get_contents($root . '/includes/customer/class-paxdesign-customer-admin.php');
 $adminJs = file_get_contents($root . '/assets/js/cybercrime-admin.js');
 
-assert_true(strpos($boot, "define('PAXDESIGN_BOOKING_VERSION', '3.174.127')") !== false, 'plugin version 3.174.127');
-assert_true(strpos($js, 'Version: 3.174.127') !== false, 'chat-script cache-bust 3.174.127');
+assert_true(strpos($boot, "define('PAXDESIGN_BOOKING_VERSION', '3.174.128')") !== false, 'plugin version 3.174.128');
+assert_true(strpos($js, 'Version: 3.174.128') !== false, 'chat-script cache-bust 3.174.128');
 assert_true(strpos($js, 'uploadHumanAttachFile') !== false, 'JS upload handler');
 assert_true(strpos($js, 'paxdesign-chat-admin-active') !== false, 'JS human takeover class');
 assert_true(strpos($js, 'paxdesign_chat_live_user_attach') !== false, 'JS posts attach action');
@@ -62,7 +62,8 @@ assert_true(strpos($live, 'resync_required') !== false, 'PHP can request poll re
 assert_true(strpos($js, 'startVoiceWaveformFromHeldStream') !== false, 'JS uses held mic stream for waveform (no second getUserMedia during speech)');
 assert_true(strpos($js, 'startVoiceWaveformForListening') === false, 'JS does not re-acquire mic while SpeechRecognition runs');
 assert_true(strpos($js, 'releaseChatShellLoader') !== false, 'JS releases shell loader when chat UI is ready');
-assert_true(strpos($js, 'microphoneDeniedRecoveryMessage') !== false, 'JS shows recovery help when mic denied');
+assert_true(strpos($js, 'syncGesture: true') !== false, 'JS starts speech recognition synchronously in user gesture');
+assert_true(strpos($js, 'shouldUseDesktopSpeechFlow') === false, 'JS does not use Windows-only mic release workaround');
 assert_true(strpos($css, '.paxdesign-booking-chat-auth-inline') !== false && strpos($css, 'overflow: auto;') !== false, 'chat auth form uses scroll-safe overflow');
 assert_true(strpos($chat, "self::asset_version('assets/js/chat-script.js')") !== false, 'chat script enqueue uses filemtime-aware version');
 assert_true(strpos($widgetPerf, "self::asset_version('assets/js/chat-script.js')") !== false, 'widget loader chatSrc uses filemtime-aware version');

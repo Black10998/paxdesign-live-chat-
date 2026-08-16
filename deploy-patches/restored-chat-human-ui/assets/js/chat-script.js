@@ -1,6 +1,6 @@
 /**
  * PAXdesign AI Chat — Sales & Booking Assistant
- * Version: 3.174.127
+ * Version: 3.174.128
  */
 (function () {
   'use strict';
@@ -79,6 +79,8 @@
   var voiceBaseText         = '';
   var voiceMicPermission    = 'unknown';
   var voiceMicSessionReady  = false;
+  var voiceStartInFlight    = false;
+  var voicePendingMicRetry  = false;
   var voiceInputMaxHeight   = 120;
   var HISTORY_INITIAL    = 10;
   var HISTORY_BATCH      = 10;
@@ -2984,6 +2986,8 @@
 
   function stopVoiceInput(releaseMic) {
     voiceListening = false;
+    voiceStartInFlight = false;
+    voicePendingMicRetry = false;
     root.classList.remove('paxdesign-voice-active');
     setVoiceRecordingUi(false);
     stopVoiceAnalyser();
@@ -3082,13 +3086,6 @@
     return tracks.length > 0 && tracks[0].readyState === 'live';
   }
 
-  function shouldUseDesktopSpeechFlow() {
-    var ua = navigator.userAgent || '';
-    var isWindows = /Windows/i.test(ua);
-    var isMobileUA = /Android|iPhone|iPad|iPod|Mobile/i.test(ua);
-    return isWindows && !isMobileUA;
-  }
-
   function acquireMicrophoneStream(options) {
     options = options || {};
     if (!navigator.mediaDevices || typeof navigator.mediaDevices.getUserMedia !== 'function') {
@@ -3116,12 +3113,7 @@
   function requestMicrophoneFromUserGesture(options) {
     options = options || {};
     var forceNew = !!options.forceNew || !hasLiveVoiceMicStream();
-    return acquireMicrophoneStream({ forceNew: forceNew }).then(function (stream) {
-      if (options.releaseAfterGrant) {
-        releaseVoiceMicStream();
-      }
-      return stream;
-    });
+    return acquireMicrophoneStream({ forceNew: forceNew });
   }
 
   function startVoiceWaveformFromHeldStream() {
@@ -3192,6 +3184,7 @@
     };
     voiceRecognition.onstart = function () {
       voiceListening = true;
+      voicePendingMicRetry = false;
       voiceMicPermission = 'granted';
       voiceMicSessionReady = true;
       root.classList.add('paxdesign-voice-active');
@@ -3201,9 +3194,7 @@
         voiceBtn.classList.remove('paxdesign-is-pending');
         voiceBtn.classList.add('paxdesign-is-active');
       }
-      if (!options.skipHeldStreamWaveform) {
-        startVoiceWaveformFromHeldStream();
-      }
+      startVoiceWaveformFromHeldStream();
     };
     voiceRecognition.onend = function () {
       if (!voiceListening) return;
@@ -3215,16 +3206,20 @@
     };
     voiceRecognition.onerror = function (event) {
       if (event.error === 'not-allowed') {
+        if (options.syncGesture && !options.afterMicGrant && !hasLiveVoiceMicStream()) {
+          voicePendingMicRetry = true;
+          return;
+        }
         if (hasLiveVoiceMicStream() && !options.retriedNotAllowed) {
           options.retriedNotAllowed = true;
           stopVoiceAnalyser();
           window.setTimeout(function () {
-            if (!voiceListening) return;
-            beginSpeechRecognition({ retried: true, retriedNotAllowed: true });
+            if (!voiceStartInFlight && !voiceListening && !voicePendingMicRetry) return;
+            beginSpeechRecognition({ retried: true, retriedNotAllowed: true, afterMicGrant: options.afterMicGrant });
           }, 140);
           return;
         }
-        if (hasLiveVoiceMicStream() || options.skipHeldStreamWaveform) {
+        if (hasLiveVoiceMicStream() || options.afterMicGrant) {
           showError(speechRecognitionBlockedMessage());
         } else {
           showError(microphoneDeniedRecoveryMessage());
@@ -3263,22 +3258,42 @@
       stopVoiceInput(false);
       return;
     }
+    if (voiceStartInFlight) return;
+    voiceStartInFlight = true;
+    voicePendingMicRetry = false;
+
     composerWantsKeyboard = true;
     keepComposerFocus();
     primeVoiceAudioContext();
     if (voiceBtn) voiceBtn.classList.add('paxdesign-is-pending');
     refreshVoiceMicPermissionHint();
 
-    var desktopSpeechFlow = shouldUseDesktopSpeechFlow();
-    requestMicrophoneFromUserGesture({
-      forceNew: desktopSpeechFlow,
-      releaseAfterGrant: desktopSpeechFlow
-    }).then(function () {
-      beginSpeechRecognition({ skipHeldStreamWaveform: desktopSpeechFlow });
-    }).catch(function (err) {
+    var micPromise = requestMicrophoneFromUserGesture({
+      forceNew: !hasLiveVoiceMicStream()
+    });
+
+    beginSpeechRecognition({ syncGesture: true });
+
+    micPromise.then(function () {
+      voiceStartInFlight = false;
+      if (voiceListening) {
+        startVoiceWaveformFromHeldStream();
+        return;
+      }
+      if (voicePendingMicRetry) {
+        voicePendingMicRetry = false;
+        beginSpeechRecognition({ afterMicGrant: true });
+        return;
+      }
       if (voiceBtn) voiceBtn.classList.remove('paxdesign-is-pending');
-      showError(microphoneAccessErrorMessage(err));
-      maybeRestoreComposerFocus();
+    }).catch(function (err) {
+      voiceStartInFlight = false;
+      voicePendingMicRetry = false;
+      if (voiceBtn) voiceBtn.classList.remove('paxdesign-is-pending');
+      if (!voiceListening) {
+        showError(microphoneAccessErrorMessage(err));
+        maybeRestoreComposerFocus();
+      }
     });
   }
 
@@ -3301,7 +3316,7 @@
     voiceBtn.hidden = false;
     var voicePointerHandled = false;
     voiceBtn.addEventListener('pointerdown', function (e) {
-      if (e.pointerType === 'mouse') return;
+      if (e.pointerType === 'mouse' && typeof e.button === 'number' && e.button !== 0) return;
       voicePointerHandled = true;
       window.setTimeout(function () { voicePointerHandled = false; }, 450);
       toggleVoiceInput(e);
