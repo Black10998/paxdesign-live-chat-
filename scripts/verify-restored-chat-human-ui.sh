@@ -121,3 +121,4 @@ if [ "$FAIL" -ne 0 ]; then
 fi
 
 echo "Restored chat / CCS patch verified on ${SITE}"
+
