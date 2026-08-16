@@ -60,6 +60,7 @@ assert_true(strpos($js, 'forceOpen: true') !== false, 'JS forces server history 
 assert_true(strpos($js, 'whenBootstrapped') !== false, 'JS waits for session bootstrap before open UI');
 assert_true(strpos($live, 'resync_required') !== false, 'PHP can request poll resync on cursor gap');
 assert_true(strpos($js, 'startVoiceWaveformFromHeldStream') !== false, 'JS uses held mic stream for waveform (no second getUserMedia during speech)');
+assert_true(strpos($js, 'startVoiceWaveformForListening') === false, 'JS does not re-acquire mic while SpeechRecognition runs');
 assert_true(strpos($js, 'releaseChatShellLoader') !== false, 'JS releases shell loader when chat UI is ready');
 assert_true(strpos($js, 'microphoneDeniedRecoveryMessage') !== false, 'JS shows recovery help when mic denied');
 
