@@ -18,6 +18,7 @@ function assert_true($cond, $message) {
 }
 
 $js = file_get_contents($root . '/assets/js/chat-script.js');
+$bookingJs = file_get_contents($root . '/assets/js/booking-script.js');
 $css = file_get_contents($root . '/assets/css/booking-styles.css');
 $live = file_get_contents($root . '/includes/class-paxdesign-chat-live.php');
 $store = file_get_contents($root . '/includes/class-paxdesign-message-store.php');
@@ -31,8 +32,8 @@ $i18n = file_get_contents($root . '/includes/class-paxdesign-cybercrime-i18n.php
 $admin = file_get_contents($root . '/includes/customer/class-paxdesign-customer-admin.php');
 $adminJs = file_get_contents($root . '/assets/js/cybercrime-admin.js');
 
-assert_true(strpos($boot, "define('PAXDESIGN_BOOKING_VERSION', '3.174.93')") !== false, 'plugin version 3.174.93');
-assert_true(strpos($js, 'Version: 3.174.93') !== false, 'chat-script cache-bust 3.174.93');
+assert_true(strpos($boot, "define('PAXDESIGN_BOOKING_VERSION', '3.174.104')") !== false, 'plugin version 3.174.104');
+assert_true(strpos($js, 'Version: 3.174.104') !== false, 'chat-script cache-bust 3.174.104');
 assert_true(strpos($js, 'uploadHumanAttachFile') !== false, 'JS upload handler');
 assert_true(strpos($js, 'paxdesign-chat-admin-active') !== false, 'JS human takeover class');
 assert_true(strpos($js, 'paxdesign_chat_live_user_attach') !== false, 'JS posts attach action');
@@ -40,6 +41,35 @@ assert_true(strpos($js, '5 * 1024 * 1024') !== false, 'JS 5 MB image cap');
 assert_true(strpos($js, '8 * 1024 * 1024') !== false, 'JS 8 MB file cap');
 assert_true(preg_match('/function canCustomerEndChat\(\)\s*\{\s*return false;/', $js) === 1, 'end-chat disabled');
 assert_true(strpos($js, "isLoggedIn() && isVerifiedAccount()") !== false, 'auth gate skips logged-in users');
+assert_true(strpos($js, "context: 'page'") !== false, 'chat login uses the account-page form');
+assert_true(strpos($widget, 'pdx-auth-page-form-wrap') !== false, 'chat login panel shares account-page form wrap');
+assert_true(strpos($css, '--pax-mobile-widget-max-chat: none') !== false, 'mobile chat is a full phone sheet');
+assert_true(strpos($css, 'min(420px, 58svh') !== false, 'mobile chat uses a compact svh card');
+assert_true(strpos($css, 'width: 360px') !== false && strpos($css, 'height: 420px') !== false, 'desktop chat is a compact 360x420 card from the first frame');
+assert_true(strpos($css, '.paxdesign-booking-chat-auth-gate[hidden]') !== false && strpos($css, 'display: none !important') !== false, 'hidden login overlay cannot cover messages on PC or mobile');
+assert_true(strpos($css, 'text-align: center !important') !== false, 'login title/button is centered');
+assert_true(strpos($css, 'display: none !important') !== false && strpos($css, 'paxdesign-booking-mode-switch') !== false, 'top Live Chat/Termin buchen tabs are hidden');
+assert_true(strpos($bookingJs, 'function visualViewportBox') !== false, 'mobile layout reads the visual viewport box');
+assert_true(strpos($bookingJs, 'COMPACT_HEIGHT = 420') !== false, 'closed keyboard chat is a 420px compact card, not 84% of the screen');
+assert_true(strpos($bookingJs, 'kb > 50') !== false, 'keyboard-open layout waits for real visualViewport occlusion');
+assert_true(strpos($bookingJs, 'function applyCompactWidgetFrame') !== false, 'chat sizes to a compact card on desktop and mobile');
+assert_true(strpos($js, "data-widget-mode=\"booking\"") !== false, 'plus menu contains Termin buchen');
+assert_true(strpos($js, "data-widget-mode=\"chat\"") !== false, 'plus menu contains Live Chat');
+assert_true(strpos($css, 'overflow-wrap: anywhere') !== false, 'mobile bubbles wrap instead of overflowing');
+assert_true(strpos($css, 'paxdesign-chat-mode-active.paxdesign-mobile-chat-mode') !== false, 'mobile sheet beats the 520px desktop chat height');
+assert_true(strpos($css, 'font-size: 22px') !== false, 'in-chat login title matches /account/');
+assert_true(strpos($css, 'paxdesign-chat-auth-locked .paxdesign-booking-container') !== false && strpos($css, 'flex-direction: column') !== false, 'login panel stacks below the header instead of overlapping it');
+assert_true(strpos($css, '.paxdesign-booking-chat-auth-gate-inner:has(.paxdesign-booking-chat-auth-inline .pdx-auth-form) .paxdesign-booking-chat-auth-gate-intro') !== false, 'duplicate login headline is hidden once the inline form is mounted');
+assert_true(strpos($css, '.paxdesign-booking-chat-auth-gate-close') !== false && strpos($css, 'display: none !important') !== false, 'duplicate login Close button is hidden; header Close is the only one');
+assert_true(strpos($widget, 'paxdesignChatAuthClose') === false, 'widget template has no duplicate auth-gate Close button');
+assert_true(strpos($css, 'pdx-auth-link[data-view="forgot"]') !== false && strpos($css, 'display: inline') !== false, 'Forgot password link stays visible in compact login');
+assert_true(strpos($css, 'overflow-wrap: anywhere') !== false, 'login labels and links wrap instead of overlapping');
+assert_true(strpos($bookingJs, 'mobileKeyboardWasOpen') !== false, 'mobile keyboard resize does not force pin-to-latest on every viewport event');
+assert_true(strpos($bookingJs, "top: top + 'px'") !== false, 'mobile keyboard-open sheet anchors to the visual viewport top');
+assert_true(strpos($css, 'paxdesign-keyboard-open .paxdesign-booking-container') !== false && strpos($css, 'max-height: none') !== false, 'keyboard-open chat can shrink below the 420px container cap');
+assert_true(strpos($bookingJs, 'function keyboardOcclusionPx') !== false, 'keyboard occlusion uses visualViewport');
+assert_true(strpos($js, 'pinToLatestMessage: pinToLatestMessage') !== false, 'keyboard resize can pin to the latest message');
+assert_true(strpos($css, 'paxdesign-keyboard-open .paxdesign-booking-widget') !== false && strpos($css, 'border-radius: 0') !== false, 'keyboard-open sheet fills the visual viewport flush above the keyboard');
 assert_true(strpos($css, '#063226') !== false, 'CSS dark green composer');
 assert_true(strpos($css, 'paxdesign-booking-chat-attach-menu') !== false, 'CSS attach menu');
 assert_true(strpos($css, 'display: none !important') !== false && strpos($css, 'paxdesign-booking-chat-end-wrap') !== false, 'end-chat CSS hidden');
@@ -54,7 +84,9 @@ assert_true(strpos($js, 'function pinToLatestMessage') !== false, 'open pins to 
 assert_true(strpos($widget, 'paxdesignChatEndWrap') === false, 'widget has no end-chat wrap');
 assert_true(strpos($knowledge, 'Immer auf Deutsch') === false, 'knowledge prompt does not force German');
 assert_true(strpos($knowledge, 'SAME language as the latest customer message') !== false, 'knowledge matches customer language');
-assert_true(strpos($knowledge, 'Do not repeat the question') !== false, 'knowledge understands full intent');
+assert_true(strpos($knowledge, 'the items below ARE that request') !== false, 'account context treats listed items as the submitted request');
+assert_true(strpos($knowledge, 'Never ask them to describe or repeat a request') !== false, 'assistant must not re-ask a known request');
+assert_true(strpos($chat, 'PAXdesign_Chat_Intent::detect') !== false, 'chat prompt runs intent detection');
 assert_true(strpos($knowledge, 'ONE clear step at a time') !== false, 'CCS one-step guidance');
 assert_true(strpos($knowledge, 'NEVER ask them to sign in') !== false, 'logged-in users are not asked to sign in');
 assert_true(strpos($chat, 'This customer IS already logged in') !== false, 'chat prompt knows session auth');
@@ -71,6 +103,7 @@ $syntax = array(
     $root . '/paxdesign-booking.php',
     $root . '/includes/class-paxdesign-chat-live.php',
     $root . '/includes/class-paxdesign-message-store.php',
+    $root . '/includes/class-paxdesign-chat-intent.php',
     $root . '/includes/class-paxdesign-chat.php',
     $root . '/includes/class-paxdesign-chat-knowledge.php',
     $root . '/includes/class-paxdesign-cybercrime-i18n.php',
@@ -90,6 +123,10 @@ $jsCheck = array();
 $jsCode = 0;
 exec('node --check ' . escapeshellarg($root . '/assets/js/chat-script.js') . ' 2>&1', $jsCheck, $jsCode);
 assert_true($jsCode === 0, 'node --check chat-script.js ' . implode(' ', $jsCheck));
+$bookingJsCheck = array();
+$bookingJsCode = 0;
+exec('node --check ' . escapeshellarg($root . '/assets/js/booking-script.js') . ' 2>&1', $bookingJsCheck, $bookingJsCode);
+assert_true($bookingJsCode === 0, 'node --check booking-script.js ' . implode(' ', $bookingJsCheck));
 $adminJsCheck = array();
 $adminJsCode = 0;
 exec('node --check ' . escapeshellarg($root . '/assets/js/cybercrime-admin.js') . ' 2>&1', $adminJsCheck, $adminJsCode);

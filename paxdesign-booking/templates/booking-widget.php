@@ -85,7 +85,7 @@ $team_members = PAXdesign_Booking::get_instance()->get_team_members();
         </div>
 
         <?php if (PAXdesign_Chat::get_instance()->is_enabled()) : ?>
-        <div class="paxdesign-booking-mode-switch" role="tablist" aria-label="Live Chat oder Termin buchen">
+        <div class="paxdesign-booking-mode-switch" role="tablist" aria-label="Live Chat oder Termin buchen" hidden>
           <button type="button" class="paxdesign-booking-mode-btn paxdesign-is-active" data-mode="chat" role="tab" aria-selected="true" aria-controls="paxdesignChatPanel">
             <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" aria-hidden="true"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg>
             Live Chat
@@ -98,9 +98,6 @@ $team_members = PAXdesign_Booking::get_instance()->get_team_members();
 
         <?php if (get_option('paxdesign_customer_require_login_for_chat', '1') === '1') : ?>
         <div class="paxdesign-booking-chat-auth-gate" id="paxdesignChatAuthGate" hidden>
-          <button type="button" class="paxdesign-booking-chat-auth-gate-close" id="paxdesignChatAuthClose" aria-label="<?php echo esc_attr__('Close', 'paxdesign-booking'); ?>">
-            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true"><path d="M18 6 6 18M6 6l12 12"/></svg>
-          </button>
           <div class="paxdesign-booking-chat-auth-gate-inner" role="region" aria-labelledby="paxdesignChatAuthGateTitle">
             <div class="paxdesign-booking-chat-auth-gate-intro">
               <h3 class="paxdesign-booking-chat-auth-gate-title" id="paxdesignChatAuthGateTitle"><?php echo esc_html__('Continue to Live Chat', 'paxdesign-booking'); ?></h3>
@@ -111,7 +108,7 @@ $team_members = PAXdesign_Booking::get_instance()->get_team_members();
               <button type="button" class="paxdesign-booking-chat-auth-gate-btn" id="paxdesignChatAuthSignIn" data-auth-view="login"><?php echo esc_html__('Sign In', 'paxdesign-booking'); ?></button>
               <button type="button" class="paxdesign-booking-chat-auth-gate-btn paxdesign-booking-chat-auth-gate-btn--primary" id="paxdesignChatAuthRegister" data-auth-view="register"><?php echo esc_html__('Create Account', 'paxdesign-booking'); ?></button>
             </div>
-            <div class="paxdesign-booking-chat-auth-inline" id="paxdesignChatAuthInline" aria-live="polite"></div>
+            <div class="paxdesign-booking-chat-auth-inline pdx-auth-page-form-wrap" id="paxdesignChatAuthInline" aria-live="polite"></div>
           </div>
         </div>
         <?php endif; ?>
@@ -346,6 +343,14 @@ $team_members = PAXdesign_Booking::get_instance()->get_team_members();
           </div>
 
         </div>
+        <?php if (PAXdesign_Chat::get_instance()->is_enabled()) : ?>
+        <div class="paxdesign-booking-mode-plus-bar">
+          <button type="button" class="paxdesign-booking-chat-plus" aria-label="<?php echo esc_attr__('Live Chat oder Termin buchen', 'paxdesign-booking'); ?>" aria-expanded="false">
+            <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><circle cx="12" cy="12" r="10"/><path d="M12 8v8M8 12h8"/></svg>
+            <span class="paxdesign-booking-chat-plus-tooltip">Live Chat</span>
+          </button>
+        </div>
+        <?php endif; ?>
         </div><!-- /paxdesign-booking-mode-panel booking -->
 
         <?php if (PAXdesign_Chat::get_instance()->is_enabled()) : ?>
