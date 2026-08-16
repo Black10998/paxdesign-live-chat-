@@ -29,17 +29,25 @@ curl -fsSL "${SITE}/wp-content/plugins/paxdesign-booking/assets/js/cybercrime-ad
 curl -fsSL "${SITE}/wp-content/plugins/paxdesign-booking/paxdesign-booking.php?v=${STAMP}" \
   -o "${tmpdir}/paxdesign-booking.php" || true
 
-grep -q "Version: 3.174.98" "${tmpdir}/chat-script.js" \
-  && ok "chat-script.js cache-bust version 3.174.98" \
-  || fail "chat-script.js is not the patched 3.174.98 file"
+grep -q "Version: 3.174.99" "${tmpdir}/chat-script.js" \
+  && ok "chat-script.js cache-bust version 3.174.99" \
+  || fail "chat-script.js is not the patched 3.174.99 file"
 
 grep -q "function pinToLatestMessage" "${tmpdir}/chat-script.js" \
   && ok "instant pin-to-latest is present" \
   || fail "pinToLatestMessage missing"
 
-grep -q -- "--pax-mobile-widget-max-chat: none" "${tmpdir}/booking-styles.css" \
-  && ok "mobile chat is a full phone sheet" \
-  || fail "mobile chat still uses a 380px height cap"
+grep -q -- "min(84svh, calc(100svh - 20px))" "${tmpdir}/booking-styles.css" \
+  && ok "mobile chat uses a compact svh sheet" \
+  || fail "mobile chat is not using compact svh height"
+
+grep -q "function visualViewportBox" "${tmpdir}/booking-script.js" \
+  && ok "mobile layout reads the visual viewport box" \
+  || fail "visualViewportBox missing from live booking-script.js"
+
+grep -q "text-align: center !important" "${tmpdir}/booking-styles.css" \
+  && ok "login title/button is centered" \
+  || fail "login control is not centered"
 
 grep -q "paxdesign-chat-mode-active.paxdesign-mobile-chat-mode" "${tmpdir}/booking-styles.css" \
   && ok "mobile sheet overrides the 520px desktop chat height" \

@@ -32,8 +32,8 @@ $i18n = file_get_contents($root . '/includes/class-paxdesign-cybercrime-i18n.php
 $admin = file_get_contents($root . '/includes/customer/class-paxdesign-customer-admin.php');
 $adminJs = file_get_contents($root . '/assets/js/cybercrime-admin.js');
 
-assert_true(strpos($boot, "define('PAXDESIGN_BOOKING_VERSION', '3.174.98')") !== false, 'plugin version 3.174.98');
-assert_true(strpos($js, 'Version: 3.174.98') !== false, 'chat-script cache-bust 3.174.98');
+assert_true(strpos($boot, "define('PAXDESIGN_BOOKING_VERSION', '3.174.99')") !== false, 'plugin version 3.174.99');
+assert_true(strpos($js, 'Version: 3.174.99') !== false, 'chat-script cache-bust 3.174.99');
 assert_true(strpos($js, 'uploadHumanAttachFile') !== false, 'JS upload handler');
 assert_true(strpos($js, 'paxdesign-chat-admin-active') !== false, 'JS human takeover class');
 assert_true(strpos($js, 'paxdesign_chat_live_user_attach') !== false, 'JS posts attach action');
@@ -44,7 +44,10 @@ assert_true(strpos($js, "isLoggedIn() && isVerifiedAccount()") !== false, 'auth 
 assert_true(strpos($js, "context: 'page'") !== false, 'chat login uses the account-page form');
 assert_true(strpos($widget, 'pdx-auth-page-form-wrap') !== false, 'chat login panel shares account-page form wrap');
 assert_true(strpos($css, '--pax-mobile-widget-max-chat: none') !== false, 'mobile chat is a full phone sheet');
-assert_true(strpos($css, 'top: max(8px, env(safe-area-inset-top, 0px))') !== false, 'mobile widget is aligned to the viewport');
+assert_true(strpos($css, 'min(84svh, calc(100svh - 20px))') !== false, 'mobile chat uses a compact svh sheet');
+assert_true(strpos($css, 'text-align: center !important') !== false, 'login title/button is centered');
+assert_true(strpos($bookingJs, 'function visualViewportBox') !== false, 'mobile layout reads the visual viewport box');
+assert_true(strpos($bookingJs, 'box.height * 0.84') !== false, 'closed keyboard chat is reduced to 84% of the visible viewport');
 assert_true(strpos($css, 'overflow-wrap: anywhere') !== false, 'mobile bubbles wrap instead of overflowing');
 assert_true(strpos($css, 'paxdesign-chat-mode-active.paxdesign-mobile-chat-mode') !== false, 'mobile sheet beats the 520px desktop chat height');
 assert_true(strpos($css, 'font-size: 22px') !== false, 'in-chat login title matches /account/');

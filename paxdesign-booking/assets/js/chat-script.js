@@ -1,6 +1,6 @@
 /**
  * PAXdesign AI Chat — Sales & Booking Assistant
- * Version: 3.174.98
+ * Version: 3.174.99
  */
 (function () {
   'use strict';
@@ -1434,6 +1434,9 @@
     abortStream();
     if (!isLoggedIn()) {
       mountInlineAuthForm('login');
+    }
+    if (window.PAXdesignBookingMobile && typeof window.PAXdesignBookingMobile.adjustLayout === 'function') {
+      window.PAXdesignBookingMobile.adjustLayout(false);
     }
   }
 

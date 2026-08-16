@@ -692,7 +692,7 @@
         mobileViewportBound = true;
 
         var onViewportChange = function() {
-            adjustMobileLayout(false);
+            scheduleMobileLayout(false);
         };
 
         if (window.visualViewport) {
@@ -702,7 +702,7 @@
         window.addEventListener('resize', onViewportChange);
         window.addEventListener('orientationchange', function() {
             setTimeout(function() {
-                adjustMobileLayout(false);
+                scheduleMobileLayout(false);
             }, 120);
         });
 
@@ -710,7 +710,7 @@
             'focusin.paxMobile',
             '.paxdesign-booking-chat-input, .paxdesign-booking-chat-auth-gate input, .paxdesign-booking-chat-auth-gate textarea',
             function() {
-                adjustMobileLayout(true);
+                scheduleMobileLayout(true);
             }
         );
         root().on(
@@ -718,7 +718,7 @@
             '.paxdesign-booking-chat-input, .paxdesign-booking-chat-auth-gate input, .paxdesign-booking-chat-auth-gate textarea',
             function() {
                 setTimeout(function() {
-                    adjustMobileLayout(false);
+                    scheduleMobileLayout(false);
                 }, 80);
             }
         );
@@ -734,6 +734,24 @@
         if (!window.visualViewport) return 0;
         var vv = window.visualViewport;
         return Math.max(0, window.innerHeight - vv.height - vv.offsetTop);
+    }
+
+    function visualViewportBox() {
+        var vv = window.visualViewport;
+        if (vv) {
+            return {
+                top: Math.max(0, vv.offsetTop || 0),
+                left: Math.max(0, vv.offsetLeft || 0),
+                width: Math.max(1, vv.width),
+                height: Math.max(1, vv.height)
+            };
+        }
+        return {
+            top: 0,
+            left: 0,
+            width: Math.max(1, window.innerWidth),
+            height: Math.max(1, window.innerHeight)
+        };
     }
 
     function keepPagePinned() {
@@ -753,35 +771,51 @@
     }
 
     function fitWidgetToVisualViewport(keyboardOpen) {
-        var inset = keyboardOpen ? 0 : 8;
         var $widget = $in('.paxdesign-booking-widget');
-        var top;
-        var left;
-        var width;
-        var height;
-        var vv = window.visualViewport;
+        var box = visualViewportBox();
+        var side = 10;
+        var topPad = keyboardOpen ? 6 : 10;
+        var bottomPad = keyboardOpen ? 0 : Math.max(10, 0);
+        var left = box.left + side;
+        var width = Math.max(240, box.width - side * 2);
+        var available = Math.max(220, box.height - topPad - bottomPad);
+        var height = keyboardOpen
+            ? available
+            : Math.min(available, Math.max(440, Math.round(box.height * 0.84)));
+        var top = keyboardOpen
+            ? (box.top + topPad)
+            : (box.top + Math.max(topPad, box.height - bottomPad - height));
 
-        if (vv) {
-            top = Math.max(0, vv.offsetTop) + inset;
-            left = Math.max(0, vv.offsetLeft) + inset;
-            width = Math.max(200, vv.width - inset * 2);
-            height = Math.max(160, vv.height - inset * 2);
-        } else {
-            top = inset;
-            left = inset;
-            width = Math.max(200, window.innerWidth - inset * 2);
-            height = Math.max(160, window.innerHeight - inset * 2);
+        if (top < box.top) {
+            top = box.top + topPad;
+        }
+        if (top + height > box.top + box.height - bottomPad) {
+            height = Math.max(220, box.top + box.height - bottomPad - top);
         }
 
         $widget.css({
-            top: top + 'px',
-            left: left + 'px',
+            position: 'fixed',
+            top: Math.round(top) + 'px',
+            left: Math.round(left) + 'px',
             right: 'auto',
             bottom: 'auto',
-            width: width + 'px',
-            maxWidth: 'none',
-            height: height + 'px',
-            maxHeight: height + 'px'
+            width: Math.round(width) + 'px',
+            maxWidth: Math.round(width) + 'px',
+            height: Math.round(height) + 'px',
+            maxHeight: Math.round(height) + 'px',
+            minHeight: '0'
+        });
+    }
+
+    var mobileLayoutRaf = 0;
+
+    function scheduleMobileLayout(forceKeyboard) {
+        if (mobileLayoutRaf) {
+            cancelAnimationFrame(mobileLayoutRaf);
+        }
+        mobileLayoutRaf = requestAnimationFrame(function() {
+            mobileLayoutRaf = 0;
+            adjustMobileLayout(forceKeyboard);
         });
     }
 
@@ -789,12 +823,14 @@
         var $widget = $in('.paxdesign-booking-widget');
         if (!$widget.hasClass('paxdesign-is-active') || !isMobileViewport()) {
             $widget.css({
+                position: '',
                 top: '',
                 bottom: '',
                 left: '',
                 right: '',
                 width: '',
                 height: '',
+                minHeight: '',
                 maxHeight: '',
                 maxWidth: ''
             });
@@ -964,12 +1000,14 @@
         }
         $in('.paxdesign-booking-widget').removeClass('paxdesign-is-active').attr('aria-hidden', 'true');
         $in('.paxdesign-booking-widget').css({
+            position: '',
             top: '',
             bottom: '',
             left: '',
             right: '',
             width: '',
             height: '',
+            minHeight: '',
             maxHeight: '',
             maxWidth: ''
         });
