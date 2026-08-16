@@ -1,6 +1,7 @@
 <?php
 /**
  * Cybercrime intake reports — storage, uploads, and notifications.
+ * Evidence resubmit uploads require files when staff requested evidence.
  */
 
 if (!defined('ABSPATH')) {
