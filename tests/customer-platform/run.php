@@ -163,52 +163,19 @@ $animated_logo = file_get_contents(dirname(__DIR__, 2) . '/paxdesign-booking/ios
 cx_assert_true(strpos($animated_logo, 'holdDuration') !== false && strpos($animated_logo, '1.2') !== false, 'Logo animation must preserve website hold timing');
 
 $ccs_root = dirname(__DIR__, 2) . '/paxdesign-booking';
-$ccs_wf = file_get_contents($ccs_root . '/includes/class-paxdesign-cybercrime-ai-workflow.php');
-cx_assert_true(strpos($ccs_wf, 'class PAXdesign_Cybercrime_AI_Workflow') !== false, 'CCS AI workflow class must exist');
-cx_assert_true(strpos($ccs_wf, 'أعطني رقم الهاتف.') !== false, 'Arabic phone prompt must be a single short request');
-cx_assert_true(strpos($ccs_wf, 'ما البلد؟') !== false, 'Arabic country prompt must be a single short question');
-cx_assert_true(strpos($ccs_wf, 'ارفع وثيقة الهوية من زر +.') !== false, 'Arabic identity upload prompt must point at the + button');
-cx_assert_true(strpos($ccs_wf, 'Current website workflow step') === false, 'Workflow replies must not recap the 4-step form');
-cx_assert_true(strpos($ccs_wf, 'Still missing:') === false, 'Workflow replies must not list every missing field');
-cx_assert_true(substr_count($ccs_wf, 'apply_extracted_fields(') === 1, 'A CCS turn must save extracted fields once');
-
-$ccs_ops = file_get_contents($ccs_root . '/includes/class-paxdesign-cybercrime-ai-operations.php');
-$ccs_store = file_get_contents($ccs_root . '/includes/class-paxdesign-message-store.php');
-cx_assert_true(strpos($ccs_ops, 'pax_ccs_asst_lock_') !== false, 'Assistant persist must lock one reply per session turn');
-cx_assert_true(strpos($ccs_ops, 'function reuse_assistant_row') !== false, 'Reused assistant rows must update stale repeated text');
-cx_assert_true(strpos($ccs_store, 'function update_message_content') !== false, 'Assistant persist must be able to replace stale reply text');
-cx_assert_true(strpos($ccs_ops, 'function latest_user_message') !== false, 'Assistant replies must bind to the latest customer message');
-cx_assert_true(strpos($ccs_wf, 'merge_extracted_into_state') !== false, 'Extracted facts must merge into the live CCS state even if a DB write is skipped');
-cx_assert_true(strpos($ccs_wf, 'should_use_model') !== false, 'Unparsed questions must use the model instead of repeating the last prompt');
-cx_assert_true(strpos($chat_knowledge, 'COMPLETE latest message') !== false, 'The CCS assistant must read the complete latest customer message');
-cx_assert_true(strpos($chat_knowledge, 'Never repeat your previous question') !== false, 'The CCS assistant must not repeat the previous question');
-
-$ccs_chat = file_get_contents($ccs_root . '/includes/class-paxdesign-chat.php');
-cx_assert_true(strpos($ccs_chat, 'paxdesign_chat_ccs_bootstrap') !== false, 'CCS chat open must have a bootstrap next-prompt endpoint');
-cx_assert_true(strpos($ccs_chat, 'emit_ccs_operation_sse($operation, null)') !== false, 'Skip-LLM CCS replies must not also emit the assistant on the operation event');
-cx_assert_true(strpos($ccs_chat, "'text' => \$reply") === false, 'Skip-LLM CCS replies must not also emit a duplicate streaming text event');
-cx_assert_true(strpos($ccs_chat, 'please check the uploaded files') === false, 'File uploads must continue the workflow instead of starting a second document-check turn');
-
-$ccs_case = file_get_contents($ccs_root . '/includes/class-paxdesign-cybercrime-ai-case.php');
-cx_assert_true(strpos($ccs_case, 'class_exists(\'PAXdesign_Cybercrime_AI_Workflow\')') !== false, 'Ingest must skip duplicate field extraction when the workflow will save the turn');
+$chat_knowledge = file_get_contents($ccs_root . '/includes/class-paxdesign-chat-knowledge.php');
+cx_assert_true(!is_file($ccs_root . '/includes/class-paxdesign-cybercrime-ai-workflow.php'), '3.176 CCS AI workflow must not exist on the production baseline');
+cx_assert_true(!is_file($ccs_root . '/includes/class-paxdesign-cybercrime-ai-operations.php'), '3.176 CCS AI operations must not exist on the production baseline');
+cx_assert_true(!is_file($ccs_root . '/includes/class-paxdesign-cybercrime-ai-case.php'), '3.176 CCS AI case must not exist on the production baseline');
+cx_assert_true(strpos($chat_knowledge, 'complete latest message') !== false || strpos($chat_knowledge, 'COMPLETE latest message') !== false, 'The CCS assistant must read the complete latest customer message');
+cx_assert_true(strpos($chat_knowledge, 'ONE clear step at a time') !== false, 'The CCS assistant must give one step at a time');
 
 $ccs_js = file_get_contents($ccs_root . '/assets/js/chat-script.js');
-cx_assert_true(strpos($ccs_js, 'function assistantAlreadyShownForLatestTurn') !== false, 'The UI must keep one assistant bubble per customer turn');
-cx_assert_true(strpos($ccs_js, 'function ensureCcsOpeningPrompt') !== false, 'Opening CCS chat must request the next missing prompt once');
-cx_assert_true(strpos($ccs_js, 'paxdesign_chat_ccs_bootstrap') !== false, 'Website CCS chat must call the bootstrap endpoint');
-cx_assert_true(strpos($ccs_js, 'config.greeting && !isCybercrimeCaseChat()') !== false, 'CCS chat must not insert the sales greeting');
-cx_assert_true(strpos($ccs_js, 'pollSeq = Math.max(pollSeq, localMsgId)') === false, 'Optimistic local ids must not skip server messages during poll');
-cx_assert_true(strpos($ccs_js, 'function isNearBottom') !== false, 'Chat must detect when the customer is already at the latest messages');
-cx_assert_true(strpos($ccs_js, 'var stickToBottom') !== false, 'Auto-scroll must stop while the customer reads older messages');
-cx_assert_true(strpos($ccs_js, 'scrollToBottom(true)') !== false, 'Opening and sending must pin the thread to the latest message');
-cx_assert_true(strpos($ccs_js, 'anchor.scrollIntoView') === false, 'Chat must not use scrollIntoView which jumps the page on mobile');
-cx_assert_true(strpos($ccs_js, 'window.setTimeout(run, 80)') === false, 'Chat must not keep forcing delayed scroll jumps');
-cx_assert_true(strpos($ccs_js, 'return assistantAlreadyShownForLatestTurn(msg)') !== false, 'CCS duplicate detection must not hide a new reply that only matches an older prompt');
-cx_assert_true(strpos($ccs_js, 'skipScroll: true') !== false, 'History restore must not scroll once per restored row');
+cx_assert_true(strpos($ccs_js, 'skipping stacked sync') === false, 'Chat JS must not contain the 3.176 stacked-sync rewrite');
+cx_assert_true(strpos($ccs_js, 'Version: 3.174.91') !== false, 'Chat JS must be the 3.174.91 baseline');
 
 $ccs_css = file_get_contents($ccs_root . '/assets/css/booking-styles.css');
-cx_assert_true(strpos($ccs_css, 'margin-top: auto') !== false, 'The chat thread must pin the latest messages to the bottom');
-cx_assert_true(strpos($ccs_css, 'scroll-behavior: smooth') === false || !preg_match('/\.paxdesign-booking-chat-messages\s*\{[^}]*scroll-behavior:\s*smooth/s', $ccs_css), 'Programmatic chat scroll must not use CSS smooth scrolling');
+cx_assert_true(strpos($ccs_css, '#063226') !== false, 'Human composer dark-green color must remain');
 
 $avatar_presets = file_get_contents($customer_dir . '/class-paxdesign-customer-avatar-presets.php');
 cx_assert_true(strpos($avatar_presets, 'const COUNT = 100') !== false, 'Avatar presets must support 100 GIF avatars');

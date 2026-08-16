@@ -277,43 +277,7 @@ class PAXdesign_Customer_REST {
                 'methods'             => WP_REST_Server::EDITABLE,
                 'callback'            => array(__CLASS__, 'mark_notifications_read'),
                 'permission_callback' => array('PAXdesign_Customer_Auth', 'require_customer'),
-                'args'                => array(
-                    'ids' => array(
-                        'type'  => 'array',
-                        'items' => array('type' => 'integer'),
-                    ),
-                    'id'  => array(
-                        'type' => 'integer',
-                    ),
-                    'all' => array(
-                        'type' => 'boolean',
-                    ),
-                ),
             ),
-        ));
-
-        register_rest_route(self::NS, '/customer/notifications/read', array(
-            'methods'             => WP_REST_Server::CREATABLE,
-            'callback'            => array(__CLASS__, 'mark_notifications_read'),
-            'permission_callback' => array('PAXdesign_Customer_Auth', 'require_customer'),
-            'args'                => array(
-                'ids' => array(
-                    'type'  => 'array',
-                    'items' => array('type' => 'integer'),
-                ),
-                'id'  => array(
-                    'type' => 'integer',
-                ),
-                'all' => array(
-                    'type' => 'boolean',
-                ),
-            ),
-        ));
-
-        register_rest_route(self::NS, '/customer/notifications/read-all', array(
-            'methods'             => WP_REST_Server::CREATABLE,
-            'callback'            => array(__CLASS__, 'mark_all_notifications_read'),
-            'permission_callback' => array('PAXdesign_Customer_Auth', 'require_customer'),
         ));
 
         register_rest_route(self::NS, '/customer/chat/session', array(
@@ -522,16 +486,6 @@ class PAXdesign_Customer_REST {
         $result = PAXdesign_Customer_Avatar::set_preset_for_user($uid, $preset_id);
         if (is_wp_error($result)) {
             return $result;
-        }
-        if (
-            class_exists('PAXdesign_Customer_Avatar_Vip_Presets')
-            && class_exists('PAXdesign_Customer_Master_Admin')
-            && class_exists('PAXdesign_Customer_Levels')
-            && PAXdesign_Customer_Master_Admin::is_master_admin($uid)
-            && PAXdesign_Customer_Avatar_Vip_Presets::is_vip($preset_id)
-        ) {
-            $level = (int) preg_replace('/^pax-vip-/', '', $preset_id);
-            PAXdesign_Customer_Levels::set_level_for_user($uid, $level);
         }
         $profile_response = self::get_profile();
         $profile_data = $profile_response->get_data();
@@ -786,114 +740,14 @@ class PAXdesign_Customer_REST {
 
     public static function mark_notifications_read(WP_REST_Request $request) {
         $uid = PAXdesign_Customer_Auth::current_user_id();
-        if (self::notification_mark_all_from_request($request)) {
-            return self::mark_all_notifications_read($request);
-        }
-        $ids = self::notification_ids_from_request($request);
-        $marked = PAXdesign_Customer_Notifications::mark_read_many($uid, $ids);
-        return rest_ensure_response(array(
-            'success'      => true,
-            'marked'       => $marked,
-            'unread_count' => PAXdesign_Customer_Notifications::unread_count($uid),
-            'items'        => PAXdesign_Customer_Notifications::list_for_user($uid, false, 50),
-        ));
-    }
-
-    public static function mark_all_notifications_read(WP_REST_Request $request) {
-        $uid = PAXdesign_Customer_Auth::current_user_id();
-        $marked = PAXdesign_Customer_Notifications::mark_all_read($uid);
-        return rest_ensure_response(array(
-            'success'      => true,
-            'marked'       => $marked,
-            'unread_count' => PAXdesign_Customer_Notifications::unread_count($uid),
-            'items'        => PAXdesign_Customer_Notifications::list_for_user($uid, false, 50),
-        ));
-    }
-
-    /**
-     * @return int[]
-     */
-    private static function notification_ids_from_request(WP_REST_Request $request) {
         $ids = $request->get_param('ids');
-        if (!is_array($ids) || $ids === array()) {
-            $json = $request->get_json_params();
-            if (is_array($json) && isset($json['ids'])) {
-                $ids = $json['ids'];
-            }
-        }
-        if (!is_array($ids) || $ids === array()) {
-            $body = json_decode((string) $request->get_body(), true);
-            if (is_array($body) && isset($body['ids'])) {
-                $ids = $body['ids'];
-            }
-        }
         if (!is_array($ids)) {
-            $single = $request->get_param('id');
-            $ids = ($single !== null && $single !== '') ? array($single) : array();
+            $ids = array($request->get_param('id'));
         }
-        $clean = array();
-        foreach ((array) $ids as $id) {
-            $id = absint($id);
-            if ($id > 0) {
-                $clean[] = $id;
-            }
+        foreach ($ids as $id) {
+            PAXdesign_Customer_Notifications::mark_read($uid, (int) $id);
         }
-        return array_values(array_unique($clean));
-    }
-
-    /**
-     * @return bool
-     */
-    private static function notification_mark_all_from_request(WP_REST_Request $request) {
-        $all = $request->get_param('all');
-        if ($all === null) {
-            $json = $request->get_json_params();
-            if (is_array($json) && array_key_exists('all', $json)) {
-                $all = $json['all'];
-            }
-        }
-        if ($all === null) {
-            $body = json_decode((string) $request->get_body(), true);
-            if (is_array($body) && array_key_exists('all', $body)) {
-                $all = $body['all'];
-            }
-        }
-        if (is_string($all)) {
-            $all = strtolower(trim($all));
-            return $all === '1' || $all === 'true' || $all === 'yes';
-        }
-        return !empty($all);
-    }
-
-    /**
-     * Attach Cybercrime (or other page) context so the AI assistant recognizes the report.
-     *
-     * @param string               $session_id
-     * @param array<string, mixed> $params
-     */
-    private static function apply_chat_page_context($session_id, $params) {
-        if (!class_exists('PAXdesign_Chat') || $session_id === '') {
-            return;
-        }
-        $reference = sanitize_text_field((string) ($params['page_reference'] ?? ''));
-        $message = trim((string) ($params['message'] ?? $params['content'] ?? ''));
-        if (
-            class_exists('PAXdesign_Cybercrime_AI_Case')
-            && PAXdesign_Cybercrime_AI_Case::is_explicit_new_case_request($message)
-        ) {
-            $reference = '';
-        } elseif ($reference !== '' && class_exists('PAXdesign_Cybercrime_Tickets')) {
-            $bound = PAXdesign_Cybercrime_Tickets::get_reference_for_session($session_id);
-            if (is_string($bound) && $bound !== '' && strcasecmp($bound, $reference) !== 0) {
-                $reference = $bound;
-            }
-        }
-        PAXdesign_Chat::get_instance()->set_session_page_context(
-            $session_id,
-            (string) ($params['page_context'] ?? ''),
-            $reference,
-            (string) ($params['page_language'] ?? '')
-        );
+        return rest_ensure_response(array('success' => true));
     }
 
     public static function chat_session() {
@@ -1026,7 +880,6 @@ class PAXdesign_Customer_REST {
         if ($session_id === '') {
             $session_id = PAXdesign_Customer_Chat_Bridge::primary_session_id($uid);
         }
-        self::apply_chat_page_context($session_id, $params);
         $result = PAXdesign_Customer_Chat_Bridge::send_user_message(
             $uid,
             $session_id,
@@ -1055,7 +908,6 @@ class PAXdesign_Customer_REST {
             return new WP_Error('forbidden', __('You do not have access to this conversation.', 'paxdesign-booking'), array('status' => 403));
         }
         PAXdesign_Customer_Chat_Bridge::materialize_session($session_id, $uid);
-        self::apply_chat_page_context($session_id, $params);
 
         $result = PAXdesign_Chat::get_instance()->stream_authenticated_customer_chat(
             $session_id,

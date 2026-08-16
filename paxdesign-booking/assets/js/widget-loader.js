@@ -1,5 +1,5 @@
 /**
- * Prefetch and lazy-load chat script so the widget can open without waiting.
+ * Lazy-load chat script after idle or first widget interaction (keeps initial load light).
  */
 (function () {
   'use strict';
@@ -44,8 +44,41 @@
     preload: preloadChat,
   };
 
-  // Start downloading the chat bundle immediately after this deferred loader
-  // runs — do not wait for the first tap. Opening the panel must never stall
-  // on a ~200KB parse if the file is already in flight / cached.
-  preloadChat();
+  if ('requestIdleCallback' in window) {
+    requestIdleCallback(preloadChat, { timeout: 5000 });
+  } else {
+    setTimeout(preloadChat, 4000);
+  }
+
+  document.addEventListener(
+    'click',
+    function (event) {
+      var target = event.target;
+      if (!target || !target.closest) {
+        return;
+      }
+      if (
+        target.closest(
+          '.paxdesign-booking-button, #paxdesign-booking-root, [data-paxdesign-open-chat]'
+        )
+      ) {
+        preloadChat();
+      }
+    },
+    true
+  );
+
+  document.addEventListener(
+    'mouseover',
+    function (event) {
+      var target = event.target;
+      if (!target || !target.closest) {
+        return;
+      }
+      if (target.closest('.paxdesign-booking-button')) {
+        preloadChat();
+      }
+    },
+    { passive: true, once: true }
+  );
 })();

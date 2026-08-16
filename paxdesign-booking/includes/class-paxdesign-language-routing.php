@@ -45,85 +45,6 @@ class PAXdesign_Language_Routing {
     }
 
     /**
-     * Detect a language-preference message (not the language of the prose).
-     *
-     * "arabic", "English", "Deutsch", "العربية" switch the session language.
-     * Longer incident text that merely mentions a language is ignored.
-     *
-     * @param string $text
-     * @return string de|en|ar or empty when this is not a language switch.
-     */
-    public static function detect_language_preference($text) {
-        $normalized = self::normalize_preference_text($text);
-        if ($normalized === '') {
-            return '';
-        }
-
-        $names = array(
-            'ar' => array(
-                'ar', 'arabic', 'arabisch', 'arabe', 'arabiyya', 'arabi',
-                'العربية', 'عربي', 'العربي', 'عربية', 'عربيه', 'بالعربية', 'بالعربي',
-            ),
-            'en' => array(
-                'en', 'english', 'englisch', 'anglais', 'eng',
-                'الإنجليزية', 'الانجليزية', 'انجليزي', 'إنجليزي', 'الانجليزي',
-                'بالإنجليزية', 'بالانجليزية',
-            ),
-            'de' => array(
-                'de', 'german', 'deutsch', 'deutsche', 'deutschs', 'ger',
-                'الألمانية', 'الالمانية', 'الماني', 'ألماني', 'المانية',
-                'بالألمانية', 'بالالمانية',
-            ),
-        );
-        foreach ($names as $lang => $list) {
-            if (in_array($normalized, $list, true)) {
-                return $lang;
-            }
-        }
-
-        $len = function_exists('mb_strlen') ? mb_strlen($normalized) : strlen($normalized);
-        if ($len > 72) {
-            return '';
-        }
-
-        $patterns = array(
-            'ar' => '/(?:reply|respond|speak|talk|continue|write|switch|change|answer|use)\s+(?:in\s+|to\s+)?(?:arabic|arabisch)\b|(?:in|auf)\s+(?:arabic|arabisch)\b|بالعربية|بالعربي|تحدث بالعربية|جاوب بالعربي|العربية من فضلك/u',
-            'en' => '/(?:reply|respond|speak|talk|continue|write|switch|change|answer|use)\s+(?:in\s+|to\s+)?english\b|(?:in|auf)\s+english\b|بالإنجليزية|بالانجليزية/u',
-            'de' => '/(?:reply|respond|speak|talk|continue|write|switch|change|answer|use)\s+(?:in\s+|to\s+)?(?:german|deutsch)\b|(?:in|auf)\s+(?:german|deutsch)\b|بالألمانية|بالالمانية/u',
-        );
-        foreach ($patterns as $lang => $pattern) {
-            if (preg_match($pattern, $normalized)) {
-                return $lang;
-            }
-        }
-
-        return '';
-    }
-
-    /**
-     * @param string $text
-     * @return string
-     */
-    private static function normalize_preference_text($text) {
-        $text = trim((string) $text);
-        if ($text === '') {
-            return '';
-        }
-        $text = str_replace(array('’', '‘', '`'), "'", $text);
-        $stripped = preg_replace('/[\p{P}\p{S}]+/u', ' ', $text);
-        if (is_string($stripped)) {
-            $text = $stripped;
-        }
-        if (function_exists('mb_strtolower')) {
-            $text = mb_strtolower($text, 'UTF-8');
-        } else {
-            $text = strtolower($text);
-        }
-        $text = trim(preg_replace('/\s+/u', ' ', $text));
-        return is_string($text) ? $text : '';
-    }
-
-    /**
      * Resolve the language the customer AI assistant should use for this session.
      *
      * @param string $session_id
@@ -138,10 +59,6 @@ class PAXdesign_Language_Routing {
 
         $latest_user_text = trim((string) $latest_user_text);
         if ($latest_user_text !== '') {
-            $preference = self::detect_language_preference($latest_user_text);
-            if ($preference !== '' && in_array($preference, self::SUPPORTED, true)) {
-                return $preference;
-            }
             if (preg_match('/[\x{0600}-\x{06FF}\x{0750}-\x{077F}\x{08A0}-\x{08FF}\x{FB50}-\x{FDFF}\x{FE70}-\x{FEFF}]/u', $latest_user_text)) {
                 return 'ar';
             }

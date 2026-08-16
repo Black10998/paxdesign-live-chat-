@@ -10,25 +10,8 @@ on:
       production:
         description: Deploy to production after verification
         required: false
-        default: "true"
-  push:
-    branches:
-      - main
-      - 'cursor/account-dashboard-mobile-l10n-3a65'
-      - 'cursor/mobile-profile-photo-fix-3a65'
-      - 'cursor/premium-gif-avatars-3a65'
-      - 'cursor/gif-avatar-desktop-fix-3a65'
-      - 'cursor/100-avatars-auto-assign-3a65'
-      - 'cursor/vip-svg-avatars-3a65'
-      - 'cursor/vip-levels-master-admin-3a65'
-      - 'cursor/master-admin-customer-editor-3a65'
-      - 'cursor/customer-email-sync-3a65'
-      - 'cursor/customer-name-display-fix-3a65'
-      - 'cursor/header-customer-name-fix-3a65'
-      - 'cursor/remove-paxdesign-toolbar-3a65'
-    paths:
-      - 'paxdesign-booking/**'
-      - '.github/triggers/deploy-customer-platform-*'
+        default: "false"
+  # push auto-deploy disabled — live site is 3.174.91 production baseline
 
 permissions:
   contents: read
@@ -38,6 +21,14 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
+
+      - name: Block full plugin rsync over live baseline
+        run: |
+          echo "Full plugin rsync to paxdesign.at is disabled."
+          echo "Production baseline is the live WordPress plugin 3.174.91."
+          echo "Use only surgical overlay deploys that do not rsync --delete."
+          exit 1
+
 
       - name: Install PHP extensions
         run: sudo apt-get update && sudo apt-get install -y php-cli php-mysql ripgrep

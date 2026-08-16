@@ -1,0 +1,99 @@
+name: Deploy restored chat human UI
+
+# Surgical production patch on the restored 2026-08-08 WordPress baseline.
+# Copies only the listed plugin files. Does NOT rsync the current GitHub plugin.
+on:
+  push:
+    branches:
+      - cursor/chat-ccs-ai-workflow-9e84
+    paths:
+      - 'deploy-patches/restored-chat-human-ui/**'
+      - '.github/workflows/deploy-restored-chat-human-ui.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Validate secrets
+        run: |
+          set -euo pipefail
+          for key in WP_SSH_HOST WP_SSH_USER WP_SSH_PRIVATE_KEY WP_PATH; do
+            [ -n "${!key:-}" ] || { echo "Missing $key"; exit 1; }
+          done
+        env:
+          WP_SSH_HOST: ${{ secrets.WP_SSH_HOST }}
+          WP_SSH_USER: ${{ secrets.WP_SSH_USER }}
+          WP_SSH_PRIVATE_KEY: ${{ secrets.WP_SSH_PRIVATE_KEY }}
+          WP_PATH: ${{ secrets.WP_PATH }}
+
+      - name: Deploy patched chat files only
+        env:
+          WP_SSH_HOST: ${{ secrets.WP_SSH_HOST }}
+          WP_SSH_PORT: ${{ secrets.WP_SSH_PORT }}
+          WP_SSH_USER: ${{ secrets.WP_SSH_USER }}
+          WP_SSH_PRIVATE_KEY: ${{ secrets.WP_SSH_PRIVATE_KEY }}
+          WP_PATH: ${{ secrets.WP_PATH }}
+        run: |
+          set -euo pipefail
+          PORT="${WP_SSH_PORT:-22}"
+          SSH_OPTS=(-i ~/.ssh/id_deploy -p "$PORT" -o StrictHostKeyChecking=yes -o BatchMode=yes)
+          install -m 600 -D /dev/null ~/.ssh/id_deploy
+          printf '%s\n' "$WP_SSH_PRIVATE_KEY" > ~/.ssh/id_deploy
+          ssh-keyscan -p "$PORT" -H "$WP_SSH_HOST" >> ~/.ssh/known_hosts 2>/dev/null || true
+          TARGET="${WP_PATH%/}/wp-content/plugins/paxdesign-booking"
+          SRC="deploy-patches/restored-chat-human-ui"
+          REMOTE="${WP_SSH_USER}@${WP_SSH_HOST}"
+          rsync -az -e "ssh ${SSH_OPTS[*]}" \
+            "$SRC/paxdesign-booking.php" \
+            "${REMOTE}:${TARGET}/paxdesign-booking.php"
+          rsync -az -e "ssh ${SSH_OPTS[*]}" \
+            "$SRC/assets/js/chat-script.js" \
+            "${REMOTE}:${TARGET}/assets/js/chat-script.js"
+          rsync -az -e "ssh ${SSH_OPTS[*]}" \
+            "$SRC/assets/css/booking-styles.css" \
+            "${REMOTE}:${TARGET}/assets/css/booking-styles.css"
+          rsync -az -e "ssh ${SSH_OPTS[*]}" \
+            "$SRC/assets/js/cybercrime-admin.js" \
+            "${REMOTE}:${TARGET}/assets/js/cybercrime-admin.js"
+          rsync -az -e "ssh ${SSH_OPTS[*]}" \
+            "$SRC/templates/booking-widget.php" \
+            "${REMOTE}:${TARGET}/templates/booking-widget.php"
+          rsync -az -e "ssh ${SSH_OPTS[*]}" \
+            "$SRC/includes/class-paxdesign-chat-live.php" \
+            "${REMOTE}:${TARGET}/includes/class-paxdesign-chat-live.php"
+          rsync -az -e "ssh ${SSH_OPTS[*]}" \
+            "$SRC/includes/class-paxdesign-message-store.php" \
+            "${REMOTE}:${TARGET}/includes/class-paxdesign-message-store.php"
+          rsync -az -e "ssh ${SSH_OPTS[*]}" \
+            "$SRC/includes/class-paxdesign-chat.php" \
+            "${REMOTE}:${TARGET}/includes/class-paxdesign-chat.php"
+          rsync -az -e "ssh ${SSH_OPTS[*]}" \
+            "$SRC/includes/class-paxdesign-chat-knowledge.php" \
+            "${REMOTE}:${TARGET}/includes/class-paxdesign-chat-knowledge.php"
+          rsync -az -e "ssh ${SSH_OPTS[*]}" \
+            "$SRC/includes/class-paxdesign-cybercrime-i18n.php" \
+            "${REMOTE}:${TARGET}/includes/class-paxdesign-cybercrime-i18n.php"
+          rsync -az -e "ssh ${SSH_OPTS[*]}" \
+            "$SRC/includes/class-paxdesign-cybercrime-intake.php" \
+            "${REMOTE}:${TARGET}/includes/class-paxdesign-cybercrime-intake.php"
+          rsync -az -e "ssh ${SSH_OPTS[*]}" \
+            "$SRC/includes/class-paxdesign-cybercrime-tickets.php" \
+            "${REMOTE}:${TARGET}/includes/class-paxdesign-cybercrime-tickets.php"
+          rsync -az -e "ssh ${SSH_OPTS[*]}" \
+            "$SRC/includes/customer/class-paxdesign-customer-admin.php" \
+            "${REMOTE}:${TARGET}/includes/customer/class-paxdesign-customer-admin.php"
+          ssh "${SSH_OPTS[@]}" "$REMOTE" \
+            "cd '$(printf '%q' "$WP_PATH")' && (command -v wp >/dev/null && wp cache flush || true) && (command -v wp >/dev/null && wp litespeed-purge all || true)"
+
+      - name: Verify live chat assets
+        run: |
+          set -euo pipefail
+          chmod +x scripts/verify-restored-chat-human-ui.sh
+          ./scripts/verify-restored-chat-human-ui.sh

@@ -2,14 +2,8 @@ name: Deploy and verify plugin 3.113.0
 
 on:
   workflow_dispatch:
-  push:
-    branches: [main]
-    paths:
-      - '.github/triggers/wordpress-deploy-3113'
-      - 'scripts/verify-litespeed-image-post-deploy.sh'
-      - 'scripts/scan-litespeed-image-warnings.sh'
-      - 'scripts/repair-broken-image-urls.sh'
-      - 'paxdesign-booking/**'
+  # Push-to-main auto-deploy disabled.
+  # Live paxdesign.at is production baseline 3.174.91. Do not rsync GitHub plugin trees over it.
 
 permissions:
   contents: read
@@ -20,6 +14,14 @@ jobs:
     timeout-minutes: 20
     steps:
       - uses: actions/checkout@v4
+
+      - name: Block full plugin rsync over live baseline
+        run: |
+          echo "Full plugin rsync to paxdesign.at is disabled."
+          echo "Production baseline is the live WordPress plugin 3.174.91."
+          echo "Use only surgical overlay deploys that do not rsync --delete."
+          exit 1
+
 
       - name: Validate secrets
         run: |

@@ -2,58 +2,7 @@ name: Deploy Apple Cybercrime Support page
 
 on:
   workflow_dispatch:
-  push:
-    branches:
-      - main
-      - 'cursor/cybercrime-support-page-bdff'
-      - 'cursor/cybercrime-support-fixes-db83'
-      - 'cursor/cybercrime-ticket-workflow-db83'
-      - 'cursor/revolut-full-redesign-b0ff'
-    paths:
-      - '.github/triggers/deploy-apple-cybercrime-support'
-      - '.github/workflows/deploy-apple-cybercrime-support.yml'
-      - 'navein/template-apple-cybercrime-support.php'
-      - 'navein/template-parts/pages/cybercrime-support.php'
-      - 'navein/template-parts/pages/cybercrime-support-data.php'
-      - 'navein/template-parts/pages/cybercrime-support-en.php'
-      - 'navein/template-parts/page-title/page-header-page.php'
-      - 'navein/assets/css/apple-app-page.css'
-      - 'navein/assets/css/apple-cybercrime-support.css'
-      - 'navein/assets/css/apple-homepage.css'
-      - 'navein/assets/js/apple-app-page.js'
-      - 'navein/assets/js/apple-cybercrime-support.js'
-      - 'navein/inc/cybercrime-countries.php'
-      - 'navein/inc/cybercrime-support-locale.php'
-      - 'navein/style.css'
-      - 'navein/screenshot.png'
-      - 'navein/fonts/iconfont.css'
-      - 'paxdesign-booking/includes/class-paxdesign-chat.php'
-      - 'paxdesign-booking/includes/class-paxdesign-chat-knowledge.php'
-      - 'paxdesign-booking/includes/class-paxdesign-language-routing.php'
-      - 'paxdesign-booking/assets/js/chat-script.js'
-      - 'paxdesign-booking/assets/js/booking-script.js'
-      - 'paxdesign-booking/assets/js/cybercrime-admin.js'
-      - 'paxdesign-booking/assets/js/cybercrime-admin-notifications.js'
-      - 'paxdesign-booking/assets/css/booking-styles.css'
-      - 'paxdesign-booking/includes/class-paxdesign-cybercrime-intake.php'
-      - 'paxdesign-booking/includes/class-paxdesign-cybercrime-tickets.php'
-      - 'paxdesign-booking/includes/class-paxdesign-cybercrime-i18n.php'
-      - 'paxdesign-booking/includes/class-paxdesign-cybercrime-document-checks.php'
-      - 'paxdesign-booking/includes/class-paxdesign-cybercrime-admin-reminders.php'
-      - 'paxdesign-booking/includes/class-paxdesign-cybercrime-ai-case.php'
-      - 'paxdesign-booking/includes/class-paxdesign-cybercrime-ai-operations.php'
-      - 'paxdesign-booking/includes/class-paxdesign-cybercrime-ai-workflow.php'
-      - 'paxdesign-booking/includes/class-paxdesign-message-store.php'
-      - 'paxdesign-booking/includes/class-paxdesign-link-scan-service.php'
-      - 'paxdesign-booking/includes/class-paxdesign-widget-performance.php'
-      - '.gitignore'
-      - 'paxdesign-booking/includes/customer/class-paxdesign-customer-admin.php'
-      - 'paxdesign-booking/assets/customer-auth/css/pdx-auth.css'
-      - 'paxdesign-booking/assets/customer-auth/css/pdx-portal-apple.css'
-      - 'paxdesign-booking/includes/auth/class-paxdesign-auth-frontend.php'
-      - 'paxdesign-booking/assets/customer-auth/js/pax-auth.js'
-      - 'paxdesign-booking/paxdesign-booking.php'
-      - 'scripts/assign-apple-cybercrime-support-template.sh'
+  # push auto-deploy disabled — do not overwrite live CCS/chat
 
 permissions:
   contents: read
@@ -64,6 +13,12 @@ jobs:
     timeout-minutes: 20
     steps:
       - uses: actions/checkout@v4
+
+      - name: Block theme/plugin rsync over live baseline
+        run: |
+          echo "Auto-deploy of navein + plugin chat files to paxdesign.at is disabled."
+          echo "Production baseline is the live WordPress site (plugin 3.174.91)."
+          exit 1
 
       - name: Validate secrets
         run: |

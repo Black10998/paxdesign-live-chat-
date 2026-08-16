@@ -1,9 +1,9 @@
 <?php
 /**
- * Merge-integration regression guard.
+ * Merge-integration regression guard for production baseline 3.174.91.
  *
- * Verifies the 12/08 UI + customer-levels restore coexists with main's
- * new Cybercrime CCS AI backend, and that paxdesign-toolbar stays gone.
+ * Verifies customer levels / avatars / account UI from the restored site,
+ * and that the later 3.176.x chat/CCS AI rewrite is not present.
  * Pure static verification (no DB / no WordPress runtime required).
  */
 
@@ -54,8 +54,10 @@ mi_assert(
     preg_match('/function get_profile\([^)]*\)\s*\{.*Customer_Avatar::profile_fields/s', $rest) === 1,
     'get_profile() must include avatar (level) fields in the profile response'
 );
-// Master admin selecting a VIP avatar must set the customer level.
-mi_assert(strpos($rest, 'PAXdesign_Customer_Levels::set_level_for_user') !== false, 'VIP preset selection must set customer level');
+// VIP avatar grants may exist without the later 3.176 REST level-sync hook.
+if (strpos($rest, 'PAXdesign_Customer_Levels::set_level_for_user') !== false) {
+    mi_assert(true, 'VIP preset selection sets customer level when present');
+}
 
 // ---------------------------------------------------------------------------
 // RESTORE: Username display + Level Badge in the account UI (pax-auth.js/css)
@@ -88,63 +90,44 @@ $vip_gifs = glob($plugin . '/assets/customer-auth/images/avatars-vip/pax-vip-*.g
 mi_assert(count($vip_gifs) === 10, 'Expected 10 restored VIP avatar GIFs, got ' . count($vip_gifs));
 
 // ---------------------------------------------------------------------------
-// KEEP: main's new Cybercrime CCS AI page + backend must remain intact
+// Production baseline: live 3.174.91 — do not keep the 3.176.x CCS AI rewrite
 // ---------------------------------------------------------------------------
-$ccs_page = file_get_contents($root . '/navein/template-parts/pages/cybercrime-support.php');
-foreach (array('pax-ccs-decision-card', 'pax-ccs-case-dossier', 'pax-ccs-checks-list', 'data-ccs-guide', 'pax-ccs-category-cards') as $needle) {
-    mi_assert(strpos($ccs_page, $needle) !== false, "New Cybercrime page must keep element: $needle");
-}
 $bootstrap = file_get_contents($plugin . '/paxdesign-booking.php');
+mi_assert(strpos($bootstrap, "PAXDESIGN_BOOKING_VERSION', '3.174.91'") !== false, 'Plugin version must be 3.174.91');
+mi_assert(strpos($bootstrap, 'class-paxdesign-cybercrime-i18n.php') !== false, 'Compact CCS i18n must remain');
 foreach (array(
     'class-paxdesign-cybercrime-ai-case.php',
     'class-paxdesign-cybercrime-ai-operations.php',
     'class-paxdesign-cybercrime-ai-workflow.php',
     'class-paxdesign-cybercrime-document-checks.php',
-    'class-paxdesign-cybercrime-i18n.php',
     'class-paxdesign-cybercrime-admin-reminders.php',
 ) as $needle) {
-    mi_assert(strpos($bootstrap, $needle) !== false, "Bootstrap must keep CCS AI require: $needle");
+    mi_assert(strpos($bootstrap, $needle) === false, "Bootstrap must not load 3.176 CCS AI file: $needle");
+    mi_assert(!is_file($plugin . '/includes/' . $needle), "3.176 CCS AI file must be absent: $needle");
 }
-mi_assert(strpos($bootstrap, "PAXDESIGN_BOOKING_VERSION', '3.176.1'") !== false, 'Merged plugin version must be 3.176.1');
 
-// KEEP: messaging + chat reliability files still present
 mi_assert(is_readable($plugin . '/includes/class-paxdesign-message-store.php'), 'Message store must remain');
 $chat_js = file_get_contents($plugin . '/assets/js/chat-script.js');
-mi_assert(strpos($chat_js, 'function assistantAlreadyShownForLatestTurn') !== false, 'Chat must keep one-bubble-per-turn logic');
-mi_assert(strpos($chat_js, 'scrollToBottom(true)') !== false, 'Chat must keep pin-to-latest behavior');
+mi_assert(strpos($chat_js, 'skipping stacked sync') === false, 'Chat must not contain the 3.176 stacked-sync rewrite');
+mi_assert(strpos($chat_js, 'var openInstant') === false, 'Chat must not contain the 3.176 instant-open rewrite');
+mi_assert(strpos($chat_js, 'Version: 3.174.91') !== false, 'Chat JS must be cache-bust 3.174.91');
+mi_assert(strpos($chat_js, 'Gespräch beenden') === false, 'Customer chat must not include Gespräch beenden');
+mi_assert(strpos($chat_js, 'uploadHumanAttachFile') !== false, 'Human-composer attach handler must remain');
 
-// FIX: chat must open instantly (no blocking readiness overlay for a restored
-// session); the session/history/poll sync runs in the background.
-mi_assert(strpos($chat_js, 'var openInstant') !== false, 'Chat open must have the instant (non-blocking) fast path');
-mi_assert(
-    preg_match('/openInstant\s*=\s*!options\.force\s*&&\s*!!options\.reuseSession\s*&&\s*!!getSessionId\(\)\s*&&\s*sessionRestored/', $chat_js) === 1,
-    'Instant open must trigger when a session is already restored'
-);
-mi_assert(
-    preg_match('/if\s*\(openInstant\)\s*\{[^}]*return Promise\.resolve\(true\)/s', $chat_js) === 1,
-    'Instant open must return immediately so the UI is interactive without waiting on the sync chain'
-);
-mi_assert(strpos($chat_js, 'runChatReadinessChecks(options)') !== false, 'Background readiness sync (session/history/poll) must still run');
+$ccs_page = file_get_contents($root . '/navein/template-parts/pages/cybercrime-support.php');
+$ccs_data = file_get_contents($root . '/navein/template-parts/pages/cybercrime-support-data.php');
+mi_assert(strpos($ccs_page, 'pax-ccs-locale') !== false, 'Cybercrime page must keep locale field');
+mi_assert(strpos($ccs_page, 'data-ccs-switch') !== false, 'Cybercrime page must keep language switcher');
+mi_assert(strpos($ccs_data, 'بوابة الإبلاغ') !== false, 'Cybercrime copy must include Arabic portal title');
 
-// FIX: the chat bundle must warm on the first real (touch-friendly) interaction
-// so the launcher opens instantly instead of lazy-loading ~200KB on click.
-$loader_js = file_get_contents($plugin . '/assets/js/widget-loader.js');
-mi_assert(strpos($loader_js, 'warmOnFirstInteraction') !== false, 'Widget loader must warm the chat bundle on first interaction');
-mi_assert(strpos($loader_js, "'touchstart'") !== false || strpos($loader_js, '"touchstart"') !== false, 'Widget loader must warm on touchstart (mobile)');
-mi_assert(strpos($loader_js, 'setTimeout(warmOnFirstInteraction, 1200)') !== false || strpos($loader_js, 'requestIdleCallback(warmOnFirstInteraction') !== false, 'Widget loader must warm shortly after load (no 4s cold gap)');
-mi_assert(strpos($loader_js, 'setTimeout(preloadChat, 4000)') === false, 'Widget loader must not keep the old 4s cold preload gap');
-
-// FIX: header level badge shows only the metal tier (e.g. "Gold") — no "Level N"
 $auth_js2 = file_get_contents($plugin . '/assets/customer-auth/js/pax-auth.js');
-mi_assert(strpos($auth_js2, 'level_metal') !== false, 'Header badge must use the metal tier field');
-mi_assert(
-    preg_match('/if\s*\(opts\.header\)\s*\{.*?level\.level_metal.*?escHtml\(metal\)/s', $auth_js2) === 1,
-    'Header badge must render only the metal (Gold) — not the "Level N" label'
-);
-mi_assert(
-    preg_match('/if\s*\(opts\.header\)\s*\{(?:(?!escHtml\(level\.level_label\)).)*?return/s', $auth_js2) === 1,
-    'Header badge must not render the level_label ("PAXDesign Level NN — ...") in the header'
-);
+// Header metal-only badge is optional on this baseline (present on later UI patches).
+if (strpos($auth_js2, 'level_metal') !== false) {
+    mi_assert(
+        preg_match('/if\s*\(opts\.header\)\s*\{.*?level\.level_metal.*?escHtml\(metal\)/s', $auth_js2) === 1,
+        'Header badge must render only the metal (Gold) — not the "Level N" label'
+    );
+}
 
 // ---------------------------------------------------------------------------
 // DELETE: paxdesign-toolbar must be gone; migration + deploy guard retained
@@ -156,4 +139,4 @@ $deploy = file_get_contents($root . '/.github/workflows/deploy-customer-platform
 mi_assert(strpos($deploy, 'wp plugin deactivate paxdesign-toolbar') !== false, 'Deploy guard must deactivate any reappearing toolbar');
 mi_assert(strpos($deploy, 'rm -rf wp-content/plugins/paxdesign-toolbar') !== false, 'Deploy guard must remove toolbar from server');
 
-echo "OK: merge-integration checks passed (levels, badge, username, mobile menu, avatars, new cybercrime kept, toolbar removed)\n";
+echo "OK: merge-integration checks passed (levels, badge, username, mobile menu, avatars, 3.174.91 baseline, toolbar removed)\n";
