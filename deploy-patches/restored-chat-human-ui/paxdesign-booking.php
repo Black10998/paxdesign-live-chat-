@@ -2,7 +2,7 @@
 /*
 Plugin Name: PAXdesign Booking System
 Description: Professional booking system with minimal chat-style interface and team management
-Version: 3.174.93
+Version: 3.174.117
 Author: PAXdesign
 Author URI: https://paxdesign.at
 License: GPL v2 or later
@@ -10,7 +10,7 @@ License URI: https://www.gnu.org/licenses/gpl-2.0.html
 Text Domain: paxdesign-booking
 */
 
-// Prevent direct access
+// Production chat patch baseline — v3.174.117
 if (!defined('ABSPATH')) {
     exit;
 }
@@ -21,7 +21,7 @@ if (defined('PAXDESIGN_BOOKING_VERSION')) {
 }
 
 // Define plugin constants (customer platform)
-define('PAXDESIGN_BOOKING_VERSION', '3.174.93');
+define('PAXDESIGN_BOOKING_VERSION', '3.174.117');
 define('PAXDESIGN_BOOKING_DB_VERSION', '2.1');
 define('PAXDESIGN_BOOKING_PLUGIN_DIR', plugin_dir_path(__FILE__));
 define('PAXDESIGN_BOOKING_PLUGIN_URL', plugin_dir_url(__FILE__));
@@ -38,6 +38,7 @@ require_once PAXDESIGN_BOOKING_PLUGIN_DIR . 'includes/class-paxdesign-api-time.p
 require_once PAXDESIGN_BOOKING_PLUGIN_DIR . 'includes/class-paxdesign-db.php';
 require_once PAXDESIGN_BOOKING_PLUGIN_DIR . 'includes/class-paxdesign-ajax-json-guard.php';
 require_once PAXDESIGN_BOOKING_PLUGIN_DIR . 'includes/class-paxdesign-message-store.php';
+require_once PAXDESIGN_BOOKING_PLUGIN_DIR . 'includes/class-paxdesign-conversation-sync.php';
 require_once PAXDESIGN_BOOKING_PLUGIN_DIR . 'includes/class-paxdesign-chat-live.php';
 require_once PAXDESIGN_BOOKING_PLUGIN_DIR . 'includes/class-paxdesign-live-chat-shortcode.php';
 require_once PAXDESIGN_BOOKING_PLUGIN_DIR . 'includes/class-paxdesign-web-push.php';

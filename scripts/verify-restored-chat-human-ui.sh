@@ -20,6 +20,10 @@ trap 'rm -rf "$tmpdir"' EXIT
 
 curl -fsSL "${SITE}/wp-content/plugins/paxdesign-booking/assets/js/chat-script.js?v=${STAMP}" \
   -o "${tmpdir}/chat-script.js"
+curl -fsSL "${SITE}/wp-content/plugins/paxdesign-booking/assets/js/booking-script.js?v=${STAMP}" \
+  -o "${tmpdir}/booking-script.js"
+curl -fsSL "${SITE}/wp-content/plugins/paxdesign-booking/assets/js/widget-loader.js?v=${STAMP}" \
+  -o "${tmpdir}/widget-loader.js"
 curl -fsSL "${SITE}/wp-content/plugins/paxdesign-booking/assets/css/booking-styles.css?v=${STAMP}" \
   -o "${tmpdir}/booking-styles.css"
 curl -fsSL "${SITE}/wp-content/plugins/paxdesign-booking/assets/js/cybercrime-admin.js?v=${STAMP}" \
@@ -27,9 +31,94 @@ curl -fsSL "${SITE}/wp-content/plugins/paxdesign-booking/assets/js/cybercrime-ad
 curl -fsSL "${SITE}/wp-content/plugins/paxdesign-booking/paxdesign-booking.php?v=${STAMP}" \
   -o "${tmpdir}/paxdesign-booking.php" || true
 
-grep -q "Version: 3.174.93" "${tmpdir}/chat-script.js" \
-  && ok "chat-script.js cache-bust version 3.174.93" \
-  || fail "chat-script.js is not the patched 3.174.93 file"
+grep -q "Version: 3.174.117" "${tmpdir}/chat-script.js" \
+  && ok "chat-script.js cache-bust version 3.174.117" \
+  || fail "chat-script.js is not the patched 3.174.117 file"
+
+grep -q "var appliedMessageSeq" "${tmpdir}/chat-script.js" \
+  && grep -q "function getIncrementalSince" "${tmpdir}/chat-script.js" \
+  && grep -q "resync_required" "${tmpdir}/chat-script.js" \
+  && grep -q "function shouldPreserveHistoryDom" "${tmpdir}/chat-script.js" \
+  && ok "website unified sync merge cursors present" \
+  || fail "unified sync client markers missing from chat-script.js"
+
+grep -q "function ensureMicrophonePermission" "${tmpdir}/chat-script.js" \
+  && grep -q "voiceMicPermission" "${tmpdir}/chat-script.js" \
+  && grep -q "voiceMicSessionReady" "${tmpdir}/chat-script.js" \
+  && grep -q "function startVoiceWaveformFallback" "${tmpdir}/chat-script.js" \
+  && grep -q "function primeVoiceAudioContext" "${tmpdir}/chat-script.js" \
+  && ok "desktop-safe voice input with permission reuse present" \
+  || fail "voice permission reuse flow missing from chat-script.js"
+
+grep -q "function showLauncherLoading" "${tmpdir}/booking-script.js" \
+  && grep -q "function showChatShellLoading" "${tmpdir}/booking-script.js" \
+  && grep -q "function beginLauncherOpen" "${tmpdir}/booking-script.js" \
+  && grep -q "function visualViewportInsets" "${tmpdir}/booking-script.js" \
+  && grep -q "paxdesign-chat-shell-loader" "${tmpdir}/booking-styles.css" \
+  && ! grep -q "paxdesign-chat-open-loader" "${tmpdir}/booking-styles.css" \
+  && ! grep -q "CHAT_OPEN_LOADER_MIN_MS" "${tmpdir}/booking-script.js" \
+  && ok "in-chat shell loader present without full-page overlay" \
+  || fail "in-chat shell loader missing or full-page overlay still present"
+
+grep -q "pointerdown" "${tmpdir}/widget-loader.js" \
+  && grep -q "mousedown" "${tmpdir}/widget-loader.js" \
+  && ok "desktop pointerdown chat preload present" \
+  || fail "widget-loader.js missing desktop preload handlers"
+
+grep -q "function initComposerAttachments" "${tmpdir}/chat-script.js" \
+  && grep -q "paxdesign-booking-chat-media" "${tmpdir}/chat-script.js" \
+  && ok "dedicated composer media/file buttons present" \
+  || fail "composer attachment buttons missing from chat-script.js"
+
+grep -q "var sendInFlight" "${tmpdir}/chat-script.js" \
+  && ok "send debounce guard present" \
+  || fail "sendInFlight guard missing from chat-script.js"
+
+grep -q "paxdesign-booking-chat-composer-row" "${tmpdir}/booking-styles.css" \
+  && ok "separate send button composer row present" \
+  || fail "composer row layout missing from booking-styles.css"
+
+grep -q "paxdesign-chat-focus-backdrop" "${tmpdir}/booking-styles.css" \
+  && grep -q "pax-z-stack" "${tmpdir}/booking-styles.css" \
+  && ok "focus mode backdrop and z-index stack present" \
+  || fail "focus mode / z-index stack missing from booking-styles.css"
+
+grep -q "function keepComposerFocus" "${tmpdir}/chat-script.js" \
+  && ok "composer focus retention present" \
+  || fail "keepComposerFocus missing from chat-script.js"
+
+grep -q "function reconcileSyncedUserMessage" "${tmpdir}/chat-script.js" \
+  && ok "user message dedup reconciliation present" \
+  || fail "reconcileSyncedUserMessage missing from chat-script.js"
+
+grep -q "function scheduleUnifiedSync" "${tmpdir}/chat-script.js" \
+  && ok "website unified sync coordinator present" \
+  || fail "scheduleUnifiedSync missing"
+
+grep -q "openWidget();" "${tmpdir}/booking-script.js" \
+  && grep -q "ensureChatReady(runChatInit)" "${tmpdir}/booking-script.js" \
+  && ok "non-blocking widget open before chat init" \
+  || fail "instant open path missing from booking-script.js"
+
+grep -q "function resetBookingPanelState" "${tmpdir}/booking-script.js" \
+  && ok "instant chat close without booking reset present" \
+  || fail "resetBookingPanelState / chat close path missing from booking-script.js"
+
+grep -q "function getSiteHeaderBottom" "${tmpdir}/booking-script.js" \
+  && ok "mobile keyboard header clamp present" \
+  || fail "getSiteHeaderBottom missing from booking-script.js"
+
+grep -q "paxdesign-is-preparing" "${tmpdir}/booking-script.js" \
+  && ok "mobile first-open prepare phase present" \
+  || fail "paxdesign-is-preparing missing from booking-script.js"
+
+grep -q "paxdesign-frame-managed" "${tmpdir}/booking-styles.css" \
+  && ok "JS-managed mobile frame CSS present" \
+  || fail "paxdesign-frame-managed missing from booking-styles.css"
+
+grep -q "function transitionAfterLogin" "${tmpdir}/chat-script.js" \
+  && ok "instant login transition present" \
+  || fail "transitionAfterLogin missing"
 
 grep -q "function pinToLatestMessage" "${tmpdir}/chat-script.js" \
   && ok "instant pin-to-latest is present" \
@@ -41,6 +130,10 @@ else
   ok "live CSS pins instantly without smooth scroll"
 fi
 
+grep -q "flex: 0 0 auto" "${tmpdir}/booking-styles.css" \
+  && ok "single message scroller layout present" \
+  || fail "chat thread flex fix missing"
+
 grep -q "uploadHumanAttachFile" "${tmpdir}/chat-script.js" \
   && ok "plus-button upload handler present" \
   || fail "uploadHumanAttachFile missing"
@@ -48,10 +141,6 @@ grep -q "uploadHumanAttachFile" "${tmpdir}/chat-script.js" \
 grep -q "var stickToBottom" "${tmpdir}/chat-script.js" \
   && ok "WhatsApp stick-to-bottom present" \
   || fail "stickToBottom missing"
-
-grep -q "background: true, blockUi: false" "${tmpdir}/chat-script.js" \
-  && ok "open does not block on history/sync" \
-  || fail "background open path missing"
 
 grep -q "paxdesign-chat-admin-active" "${tmpdir}/chat-script.js" \
   && ok "human takeover class toggle present" \
@@ -79,7 +168,6 @@ grep -q "saveStatus('rejected')" "${tmpdir}/cybercrime-admin.js" \
   && ok "admin JS includes rejected/مرفوض action" \
   || fail "rejected action missing from live cybercrime-admin.js"
 
-# Must still be the restored baseline, not the later GitHub chat freeze/unfreeze work.
 if grep -q "skipping stacked sync" "${tmpdir}/chat-script.js"; then
   fail "live chat-script.js looks like a newer GitHub chat rewrite"
 else

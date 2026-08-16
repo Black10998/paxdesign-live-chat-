@@ -1420,7 +1420,12 @@ class PAXdesign_Chat_Live {
         if ($user_id > 0 && class_exists('PAXdesign_Customer_Chat_Bridge')) {
             PAXdesign_Customer_Chat_Bridge::touch_customer_presence($session_id, $user_id);
         }
-        $data  = $this->get_poll_data($session_id, $since, $full, 'user', $history_limit, $before);
+        if (class_exists('PAXdesign_Conversation_Sync')) {
+            PAXdesign_Conversation_Sync::send_nostore_headers();
+            $data = PAXdesign_Conversation_Sync::poll($session_id, $since, $full, 'user', $history_limit, $before);
+        } else {
+            $data = $this->get_poll_data($session_id, $since, $full, 'user', $history_limit, $before);
+        }
         if (is_wp_error($data)) {
             if ($data->get_error_code() === 'not_found' && $this->can_serve_unmaterialized_poll($session_id, $user_id)) {
                 $data = class_exists('PAXdesign_Customer_Chat_Bridge')
