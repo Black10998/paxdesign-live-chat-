@@ -31,8 +31,8 @@ $i18n = file_get_contents($root . '/includes/class-paxdesign-cybercrime-i18n.php
 $admin = file_get_contents($root . '/includes/customer/class-paxdesign-customer-admin.php');
 $adminJs = file_get_contents($root . '/assets/js/cybercrime-admin.js');
 
-assert_true(strpos($boot, "define('PAXDESIGN_BOOKING_VERSION', '3.174.91')") !== false, 'plugin version 3.174.91');
-assert_true(strpos($js, 'Version: 3.174.91') !== false, 'chat-script cache-bust 3.174.91');
+assert_true(strpos($boot, "define('PAXDESIGN_BOOKING_VERSION', '3.174.92')") !== false, 'plugin version 3.174.92');
+assert_true(strpos($js, 'Version: 3.174.92') !== false, 'chat-script cache-bust 3.174.92');
 assert_true(strpos($js, 'uploadHumanAttachFile') !== false, 'JS upload handler');
 assert_true(strpos($js, 'paxdesign-chat-admin-active') !== false, 'JS human takeover class');
 assert_true(strpos($js, 'paxdesign_chat_live_user_attach') !== false, 'JS posts attach action');
@@ -46,6 +46,9 @@ assert_true(strpos($css, 'display: none !important') !== false && strpos($css, '
 assert_true(strpos($live, 'handle_user_attach') !== false, 'PHP attach endpoint');
 assert_true(strpos($store, "'file_url'") !== false, 'message store persists file_url');
 assert_true(strpos($js, 'skipping stacked sync') === false, 'patch is not the later GitHub chat rewrite');
+assert_true(strpos($js, 'var openInstant') === false, 'patch does not use 3.176 instant-open');
+assert_true(strpos($js, 'var stickToBottom') !== false, 'WhatsApp stick-to-bottom is present');
+assert_true(strpos($js, 'background: true, blockUi: false') !== false, 'open stays usable during background sync');
 assert_true(strpos($widget, 'Gespräch beenden') === false, 'widget has no Gespräch beenden');
 assert_true(strpos($widget, 'paxdesignChatEndWrap') === false, 'widget has no end-chat wrap');
 assert_true(strpos($knowledge, 'Immer auf Deutsch') === false, 'knowledge prompt does not force German');

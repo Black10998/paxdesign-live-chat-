@@ -2026,8 +2026,9 @@ body.paxdesign-agent-profile-open {
 
 /* ─── Chat readiness overlay (scoped to widget) ─────────────────────────── */
 #paxdesign-booking-root #paxdesignChatPanel.paxdesign-chat-readiness-active > :not(#paxdesignChatReadiness) {
-  visibility: hidden !important;
-  pointer-events: none !important;
+  /* Keep composer/thread usable during background sync. Overlay is error-only. */
+  visibility: visible;
+  pointer-events: auto;
 }
 
 #paxdesign-booking-root .paxdesign-booking-chat-readiness {
