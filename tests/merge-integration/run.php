@@ -126,6 +126,14 @@ mi_assert(
 );
 mi_assert(strpos($chat_js, 'runChatReadinessChecks(options)') !== false, 'Background readiness sync (session/history/poll) must still run');
 
+// FIX: the chat bundle must warm on the first real (touch-friendly) interaction
+// so the launcher opens instantly instead of lazy-loading ~200KB on click.
+$loader_js = file_get_contents($plugin . '/assets/js/widget-loader.js');
+mi_assert(strpos($loader_js, 'warmOnFirstInteraction') !== false, 'Widget loader must warm the chat bundle on first interaction');
+mi_assert(strpos($loader_js, "'touchstart'") !== false || strpos($loader_js, '"touchstart"') !== false, 'Widget loader must warm on touchstart (mobile)');
+mi_assert(strpos($loader_js, 'setTimeout(warmOnFirstInteraction, 1200)') !== false || strpos($loader_js, 'requestIdleCallback(warmOnFirstInteraction') !== false, 'Widget loader must warm shortly after load (no 4s cold gap)');
+mi_assert(strpos($loader_js, 'setTimeout(preloadChat, 4000)') === false, 'Widget loader must not keep the old 4s cold preload gap');
+
 // FIX: header level badge shows only the metal tier (e.g. "Gold") — no "Level N"
 $auth_js2 = file_get_contents($plugin . '/assets/customer-auth/js/pax-auth.js');
 mi_assert(strpos($auth_js2, 'level_metal') !== false, 'Header badge must use the metal tier field');

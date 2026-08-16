@@ -44,41 +44,63 @@
     preload: preloadChat,
   };
 
-  if ('requestIdleCallback' in window) {
-    requestIdleCallback(preloadChat, { timeout: 5000 });
-  } else {
-    setTimeout(preloadChat, 4000);
+  // Warm the chat bundle early enough that clicking the launcher opens the panel
+  // instantly instead of waiting for a ~200KB lazy load. We keep the initial page
+  // load light (the bundle is still fetched async, never render-blocking) but warm
+  // it on the FIRST real user interaction — including touch, which the old
+  // mouseover-only hint never caught on mobile — and shortly after load as a
+  // fallback. The launcher itself warms on approach/touch for an extra head start.
+  var warmed = false;
+  var INTERACTION_EVENTS = ['pointerdown', 'touchstart', 'keydown', 'scroll'];
+
+  function removeInteractionWarmers() {
+    INTERACTION_EVENTS.forEach(function (evt) {
+      document.removeEventListener(evt, warmOnFirstInteraction, true);
+    });
   }
 
-  document.addEventListener(
-    'click',
-    function (event) {
-      var target = event.target;
-      if (!target || !target.closest) {
-        return;
-      }
-      if (
-        target.closest(
-          '.paxdesign-booking-button, #paxdesign-booking-root, [data-paxdesign-open-chat]'
-        )
-      ) {
-        preloadChat();
-      }
-    },
-    true
-  );
+  function warmOnFirstInteraction() {
+    if (warmed) {
+      return;
+    }
+    warmed = true;
+    removeInteractionWarmers();
+    preloadChat();
+  }
 
-  document.addEventListener(
-    'mouseover',
-    function (event) {
-      var target = event.target;
-      if (!target || !target.closest) {
-        return;
-      }
-      if (target.closest('.paxdesign-booking-button')) {
-        preloadChat();
-      }
-    },
-    { passive: true, once: true }
-  );
+  INTERACTION_EVENTS.forEach(function (evt) {
+    document.addEventListener(evt, warmOnFirstInteraction, {
+      capture: true,
+      passive: true,
+    });
+  });
+
+  // Fallback: warm shortly after load even without interaction (mobile Safari has
+  // no requestIdleCallback, so the old 4s setTimeout left early taps cold).
+  if ('requestIdleCallback' in window) {
+    requestIdleCallback(warmOnFirstInteraction, { timeout: 2000 });
+  } else {
+    setTimeout(warmOnFirstInteraction, 1200);
+  }
+
+  // Extra head start the moment the pointer approaches or touches the launcher.
+  ['pointerenter', 'pointerdown', 'touchstart', 'focusin'].forEach(function (evt) {
+    document.addEventListener(
+      evt,
+      function (event) {
+        var target = event.target;
+        if (!target || !target.closest) {
+          return;
+        }
+        if (
+          target.closest(
+            '.paxdesign-booking-button, #paxdesign-booking-root, [data-paxdesign-open-chat]'
+          )
+        ) {
+          warmOnFirstInteraction();
+        }
+      },
+      { capture: true, passive: true }
+    );
+  });
 })();
