@@ -3552,22 +3552,9 @@ html.paxdesign-scroll-lock body {
   color: var(--pax-white);
 }
 
-#paxdesign-booking-root .paxdesign-booking-chat-end-wrap {
-  padding: 0 12px 4px;
-  text-align: center;
-}
-
+#paxdesign-booking-root .paxdesign-booking-chat-end-wrap,
 #paxdesign-booking-root .paxdesign-booking-chat-end-btn {
-  border: none;
-  background: transparent;
-  color: var(--pax-icon-muted);
-  font: inherit;
-  font-size: 0.68rem;
-  font-weight: 500;
-  cursor: pointer;
-  padding: 4px 8px;
-  text-decoration: underline;
-  text-underline-offset: 2px;
+  display: none !important;
 }
 
 #paxdesign-booking-root .paxdesign-booking-chat-name-prompt {

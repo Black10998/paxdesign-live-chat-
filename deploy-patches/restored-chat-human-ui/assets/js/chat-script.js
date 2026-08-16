@@ -1,6 +1,6 @@
 /**
  * PAXdesign AI Chat — Sales & Booking Assistant
- * Version: 3.174.90
+ * Version: 3.174.91
  */
 (function () {
   'use strict';
@@ -1343,6 +1343,10 @@
   function showAuthGate() {
     initAuthGate();
     if (!isLoginGateEnabled()) return;
+    if (isLoggedIn() && isVerifiedAccount()) {
+      hideAuthGate();
+      return;
+    }
     if (authGateEl) authGateEl.hidden = false;
     root.classList.add('paxdesign-chat-auth-locked');
     stopCustomerStream();
@@ -1776,72 +1780,20 @@
   }
 
   function canCustomerEndChat() {
-    if (chatHandler === 'closed') return false;
-    return isHumanMode() || liveAgentPhase >= 1 || entryChoice === 'live' ||
-      root.classList.contains('paxdesign-has-chat-messages');
+    return false;
   }
 
   function updateEndButtonUi() {
-    if (!endWrapEl) return;
-    var show = canCustomerEndChat() && chatHandler !== 'closed';
-    endWrapEl.hidden = !show;
+    if (endWrapEl) endWrapEl.hidden = true;
+    if (endBtnEl) endBtnEl.hidden = true;
   }
 
   function customerCloseConversation() {
-    if (!window.confirm('Möchten Sie dieses Gespräch wirklich beenden?')) return;
-    if (!config.ajaxUrl) return;
-    var formData = new FormData();
-    formData.append('action', 'paxdesign_chat_live_customer_close');
-    formData.append('nonce', config.nonce);
-    stampChatRequest(formData);
-    formData.append('session_id', getSessionId());
-    fetch(config.ajaxUrl, { method: 'POST', body: formData, credentials: 'same-origin' })
-      .then(function (res) { return safeJson(res).then(function (json) { return { ok: res.ok, json: json }; }); })
-      .then(function (result) {
-        var json = result.json;
-        if (!json || !json.success) {
-          if (json && json.data && json.data.message === 'Invalid nonce') {
-            showError('Sitzung abgelaufen. Bitte laden Sie die Seite neu.');
-          } else {
-            showError(json && json.data && json.data.message ? json.data.message : 'Beenden fehlgeschlagen.');
-          }
-          return;
-        }
-        stopCustomerStream();
-        var nextHandler = (json.data && json.data.handler) ? json.data.handler : 'closed';
-        if (json.data && json.data.message && !isDuplicateMessage(json.data.message)) {
-          domMsgIds[json.data.message.id] = true;
-          seenMsgId(json.data.message.id);
-          rememberMessageIdentity(json.data.message);
-          if (nextHandler !== 'ai' || !isPersistentAccountChat()) {
-            renderMessageDom(json.data.message.role, json.data.message.content, json.data.message.id, { skipPush: true });
-          }
-        }
-        if (nextHandler === 'ai' && isPersistentAccountChat()) {
-          applyHandlerState('ai', '');
-          customerEndedChat = false;
-          saveSessionSnapshot();
-          startCustomerStream();
-          return;
-        }
-        applyHandlerState(nextHandler, '');
-        if (nextHandler === 'closed') {
-          customerEndedChat = true;
-          showRatingUi();
-          archiveClosedSession();
-        }
-        saveSessionSnapshot();
-      })
-      .catch(function () { showError('Verbindungsfehler beim Beenden.'); });
+    return;
   }
 
   function initCustomerClose() {
-    if (endBtnEl) {
-      endBtnEl.addEventListener('click', function (e) {
-        e.preventDefault();
-        customerCloseConversation();
-      });
-    }
+    updateEndButtonUi();
   }
 
   function showRatingUi() {
@@ -5056,6 +5008,10 @@
 
   function handleAuthGateResponse(json) {
     if (!isLoginRequiredResponse(json)) return false;
+    if (isLoggedIn() && isVerifiedAccount()) {
+      hideAuthGate();
+      return false;
+    }
     showAuthGate();
     return true;
   }

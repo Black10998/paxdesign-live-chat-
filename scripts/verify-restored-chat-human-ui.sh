@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# Verify the surgically deployed restored-baseline chat human UI on paxdesign.at.
+# Verify the surgically deployed restored-baseline chat / CCS patch on paxdesign.at.
 set -euo pipefail
 
 SITE="${PAX_SITE:-https://paxdesign.at}"
@@ -22,10 +22,14 @@ curl -fsSL "${SITE}/wp-content/plugins/paxdesign-booking/assets/js/chat-script.j
   -o "${tmpdir}/chat-script.js"
 curl -fsSL "${SITE}/wp-content/plugins/paxdesign-booking/assets/css/booking-styles.css?v=${STAMP}" \
   -o "${tmpdir}/booking-styles.css"
+curl -fsSL "${SITE}/wp-content/plugins/paxdesign-booking/assets/js/cybercrime-admin.js?v=${STAMP}" \
+  -o "${tmpdir}/cybercrime-admin.js"
+curl -fsSL "${SITE}/wp-content/plugins/paxdesign-booking/paxdesign-booking.php?v=${STAMP}" \
+  -o "${tmpdir}/paxdesign-booking.php" || true
 
-grep -q "Version: 3.174.90" "${tmpdir}/chat-script.js" \
-  && ok "chat-script.js cache-bust version 3.174.90" \
-  || fail "chat-script.js is not the patched 3.174.90 file"
+grep -q "Version: 3.174.91" "${tmpdir}/chat-script.js" \
+  && ok "chat-script.js cache-bust version 3.174.91" \
+  || fail "chat-script.js is not the patched 3.174.91 file"
 
 grep -q "uploadHumanAttachFile" "${tmpdir}/chat-script.js" \
   && ok "plus-button upload handler present" \
@@ -35,6 +39,11 @@ grep -q "paxdesign-chat-admin-active" "${tmpdir}/chat-script.js" \
   && ok "human takeover class toggle present" \
   || fail "admin-active class toggle missing"
 
+grep -q "function canCustomerEndChat" "${tmpdir}/chat-script.js" \
+  && grep -A2 "function canCustomerEndChat" "${tmpdir}/chat-script.js" | grep -q "return false" \
+  && ok "customer end-chat is disabled" \
+  || fail "canCustomerEndChat is not disabled"
+
 grep -q "#063226" "${tmpdir}/booking-styles.css" \
   && ok "dark-green composer color present" \
   || fail "dark-green composer color missing"
@@ -42,6 +51,15 @@ grep -q "#063226" "${tmpdir}/booking-styles.css" \
 grep -q "paxdesign-booking-chat-attach-menu" "${tmpdir}/booking-styles.css" \
   && ok "attach menu styles present" \
   || fail "attach menu styles missing"
+
+grep -q "paxdesign-booking-chat-end-wrap" "${tmpdir}/booking-styles.css" \
+  && grep -q "display: none !important" "${tmpdir}/booking-styles.css" \
+  && ok "end-chat UI is hidden in CSS" \
+  || fail "end-chat CSS hide missing"
+
+grep -q "saveStatus('rejected')" "${tmpdir}/cybercrime-admin.js" \
+  && ok "admin JS includes rejected/مرفوض action" \
+  || fail "rejected action missing from live cybercrime-admin.js"
 
 # Must still be the restored baseline, not the later GitHub chat freeze/unfreeze work.
 if grep -q "skipping stacked sync" "${tmpdir}/chat-script.js"; then
@@ -55,4 +73,4 @@ if [ "$FAIL" -ne 0 ]; then
   exit 1
 fi
 
-echo "Restored chat human UI verified on ${SITE}"
+echo "Restored chat / CCS patch verified on ${SITE}"
