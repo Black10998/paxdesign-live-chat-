@@ -1,5 +1,5 @@
 /**
- * Lazy-load chat script after idle or first widget interaction (keeps initial load light).
+ * Prefetch and lazy-load chat script so the widget can open without waiting.
  */
 (function () {
   'use strict';
@@ -44,63 +44,8 @@
     preload: preloadChat,
   };
 
-  // Warm the chat bundle early enough that clicking the launcher opens the panel
-  // instantly instead of waiting for a ~200KB lazy load. We keep the initial page
-  // load light (the bundle is still fetched async, never render-blocking) but warm
-  // it on the FIRST real user interaction — including touch, which the old
-  // mouseover-only hint never caught on mobile — and shortly after load as a
-  // fallback. The launcher itself warms on approach/touch for an extra head start.
-  var warmed = false;
-  var INTERACTION_EVENTS = ['pointerdown', 'touchstart', 'keydown', 'scroll'];
-
-  function removeInteractionWarmers() {
-    INTERACTION_EVENTS.forEach(function (evt) {
-      document.removeEventListener(evt, warmOnFirstInteraction, true);
-    });
-  }
-
-  function warmOnFirstInteraction() {
-    if (warmed) {
-      return;
-    }
-    warmed = true;
-    removeInteractionWarmers();
-    preloadChat();
-  }
-
-  INTERACTION_EVENTS.forEach(function (evt) {
-    document.addEventListener(evt, warmOnFirstInteraction, {
-      capture: true,
-      passive: true,
-    });
-  });
-
-  // Fallback: warm shortly after load even without interaction (mobile Safari has
-  // no requestIdleCallback, so the old 4s setTimeout left early taps cold).
-  if ('requestIdleCallback' in window) {
-    requestIdleCallback(warmOnFirstInteraction, { timeout: 2000 });
-  } else {
-    setTimeout(warmOnFirstInteraction, 1200);
-  }
-
-  // Extra head start the moment the pointer approaches or touches the launcher.
-  ['pointerenter', 'pointerdown', 'touchstart', 'focusin'].forEach(function (evt) {
-    document.addEventListener(
-      evt,
-      function (event) {
-        var target = event.target;
-        if (!target || !target.closest) {
-          return;
-        }
-        if (
-          target.closest(
-            '.paxdesign-booking-button, #paxdesign-booking-root, [data-paxdesign-open-chat]'
-          )
-        ) {
-          warmOnFirstInteraction();
-        }
-      },
-      { capture: true, passive: true }
-    );
-  });
+  // Start downloading the chat bundle immediately after this deferred loader
+  // runs — do not wait for the first tap. Opening the panel must never stall
+  // on a ~200KB parse if the file is already in flight / cached.
+  preloadChat();
 })();
