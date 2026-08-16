@@ -20,6 +20,8 @@ trap 'rm -rf "$tmpdir"' EXIT
 
 curl -fsSL "${SITE}/wp-content/plugins/paxdesign-booking/assets/js/chat-script.js?v=${STAMP}" \
   -o "${tmpdir}/chat-script.js"
+curl -fsSL "${SITE}/wp-content/plugins/paxdesign-booking/assets/js/booking-script.js?v=${STAMP}" \
+  -o "${tmpdir}/booking-script.js"
 curl -fsSL "${SITE}/wp-content/plugins/paxdesign-booking/assets/css/booking-styles.css?v=${STAMP}" \
   -o "${tmpdir}/booking-styles.css"
 curl -fsSL "${SITE}/wp-content/plugins/paxdesign-booking/assets/js/cybercrime-admin.js?v=${STAMP}" \
@@ -27,13 +29,30 @@ curl -fsSL "${SITE}/wp-content/plugins/paxdesign-booking/assets/js/cybercrime-ad
 curl -fsSL "${SITE}/wp-content/plugins/paxdesign-booking/paxdesign-booking.php?v=${STAMP}" \
   -o "${tmpdir}/paxdesign-booking.php" || true
 
-grep -q "Version: 3.174.93" "${tmpdir}/chat-script.js" \
-  && ok "chat-script.js cache-bust version 3.174.93" \
-  || fail "chat-script.js is not the patched 3.174.93 file"
+grep -q "Version: 3.174.97" "${tmpdir}/chat-script.js" \
+  && ok "chat-script.js cache-bust version 3.174.97" \
+  || fail "chat-script.js is not the patched 3.174.97 file"
 
 grep -q "function pinToLatestMessage" "${tmpdir}/chat-script.js" \
   && ok "instant pin-to-latest is present" \
   || fail "pinToLatestMessage missing"
+
+grep -q -- "--pax-mobile-widget-max-chat: none" "${tmpdir}/booking-styles.css" \
+  && ok "mobile chat is a full phone sheet" \
+  || fail "mobile chat still uses a 380px height cap"
+
+grep -q "paxdesign-chat-mode-active.paxdesign-mobile-chat-mode" "${tmpdir}/booking-styles.css" \
+  && ok "mobile sheet overrides the 520px desktop chat height" \
+  || fail "mobile sheet still loses to the 520px desktop chat height"
+
+grep -q "function fitWidgetToVisualViewport" "${tmpdir}/booking-script.js" \
+  && ok "mobile chat sizes to the visual viewport" \
+  || fail "fitWidgetToVisualViewport missing from live booking-script.js"
+
+grep -q "paxdesign-booking-chat-auth-gate" "${tmpdir}/booking-styles.css" \
+  && grep -q "background: #fff" "${tmpdir}/booking-styles.css" \
+  && ok "chat login panel has Apple light styling" \
+  || fail "chat login panel is not Apple-styled"
 
 if grep -q "scroll-behavior: smooth" "${tmpdir}/booking-styles.css"; then
   fail "live CSS still uses smooth history scrolling"
@@ -85,6 +104,17 @@ if grep -q "skipping stacked sync" "${tmpdir}/chat-script.js"; then
 else
   ok "live chat-script.js is not the later GitHub chat rewrite"
 fi
+
+curl -fsSL "${SITE}/wp-content/plugins/paxdesign-booking/assets/customer-auth/js/pax-auth.js?v=${STAMP}" \
+  -o "${tmpdir}/pax-auth.js"
+
+grep -q "Sign in with GitHub" "${tmpdir}/pax-auth.js" \
+  && ok "website login includes Sign in with GitHub" \
+  || fail "Sign in with GitHub missing from live pax-auth.js"
+
+grep -q "githubWebStartUrl" "${tmpdir}/pax-auth.js" \
+  && ok "GitHub OAuth start helper is present" \
+  || fail "githubWebStartUrl missing from live pax-auth.js"
 
 curl -fsSL "${SITE}/?pax_chat_ui=${STAMP}" -o "${tmpdir}/home.html" || true
 if grep -q "KI-generierte Antworten" "${tmpdir}/home.html" 2>/dev/null; then

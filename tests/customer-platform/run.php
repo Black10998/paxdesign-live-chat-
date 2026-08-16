@@ -172,7 +172,7 @@ cx_assert_true(strpos($chat_knowledge, 'ONE clear step at a time') !== false, 'T
 
 $ccs_js = file_get_contents($ccs_root . '/assets/js/chat-script.js');
 cx_assert_true(strpos($ccs_js, 'skipping stacked sync') === false, 'Chat JS must not contain the 3.176 stacked-sync rewrite');
-cx_assert_true(strpos($ccs_js, 'Version: 3.174.93') !== false, 'Chat JS must be the 3.174.93 baseline');
+cx_assert_true(strpos($ccs_js, 'Version: 3.174.97') !== false, 'Chat JS must be the 3.174.97 baseline');
 
 $ccs_css = file_get_contents($ccs_root . '/assets/css/booking-styles.css');
 cx_assert_true(strpos($ccs_css, '#063226') !== false, 'Human composer dark-green color must remain');
@@ -193,6 +193,7 @@ cx_assert_true(count($avatar_gifs) === 100, 'Expected 100 avatar GIF assets');
 $pax_auth_js = file_get_contents(dirname(__DIR__, 2) . '/paxdesign-booking/assets/customer-auth/js/pax-auth.js');
 cx_assert_true(strpos($pax_auth_js, 'pax-\\d{2,3}') !== false, 'Account JS must support 3-digit avatar preset ids');
 cx_assert_true(strpos($pax_auth_js, 'pdx-account-avatar-picker__item--locked') !== false, 'Account JS must render locked VIP avatars');
+cx_assert_true(strpos($pax_auth_js, 'Sign in with GitHub') !== false, 'Account JS must offer Sign in with GitHub');
 
 $vip_presets = file_get_contents($customer_dir . '/class-paxdesign-customer-avatar-vip-presets.php');
 cx_assert_true(strpos($vip_presets, 'const COUNT = 10') !== false, 'VIP avatar presets must define 10 exclusive avatars');
