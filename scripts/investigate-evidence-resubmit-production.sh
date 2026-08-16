@@ -1,5 +1,6 @@
 #!/usr/bin/env bash
 # Trace evidence RESUBMIT workflow on production (not original intake attachments).
+# Focus: customer_evidence messages, staff request_evidence rows, orphan uploads.
 set -euo pipefail
 
 WP_PATH="${WP_PATH:?WP_PATH required}"
