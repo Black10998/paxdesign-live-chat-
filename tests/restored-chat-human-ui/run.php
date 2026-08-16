@@ -32,8 +32,8 @@ $i18n = file_get_contents($root . '/includes/class-paxdesign-cybercrime-i18n.php
 $admin = file_get_contents($root . '/includes/customer/class-paxdesign-customer-admin.php');
 $adminJs = file_get_contents($root . '/assets/js/cybercrime-admin.js');
 
-assert_true(strpos($boot, "define('PAXDESIGN_BOOKING_VERSION', '3.174.100')") !== false, 'plugin version 3.174.100');
-assert_true(strpos($js, 'Version: 3.174.100') !== false, 'chat-script cache-bust 3.174.100');
+assert_true(strpos($boot, "define('PAXDESIGN_BOOKING_VERSION', '3.174.101')") !== false, 'plugin version 3.174.101');
+assert_true(strpos($js, 'Version: 3.174.101') !== false, 'chat-script cache-bust 3.174.101');
 assert_true(strpos($js, 'uploadHumanAttachFile') !== false, 'JS upload handler');
 assert_true(strpos($js, 'paxdesign-chat-admin-active') !== false, 'JS human takeover class');
 assert_true(strpos($js, 'paxdesign_chat_live_user_attach') !== false, 'JS posts attach action');
@@ -44,18 +44,21 @@ assert_true(strpos($js, "isLoggedIn() && isVerifiedAccount()") !== false, 'auth 
 assert_true(strpos($js, "context: 'page'") !== false, 'chat login uses the account-page form');
 assert_true(strpos($widget, 'pdx-auth-page-form-wrap') !== false, 'chat login panel shares account-page form wrap');
 assert_true(strpos($css, '--pax-mobile-widget-max-chat: none') !== false, 'mobile chat is a full phone sheet');
-assert_true(strpos($css, 'min(460px, 62svh') !== false, 'mobile chat uses a compact svh card');
+assert_true(strpos($css, 'min(420px, 58svh') !== false, 'mobile chat uses a compact svh card');
+assert_true(strpos($css, 'width: 360px') !== false && strpos($css, 'height: 420px') !== false, 'desktop chat is a compact 360x420 card from the first frame');
+assert_true(strpos($css, '.paxdesign-booking-chat-auth-gate[hidden]') !== false && strpos($css, 'display: none !important') !== false, 'hidden login overlay cannot cover messages on PC or mobile');
 assert_true(strpos($css, 'text-align: center !important') !== false, 'login title/button is centered');
 assert_true(strpos($css, 'display: none !important') !== false && strpos($css, 'paxdesign-booking-mode-switch') !== false, 'top Live Chat/Termin buchen tabs are hidden');
 assert_true(strpos($bookingJs, 'function visualViewportBox') !== false, 'mobile layout reads the visual viewport box');
-assert_true(strpos($bookingJs, 'box.height * 0.62') !== false, 'closed keyboard chat is a compact card, not 84% of the screen');
-assert_true(strpos($bookingJs, 'function isFixedLayoutRelative') !== false, 'keyboard fit detects iOS visual-viewport fixed positioning');
+assert_true(strpos($bookingJs, 'COMPACT_HEIGHT = 420') !== false, 'closed keyboard chat is a 420px compact card, not 84% of the screen');
+assert_true(strpos($bookingJs, 'kb > 50') !== false, 'keyboard-open layout waits for real visualViewport occlusion');
+assert_true(strpos($bookingJs, 'function applyCompactWidgetFrame') !== false, 'chat sizes to a compact card on desktop and mobile');
 assert_true(strpos($js, "data-widget-mode=\"booking\"") !== false, 'plus menu contains Termin buchen');
 assert_true(strpos($js, "data-widget-mode=\"chat\"") !== false, 'plus menu contains Live Chat');
 assert_true(strpos($css, 'overflow-wrap: anywhere') !== false, 'mobile bubbles wrap instead of overflowing');
 assert_true(strpos($css, 'paxdesign-chat-mode-active.paxdesign-mobile-chat-mode') !== false, 'mobile sheet beats the 520px desktop chat height');
 assert_true(strpos($css, 'font-size: 22px') !== false, 'in-chat login title matches /account/');
-assert_true(strpos($bookingJs, 'function fitWidgetToVisualViewport') !== false, 'mobile chat sizes to the visual viewport');
+assert_true(strpos($bookingJs, 'bottom: Math.round') !== false, 'widget is bottom-pinned instead of jumping via offsetTop');
 assert_true(strpos($bookingJs, 'function keyboardOcclusionPx') !== false, 'keyboard occlusion uses visualViewport');
 assert_true(strpos($js, 'pinToLatestMessage: pinToLatestMessage') !== false, 'keyboard resize can pin to the latest message');
 assert_true(strpos($css, 'border-radius: 12px 12px 0 0') !== false, 'keyboard-open composer sits flush above the keyboard');

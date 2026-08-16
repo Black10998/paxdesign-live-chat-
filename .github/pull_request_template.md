@@ -1,6 +1,6 @@
 ## Production baseline
 
-This PR must be based on current `main` (plugin **3.174.100**, matching live `paxdesign.at`).
+This PR must be based on current `main` (plugin **3.174.101**, matching live `paxdesign.at`).
 
 - Do not reintroduce `3.176.x` chat (`skipping stacked sync`, instant-open freeze work).
 - Do not restore CCS AI form-fill classes (`class-paxdesign-cybercrime-ai-workflow.php` and related).

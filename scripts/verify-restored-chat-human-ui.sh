@@ -29,25 +29,43 @@ curl -fsSL "${SITE}/wp-content/plugins/paxdesign-booking/assets/js/cybercrime-ad
 curl -fsSL "${SITE}/wp-content/plugins/paxdesign-booking/paxdesign-booking.php?v=${STAMP}" \
   -o "${tmpdir}/paxdesign-booking.php" || true
 
-grep -q "Version: 3.174.100" "${tmpdir}/chat-script.js" \
-  && ok "chat-script.js cache-bust version 3.174.100" \
-  || fail "chat-script.js is not the patched 3.174.100 file"
+grep -q "Version: 3.174.101" "${tmpdir}/chat-script.js" \
+  && ok "chat-script.js cache-bust version 3.174.101" \
+  || fail "chat-script.js is not the patched 3.174.101 file"
 
 grep -q "function pinToLatestMessage" "${tmpdir}/chat-script.js" \
   && ok "instant pin-to-latest is present" \
   || fail "pinToLatestMessage missing"
 
-grep -q -- "min(460px, 62svh" "${tmpdir}/booking-styles.css" \
+grep -q -- "min(420px, 58svh" "${tmpdir}/booking-styles.css" \
   && ok "mobile chat uses a compact svh card" \
   || fail "mobile chat is not using compact svh card height"
+
+grep -q "width: 360px" "${tmpdir}/booking-styles.css" \
+  && grep -q "height: 420px" "${tmpdir}/booking-styles.css" \
+  && ok "desktop chat is a compact 360x420 card" \
+  || fail "desktop chat is not the compact 360x420 card"
+
+grep -qF ".paxdesign-booking-chat-auth-gate[hidden]" "${tmpdir}/booking-styles.css" \
+  && grep -A2 -F ".paxdesign-booking-chat-auth-gate[hidden]" "${tmpdir}/booking-styles.css" | grep -q "display: none !important" \
+  && ok "hidden login overlay is display:none so it cannot cover messages" \
+  || fail "hidden login overlay can still cover messages"
 
 grep -q 'data-widget-mode="booking"' "${tmpdir}/chat-script.js" \
   && ok "plus menu contains Termin buchen" \
   || fail "plus menu is missing Termin buchen"
 
-grep -q "function isFixedLayoutRelative" "${tmpdir}/booking-script.js" \
-  && ok "keyboard fit detects iOS visual-viewport fixed positioning" \
-  || fail "isFixedLayoutRelative missing from live booking-script.js"
+grep -q "function applyCompactWidgetFrame" "${tmpdir}/booking-script.js" \
+  && ok "compact widget frame is applied on desktop and mobile" \
+  || fail "applyCompactWidgetFrame missing from live booking-script.js"
+
+grep -q "COMPACT_HEIGHT = 420" "${tmpdir}/booking-script.js" \
+  && ok "compact card height is 420px" \
+  || fail "COMPACT_HEIGHT 420 missing from live booking-script.js"
+
+grep -q "kb > 50" "${tmpdir}/booking-script.js" \
+  && ok "keyboard-open waits for real visualViewport occlusion" \
+  || fail "kb > 50 missing from live booking-script.js"
 
 grep -q "function visualViewportBox" "${tmpdir}/booking-script.js" \
   && ok "mobile layout reads the visual viewport box" \
@@ -61,9 +79,9 @@ grep -q "paxdesign-chat-mode-active.paxdesign-mobile-chat-mode" "${tmpdir}/booki
   && ok "mobile sheet overrides the 520px desktop chat height" \
   || fail "mobile sheet still loses to the 520px desktop chat height"
 
-grep -q "function fitWidgetToVisualViewport" "${tmpdir}/booking-script.js" \
-  && ok "mobile chat sizes to the visual viewport" \
-  || fail "fitWidgetToVisualViewport missing from live booking-script.js"
+grep -q "bottom: Math.round" "${tmpdir}/booking-script.js" \
+  && ok "widget is bottom-pinned instead of jumping via offsetTop" \
+  || fail "bottom-pinned compact frame missing from live booking-script.js"
 
 grep -q "paxdesign-booking-chat-auth-gate" "${tmpdir}/booking-styles.css" \
   && grep -q "background: #fff" "${tmpdir}/booking-styles.css" \
