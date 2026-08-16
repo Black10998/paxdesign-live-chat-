@@ -502,7 +502,6 @@
     readinessEl.setAttribute('aria-busy', 'true');
     if (readinessLoadingEl) readinessLoadingEl.hidden = false;
     if (readinessErrorEl) readinessErrorEl.hidden = true;
-    chatPanelEl.classList.add('paxdesign-chat-readiness-active');
     readinessState = 'loading';
     setReadinessPhase('readinessConnecting', 'Connecting to chat…');
   }
@@ -524,7 +523,6 @@
     if (!readinessEl || !chatPanelEl) return;
     readinessEl.hidden = true;
     readinessEl.setAttribute('aria-busy', 'false');
-    chatPanelEl.classList.remove('paxdesign-chat-readiness-active');
     readinessState = 'ready';
   }
 
@@ -671,7 +669,10 @@
     if (entryEl && !entryEl.hidden) {
       if (messagesEl) messagesEl.scrollTop = 0;
     } else {
-      scrollToBottom(true);
+      flushScrollToBottom(true);
+    }
+    if (widgetOpen && input && !input.disabled) {
+      try { input.focus({ preventScroll: true }); } catch (focusErr) {}
     }
   }
 
@@ -831,13 +832,17 @@
     // overlay. Every CCS/messaging sync still runs — it just no longer freezes
     // the UI on open. The blocking overlay is reserved for a genuine cold start
     // (no session yet) or when a refresh is explicitly forced.
-    var openInstant = !options.force && !!options.reuseSession && !!getSessionId() &&
-      (sessionRestored || shouldPreserveHistoryDom());
-    if (openInstant) {
-      hideReadinessOverlay();
-      updateEntryUi();
-      updateInputState();
-    } else {
+    var openInstant = !options.force && (
+      widgetOpen ||
+      (!!options.reuseSession && !!getSessionId() && (sessionRestored || shouldPreserveHistoryDom()))
+    );
+    hideReadinessOverlay();
+    updateEntryUi();
+    updateInputState();
+    if (openInstant && input && !input.disabled) {
+      try { input.focus({ preventScroll: true }); } catch (focusErr) {}
+    }
+    if (!openInstant) {
       showReadinessOverlay();
     }
     readinessPromise = runChatReadinessChecks(options)
@@ -1782,6 +1787,7 @@
   function onWidgetOpen() {
     widgetOpen = true;
     playAvailableSoundOnce();
+    hideReadinessOverlay();
     initAuthGate();
     if (!canUseChat()) {
       showAuthGate();
@@ -1789,11 +1795,10 @@
       return;
     }
     hideAuthGate();
-    if (shouldPreserveHistoryDom()) {
-      scrollToBottom(true);
-      requestAnimationFrame(function () {
-        scrollToBottom(true);
-      });
+    updateInputState();
+    flushScrollToBottom(true);
+    if (input && !input.disabled) {
+      try { input.focus({ preventScroll: true }); } catch (focusErr) {}
     }
     beginChatReadiness({ reuseSession: true }).then(function (ready) {
       if (!ready) return;
@@ -2449,6 +2454,7 @@
         if (full) {
           historyLoadedAt = Date.now();
         }
+        flushScrollToBottom(true);
         return true;
       })
       .catch(function (err) {
@@ -3382,7 +3388,12 @@
   function updateInputState() {
     var closed = chatHandler === 'closed' && !isPersistentAccountChat();
     var showForm = !closed;
-    input.disabled = closed;
+    if (input) {
+      input.disabled = closed;
+      input.readOnly = false;
+      input.removeAttribute('readonly');
+      input.setAttribute('aria-disabled', closed ? 'true' : 'false');
+    }
     if (sendBtn) {
       sendBtn.classList.toggle('paxdesign-is-disabled', closed || (!input.value.trim() && !isStreaming));
       sendBtn.setAttribute('aria-disabled', closed ? 'true' : sendBtn.getAttribute('aria-disabled'));
@@ -4896,6 +4907,7 @@
 
     plusBtn.addEventListener('click', function (e) {
       e.preventDefault();
+      e.stopPropagation();
       unlockAudio();
       if (!canUseChat()) {
         showAuthGate();
@@ -4917,13 +4929,26 @@
       toggleComposerAttachMenu(true);
     });
 
-    document.addEventListener('click', function (e) {
-      if (!root.contains(e.target)) {
-        closeComposerAttachMenu();
-      }
-    });
+    document.addEventListener('pointerdown', function (e) {
+      if (!root.classList.contains('paxdesign-chat-attach-open')) return;
+      var menu = root.querySelector('.paxdesign-booking-chat-attach-menu');
+      if (!menu || menu.hidden) return;
+      if (menu.contains(e.target) || plusBtn.contains(e.target)) return;
+      closeComposerAttachMenu();
+    }, true);
 
     updateComposerPlusUi();
+  }
+
+  function triggerHiddenFileInput(input) {
+    if (!input) return;
+    try {
+      if (typeof input.showPicker === 'function') {
+        input.showPicker();
+        return;
+      }
+    } catch (pickerErr) {}
+    input.click();
   }
 
   function ensureHumanAttachInputs() {
@@ -4942,9 +4967,8 @@
     fileInput.accept = '.pdf,.doc,.docx,.txt,.zip,.jpg,.jpeg,.png,.webp,.gif,.heic,.heif';
     fileInput.setAttribute('aria-hidden', 'true');
     fileInput.tabIndex = -1;
-    var host = plusBtn.parentNode || root;
-    host.appendChild(imageInput);
-    host.appendChild(fileInput);
+    document.body.appendChild(imageInput);
+    document.body.appendChild(fileInput);
     imageInput.addEventListener('change', function () {
       var file = imageInput.files && imageInput.files[0];
       imageInput.value = '';
@@ -4962,25 +4986,29 @@
     var menu = document.createElement('div');
     menu.className = 'paxdesign-booking-chat-attach-menu';
     menu.hidden = true;
+    menu.setAttribute('role', 'menu');
     menu.innerHTML =
-      '<button type="button" class="paxdesign-booking-chat-attach-item" data-attach-kind="image">' +
+      '<button type="button" class="paxdesign-booking-chat-attach-item" data-attach-kind="image" role="menuitem">' +
         '<span class="paxdesign-booking-chat-attach-item-label">' + escapeHtml(attachMenuLabel('image')) + '</span>' +
       '</button>' +
-      '<button type="button" class="paxdesign-booking-chat-attach-item" data-attach-kind="file">' +
+      '<button type="button" class="paxdesign-booking-chat-attach-item" data-attach-kind="file" role="menuitem">' +
         '<span class="paxdesign-booking-chat-attach-item-label">' + escapeHtml(attachMenuLabel('file')) + '</span>' +
       '</button>';
-    menu.addEventListener('click', function (e) {
+    menu.addEventListener('pointerdown', function (e) {
       var btn = e.target.closest('[data-attach-kind]');
       if (!btn) return;
       e.preventDefault();
+      e.stopPropagation();
+      var kind = btn.getAttribute('data-attach-kind') || 'file';
       closeComposerAttachMenu();
       if (!isHumanMode()) {
         showError(attachMenuLabel('humanOnly'));
         return;
       }
-      var kind = btn.getAttribute('data-attach-kind') || 'file';
-      var input = root.querySelector(kind === 'image' ? '#paxdesignChatHumanImageAttach' : '#paxdesignChatHumanFileAttach');
-      if (input) input.click();
+      var inputEl = document.querySelector(kind === 'image' ? '#paxdesignChatHumanImageAttach' : '#paxdesignChatHumanFileAttach');
+      window.setTimeout(function () {
+        triggerHiddenFileInput(inputEl);
+      }, 0);
     });
     var host = root.querySelector('.paxdesign-booking-chat-input-area') || root;
     host.appendChild(menu);
@@ -5006,12 +5034,12 @@
   function toggleComposerAttachMenu(forceOpen) {
     var menu = root.querySelector('.paxdesign-booking-chat-attach-menu');
     if (!menu) return;
-    var open = forceOpen === true ? true : menu.hidden;
-    menu.hidden = !open;
-    root.classList.toggle('paxdesign-chat-attach-open', open);
-    plusBtn.setAttribute('aria-expanded', open ? 'true' : 'false');
-    plusBtn.classList.toggle('paxdesign-is-active', open);
-    if (open && quickActions) {
+    var shouldOpen = forceOpen === true ? true : (forceOpen === false ? false : menu.hidden);
+    menu.hidden = !shouldOpen;
+    root.classList.toggle('paxdesign-chat-attach-open', shouldOpen);
+    plusBtn.setAttribute('aria-expanded', shouldOpen ? 'true' : 'false');
+    plusBtn.classList.toggle('paxdesign-is-active', shouldOpen);
+    if (shouldOpen && quickActions) {
       root.classList.remove('paxdesign-chat-quick-open');
       quickActions.classList.remove('paxdesign-is-open');
     }
@@ -5046,8 +5074,9 @@
     var menu = root.querySelector('.paxdesign-booking-chat-attach-menu');
     if (menu) {
       menu.querySelectorAll('[data-attach-kind]').forEach(function (btn) {
-        btn.disabled = !humanQueue;
-        btn.classList.toggle('paxdesign-is-disabled', !humanQueue);
+        btn.removeAttribute('disabled');
+        btn.classList.remove('paxdesign-is-disabled');
+        btn.setAttribute('aria-disabled', humanQueue ? 'false' : 'true');
       });
     }
     if (!humanQueue) closeComposerAttachMenu();
@@ -5246,14 +5275,30 @@
   }
 
   function scrollToBottom(force) {
+    flushScrollToBottom(force);
+  }
+
+  function flushScrollToBottom(force) {
     if (!messagesEl) return;
     if (force) stickToBottom = true;
     if (!stickToBottom) return;
-    messagesEl.scrollTop = messagesEl.scrollHeight;
-    requestAnimationFrame(function () {
+    function applyScroll() {
       if (!messagesEl || !stickToBottom) return;
       messagesEl.scrollTop = messagesEl.scrollHeight;
+      if (threadEl && threadEl.lastElementChild) {
+        try {
+          threadEl.lastElementChild.scrollIntoView({ block: 'end', inline: 'nearest' });
+        } catch (scrollErr) {}
+      }
+    }
+    applyScroll();
+    requestAnimationFrame(function () {
+      applyScroll();
+      requestAnimationFrame(applyScroll);
     });
+    window.setTimeout(applyScroll, 0);
+    window.setTimeout(applyScroll, 48);
+    window.setTimeout(applyScroll, 160);
   }
 
   function escapeHtml(str) {
