@@ -5,7 +5,7 @@ name: Deploy restored chat human UI
 on:
   push:
     branches:
-      - cursor/chat-ui-compact-9e84
+      - cursor/github-web-login-9e84
     paths:
       - 'deploy-patches/restored-chat-human-ui/**'
       - '.github/workflows/deploy-restored-chat-human-ui.yml'
@@ -90,8 +90,66 @@ jobs:
           rsync -az -e "ssh ${SSH_OPTS[*]}" \
             "$SRC/includes/customer/class-paxdesign-customer-admin.php" \
             "${REMOTE}:${TARGET}/includes/customer/class-paxdesign-customer-admin.php"
+          rsync -az -e "ssh ${SSH_OPTS[*]}" \
+            "$SRC/includes/auth/class-paxdesign-auth-github.php" \
+            "${REMOTE}:${TARGET}/includes/auth/class-paxdesign-auth-github.php"
+          rsync -az -e "ssh ${SSH_OPTS[*]}" \
+            "$SRC/includes/auth/class-paxdesign-auth-module.php" \
+            "${REMOTE}:${TARGET}/includes/auth/class-paxdesign-auth-module.php"
+          rsync -az -e "ssh ${SSH_OPTS[*]}" \
+            "$SRC/includes/auth/class-paxdesign-auth-rest.php" \
+            "${REMOTE}:${TARGET}/includes/auth/class-paxdesign-auth-rest.php"
+          rsync -az -e "ssh ${SSH_OPTS[*]}" \
+            "$SRC/includes/auth/class-paxdesign-auth-frontend.php" \
+            "${REMOTE}:${TARGET}/includes/auth/class-paxdesign-auth-frontend.php"
+          rsync -az -e "ssh ${SSH_OPTS[*]}" \
+            "$SRC/assets/customer-auth/js/pax-auth.js" \
+            "${REMOTE}:${TARGET}/assets/customer-auth/js/pax-auth.js"
+          rsync -az -e "ssh ${SSH_OPTS[*]}" \
+            "$SRC/assets/customer-auth/css/pdx-auth-page.css" \
+            "${REMOTE}:${TARGET}/assets/customer-auth/css/pdx-auth-page.css"
+          rsync -az -e "ssh ${SSH_OPTS[*]}" \
+            "$SRC/assets/customer-auth/css/pdx-auth.css" \
+            "${REMOTE}:${TARGET}/assets/customer-auth/css/pdx-auth.css"
+          rsync -az -e "ssh ${SSH_OPTS[*]}" \
+            "$SRC/templates/settings-page.php" \
+            "${REMOTE}:${TARGET}/templates/settings-page.php"
+          rsync -az -e "ssh ${SSH_OPTS[*]}" \
+            "$SRC/scripts/wp-eval-github-web-oauth-config.php" \
+            "${REMOTE}:${TARGET}/scripts/wp-eval-github-web-oauth-config.php"
           ssh "${SSH_OPTS[@]}" "$REMOTE" \
             "cd '$(printf '%q' "$WP_PATH")' && (command -v wp >/dev/null && wp cache flush || true) && (command -v wp >/dev/null && wp litespeed-purge all || true)"
+
+      - name: Configure Sign in with GitHub web OAuth
+        env:
+          WP_SSH_HOST: ${{ secrets.WP_SSH_HOST }}
+          WP_SSH_PORT: ${{ secrets.WP_SSH_PORT }}
+          WP_SSH_USER: ${{ secrets.WP_SSH_USER }}
+          WP_SSH_PRIVATE_KEY: ${{ secrets.WP_SSH_PRIVATE_KEY }}
+          WP_PATH: ${{ secrets.WP_PATH }}
+          PAX_GITHUB_OAUTH_CLIENT_ID: ${{ secrets.PAX_GITHUB_OAUTH_CLIENT_ID }}
+          PAX_GITHUB_OAUTH_CLIENT_SECRET: ${{ secrets.PAX_GITHUB_OAUTH_CLIENT_SECRET }}
+          GITHUB_OAUTH_CLIENT_ID: ${{ secrets.GITHUB_OAUTH_CLIENT_ID }}
+          GITHUB_OAUTH_CLIENT_SECRET: ${{ secrets.GITHUB_OAUTH_CLIENT_SECRET }}
+        run: |
+          set -euo pipefail
+          PORT="${WP_SSH_PORT:-22}"
+          SSH_OPTS=(-i ~/.ssh/id_deploy -p "$PORT" -o StrictHostKeyChecking=yes -o BatchMode=yes)
+          install -m 600 -D /dev/null ~/.ssh/id_deploy
+          printf '%s\n' "$WP_SSH_PRIVATE_KEY" > ~/.ssh/id_deploy
+          ssh-keyscan -p "$PORT" -H "$WP_SSH_HOST" >> ~/.ssh/known_hosts 2>/dev/null || true
+          CLIENT_ID="${PAX_GITHUB_OAUTH_CLIENT_ID:-${GITHUB_OAUTH_CLIENT_ID:-}}"
+          CLIENT_SECRET="${PAX_GITHUB_OAUTH_CLIENT_SECRET:-${GITHUB_OAUTH_CLIENT_SECRET:-}}"
+          if [ -z "$CLIENT_ID" ] || [ -z "$CLIENT_SECRET" ]; then
+            echo "GitHub OAuth Client ID/Secret not in Actions secrets — WP options left unchanged"
+            echo "Add PAX_GITHUB_OAUTH_CLIENT_ID and PAX_GITHUB_OAUTH_CLIENT_SECRET, then re-run."
+            exit 0
+          fi
+          ssh "${SSH_OPTS[@]}" "${WP_SSH_USER}@${WP_SSH_HOST}" \
+            "cd '$(printf '%q' "$WP_PATH")' && \
+             export PAX_GITHUB_OAUTH_CLIENT_ID=$(printf '%q' "$CLIENT_ID") && \
+             export PAX_GITHUB_OAUTH_CLIENT_SECRET=$(printf '%q' "$CLIENT_SECRET") && \
+             wp eval-file wp-content/plugins/paxdesign-booking/scripts/wp-eval-github-web-oauth-config.php"
 
       - name: Verify live chat assets
         run: |

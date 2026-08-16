@@ -2,7 +2,7 @@
 /*
 Plugin Name: PAXdesign Booking System
 Description: Professional booking system with minimal chat-style interface and team management
-Version: 3.174.93
+Version: 3.174.94
 Author: PAXdesign
 Author URI: https://paxdesign.at
 License: GPL v2 or later
@@ -21,7 +21,7 @@ if (defined('PAXDESIGN_BOOKING_VERSION')) {
 }
 
 // Define plugin constants (customer platform)
-define('PAXDESIGN_BOOKING_VERSION', '3.174.93');
+define('PAXDESIGN_BOOKING_VERSION', '3.174.94');
 define('PAXDESIGN_BOOKING_DB_VERSION', '2.1');
 define('PAXDESIGN_BOOKING_PLUGIN_DIR', plugin_dir_path(__FILE__));
 define('PAXDESIGN_BOOKING_PLUGIN_URL', plugin_dir_url(__FILE__));
@@ -1049,6 +1049,18 @@ class PAXdesign_Booking {
         register_setting('paxdesign_booking_settings', 'paxdesign_apple_web_key_p8', array(
             'sanitize_callback' => function ($value) {
                 return is_string($value) ? trim($value) : '';
+            },
+        ));
+        register_setting('paxdesign_booking_settings', 'paxdesign_github_oauth_client_id', array(
+            'sanitize_callback' => 'sanitize_text_field',
+        ));
+        register_setting('paxdesign_booking_settings', 'paxdesign_github_oauth_client_secret', array(
+            'sanitize_callback' => function ($value) {
+                $value = is_string($value) ? trim($value) : '';
+                if ($value === '') {
+                    return (string) get_option('paxdesign_github_oauth_client_secret', '');
+                }
+                return $value;
             },
         ));
         register_setting(

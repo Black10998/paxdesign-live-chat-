@@ -31,8 +31,8 @@ $i18n = file_get_contents($root . '/includes/class-paxdesign-cybercrime-i18n.php
 $admin = file_get_contents($root . '/includes/customer/class-paxdesign-customer-admin.php');
 $adminJs = file_get_contents($root . '/assets/js/cybercrime-admin.js');
 
-assert_true(strpos($boot, "define('PAXDESIGN_BOOKING_VERSION', '3.174.93')") !== false, 'plugin version 3.174.93');
-assert_true(strpos($js, 'Version: 3.174.93') !== false, 'chat-script cache-bust 3.174.93');
+assert_true(strpos($boot, "define('PAXDESIGN_BOOKING_VERSION', '3.174.94')") !== false, 'plugin version 3.174.94');
+assert_true(strpos($js, 'Version: 3.174.94') !== false, 'chat-script cache-bust 3.174.94');
 assert_true(strpos($js, 'uploadHumanAttachFile') !== false, 'JS upload handler');
 assert_true(strpos($js, 'paxdesign-chat-admin-active') !== false, 'JS human takeover class');
 assert_true(strpos($js, 'paxdesign_chat_live_user_attach') !== false, 'JS posts attach action');
