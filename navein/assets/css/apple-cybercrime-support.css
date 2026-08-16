@@ -2397,25 +2397,90 @@ html body.page-cybercrime-support .pax-ccs-portal__accordion-item.is-open .pax-c
 }
 
 .pax-ccs-portal__evidence-request {
-  margin-top: 14px;
-  padding: 14px;
-  border: 1px solid rgba(0, 113, 227, 0.28);
+  margin-top: 16px;
+  padding: 18px 18px 16px;
+  border: 1px solid rgba(0, 113, 227, 0.24);
+  border-radius: 16px;
+  background: linear-gradient(180deg, rgba(0, 113, 227, 0.1), rgba(0, 113, 227, 0.04));
+  box-shadow: 0 8px 24px rgba(0, 113, 227, 0.08);
+}
+
+.pax-ccs-portal__evidence-request-icon {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 42px;
+  height: 42px;
+  margin-bottom: 10px;
   border-radius: 12px;
-  background: linear-gradient(180deg, rgba(0, 113, 227, 0.07), rgba(0, 113, 227, 0.03));
+  background: rgba(0, 113, 227, 0.14);
+  color: #0071e3;
+  font-size: 22px;
+  line-height: 1;
 }
 
 .pax-ccs-portal__evidence-request-kicker {
-  margin: 0 0 6px;
-  font-size: 15px;
-  font-weight: 600;
+  margin: 0 0 8px;
+  font-size: 17px;
+  font-weight: 700;
+  letter-spacing: -0.01em;
   color: #0071e3;
 }
 
 .pax-ccs-portal__evidence-request-hint {
-  margin: 0 0 12px;
-  font-size: 13px;
-  line-height: 1.45;
+  margin: 0 0 16px;
+  font-size: 14px;
+  line-height: 1.5;
   color: var(--ccs-muted, #6e6e73);
+}
+
+.pax-ccs-portal__evidence-request-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 100%;
+  min-height: 48px;
+  padding: 12px 18px;
+  border: 0;
+  border-radius: 12px;
+  background: #0071e3;
+  color: #fff;
+  font-size: 15px;
+  font-weight: 600;
+  line-height: 1.25;
+  text-align: center;
+  cursor: pointer;
+  box-shadow: 0 4px 14px rgba(0, 113, 227, 0.24);
+}
+
+.pax-ccs-portal__evidence-request-btn:hover {
+  background: #0077ed;
+}
+
+.pax-ccs-portal__evidence-request-btn:focus-visible {
+  outline: 3px solid rgba(0, 113, 227, 0.28);
+  outline-offset: 2px;
+}
+
+.pax-ccs-portal__accordion-evidence-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  margin-inline-start: 8px;
+  padding: 2px 8px;
+  border-radius: 999px;
+  background: rgba(0, 113, 227, 0.12);
+  color: #0071e3;
+  font-size: 11px;
+  font-weight: 700;
+  white-space: nowrap;
+}
+
+@media (min-width: 768px) {
+  .pax-ccs-portal__evidence-request-btn {
+    width: auto;
+    min-width: 240px;
+  }
 }
 
 .pax-ccs-portal__reply-wrap--evidence-needed {

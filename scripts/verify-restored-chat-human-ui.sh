@@ -176,6 +176,20 @@ grep -q "timelineEvidenceInlineHtml" "${tmpdir}/apple-cybercrime-support.js" \
   && ok "portal JS includes inline evidence request CTA" \
   || fail "inline evidence request CTA missing from live portal JS"
 
+grep -q "entryHasEvidenceRequest" "${tmpdir}/apple-cybercrime-support.js" \
+  && ok "portal JS detects evidence request flags on timeline entries" \
+  || fail "entryHasEvidenceRequest missing from live portal JS"
+
+grep -q "pax-ccs-portal__evidence-request-btn" "${tmpdir}/apple-cybercrime-support.js" \
+  && ok "portal JS includes prominent evidence upload button" \
+  || fail "evidence upload button missing from live portal JS"
+
+curl -fsSL "${SITE}/wp-content/themes/navein/assets/css/apple-cybercrime-support.css?v=${STAMP}" \
+  -o "${tmpdir}/apple-cybercrime-support.css" || true
+grep -q "pax-ccs-portal__evidence-request" "${tmpdir}/apple-cybercrime-support.css" \
+  && ok "portal CSS includes Apple-style evidence request card" \
+  || fail "evidence request card styles missing from live portal CSS"
+
 curl -fsSL "${SITE}/cybercrime-support/?n=${STAMP}" -o "${tmpdir}/ccs-page.html" || true
 grep -q "pax-ccs-resubmit-preview" "${tmpdir}/ccs-page.html" \
   && ok "cybercrime portal template includes evidence preview UI" \
@@ -185,6 +199,9 @@ curl -fsSL "${SITE}/wp-content/plugins/paxdesign-booking/includes/class-paxdesig
   -o "${tmpdir}/cybercrime-tickets.php" 2>/dev/null || true
 if [ -s "${tmpdir}/cybercrime-tickets.php" ] && grep -q "ajax_customer_resubmit" "${tmpdir}/cybercrime-tickets.php" 2>/dev/null; then
   ok "live tickets handler includes customer resubmit endpoint"
+  grep -q "timeline_evidence_signature" "${tmpdir}/cybercrime-tickets.php" \
+    && ok "live tickets handler includes timeline evidence sync signature" \
+    || fail "timeline evidence signature missing from live tickets handler"
 elif grep -q "paxdesign_cybercrime_customer_resubmit" "${tmpdir}/apple-cybercrime-support.js" \
   && grep -q "renderAttachments" "${tmpdir}/cybercrime-admin.js"; then
   ok "live portal/admin wired for evidence resubmit + secure attachment gallery"

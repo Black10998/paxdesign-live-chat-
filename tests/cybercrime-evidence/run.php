@@ -44,6 +44,10 @@ ccs_evidence_assert(strpos($portalJs, 'updateEvidenceUi') !== false, 'portal JS 
 ccs_evidence_assert(strpos($portalJs, 'renderResubmitPreview') !== false, 'portal JS previews selected files');
 ccs_evidence_assert(strpos($portalJs, 'paxdesign_cybercrime_customer_resubmit') !== false, 'portal JS calls resubmit action');
 ccs_evidence_assert(strpos($portalJs, 'timelineEvidenceInlineHtml') !== false, 'portal JS renders inline evidence request CTA');
+ccs_evidence_assert(strpos($portalJs, 'entryHasEvidenceRequest') !== false, 'portal JS detects evidence request from entry + meta');
+ccs_evidence_assert(strpos($portalJs, 'timeline_evidence_signature') !== false, 'portal JS tracks timeline evidence signature for sync');
+ccs_evidence_assert(strpos($portalJs, 'pax-ccs-portal__evidence-request-btn') !== false, 'portal JS renders prominent evidence upload button');
+ccs_evidence_assert(strpos($tickets, 'timeline_evidence_signature') !== false, 'tickets builds timeline evidence signature');
 ccs_evidence_assert(strpos($adminJs, 'pax-cc-request-evidence') !== false, 'admin JS handles request evidence checkbox');
 ccs_evidence_assert(strpos($adminJs, 'request_evidence') !== false, 'admin JS sends request_evidence flag');
 ccs_evidence_assert(strpos($adminJs, 'isDeletableEntry') !== false, 'admin JS derives delete eligibility client-side');

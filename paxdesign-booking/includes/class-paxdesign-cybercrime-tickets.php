@@ -504,14 +504,36 @@ class PAXdesign_Cybercrime_Tickets {
             $count++;
             $max_id = max($max_id, (int) ($entry['id'] ?? 0));
         }
+        $evidence_signature = self::timeline_evidence_signature($timeline);
         $out['timeline_max_id'] = $max_id;
         $out['timeline_count'] = $count;
+        $out['timeline_evidence_signature'] = $evidence_signature;
         $out['sync_revision'] = self::build_sync_revision(
             (string) ($out['updated_at'] ?? ''),
             $max_id,
             $count,
-            (string) ($out['status'] ?? '')
+            (string) ($out['status'] ?? ''),
+            $evidence_signature
         );
+    }
+
+    /**
+     * Stable signature of per-message evidence-request flags for client sync.
+     *
+     * @param array<int, array<string, mixed>> $timeline
+     * @return string
+     */
+    public static function timeline_evidence_signature(array $timeline) {
+        $parts = array();
+        foreach ($timeline as $entry) {
+            if (!is_array($entry)) {
+                continue;
+            }
+            $meta = is_array($entry['meta'] ?? null) ? $entry['meta'] : array();
+            $flag = (!empty($meta['request_evidence']) || !empty($entry['request_evidence'])) ? '1' : '0';
+            $parts[] = (int) ($entry['id'] ?? 0) . ':' . $flag;
+        }
+        return implode(',', $parts);
     }
 
     /**
@@ -519,15 +541,17 @@ class PAXdesign_Cybercrime_Tickets {
      * @param int    $timeline_max_id
      * @param int    $timeline_count
      * @param string $status
+     * @param string $evidence_signature
      * @return string
      */
-    public static function build_sync_revision($updated_at, $timeline_max_id, $timeline_count, $status = '') {
+    public static function build_sync_revision($updated_at, $timeline_max_id, $timeline_count, $status = '', $evidence_signature = '') {
         return hash(
             'crc32b',
             sanitize_text_field((string) $updated_at)
             . '|' . max(0, (int) $timeline_max_id)
             . '|' . max(0, (int) $timeline_count)
             . '|' . sanitize_key((string) $status)
+            . '|' . sanitize_text_field((string) $evidence_signature)
         );
     }
 
@@ -556,11 +580,12 @@ class PAXdesign_Cybercrime_Tickets {
         );
         self::append_report_sync_meta($snapshot, $timeline);
         return array(
-            'updated_at'      => (string) ($snapshot['updated_at'] ?? ''),
-            'timeline_max_id' => (int) ($snapshot['timeline_max_id'] ?? 0),
-            'timeline_count'  => (int) ($snapshot['timeline_count'] ?? 0),
-            'status'          => (string) ($snapshot['status'] ?? ''),
-            'sync_revision'   => (string) ($snapshot['sync_revision'] ?? ''),
+            'updated_at'                  => (string) ($snapshot['updated_at'] ?? ''),
+            'timeline_max_id'             => (int) ($snapshot['timeline_max_id'] ?? 0),
+            'timeline_count'              => (int) ($snapshot['timeline_count'] ?? 0),
+            'timeline_evidence_signature' => (string) ($snapshot['timeline_evidence_signature'] ?? ''),
+            'status'                      => (string) ($snapshot['status'] ?? ''),
+            'sync_revision'               => (string) ($snapshot['sync_revision'] ?? ''),
         );
     }
 
@@ -891,7 +916,7 @@ class PAXdesign_Cybercrime_Tickets {
         $entry['customer_visible'] = self::is_customer_visible_timeline_entry($entry);
         $entry['subject_key'] = $subject_key;
         $entry['subject'] = $audience === 'customer' ? '' : $subject;
-        $entry['request_evidence'] = !empty($meta['request_evidence']);
+        $entry['request_evidence'] = !empty($meta['request_evidence']) ? 1 : 0;
         $entry['id'] = (int) ($entry['id'] ?? 0);
         $deletable = self::is_deletable_staff_message($entry);
         $entry['allow_delete'] = $deletable ? 1 : 0;
@@ -1513,7 +1538,7 @@ class PAXdesign_Cybercrime_Tickets {
 
         $meta = array('event' => 'staff_reply');
         if ($request_evidence) {
-            $meta['request_evidence'] = true;
+            $meta['request_evidence'] = 1;
         }
 
         $message_id = self::add_message($reference_id, 'staff', $body, 'admin', $staff_user_id, $meta);

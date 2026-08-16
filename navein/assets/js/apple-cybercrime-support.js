@@ -634,17 +634,23 @@
   }
 
   function timelineEvidenceInlineHtml(entry) {
-    if (!entry || !entry.request_evidence || !isReportActive(activeReport)) {
+    if (!entry || !entryHasEvidenceRequest(entry)) {
       return '';
     }
-    var title = activeReportText('evidence_request_inline', 'Upload Evidence / رفع الأدلة');
-    var hint = activeReportText('evidence_request_hint', 'Please upload the requested files using the section below.');
-    var action = activeReportText('evidence_request_action', 'Upload files now');
-    return '<div class="pax-ccs-portal__evidence-request">'
-      + '<p class="pax-ccs-portal__evidence-request-kicker">📎 ' + escapeHtml(title) + '</p>'
+    var canUpload = isReportActive(activeReport) && needsEvidenceUpload(activeReport);
+    var title = activeReportText('evidence_request_inline', 'Evidence Required');
+    var hint = activeReportText('evidence_request_hint', 'Please upload the requested evidence here.');
+    var action = activeReportText('evidence_request_action', 'Upload Evidence / رفع الأدلة');
+    var buttonHtml = canUpload
+      ? '<button type="button" class="pax-ccs-portal__evidence-request-btn" data-ccs-upload-evidence>'
+        + escapeHtml(action) + '</button>'
+      : '';
+    return '<div class="pax-ccs-portal__evidence-request" data-ccs-evidence-card="1">'
+      + '<div class="pax-ccs-portal__evidence-request-icon" aria-hidden="true">📎</div>'
+      + '<p class="pax-ccs-portal__evidence-request-kicker">' + escapeHtml(title) + '</p>'
       + '<p class="pax-ccs-portal__evidence-request-hint">' + escapeHtml(hint) + '</p>'
-      + '<button type="button" class="pax-ccs-portal__btn pax-ccs-portal__btn--primary pax-ccs-portal__btn--compact" data-ccs-upload-evidence>'
-      + escapeHtml(action) + '</button></div>';
+      + buttonHtml
+      + '</div>';
   }
 
   function bindTimelineEvidenceActions() {
@@ -1115,6 +1121,8 @@
       report.customer_status || '',
       report.is_active === false || report.is_active === 0 || report.is_active === '0' ? '0' : '1',
       report.updated_at || '',
+      report.sync_revision || '',
+      report.timeline_evidence_signature || '',
       report.next_action || '',
       report.unread_count || 0,
       rejection.reason_key || '',
@@ -1130,6 +1138,10 @@
       return;
     }
     options = options || {};
+    var source = options.force ? 'mutation' : (options.source || 'poll');
+    if (!options.force && !shouldApplyIncomingReport(report, source)) {
+      return;
+    }
     if (!options.force && activeReport && activeReport.reference_id === report.reference_id) {
       var incomingTs = caseSyncTimestamp(report);
       var currentTs = caseSyncTimestamp(activeReport);
@@ -1143,8 +1155,10 @@
     }
     var statusChanged = !!(activeReport && (activeReport.status || '') !== (merged.status || ''));
     if (!options.force && activeReport && caseSyncFingerprint(merged) === caseSyncFingerprint(activeReport)) {
+      rememberSync(merged);
       return;
     }
+    rememberSync(merged);
     if (phase === 'form' && (merged.is_draft || merged.status === 'draft')) {
       prefillFormFromReport(merged);
       var wfStep = merged.workflow && parseInt(merged.workflow.step, 10);
@@ -1329,6 +1343,9 @@
       var sender = timelineSenderLabel(entry);
       var when = formatDate(entry.created_at || '');
       var body = escapeHtml(localizedTimelineBody(entry) || '').replace(/\n/g, '<br>');
+      var evidenceBadge = entryHasEvidenceRequest(entry)
+        ? '<span class="pax-ccs-portal__accordion-evidence-badge">📎 ' + escapeHtml(activeReportText('evidence_request_inline', 'Evidence Required')) + '</span>'
+        : '';
       var panelId = 'pax-ccs-acc-panel-' + entryId;
       var triggerId = 'pax-ccs-acc-trigger-' + entryId;
 
@@ -1337,7 +1354,7 @@
         + ' aria-expanded="' + (isOpen ? 'true' : 'false') + '" aria-controls="' + escapeHtml(panelId) + '">'
         + '<span class="pax-ccs-portal__accordion-head">'
         + '<span class="pax-ccs-portal__accordion-head-row">'
-        + '<span class="pax-ccs-portal__accordion-sender">' + escapeHtml(sender) + '</span>'
+        + '<span class="pax-ccs-portal__accordion-sender">' + escapeHtml(sender) + evidenceBadge + '</span>'
         + '<span class="pax-ccs-portal__accordion-when">' + escapeHtml(when) + '</span>'
         + '</span>'
         + '<span class="pax-ccs-portal__accordion-chevron" aria-hidden="true"></span>'
@@ -1610,6 +1627,7 @@
     if (!activeReport || activeReport.reference_id !== report.reference_id) {
       resetTimelineTracking();
     }
+    rememberSync(report);
     activeReport = report;
     setPhase('active-report');
     applyReportLifecycle(report);
@@ -1633,6 +1651,7 @@
     updateUnreadBadges(parseInt(report.unread_count, 10) || 0);
     markReportRead(report.reference_id || '').then(function (updated) {
       if (updated) {
+        rememberSync(updated);
         activeReport = updated;
         updateUnreadBadges(0);
         updateStartUnreadFromReports(reportHistoryData);
@@ -1654,6 +1673,111 @@
   var reportVisibilityBound = false;
   var REPORT_POLL_MS = 2000;
   var reportFetchSeq = 0;
+  var syncSnapshot = null;
+  var mutationDepth = 0;
+
+  function beginMutation() {
+    mutationDepth += 1;
+  }
+
+  function endMutation() {
+    mutationDepth = Math.max(0, mutationDepth - 1);
+  }
+
+  function entryMeta(entry) {
+    var meta = entry && entry.meta;
+    if (meta && typeof meta === 'object') {
+      return meta;
+    }
+    if (typeof meta === 'string' && meta.trim()) {
+      try {
+        var parsed = JSON.parse(meta);
+        if (parsed && typeof parsed === 'object') {
+          return parsed;
+        }
+      } catch (error) {
+        return {};
+      }
+    }
+    return {};
+  }
+
+  function entryHasEvidenceRequest(entry) {
+    if (!entry) {
+      return false;
+    }
+    if (entry.request_evidence === 1 || entry.request_evidence === '1' || entry.request_evidence === true) {
+      return true;
+    }
+    var meta = entryMeta(entry);
+    return meta.request_evidence === 1 || meta.request_evidence === '1' || meta.request_evidence === true;
+  }
+
+  function syncFromReport(report) {
+    if (!report || typeof report !== 'object') {
+      return null;
+    }
+    return {
+      updatedAt: String(report.updated_at || ''),
+      timelineMaxId: parseInt(report.timeline_max_id, 10) || 0,
+      timelineCount: parseInt(report.timeline_count, 10) || 0,
+      timelineEvidenceSignature: String(report.timeline_evidence_signature || ''),
+      status: String(report.status || ''),
+      syncRevision: String(report.sync_revision || '')
+    };
+  }
+
+  function compareSync(incoming, current) {
+    if (!incoming || !current) {
+      return 0;
+    }
+    if (incoming.syncRevision && current.syncRevision && incoming.syncRevision === current.syncRevision) {
+      return 0;
+    }
+    if (incoming.timelineMaxId !== current.timelineMaxId) {
+      return incoming.timelineMaxId > current.timelineMaxId ? 1 : -1;
+    }
+    if (incoming.timelineCount !== current.timelineCount) {
+      return incoming.timelineCount > current.timelineCount ? 1 : -1;
+    }
+    if (incoming.timelineEvidenceSignature !== current.timelineEvidenceSignature) {
+      return incoming.timelineEvidenceSignature > current.timelineEvidenceSignature ? 1 : -1;
+    }
+    if (incoming.updatedAt !== current.updatedAt) {
+      return incoming.updatedAt > current.updatedAt ? 1 : -1;
+    }
+    if (incoming.status !== current.status) {
+      return incoming.updatedAt >= current.updatedAt ? 1 : -1;
+    }
+    return 0;
+  }
+
+  function shouldApplyIncomingReport(report, source) {
+    var incoming = syncFromReport(report);
+    if (!incoming) {
+      return false;
+    }
+    if (!syncSnapshot) {
+      return true;
+    }
+    var cmp = compareSync(incoming, syncSnapshot);
+    if (source === 'poll' || source === 'fetch') {
+      if (mutationDepth > 0 && cmp <= 0) {
+        return false;
+      }
+      if (cmp < 0) {
+        return false;
+      }
+    }
+    return true;
+  }
+
+  function rememberSync(report) {
+    var incoming = syncFromReport(report);
+    if (incoming) {
+      syncSnapshot = incoming;
+    }
+  }
 
   function pollActiveReport() {
     if (phase !== 'active-report' || !activeReport || !activeReport.reference_id) {
@@ -1666,7 +1790,7 @@
         return;
       }
       if (report) {
-        applyIncomingReport(report);
+        applyIncomingReport(report, { source: 'poll' });
       }
     });
   }
@@ -1708,6 +1832,7 @@
     } catch (e) {}
     if (config.activeReport && config.activeReport.reference_id) {
       activeReport = config.activeReport;
+      rememberSync(config.activeReport);
       showActiveReport(config.activeReport);
       return Promise.resolve(true);
     }
@@ -2347,6 +2472,7 @@
         activeReplyError.hidden = true;
       }
       activeReplySubmit.disabled = true;
+      beginMutation();
       var body = new FormData();
       body.append('action', 'paxdesign_cybercrime_customer_reply');
       body.append('nonce', config.nonce);
@@ -2372,6 +2498,7 @@
         })
         .finally(function () {
           activeReplySubmit.disabled = false;
+          endMutation();
         });
     });
   }
@@ -2395,6 +2522,7 @@
         activeReplyError.hidden = true;
       }
       resubmitSubmitEl.disabled = true;
+      beginMutation();
       var body = new FormData();
       body.append('action', 'paxdesign_cybercrime_customer_resubmit');
       body.append('nonce', config.nonce);
@@ -2444,6 +2572,7 @@
         })
         .finally(function () {
           resubmitSubmitEl.disabled = false;
+          endMutation();
         });
     });
   }

@@ -368,19 +368,19 @@ return array(
 			'en' => 'Evidence uploaded successfully.',
 		),
 		'evidence_request_inline' => array(
+			'ar' => 'مطلوب رفع الأدلة',
+			'de' => 'Nachweise erforderlich',
+			'en' => 'Evidence Required',
+		),
+		'evidence_request_hint' => array(
+			'ar' => 'يرجى رفع الأدلة المطلوبة هنا.',
+			'de' => 'Bitte laden Sie die angeforderten Nachweise hier hoch.',
+			'en' => 'Please upload the requested evidence here.',
+		),
+		'evidence_request_action' => array(
 			'ar' => 'رفع الأدلة / Upload Evidence',
 			'de' => 'Nachweise hochladen / Upload Evidence',
 			'en' => 'Upload Evidence / رفع الأدلة',
-		),
-		'evidence_request_hint' => array(
-			'ar' => 'يرجى رفع الصور أو المستندات المطلوبة في قسم الرفع أدناه.',
-			'de' => 'Bitte laden Sie die angeforderten Fotos oder Dokumente im Upload-Bereich unten hoch.',
-			'en' => 'Please upload the requested photos or documents in the upload section below.',
-		),
-		'evidence_request_action' => array(
-			'ar' => 'رفع الملفات الآن',
-			'de' => 'Dateien jetzt hochladen',
-			'en' => 'Upload files now',
 		),
 		'preview_remove' => array(
 			'ar' => 'إزالة',
