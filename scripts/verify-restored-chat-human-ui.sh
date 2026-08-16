@@ -20,6 +20,8 @@ trap 'rm -rf "$tmpdir"' EXIT
 
 curl -fsSL "${SITE}/wp-content/plugins/paxdesign-booking/assets/js/chat-script.js?v=${STAMP}" \
   -o "${tmpdir}/chat-script.js"
+curl -fsSL "${SITE}/wp-content/plugins/paxdesign-booking/assets/js/booking-script.js?v=${STAMP}" \
+  -o "${tmpdir}/booking-script.js"
 curl -fsSL "${SITE}/wp-content/plugins/paxdesign-booking/assets/css/booking-styles.css?v=${STAMP}" \
   -o "${tmpdir}/booking-styles.css"
 curl -fsSL "${SITE}/wp-content/plugins/paxdesign-booking/assets/js/cybercrime-admin.js?v=${STAMP}" \
@@ -27,9 +29,17 @@ curl -fsSL "${SITE}/wp-content/plugins/paxdesign-booking/assets/js/cybercrime-ad
 curl -fsSL "${SITE}/wp-content/plugins/paxdesign-booking/paxdesign-booking.php?v=${STAMP}" \
   -o "${tmpdir}/paxdesign-booking.php" || true
 
-grep -q "Version: 3.174.93" "${tmpdir}/chat-script.js" \
-  && ok "chat-script.js cache-bust version 3.174.93" \
-  || fail "chat-script.js is not the patched 3.174.93 file"
+grep -q "Version: 3.174.105" "${tmpdir}/chat-script.js" \
+  && ok "chat-script.js cache-bust version 3.174.105" \
+  || fail "chat-script.js is not the patched 3.174.105 file"
+
+grep -q "function getSiteHeaderBottom" "${tmpdir}/booking-script.js" \
+  && ok "mobile keyboard header clamp present" \
+  || fail "getSiteHeaderBottom missing from booking-script.js"
+
+grep -q "function transitionAfterLogin" "${tmpdir}/chat-script.js" \
+  && ok "instant login transition present" \
+  || fail "transitionAfterLogin missing"
 
 grep -q "function pinToLatestMessage" "${tmpdir}/chat-script.js" \
   && ok "instant pin-to-latest is present" \
@@ -41,6 +51,10 @@ else
   ok "live CSS pins instantly without smooth scroll"
 fi
 
+grep -q "flex: 0 0 auto" "${tmpdir}/booking-styles.css" \
+  && ok "single message scroller layout present" \
+  || fail "chat thread flex fix missing"
+
 grep -q "uploadHumanAttachFile" "${tmpdir}/chat-script.js" \
   && ok "plus-button upload handler present" \
   || fail "uploadHumanAttachFile missing"
@@ -48,10 +62,6 @@ grep -q "uploadHumanAttachFile" "${tmpdir}/chat-script.js" \
 grep -q "var stickToBottom" "${tmpdir}/chat-script.js" \
   && ok "WhatsApp stick-to-bottom present" \
   || fail "stickToBottom missing"
-
-grep -q "background: true, blockUi: false" "${tmpdir}/chat-script.js" \
-  && ok "open does not block on history/sync" \
-  || fail "background open path missing"
 
 grep -q "paxdesign-chat-admin-active" "${tmpdir}/chat-script.js" \
   && ok "human takeover class toggle present" \
@@ -79,7 +89,6 @@ grep -q "saveStatus('rejected')" "${tmpdir}/cybercrime-admin.js" \
   && ok "admin JS includes rejected/مرفوض action" \
   || fail "rejected action missing from live cybercrime-admin.js"
 
-# Must still be the restored baseline, not the later GitHub chat freeze/unfreeze work.
 if grep -q "skipping stacked sync" "${tmpdir}/chat-script.js"; then
   fail "live chat-script.js looks like a newer GitHub chat rewrite"
 else

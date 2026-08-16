@@ -1,6 +1,6 @@
 /**
  * PAXdesign AI Chat — Sales & Booking Assistant
- * Version: 3.174.93
+ * Version: 3.174.105
  */
 (function () {
   'use strict';
@@ -29,7 +29,7 @@
   var form         = root.querySelector('.paxdesign-booking-chat-form');
   var input        = root.querySelector('.paxdesign-booking-chat-input');
   var sendBtn      = root.querySelector('.paxdesign-booking-chat-send');
-  var plusBtn      = root.querySelector('.paxdesign-booking-chat-plus');
+  var plusBtn      = root.querySelector('.paxdesign-booking-chat-composer .paxdesign-booking-chat-plus');
   var notifyBtn    = root.querySelector('.paxdesign-booking-chat-notify');
   var honeypot     = root.querySelector('.paxdesign-booking-chat-honeypot');
   var closedBar    = root.querySelector('.paxdesign-booking-chat-closed-bar');
@@ -91,7 +91,6 @@
   var chatMessageMap     = {};
   var replyToId          = 0;
   var authGateEl         = null;
-  var authGateCloseBtn   = null;
   var authGateVerifyEl   = null;
   var authGateBound      = false;
 
@@ -521,8 +520,25 @@
     if (!readinessEl || !chatPanelEl) return;
     readinessEl.hidden = true;
     readinessEl.setAttribute('aria-busy', 'false');
+    readinessEl.classList.remove('paxdesign-auth-transition');
     chatPanelEl.classList.remove('paxdesign-chat-readiness-active');
     readinessState = 'ready';
+  }
+
+  function showAuthTransitionOverlay() {
+    initChatReadinessUi();
+    if (!readinessEl) return;
+    if (readinessAutoRetryTimer) {
+      clearTimeout(readinessAutoRetryTimer);
+      readinessAutoRetryTimer = null;
+    }
+    readinessEl.classList.add('paxdesign-auth-transition');
+    readinessEl.hidden = false;
+    readinessEl.setAttribute('aria-busy', 'true');
+    if (readinessLoadingEl) readinessLoadingEl.hidden = false;
+    if (readinessErrorEl) readinessErrorEl.hidden = true;
+    readinessState = 'loading';
+    setReadinessPhase('readinessAuthenticating', 'Preparing your conversation…');
   }
 
   function cancelChatReadiness() {
@@ -1107,7 +1123,9 @@
       streamEventSince = 0;
       streamCacheBustNext = true;
       sessionRestored = false;
-      resetSessionState();
+      if (!options.preserveUi) {
+        resetSessionState();
+      }
       lastAuthUserId = nextUserId;
       updateAuthGateUi();
 
@@ -1126,7 +1144,7 @@
 
       var boot;
       if (isPersistentAccountChat()) {
-        boot = refreshAuthenticatedChatSession().then(function () {
+        boot = refreshAuthenticatedChatSession({ skipHistory: true }).then(function () {
           return reopenAuthenticatedSessionIfNeeded();
         });
       } else {
@@ -1172,6 +1190,76 @@
     options = options || {};
     options.force = true;
     return silentRefreshChatSession(reason, options);
+  }
+
+  function transitionAfterLogin(options) {
+    options = options || {};
+    if (silentRefreshPromise && !options.force) return silentRefreshPromise;
+
+    var generation = ++silentRefreshGeneration;
+    var previousUserId = typeof options.previousUserId === 'number' ? options.previousUserId : lastAuthUserId;
+    var oldSessionId = cachedSessionId || getSessionId() || (config && config.chatSessionId) || '';
+
+    hideAuthGate();
+    clearInlineAuthForm();
+    root.classList.add('paxdesign-chat-direct-mode');
+    if (entryEl) entryEl.hidden = true;
+    if (quickActions) quickActions.hidden = true;
+    showAuthTransitionOverlay();
+    notifyLayout();
+
+    silentRefreshPromise = refreshChatAuthNonce().then(function () {
+      if (generation !== silentRefreshGeneration) return false;
+      if (oldSessionId) sendCustomerDisconnectBeacon();
+      stopChatRealtimeTransport();
+      clearUserSessionCache([previousUserId, getAuthUserId()], {
+        sessionIds: [oldSessionId],
+        allKnownSessions: false,
+      });
+      resetChatConfigSessionMeta();
+      cachedSessionId = null;
+      streamEventSince = 0;
+      streamCacheBustNext = true;
+      lastAuthUserId = getAuthUserId();
+      purgeGuestChatStorage();
+
+      return refreshAuthenticatedChatSession({ skipHistory: true }).then(function () {
+        return reopenAuthenticatedSessionIfNeeded();
+      }).then(function () {
+        if (generation !== silentRefreshGeneration) return false;
+        return fetchSessionFromServer(true, false);
+      }).then(function () {
+        if (generation !== silentRefreshGeneration) return false;
+        return pollUpdatesOnce(false);
+      }).then(function () {
+        if (generation !== silentRefreshGeneration) return false;
+        hideReadinessOverlay();
+        inferEntryChoiceFromHandler();
+        updateEntryUi();
+        updateInputState();
+        updateEndButtonUi();
+        scheduleLivePolling();
+        if (widgetOpen || isPersistentAccountChat()) startCustomerStream();
+        stickToBottom = true;
+        scrollToBottom(true);
+        notifyLayout();
+        if (widgetOpen && input && !input.disabled) {
+          try { input.focus({ preventScroll: true }); } catch (focusErr) {}
+        }
+        logReadiness('login_transition', 'OK', { sessionId: getSessionId() });
+        return true;
+      });
+    }).catch(function (err) {
+      hideReadinessOverlay();
+      logReadiness('login_transition', 'FAILED', {
+        error: err && err.message ? err.message : err,
+      });
+      return false;
+    }).finally(function () {
+      silentRefreshPromise = null;
+    });
+
+    return silentRefreshPromise;
   }
 
   function resetChatForAuthChange(clearUi) {
@@ -1251,6 +1339,15 @@
       return;
     }
 
+    if ((reason === 'login' || reason === 'verification') && widgetOpen && canUseChat()) {
+      cancelChatReadiness();
+      transitionAfterLogin({
+        previousUserId: previousUserId,
+        force: true,
+      });
+      return;
+    }
+
     var shouldRefresh = reason === 'login'
       || reason === 'logout'
       || reason === 'user_switch'
@@ -1294,7 +1391,6 @@
 
   function initAuthGate() {
     authGateEl = root.querySelector('#paxdesignChatAuthGate');
-    authGateCloseBtn = root.querySelector('#paxdesignChatAuthClose');
     authGateVerifyEl = root.querySelector('#paxdesignChatAuthGateVerify');
     if (config && config.authGate) {
       var titleEl = root.querySelector('#paxdesignChatAuthGateTitle');
@@ -1312,15 +1408,6 @@
         if (!btn) return;
         e.preventDefault();
         mountInlineAuthForm(btn.getAttribute('data-auth-view'));
-      });
-    }
-    if (authGateCloseBtn) {
-      authGateCloseBtn.addEventListener('click', function (e) {
-        e.preventDefault();
-        hideAuthGate();
-        if (window.PAXdesignBooking && typeof window.PAXdesignBooking.close === 'function') {
-          window.PAXdesignBooking.close();
-        }
       });
     }
     if (!window.__paxChatAuthSessionBound) {
@@ -1350,7 +1437,7 @@
       showAuthGate();
       window.PDXAuth.mountInlineAuth(inlineEl, view === 'register' ? 'register' : 'login', {
         compact: true,
-        context: 'chat',
+        context: 'page',
       });
       return;
     }
@@ -1368,7 +1455,7 @@
     clearInlineAuthForm();
     window.PDXAuth.mountInlineAuth(inlineEl, view || 'login', {
       compact: true,
-      context: 'chat',
+      context: 'page',
     });
     inlineEl.dataset.mounted = '1';
     inlineEl.dataset.authView = view || 'login';
@@ -1435,12 +1522,16 @@
     if (!isLoggedIn()) {
       mountInlineAuthForm('login');
     }
+    if (window.PAXdesignBookingMobile && typeof window.PAXdesignBookingMobile.adjustLayout === 'function') {
+      window.PAXdesignBookingMobile.adjustLayout(false);
+    }
   }
 
   function hideAuthGate() {
     if (authGateEl) authGateEl.hidden = true;
     root.classList.remove('paxdesign-chat-auth-locked');
     clearInlineAuthForm();
+    notifyLayout();
   }
 
   function adoptSessionId(sessionId, opts) {
@@ -2110,12 +2201,21 @@
     if (historyScrollBound || !messagesEl) return;
     historyScrollBound = true;
     messagesEl.addEventListener('scroll', function () {
-      updateStickToBottomFromScroll();
+      if (!loadingOlderHistory) {
+        updateStickToBottomFromScroll();
+      }
       if (!hasOlderMessages || loadingOlderHistory) return;
       if (messagesEl.scrollTop <= 80) {
         fetchOlderMessages();
       }
     }, { passive: true });
+    var relayout = function () {
+      if (stickToBottom) scrollToBottom(true);
+    };
+    window.addEventListener('resize', relayout);
+    if (window.visualViewport) {
+      window.visualViewport.addEventListener('resize', relayout);
+    }
   }
 
   function fetchOlderMessages() {
@@ -2181,6 +2281,7 @@
     syncLocalMessageCursor(messages);
     if (messagesEl) {
       messagesEl.scrollTop = messagesEl.scrollHeight - prevScrollHeight;
+      stickToBottom = isNearBottom();
     }
   }
 
@@ -4416,6 +4517,16 @@
 
   function attachMenuLabel(key) {
     var lang = attachUiLang();
+    if (key === 'liveChat') {
+      if (lang === 'ar') return 'دردشة مباشرة';
+      if (lang === 'en') return 'Live Chat';
+      return 'Live Chat';
+    }
+    if (key === 'bookAppointment') {
+      if (lang === 'ar') return 'حجز موعد';
+      if (lang === 'en') return 'Book appointment';
+      return 'Termin buchen';
+    }
     if (key === 'image') {
       if (lang === 'ar') return 'إرفاق صورة';
       if (lang === 'en') return 'Attach image';
@@ -4523,13 +4634,34 @@
     menu.hidden = true;
     menu.setAttribute('role', 'menu');
     menu.innerHTML =
-      '<button type="button" class="paxdesign-booking-chat-attach-item" data-attach-kind="image" role="menuitem">' +
+      '<button type="button" class="paxdesign-booking-chat-attach-item" data-widget-mode="chat" role="menuitem">' +
+        '<span class="paxdesign-booking-chat-attach-item-label">' + escapeHtml(attachMenuLabel('liveChat')) + '</span>' +
+      '</button>' +
+      '<button type="button" class="paxdesign-booking-chat-attach-item" data-widget-mode="booking" role="menuitem">' +
+        '<span class="paxdesign-booking-chat-attach-item-label">' + escapeHtml(attachMenuLabel('bookAppointment')) + '</span>' +
+      '</button>' +
+      '<button type="button" class="paxdesign-booking-chat-attach-item paxdesign-booking-chat-attach-item--file" data-attach-kind="image" role="menuitem" hidden>' +
         '<span class="paxdesign-booking-chat-attach-item-label">' + escapeHtml(attachMenuLabel('image')) + '</span>' +
       '</button>' +
-      '<button type="button" class="paxdesign-booking-chat-attach-item" data-attach-kind="file" role="menuitem">' +
+      '<button type="button" class="paxdesign-booking-chat-attach-item paxdesign-booking-chat-attach-item--file" data-attach-kind="file" role="menuitem" hidden>' +
         '<span class="paxdesign-booking-chat-attach-item-label">' + escapeHtml(attachMenuLabel('file')) + '</span>' +
       '</button>';
     menu.addEventListener('pointerdown', function (e) {
+      var modeBtn = e.target.closest('[data-widget-mode]');
+      if (modeBtn) {
+        e.preventDefault();
+        e.stopPropagation();
+        var mode = modeBtn.getAttribute('data-widget-mode') || 'chat';
+        closeComposerAttachMenu();
+        if (window.PAXdesignBooking && typeof window.PAXdesignBooking.switchMode === 'function') {
+          window.PAXdesignBooking.switchMode(mode);
+        }
+        if (mode === 'chat' && !canUseChat()) {
+          showAuthGate();
+        }
+        notifyLayout();
+        return;
+      }
       var btn = e.target.closest('[data-attach-kind]');
       if (!btn) return;
       e.preventDefault();
@@ -4540,13 +4672,25 @@
         showError(attachMenuLabel('humanOnly'));
         return;
       }
+      if (!canUseChat()) {
+        showAuthGate();
+        return;
+      }
       var inputEl = document.getElementById(kind === 'image' ? 'paxdesignChatHumanImageAttach' : 'paxdesignChatHumanFileAttach');
       window.setTimeout(function () {
         triggerHiddenFileInput(inputEl);
       }, 0);
     });
-    var host = root.querySelector('.paxdesign-booking-chat-input-area') || root;
+    var host = root.querySelector('.paxdesign-booking-frame-inner') || root.querySelector('.paxdesign-booking-chat-input-area') || root;
     host.appendChild(menu);
+  }
+
+  function syncPlusButtons(open) {
+    var nodes = root.querySelectorAll('.paxdesign-booking-chat-plus');
+    for (var i = 0; i < nodes.length; i++) {
+      nodes[i].setAttribute('aria-expanded', open ? 'true' : 'false');
+      nodes[i].classList.toggle('paxdesign-is-active', !!open);
+    }
   }
 
   function toggleComposerAttachMenu(forceOpen) {
@@ -4555,10 +4699,7 @@
     var shouldOpen = forceOpen === true ? true : (forceOpen === false ? false : menu.hidden);
     menu.hidden = !shouldOpen;
     root.classList.toggle('paxdesign-chat-attach-open', shouldOpen);
-    if (plusBtn) {
-      plusBtn.setAttribute('aria-expanded', shouldOpen ? 'true' : 'false');
-      plusBtn.classList.toggle('paxdesign-is-active', shouldOpen);
-    }
+    syncPlusButtons(shouldOpen);
     if (shouldOpen && quickActions) {
       root.classList.remove('paxdesign-chat-quick-open');
       quickActions.classList.remove('paxdesign-is-open');
@@ -4570,25 +4711,57 @@
     if (!menu) return;
     menu.hidden = true;
     root.classList.remove('paxdesign-chat-attach-open');
-    if (plusBtn) {
-      plusBtn.setAttribute('aria-expanded', 'false');
-      plusBtn.classList.remove('paxdesign-is-active');
-    }
+    syncPlusButtons(false);
   }
 
   function updateComposerPlusUi() {
-    if (!plusBtn) return;
-    var plusWrap = root.querySelector('.paxdesign-booking-chat-plus-wrap');
-    if (plusWrap) plusWrap.hidden = false;
+    var plusWraps = root.querySelectorAll('.paxdesign-booking-chat-plus-wrap, .paxdesign-booking-mode-plus-bar');
+    for (var w = 0; w < plusWraps.length; w++) plusWraps[w].hidden = false;
     var humanConnected = chatHandler === 'admin';
     var humanQueue = isHumanMode();
-    plusBtn.classList.toggle('paxdesign-booking-chat-plus--human', humanQueue);
-    plusBtn.classList.toggle('paxdesign-booking-chat-plus--connected', humanConnected);
-    var label = humanQueue ? attachMenuLabel('attach') : 'Schnellaktionen';
-    plusBtn.setAttribute('aria-label', label);
-    var tip = plusBtn.querySelector('.paxdesign-booking-chat-plus-tooltip');
-    if (tip) tip.textContent = label;
-    if (!humanQueue) closeComposerAttachMenu();
+    var nodes = root.querySelectorAll('.paxdesign-booking-chat-plus');
+    var label = 'Menü';
+    for (var i = 0; i < nodes.length; i++) {
+      nodes[i].classList.toggle('paxdesign-booking-chat-plus--human', humanQueue);
+      nodes[i].classList.toggle('paxdesign-booking-chat-plus--connected', humanConnected);
+      nodes[i].setAttribute('aria-label', label);
+      var tip = nodes[i].querySelector('.paxdesign-booking-chat-plus-tooltip');
+      if (tip) tip.textContent = label;
+    }
+    var menu = root.querySelector('.paxdesign-booking-chat-attach-menu');
+    if (!menu) return;
+    var attachItems = menu.querySelectorAll('[data-attach-kind]');
+    for (var a = 0; a < attachItems.length; a++) {
+      attachItems[a].hidden = !humanQueue;
+    }
+    var extras = menu.querySelectorAll('[data-quick-message]');
+    for (var x = 0; x < extras.length; x++) {
+      if (extras[x].parentNode) extras[x].parentNode.removeChild(extras[x]);
+    }
+    if (!humanQueue && config.quickActions && config.quickActions.length) {
+      config.quickActions.forEach(function (action) {
+        var extra = document.createElement('button');
+        extra.type = 'button';
+        extra.className = 'paxdesign-booking-chat-attach-item';
+        extra.setAttribute('role', 'menuitem');
+        extra.setAttribute('data-quick-message', action.message || '');
+        if (action.intent) extra.setAttribute('data-quick-intent', action.intent);
+        extra.innerHTML = '<span class="paxdesign-booking-chat-attach-item-label">' + escapeHtml(action.label || '') + '</span>';
+        extra.addEventListener('pointerdown', function (ev) {
+          ev.preventDefault();
+          ev.stopPropagation();
+          closeComposerAttachMenu();
+          if (!canUseChat()) {
+            showAuthGate();
+            return;
+          }
+          sendMessage(extra.getAttribute('data-quick-message') || '', {
+            intent: extra.getAttribute('data-quick-intent') || ''
+          });
+        });
+        menu.appendChild(extra);
+      });
+    }
   }
 
   function validateAttachFile(file, kind) {
@@ -4702,42 +4875,27 @@
   }
 
   function initPlusToggle() {
-    if (!plusBtn || plusBtn.dataset.composerPlusBound === '1') return;
-    plusBtn.dataset.composerPlusBound = '1';
+    if (root.dataset.composerPlusBound === '1') return;
+    root.dataset.composerPlusBound = '1';
     var plusWrap = root.querySelector('.paxdesign-booking-chat-plus-wrap');
     if (plusWrap) plusWrap.hidden = false;
     ensureHumanAttachInputs();
     ensureComposerAttachMenu();
 
-    plusBtn.addEventListener('click', function (e) {
+    root.addEventListener('click', function (e) {
+      var btn = e.target.closest('.paxdesign-booking-chat-plus');
+      if (!btn || !root.contains(btn)) return;
       e.preventDefault();
       e.stopPropagation();
       unlockAudio();
-      if (!canUseChat()) {
-        showAuthGate();
-        return;
-      }
-      if (isHumanMode()) {
-        toggleComposerAttachMenu();
-        return;
-      }
-      if (quickActions && config.quickActions && config.quickActions.length) {
-        closeComposerAttachMenu();
-        var open = root.classList.toggle('paxdesign-chat-quick-open');
-        quickActions.classList.toggle('paxdesign-is-open', open);
-        plusBtn.setAttribute('aria-expanded', open ? 'true' : 'false');
-        plusBtn.classList.toggle('paxdesign-is-active', open);
-        notifyLayout();
-        return;
-      }
-      showError(attachMenuLabel('humanOnly'));
+      toggleComposerAttachMenu();
     });
 
     document.addEventListener('pointerdown', function (e) {
       if (!root.classList.contains('paxdesign-chat-attach-open')) return;
       var menu = root.querySelector('.paxdesign-booking-chat-attach-menu');
       if (!menu || menu.hidden) return;
-      if (menu.contains(e.target) || plusBtn.contains(e.target)) return;
+      if (menu.contains(e.target) || (e.target.closest && e.target.closest('.paxdesign-booking-chat-plus'))) return;
       closeComposerAttachMenu();
     }, true);
 
@@ -4746,9 +4904,7 @@
 
   function notifyLayout() {
     if (window.PAXdesignBookingMobile && typeof window.PAXdesignBookingMobile.adjustLayout === 'function') {
-      var active = document.activeElement;
-      var keyboardLikely = active && active.classList && active.classList.contains('paxdesign-booking-chat-input');
-      window.PAXdesignBookingMobile.adjustLayout(keyboardLikely);
+      window.PAXdesignBookingMobile.adjustLayout();
     }
   }
 
@@ -5594,6 +5750,7 @@
     onOpen: onWidgetOpen,
     onClose: onWidgetClose,
     abort: abortStream,
+    pinToLatestMessage: pinToLatestMessage,
     sendMessage: sendMessage,
     canUseChat: canUseChat,
     beginReadiness: beginChatReadiness,
