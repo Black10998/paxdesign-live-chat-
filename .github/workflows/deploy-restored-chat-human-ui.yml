@@ -106,6 +106,25 @@ jobs:
           ssh "${SSH_OPTS[@]}" "$REMOTE" \
             "cd '$(printf '%q' "$WP_PATH")' && (command -v wp >/dev/null && wp cache flush || true) && (command -v wp >/dev/null && wp litespeed-purge all || true)"
 
+      - name: Verify deployed PHP sync class on server
+        env:
+          WP_SSH_HOST: ${{ secrets.WP_SSH_HOST }}
+          WP_SSH_PORT: ${{ secrets.WP_SSH_PORT }}
+          WP_SSH_USER: ${{ secrets.WP_SSH_USER }}
+          WP_SSH_PRIVATE_KEY: ${{ secrets.WP_SSH_PRIVATE_KEY }}
+          WP_PATH: ${{ secrets.WP_PATH }}
+        run: |
+          set -euo pipefail
+          PORT="${WP_SSH_PORT:-22}"
+          SSH_OPTS=(-i ~/.ssh/id_deploy -p "$PORT" -o StrictHostKeyChecking=yes -o BatchMode=yes)
+          install -m 600 -D /dev/null ~/.ssh/id_deploy
+          printf '%s\n' "$WP_SSH_PRIVATE_KEY" > ~/.ssh/id_deploy
+          ssh-keyscan -p "$PORT" -H "$WP_SSH_HOST" >> ~/.ssh/known_hosts 2>/dev/null || true
+          TARGET="${WP_PATH%/}/wp-content/plugins/paxdesign-booking"
+          REMOTE="${WP_SSH_USER}@${WP_SSH_HOST}"
+          ssh "${SSH_OPTS[@]}" "$REMOTE" \
+            "grep -q 'class PAXdesign_Conversation_Sync' '${TARGET}/includes/class-paxdesign-conversation-sync.php' && grep -q '3.174.106' '${TARGET}/paxdesign-booking.php'"
+
       - name: Verify live chat assets
         run: |
           set -euo pipefail

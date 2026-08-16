@@ -33,12 +33,12 @@ grep -q "Version: 3.174.106" "${tmpdir}/chat-script.js" \
   && ok "chat-script.js cache-bust version 3.174.106" \
   || fail "chat-script.js is not the patched 3.174.106 file"
 
-curl -fsSL "${SITE}/wp-content/plugins/paxdesign-booking/includes/class-paxdesign-conversation-sync.php?v=${STAMP}" \
-  -o "${tmpdir}/conversation-sync.php" || true
-
-grep -q "class PAXdesign_Conversation_Sync" "${tmpdir}/conversation-sync.php" \
-  && ok "unified conversation sync class deployed" \
-  || fail "PAXdesign_Conversation_Sync missing from production"
+grep -q "var appliedMessageSeq" "${tmpdir}/chat-script.js" \
+  && grep -q "function getIncrementalSince" "${tmpdir}/chat-script.js" \
+  && grep -q "resync_required" "${tmpdir}/chat-script.js" \
+  && grep -q "function shouldPreserveHistoryDom" "${tmpdir}/chat-script.js" \
+  && ok "website unified sync merge cursors present" \
+  || fail "unified sync client markers missing from chat-script.js"
 
 grep -q "function scheduleUnifiedSync" "${tmpdir}/chat-script.js" \
   && ok "website unified sync coordinator present" \
