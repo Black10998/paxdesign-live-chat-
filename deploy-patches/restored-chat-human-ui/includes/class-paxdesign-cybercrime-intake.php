@@ -1187,7 +1187,7 @@ class PAXdesign_Cybercrime_Intake {
 
         nocache_headers();
         header('Content-Type: ' . $mime);
-        header('Content-Disposition: inline; filename="' . rawurlencode($file) . '"');
+        header('Content-Disposition: inline; filename="' . str_replace(array('"', "\r", "\n"), '', $file) . '"');
         header('Content-Length: ' . (string) filesize($path));
         header('X-Content-Type-Options: nosniff');
 
