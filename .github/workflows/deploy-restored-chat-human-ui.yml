@@ -5,7 +5,7 @@ name: Deploy restored chat human UI
 on:
   push:
     branches:
-      - cursor/github-web-login-9e84
+      - cursor/chat-mobile-layout-9e84
     paths:
       - 'deploy-patches/restored-chat-human-ui/**'
       - '.github/workflows/deploy-restored-chat-human-ui.yml'
@@ -57,6 +57,9 @@ jobs:
           rsync -az -e "ssh ${SSH_OPTS[*]}" \
             "$SRC/assets/js/chat-script.js" \
             "${REMOTE}:${TARGET}/assets/js/chat-script.js"
+          rsync -az -e "ssh ${SSH_OPTS[*]}" \
+            "$SRC/assets/js/booking-script.js" \
+            "${REMOTE}:${TARGET}/assets/js/booking-script.js"
           rsync -az -e "ssh ${SSH_OPTS[*]}" \
             "$SRC/assets/css/booking-styles.css" \
             "${REMOTE}:${TARGET}/assets/css/booking-styles.css"

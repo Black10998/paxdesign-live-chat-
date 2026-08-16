@@ -1,6 +1,6 @@
 <?php
 /**
- * Guard: GitHub paxdesign-booking must match the live 3.174.94 baseline.
+ * Guard: GitHub paxdesign-booking must match the live 3.174.95 baseline.
  * Rejects the later 3.176.x chat rewrite and CCS AI form-fill classes.
  */
 $root = dirname(__DIR__, 2);
@@ -24,8 +24,8 @@ $knowledge = file_get_contents($plugin . '/includes/class-paxdesign-chat-knowled
 $css = file_get_contents($plugin . '/assets/css/booking-styles.css');
 $widget = file_get_contents($plugin . '/templates/booking-widget.php');
 
-pb_ok(strpos($boot, "define('PAXDESIGN_BOOKING_VERSION', '3.174.94')") !== false, 'plugin version 3.174.94');
-pb_ok(strpos($js, 'Version: 3.174.94') !== false, 'chat-script cache-bust 3.174.94');
+pb_ok(strpos($boot, "define('PAXDESIGN_BOOKING_VERSION', '3.174.95')") !== false, 'plugin version 3.174.95');
+pb_ok(strpos($js, 'Version: 3.174.95') !== false, 'chat-script cache-bust 3.174.95');
 pb_ok(strpos($js, 'skipping stacked sync') === false, 'chat-script is not the 3.176 freeze/unfreeze rewrite');
 pb_ok(strpos($js, 'var openInstant') === false, 'chat-script does not use the 3.176 instant-open rewrite');
 pb_ok(strpos($js, 'var stickToBottom') !== false, 'WhatsApp stick-to-bottom is present');
@@ -44,6 +44,12 @@ pb_ok(is_file($plugin . '/includes/class-paxdesign-cybercrime-i18n.php'), 'compa
 pb_ok(strpos($knowledge, 'Immer auf Deutsch') === false, 'knowledge prompt does not force German');
 pb_ok(strpos($knowledge, 'ONE clear step at a time') !== false, 'CCS one-step guidance is present');
 pb_ok(strpos($js, 'Gespräch beenden') === false, 'chat JS has no Gespräch beenden label');
+pb_ok(strpos($css, '--pax-mobile-widget-max-chat: none') !== false, 'mobile chat is not capped at 380px');
+pb_ok(strpos($css, 'top: max(8px, env(safe-area-inset-top, 0px))') !== false, 'mobile sheet is pinned to the phone viewport');
+pb_ok(strpos($css, '#paxdesign-booking-root .paxdesign-booking-chat-auth-gate') !== false && strpos($css, "background: #fff") !== false, 'chat login panel uses Apple light background');
+pb_ok(strpos($widget, 'pdx-auth-page-form-wrap') !== false, 'chat login mounts the account-page form styles');
+pb_ok(strpos($js, "context: 'page'") !== false, 'chat login uses the account-page auth form');
+pb_ok(strpos($css, 'font-size: 16px') !== false, 'mobile composer uses 16px text to avoid overflow/zoom');
 
 $overlay_files = array(
     'paxdesign-booking.php',
@@ -57,6 +63,7 @@ $overlay_files = array(
     'includes/class-paxdesign-cybercrime-intake.php',
     'includes/customer/class-paxdesign-customer-admin.php',
     'templates/booking-widget.php',
+    'assets/js/booking-script.js',
     'includes/auth/class-paxdesign-auth-github.php',
     'includes/auth/class-paxdesign-auth-module.php',
     'includes/auth/class-paxdesign-auth-rest.php',
@@ -77,4 +84,4 @@ if ($fail > 0) {
     fwrite(STDERR, "$fail production-baseline assertion(s) failed\n");
     exit(1);
 }
-echo "Production baseline 3.174.94 guards passed.\n";
+echo "Production baseline 3.174.95 guards passed.\n";

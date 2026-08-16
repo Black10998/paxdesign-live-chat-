@@ -1,6 +1,6 @@
 /**
  * PAXdesign AI Chat — Sales & Booking Assistant
- * Version: 3.174.94
+ * Version: 3.174.95
  */
 (function () {
   'use strict';
@@ -1350,7 +1350,7 @@
       showAuthGate();
       window.PDXAuth.mountInlineAuth(inlineEl, view === 'register' ? 'register' : 'login', {
         compact: true,
-        context: 'chat',
+        context: 'page',
       });
       return;
     }
@@ -1368,7 +1368,7 @@
     clearInlineAuthForm();
     window.PDXAuth.mountInlineAuth(inlineEl, view || 'login', {
       compact: true,
-      context: 'chat',
+      context: 'page',
     });
     inlineEl.dataset.mounted = '1';
     inlineEl.dataset.authView = view || 'login';
