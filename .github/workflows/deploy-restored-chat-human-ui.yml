@@ -216,7 +216,7 @@ jobs:
           ssh-keyscan -p "$PORT" -H "$WP_SSH_HOST" >> ~/.ssh/known_hosts 2>/dev/null || true
           ssh "${SSH_OPTS[@]}" "$REMOTE" "grep -q append_report_attachments '$(printf '%q' "$TARGET")' && grep -q collect_message_attachments '$(printf '%q' "$TARGET")' && grep -q mark_evidence_requests_fulfilled '$(printf '%q' "$TARGET")' && grep -q has_active_evidence_request '$(printf '%q' "$TARGET")' && echo 'OK: live tickets.php includes evidence attachment handlers'"
           INTAKE="${WP_PATH%/}/wp-content/plugins/paxdesign-booking/includes/class-paxdesign-cybercrime-intake.php"
-          ssh "${SSH_OPTS[@]}" "$REMOTE" "grep -q attachment_access_token '$(printf '%q' "$INTAKE")' && grep -q can_browser_preview_image '$(printf '%q' "$INTAKE")' && echo 'OK: live intake.php includes attachment download fixes'"
+          ssh "${SSH_OPTS[@]}" "$REMOTE" "grep -q stream_attachment_file '$(printf '%q' "$INTAKE")' && grep -q maybe_serve_attachment_early '$(printf '%q' "$INTAKE")' && echo 'OK: live intake.php includes PDF-safe attachment streaming'"
 
       - name: Verify evidence resubmit pipeline on production
         env:

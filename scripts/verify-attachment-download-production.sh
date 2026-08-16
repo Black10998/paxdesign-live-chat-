@@ -90,7 +90,7 @@ foreach ($enriched as $item) {
   $mime = PAXdesign_Cybercrime_Intake::normalize_attachment_mime((string)($item["type"] ?? ""), $path);
   if ($mime === "application/pdf") {
     if (!PAXdesign_Cybercrime_Intake::verify_pdf_file($path)) {
-      echo "FAIL: PDF on disk missing %PDF- header: $name\n";
+      echo "WARN: skipping invalid PDF on disk (not browser-openable): $name\n";
       continue;
     }
     $pdf_name = $name;
