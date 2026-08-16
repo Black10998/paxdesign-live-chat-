@@ -22,6 +22,7 @@ $tickets = file_get_contents($root . '/includes/class-paxdesign-cybercrime-ticke
 $admin = file_get_contents($root . '/includes/customer/class-paxdesign-customer-admin.php');
 $adminJs = file_get_contents($root . '/assets/js/cybercrime-admin.js');
 $portalJs = file_get_contents($theme . '/assets/js/apple-cybercrime-support.js');
+$portalCss = file_get_contents($theme . '/assets/css/apple-cybercrime-support.css');
 $portalTpl = file_get_contents($theme . '/template-parts/pages/cybercrime-support.php');
 
 ccs_evidence_assert(strpos($intake, 'ATTACHMENT_ACTION') !== false, 'intake defines attachment action');
@@ -47,6 +48,8 @@ ccs_evidence_assert(strpos($portalJs, 'timelineEvidenceInlineHtml') !== false, '
 ccs_evidence_assert(strpos($portalJs, 'entryHasEvidenceRequest') !== false, 'portal JS detects evidence request from entry + meta');
 ccs_evidence_assert(strpos($portalJs, 'timeline_evidence_signature') !== false, 'portal JS tracks timeline evidence signature for sync');
 ccs_evidence_assert(strpos($portalJs, 'pax-ccs-portal__evidence-request-btn') !== false, 'portal JS renders prominent evidence upload button');
+ccs_evidence_assert(strpos($portalCss, 'pax-ccs-portal__evidence-request-btn') !== false, 'portal CSS styles evidence upload button');
+ccs_evidence_assert(strpos($portalCss, '-webkit-text-fill-color: #fff !important') !== false, 'portal CSS locks evidence button text contrast');
 ccs_evidence_assert(strpos($tickets, 'timeline_evidence_signature') !== false, 'tickets builds timeline evidence signature');
 ccs_evidence_assert(strpos($adminJs, 'pax-cc-request-evidence') !== false, 'admin JS handles request evidence checkbox');
 ccs_evidence_assert(strpos($adminJs, 'request_evidence') !== false, 'admin JS sends request_evidence flag');

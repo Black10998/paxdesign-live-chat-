@@ -190,6 +190,11 @@ grep -q "pax-ccs-portal__evidence-request" "${tmpdir}/apple-cybercrime-support.c
   && ok "portal CSS includes Apple-style evidence request card" \
   || fail "evidence request card styles missing from live portal CSS"
 
+grep -q "pax-ccs-portal__evidence-request-btn" "${tmpdir}/apple-cybercrime-support.css" \
+  && grep -q "\-webkit-text-fill-color: #fff !important" "${tmpdir}/apple-cybercrime-support.css" \
+  && ok "portal CSS locks evidence upload button contrast" \
+  || fail "evidence upload button contrast guard missing from live portal CSS"
+
 curl -fsSL "${SITE}/cybercrime-support/?n=${STAMP}" -o "${tmpdir}/ccs-page.html" || true
 grep -q "pax-ccs-resubmit-preview" "${tmpdir}/ccs-page.html" \
   && ok "cybercrime portal template includes evidence preview UI" \

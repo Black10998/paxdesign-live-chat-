@@ -1259,6 +1259,69 @@ html body.page-template-template-apple-cybercrime-support-php .pax-ccs-portal__b
 html body.page-cybercrime-support .pax-ccs-portal__btn--primary {
   color: #fff !important;
   background: var(--ccs-navy) !important;
+  -webkit-text-fill-color: #fff !important;
+}
+
+html body.page-template-template-apple-cybercrime-support .pax-ccs-portal__evidence-request-btn,
+html body.page-template-template-apple-cybercrime-support-php .pax-ccs-portal__evidence-request-btn,
+html body.page-cybercrime-support .pax-ccs-portal__evidence-request-btn {
+  color: #fff !important;
+  background: #0071e3 !important;
+  -webkit-text-fill-color: #fff !important;
+}
+
+html body.page-template-template-apple-cybercrime-support .pax-ccs-portal__evidence-request-btn:hover,
+html body.page-template-template-apple-cybercrime-support-php .pax-ccs-portal__evidence-request-btn:hover,
+html body.page-cybercrime-support .pax-ccs-portal__evidence-request-btn:hover {
+  color: #fff !important;
+  background: #0077ed !important;
+  -webkit-text-fill-color: #fff !important;
+}
+
+html body.page-template-template-apple-cybercrime-support .pax-ccs-portal__evidence-request-kicker,
+html body.page-template-template-apple-cybercrime-support-php .pax-ccs-portal__evidence-request-kicker,
+html body.page-cybercrime-support .pax-ccs-portal__evidence-request-kicker,
+html body.page-template-template-apple-cybercrime-support .pax-ccs-portal__accordion-evidence-badge,
+html body.page-template-template-apple-cybercrime-support-php .pax-ccs-portal__accordion-evidence-badge,
+html body.page-cybercrime-support .pax-ccs-portal__accordion-evidence-badge {
+  color: #0071e3 !important;
+  -webkit-text-fill-color: #0071e3 !important;
+}
+
+html body.page-template-template-apple-cybercrime-support .pax-ccs-portal__evidence-request-hint,
+html body.page-template-template-apple-cybercrime-support-php .pax-ccs-portal__evidence-request-hint,
+html body.page-cybercrime-support .pax-ccs-portal__evidence-request-hint {
+  color: var(--ccs-muted) !important;
+  -webkit-text-fill-color: var(--ccs-muted) !important;
+}
+
+html body.page-template-template-apple-cybercrime-support .pax-ccs-portal__resubmit-title,
+html body.page-template-template-apple-cybercrime-support-php .pax-ccs-portal__resubmit-title,
+html body.page-cybercrime-support .pax-ccs-portal__resubmit-title,
+html body.page-template-template-apple-cybercrime-support .pax-ccs-portal__resubmit-label,
+html body.page-template-template-apple-cybercrime-support-php .pax-ccs-portal__resubmit-label,
+html body.page-cybercrime-support .pax-ccs-portal__resubmit-label,
+html body.page-template-template-apple-cybercrime-support .pax-ccs-portal__resubmit-preview-name,
+html body.page-template-template-apple-cybercrime-support-php .pax-ccs-portal__resubmit-preview-name,
+html body.page-cybercrime-support .pax-ccs-portal__resubmit-preview-name,
+html body.page-template-template-apple-cybercrime-support .pax-ccs-portal__reply-label,
+html body.page-template-template-apple-cybercrime-support-php .pax-ccs-portal__reply-label,
+html body.page-cybercrime-support .pax-ccs-portal__reply-label {
+  color: var(--ccs-ink) !important;
+  -webkit-text-fill-color: var(--ccs-ink) !important;
+}
+
+html body.page-template-template-apple-cybercrime-support .pax-ccs-portal__success,
+html body.page-template-template-apple-cybercrime-support-php .pax-ccs-portal__success,
+html body.page-cybercrime-support .pax-ccs-portal__success {
+  color: #1b7a36 !important;
+  -webkit-text-fill-color: #1b7a36 !important;
+}
+
+html body.page-template-template-apple-cybercrime-support .pax-ccs-portal__evidence-request,
+html body.page-template-template-apple-cybercrime-support-php .pax-ccs-portal__evidence-request,
+html body.page-cybercrime-support .pax-ccs-portal__evidence-request {
+  color: var(--ccs-ink) !important;
 }
 
 .pax-ccs-portal__panel--active-report {
@@ -2445,6 +2508,7 @@ html body.page-cybercrime-support .pax-ccs-portal__accordion-item.is-open .pax-c
   border-radius: 12px;
   background: #0071e3;
   color: #fff;
+  -webkit-text-fill-color: #fff;
   font-size: 15px;
   font-weight: 600;
   line-height: 1.25;
