@@ -1,0 +1,65 @@
+name: Clear WordPress maintenance mode
+
+on:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  clear-maintenance:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - name: Validate secrets
+        run: |
+          set -euo pipefail
+          for key in WP_SSH_HOST WP_SSH_USER WP_SSH_PRIVATE_KEY WP_PATH; do
+            [ -n "${!key:-}" ] || { echo "Missing $key"; exit 1; }
+          done
+        env:
+          WP_SSH_HOST: ${{ secrets.WP_SSH_HOST }}
+          WP_SSH_USER: ${{ secrets.WP_SSH_USER }}
+          WP_SSH_PRIVATE_KEY: ${{ secrets.WP_SSH_PRIVATE_KEY }}
+          WP_PATH: ${{ secrets.WP_PATH }}
+
+      - name: Deactivate maintenance mode on production
+        env:
+          WP_SSH_HOST: ${{ secrets.WP_SSH_HOST }}
+          WP_SSH_PORT: ${{ secrets.WP_SSH_PORT }}
+          WP_SSH_USER: ${{ secrets.WP_SSH_USER }}
+          WP_SSH_PRIVATE_KEY: ${{ secrets.WP_SSH_PRIVATE_KEY }}
+          WP_PATH: ${{ secrets.WP_PATH }}
+        run: |
+          set -euo pipefail
+          PORT="${WP_SSH_PORT:-22}"
+          SSH_OPTS=(-i ~/.ssh/id_deploy -p "$PORT" -o StrictHostKeyChecking=yes -o BatchMode=yes -o ConnectTimeout=30)
+          install -m 600 -D /dev/null ~/.ssh/id_deploy
+          printf '%s\n' "$WP_SSH_PRIVATE_KEY" > ~/.ssh/id_deploy
+          ssh-keyscan -p "$PORT" -H "$WP_SSH_HOST" >> ~/.ssh/known_hosts 2>/dev/null || true
+          REMOTE="${WP_SSH_USER}@${WP_SSH_HOST}"
+          ssh "${SSH_OPTS[@]}" "$REMOTE" \
+            "cd '$(printf '%q' "$WP_PATH")' && \
+             rm -f .maintenance && \
+             (command -v wp >/dev/null && wp maintenance-mode deactivate 2>/dev/null || true) && \
+             (command -v wp >/dev/null && wp cache flush || true) && \
+             (command -v wp >/dev/null && wp litespeed-purge all || true)"
+
+      - name: Verify site is online
+        run: |
+          set -euo pipefail
+          for attempt in 1 2 3 4 5; do
+            code="$(curl -sS -o /tmp/home.html -w '%{http_code}' "https://paxdesign.at/?nocache=$(date +%s)")"
+            echo "Attempt ${attempt}: homepage HTTP ${code}"
+            if [ "$code" = "200" ]; then
+              if grep -qi "planmäßiger Wartungsarbeiten" /tmp/home.html; then
+                echo "Homepage still shows maintenance message"
+              else
+                echo "Site is back online"
+                exit 0
+              fi
+            fi
+            sleep 8
+          done
+          echo "Site may still be in maintenance mode"
+          exit 1
