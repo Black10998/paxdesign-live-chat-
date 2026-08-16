@@ -27,9 +27,9 @@ curl -fsSL "${SITE}/wp-content/plugins/paxdesign-booking/assets/js/cybercrime-ad
 curl -fsSL "${SITE}/wp-content/plugins/paxdesign-booking/paxdesign-booking.php?v=${STAMP}" \
   -o "${tmpdir}/paxdesign-booking.php" || true
 
-grep -q "Version: 3.174.119" "${tmpdir}/chat-script.js" \
-  && ok "chat-script.js cache-bust version 3.174.119" \
-  || fail "chat-script.js is not the patched 3.174.119 file"
+grep -q "Version: 3.174.120" "${tmpdir}/chat-script.js" \
+  && ok "chat-script.js cache-bust version 3.174.120" \
+  || fail "chat-script.js is not the patched 3.174.120 file"
 
 grep -q "function pinToLatestMessage" "${tmpdir}/chat-script.js" \
   && ok "instant pin-to-latest is present" \
@@ -59,9 +59,13 @@ grep -q "showChatShellLoading" "${tmpdir}/booking-script.js" 2>/dev/null \
   && ok "booking-script shell loader present" \
   || fail "booking-script shell loader missing"
 
-grep -q "function startVoiceInput" "${tmpdir}/chat-script.js" \
-  && ok "voice input handler present" \
-  || fail "startVoiceInput missing"
+grep -q "requestMicrophoneFromUserGesture" "${tmpdir}/chat-script.js" \
+  && ok "mic is requested from user gesture via getUserMedia" \
+  || fail "requestMicrophoneFromUserGesture missing"
+
+grep -q "getUserMedia({ audio: true })" "${tmpdir}/chat-script.js" \
+  && ok "native audio getUserMedia constraint present" \
+  || fail "getUserMedia audio constraint missing"
 
 grep -q "hideShellLoader" "${tmpdir}/chat-script.js" \
   && ok "chat hides shell loader when ready" \

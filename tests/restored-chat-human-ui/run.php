@@ -31,8 +31,8 @@ $i18n = file_get_contents($root . '/includes/class-paxdesign-cybercrime-i18n.php
 $admin = file_get_contents($root . '/includes/customer/class-paxdesign-customer-admin.php');
 $adminJs = file_get_contents($root . '/assets/js/cybercrime-admin.js');
 
-assert_true(strpos($boot, "define('PAXDESIGN_BOOKING_VERSION', '3.174.119')") !== false, 'plugin version 3.174.119');
-assert_true(strpos($js, 'Version: 3.174.119') !== false, 'chat-script cache-bust 3.174.119');
+assert_true(strpos($boot, "define('PAXDESIGN_BOOKING_VERSION', '3.174.120')") !== false, 'plugin version 3.174.120');
+assert_true(strpos($js, 'Version: 3.174.120') !== false, 'chat-script cache-bust 3.174.120');
 assert_true(strpos($js, 'uploadHumanAttachFile') !== false, 'JS upload handler');
 assert_true(strpos($js, 'paxdesign-chat-admin-active') !== false, 'JS human takeover class');
 assert_true(strpos($js, 'paxdesign_chat_live_user_attach') !== false, 'JS posts attach action');
@@ -53,8 +53,9 @@ assert_true(strpos($widget, 'paxdesign-chat-shell-loader') !== false, 'widget ha
 assert_true(strpos($widget, 'paxdesign-booking-chat-voice') !== false, 'widget has voice input button');
 assert_true(strpos($js, 'function startVoiceInput') !== false, 'JS voice input handler');
 assert_true(strpos($js, 'hideShellLoader') !== false, 'JS hides shell loader when chat is ready');
-assert_true(strpos($js, 'function primeMicrophonePermission') !== false, 'JS primes mic permission without blocking speech API');
-assert_true(strpos($js, 'acquireWaveformMicrophoneStream') !== false, 'JS acquires waveform stream after speech starts');
+assert_true(strpos($js, 'function requestMicrophoneFromUserGesture') !== false, 'JS requests mic from user gesture');
+assert_true(strpos($js, 'getUserMedia({ audio: true })') !== false, 'JS uses native audio getUserMedia');
+assert_true(strpos($js, 'microphoneDeniedRecoveryMessage') !== false, 'JS shows recovery help when mic denied');
 
 $bookingJs = @file_get_contents($root . '/assets/js/booking-script.js');
 assert_true($bookingJs !== false && strpos($bookingJs, 'showChatShellLoading') !== false, 'booking-script shell loader');
