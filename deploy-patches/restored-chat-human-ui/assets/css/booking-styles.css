@@ -2,6 +2,7 @@
  * PAXdesign Booking System — Scoped Frontend UI
  * Version: 3.3.2
  * All rules scoped to #paxdesign-booking-root — no global leakage.
+ * Mobile chat sheet: visualViewport fit + keyboard-aware composer (3.174.98).
  */
 
 /* ─── Root Isolation Shell ──────────────────────────────────────────────── */
@@ -77,12 +78,12 @@
   --pax-transition-fast: 0.15s ease;
   --pax-font:           -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
   --pax-shadow-color:   #292929;
-  /* Mobile viewport layout */
-  --pax-mobile-header-clearance: 112px;
-  --pax-mobile-launcher-clearance: 64px;
-  --pax-mobile-gutter: 12px;
-  --pax-mobile-widget-max-booking: 420px;
-  --pax-mobile-widget-max-chat: 380px;
+  /* Mobile viewport layout — sheet uses the phone screen, not a 380px stub */
+  --pax-mobile-header-clearance: 10px;
+  --pax-mobile-launcher-clearance: 0px;
+  --pax-mobile-gutter: 10px;
+  --pax-mobile-widget-max-booking: none;
+  --pax-mobile-widget-max-chat: none;
 }
 
 /* ─── Hard Theme Shield (defeat Elementor/global overrides) ─────────────── */
@@ -1670,38 +1671,22 @@ body.paxdesign-agent-profile-open {
 
 /* ─── Responsive ─────────────────────────────────────────────────────────── */
 @media (max-width: 768px) {
-  #paxdesign-booking-root .paxdesign-booking-widget {
-    /* Bottom-anchored compact panel — fixed size, never grows into header */
-    top: auto;
-    bottom: calc(env(safe-area-inset-bottom, 0px) + var(--pax-mobile-launcher-clearance));
-    left: calc(env(safe-area-inset-left, 0px) + var(--pax-mobile-gutter));
-    right: calc(env(safe-area-inset-right, 0px) + var(--pax-mobile-gutter));
+  #paxdesign-booking-root .paxdesign-booking-widget,
+  #paxdesign-booking-root.paxdesign-mobile-chat-mode .paxdesign-booking-widget {
+    /* Full-phone sheet: header, login/messages, and composer all fit without nested page scroll */
+    top: max(8px, env(safe-area-inset-top, 0px));
+    bottom: max(8px, env(safe-area-inset-bottom, 0px));
+    left: max(8px, env(safe-area-inset-left, 0px));
+    right: max(8px, env(safe-area-inset-right, 0px));
     width: auto;
     max-width: none;
-    height: min(
-      var(--pax-mobile-widget-max-chat),
-      calc(100dvh - env(safe-area-inset-top, 0px) - env(safe-area-inset-bottom, 0px) - var(--pax-mobile-header-clearance) - var(--pax-mobile-launcher-clearance) - 16px)
-    );
-    max-height: min(
-      var(--pax-mobile-widget-max-chat),
-      calc(100dvh - env(safe-area-inset-top, 0px) - env(safe-area-inset-bottom, 0px) - var(--pax-mobile-header-clearance) - var(--pax-mobile-launcher-clearance) - 16px)
-    );
+    height: auto;
+    max-height: none;
     touch-action: manipulation;
     overscroll-behavior: contain;
     pointer-events: auto;
     -webkit-transform: translateZ(0);
     transform: translateZ(0);
-  }
-
-  #paxdesign-booking-root.paxdesign-mobile-chat-mode .paxdesign-booking-widget {
-    height: min(
-      var(--pax-mobile-widget-max-chat),
-      calc(100dvh - env(safe-area-inset-top, 0px) - env(safe-area-inset-bottom, 0px) - var(--pax-mobile-header-clearance) - var(--pax-mobile-launcher-clearance) - 20px)
-    );
-    max-height: min(
-      var(--pax-mobile-widget-max-chat),
-      calc(100dvh - env(safe-area-inset-top, 0px) - env(safe-area-inset-bottom, 0px) - var(--pax-mobile-header-clearance) - var(--pax-mobile-launcher-clearance) - 20px)
-    );
   }
 
   #paxdesign-booking-root .paxdesign-booking-frame {
@@ -1748,7 +1733,7 @@ body.paxdesign-agent-profile-open {
     -webkit-overflow-scrolling: touch;
   }
 
-  /* Chat layout: compact, internal scroll only */
+  /* Chat layout: one message scroller, composer stays on screen */
   #paxdesign-booking-root .paxdesign-booking-chat-body {
     flex: 1 1 auto;
     min-height: 0;
@@ -1758,13 +1743,17 @@ body.paxdesign-agent-profile-open {
     background: transparent;
   }
 
+  #paxdesign-booking-root.paxdesign-chat-direct-mode .paxdesign-booking-chat-messages {
+    min-height: 0;
+  }
+
   #paxdesign-booking-root .paxdesign-booking-chat-welcome-text {
-    font-size: 11px;
+    font-size: 13px;
     margin-top: 4px;
   }
 
   #paxdesign-booking-root .paxdesign-booking-step-title {
-    font-size: 11px;
+    font-size: 13px;
     margin-bottom: 0;
   }
 
@@ -1772,6 +1761,7 @@ body.paxdesign-agent-profile-open {
     flex: 1 1 auto;
     min-height: 0;
     max-height: 100%;
+    overflow-x: hidden;
     overflow-y: auto;
     overscroll-behavior: contain;
     touch-action: pan-y;
@@ -1779,24 +1769,38 @@ body.paxdesign-agent-profile-open {
     gap: 8px;
   }
 
-  /* Quick actions: compact text buttons */
+  #paxdesign-booking-root .paxdesign-booking-chat-thread,
+  #paxdesign-booking-root .paxdesign-booking-chat-message,
+  #paxdesign-booking-root .paxdesign-booking-chat-message-bubble {
+    max-width: 100%;
+    min-width: 0;
+    overflow-wrap: anywhere;
+    word-break: break-word;
+  }
+
+  #paxdesign-booking-root .paxdesign-booking-chat-message {
+    max-width: 92%;
+  }
+
+  #paxdesign-booking-root .paxdesign-booking-chat-message-bubble {
+    font-size: 15px;
+    line-height: 1.4;
+  }
+
+  /* Quick actions: wrap in place, do not create a second scroller */
   #paxdesign-booking-root .paxdesign-booking-chat-quick-actions {
     display: grid;
     grid-template-columns: 1fr 1fr;
-    gap: 5px;
-    max-height: 96px;
-    overflow-x: hidden;
-    overflow-y: auto;
-    overscroll-behavior: contain;
-    touch-action: pan-y;
-    -webkit-overflow-scrolling: touch;
-    padding: 6px 12px 6px;
+    gap: 6px;
+    max-height: none;
+    overflow: hidden;
+    padding: 6px 12px 8px;
     flex-shrink: 0;
   }
 
   #paxdesign-booking-root .paxdesign-booking-chat-quick-btn {
-    padding: 6px 8px;
-    font-size: 10px;
+    padding: 8px 10px;
+    font-size: 12px;
     line-height: 1.3;
     white-space: nowrap;
     overflow: hidden;
@@ -1808,11 +1812,17 @@ body.paxdesign-agent-profile-open {
   }
 
   #paxdesign-booking-root .paxdesign-booking-chat-input-area {
-    padding: 4px 10px calc(6px + env(safe-area-inset-bottom, 0px));
+    padding: 6px 12px calc(10px + env(safe-area-inset-bottom, 0px));
     flex-shrink: 0;
     position: relative;
     z-index: 2;
     background: transparent;
+    overflow: hidden;
+  }
+
+  #paxdesign-booking-root .paxdesign-booking-chat-composer {
+    min-height: 44px;
+    border-radius: 12px;
   }
 
   #paxdesign-booking-root .paxdesign-booking-widget button,
@@ -1827,7 +1837,8 @@ body.paxdesign-agent-profile-open {
     touch-action: manipulation;
     pointer-events: auto;
     cursor: pointer;
-    min-width: 34px;
+    min-width: 40px;
+    min-height: 40px;
   }
 
   #paxdesign-booking-root .paxdesign-booking-chat-send.paxdesign-is-disabled {
@@ -1843,17 +1854,32 @@ body.paxdesign-agent-profile-open {
   }
 
   #paxdesign-booking-root.paxdesign-keyboard-open .paxdesign-booking-chat-quick-actions,
-  #paxdesign-booking-root.paxdesign-keyboard-open .paxdesign-booking-chat-disclaimer {
+  #paxdesign-booking-root.paxdesign-keyboard-open .paxdesign-booking-chat-disclaimer,
+  #paxdesign-booking-root.paxdesign-keyboard-open .paxdesign-booking-chat-auth-gate-intro,
+  #paxdesign-booking-root.paxdesign-keyboard-open .paxdesign-booking-mode-switch,
+  #paxdesign-booking-root.paxdesign-keyboard-open .paxdesign-booking-header-subtitle,
+  #paxdesign-booking-root.paxdesign-keyboard-open .paxdesign-booking-chat-notify {
     display: none;
   }
 
+  #paxdesign-booking-root.paxdesign-keyboard-open .paxdesign-booking-header {
+    padding: 8px 12px;
+  }
+
+  #paxdesign-booking-root.paxdesign-keyboard-open .paxdesign-booking-chat-input-area {
+    padding: 6px 12px 8px;
+  }
+
   #paxdesign-booking-root.paxdesign-keyboard-open .paxdesign-booking-widget {
-    transition: max-height 0.2s ease, top 0.2s ease;
+    border-radius: 12px 12px 0 0;
+    filter: none;
+    transition: none;
   }
 
   #paxdesign-booking-root .paxdesign-booking-chat-input {
-    font-size: 11px;
-    padding: 6px 8px;
+    font-size: 16px;
+    padding: 8px 10px;
+    max-height: 72px;
   }
 
   #paxdesign-booking-root .paxdesign-booking-chat-disclaimer {
@@ -1897,27 +1923,41 @@ body.paxdesign-agent-profile-open {
     padding: 8px 12px 0;
   }
 
+  #paxdesign-booking-root .paxdesign-booking-mode-btn {
+    font-size: 13px;
+    padding: 8px 10px;
+    min-height: 36px;
+    gap: 6px;
+  }
+
+  #paxdesign-booking-root .paxdesign-booking-mode-btn svg {
+    width: 14px;
+    height: 14px;
+  }
+
   #paxdesign-booking-root .paxdesign-booking-header {
     padding: 12px 14px 10px;
+  }
+
+  #paxdesign-booking-root .paxdesign-booking-header .paxdesign-booking-header-title {
+    font-size: 16px;
+  }
+
+  #paxdesign-booking-root .paxdesign-booking-close-label {
+    font-size: 13px;
   }
 }
 
 @media (max-width: 400px) {
   #paxdesign-booking-root {
-    --pax-mobile-header-clearance: 88px;
-    --pax-mobile-launcher-clearance: 60px;
-    --pax-mobile-gutter: 10px;
-    --pax-mobile-widget-max-booking: 400px;
-    --pax-mobile-widget-max-chat: 360px;
-  }
-
-  #paxdesign-booking-root .paxdesign-booking-chat-quick-actions {
-    max-height: 88px;
+    --pax-mobile-header-clearance: 8px;
+    --pax-mobile-launcher-clearance: 0px;
+    --pax-mobile-gutter: 8px;
   }
 
   #paxdesign-booking-root .paxdesign-booking-chat-quick-btn {
-    padding: 5px 7px;
-    font-size: 9px;
+    padding: 7px 8px;
+    font-size: 12px;
   }
 
   #paxdesign-booking-root .paxdesign-booking-button {
@@ -1943,14 +1983,15 @@ body.paxdesign-agent-profile-open {
 
 @media (max-width: 480px) {
   #paxdesign-booking-root .paxdesign-booking-mode-btn {
-    font-size: 9px;
-    padding: 8px 6px;
-    gap: 4px;
+    font-size: 13px;
+    padding: 8px 8px;
+    min-height: 36px;
+    gap: 5px;
   }
 
   #paxdesign-booking-root .paxdesign-booking-mode-btn svg {
-    width: 12px;
-    height: 12px;
+    width: 14px;
+    height: 14px;
   }
 }
 
@@ -2168,6 +2209,33 @@ body.paxdesign-agent-profile-open {
 #paxdesign-booking-root.paxdesign-chat-direct-mode .paxdesign-booking-chat-messages {
   flex: 1 1 auto;
   min-height: 320px;
+}
+
+/* Mobile must win over the desktop 520px chat shell and 320px message floor */
+@media (max-width: 768px) {
+  #paxdesign-booking-root.paxdesign-chat-mode-active .paxdesign-booking-widget,
+  #paxdesign-booking-root.paxdesign-mobile-chat-mode .paxdesign-booking-widget,
+  #paxdesign-booking-root.paxdesign-chat-mode-active.paxdesign-mobile-chat-mode .paxdesign-booking-widget {
+    top: max(8px, env(safe-area-inset-top, 0px));
+    bottom: max(8px, env(safe-area-inset-bottom, 0px));
+    left: max(8px, env(safe-area-inset-left, 0px));
+    right: max(8px, env(safe-area-inset-right, 0px));
+    width: auto;
+    height: auto;
+    max-width: none;
+    max-height: none;
+  }
+
+  #paxdesign-booking-root.paxdesign-chat-mode-active .paxdesign-booking-container,
+  #paxdesign-booking-root.paxdesign-chat-mode-active .paxdesign-booking-frame,
+  #paxdesign-booking-root.paxdesign-chat-mode-active .paxdesign-booking-frame-inner {
+    height: 100%;
+    max-height: none;
+  }
+
+  #paxdesign-booking-root.paxdesign-chat-direct-mode .paxdesign-booking-chat-messages {
+    min-height: 0;
+  }
 }
 
 /* ─── AI Chat (integrated — booking design tokens) ──────────────────────── */
@@ -3301,6 +3369,259 @@ body.paxdesign-agent-profile-open {
   padding: 4px 0;
 }
 
+/* Login-in-chat matches the Apple /account login page */
+#paxdesign-booking-root .paxdesign-booking-chat-auth-gate {
+    overflow: hidden;
+    background: #fff;
+    backdrop-filter: none;
+    -webkit-backdrop-filter: none;
+    border-radius: inherit;
+  }
+
+  #paxdesign-booking-root .paxdesign-booking-chat-auth-gate-close {
+    top: 12px;
+    right: 12px;
+    width: 32px;
+    height: 32px;
+    border: 0;
+    border-radius: 50%;
+    background: rgba(0, 0, 0, 0.06);
+    color: #1d1d1f;
+  }
+
+  #paxdesign-booking-root .paxdesign-booking-chat-auth-gate-close:hover {
+    background: rgba(0, 0, 0, 0.1);
+  }
+
+  #paxdesign-booking-root .paxdesign-booking-chat-auth-gate-inner {
+    overflow: hidden;
+    justify-content: center;
+    padding: 48px 22px 16px;
+    gap: 10px;
+    max-width: 360px;
+    margin: 0 auto;
+    width: 100%;
+  }
+
+  #paxdesign-booking-root .paxdesign-booking-chat-auth-gate-intro {
+    text-align: center;
+  }
+
+  #paxdesign-booking-root.paxdesign-booking .paxdesign-booking-chat-auth-gate-title,
+  #paxdesign-booking-root.paxdesign-booking-wrapper .paxdesign-booking-chat-auth-gate-title {
+    color: #1d1d1f !important;
+    font-size: 22px;
+    font-weight: 600;
+    letter-spacing: -0.02em;
+    line-height: 1.15;
+    margin: 0 0 8px;
+    text-align: center;
+  }
+
+  #paxdesign-booking-root .paxdesign-booking-chat-auth-gate-sub,
+  #paxdesign-booking-root .paxdesign-booking-chat-auth-gate-verify {
+    font-size: 15px;
+    line-height: 1.35;
+    color: #6e6e73;
+  }
+
+  #paxdesign-booking-root .paxdesign-booking-chat-auth-actions {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 0;
+    padding: 2px;
+    border-radius: 9px;
+    background: #e8e8ed;
+  }
+
+  #paxdesign-booking-root .paxdesign-booking-chat-auth-gate-btn,
+  #paxdesign-booking-root .paxdesign-booking-chat-auth-gate-btn--primary,
+  #paxdesign-booking-root .paxdesign-booking-chat-auth-gate-btn.paxdesign-is-active {
+    border: 0;
+    border-radius: 7px;
+    min-height: 32px;
+    padding: 0 8px;
+    font-size: 13px;
+    font-weight: 400;
+    background: transparent;
+    color: #6e6e73;
+    box-shadow: none;
+  }
+
+  #paxdesign-booking-root .paxdesign-booking-chat-auth-gate-btn.paxdesign-is-active,
+  #paxdesign-booking-root .paxdesign-booking-chat-auth-gate-btn--primary.paxdesign-is-active {
+    color: #1d1d1f;
+    background: #fff;
+    box-shadow: 0 1px 2px rgba(0, 0, 0, 0.08);
+    font-weight: 500;
+  }
+
+  #paxdesign-booking-root .paxdesign-booking-chat-auth-inline .pdx-cx-auth-head {
+    display: none !important;
+  }
+
+  #paxdesign-booking-root .paxdesign-booking-chat-auth-inline .pdx-auth-field-label {
+    font-size: 11px;
+    font-weight: 400;
+    color: #6e6e73;
+    margin-bottom: 4px;
+  }
+
+  #paxdesign-booking-root .paxdesign-booking-chat-auth-inline .pdx-auth-input-container {
+    height: 36px;
+    min-height: 36px;
+    max-height: 36px;
+    padding: 0 12px;
+    border-radius: 8px;
+    border: 1px solid #d2d2d7;
+    background: #fff;
+    box-shadow: none;
+  }
+
+  #paxdesign-booking-root .paxdesign-booking-chat-auth-inline .pdx-auth-input-container:focus-within {
+    border-color: #0071e3;
+    box-shadow: 0 0 0 3px rgba(0, 113, 227, 0.12);
+  }
+
+  #paxdesign-booking-root .paxdesign-booking-chat-auth-inline .pdx-auth-input-container .pdx-cx-icon {
+    display: none;
+  }
+
+  #paxdesign-booking-root.paxdesign-booking .paxdesign-booking-chat-auth-inline .pdx-auth-input,
+  #paxdesign-booking-root.paxdesign-booking-wrapper .paxdesign-booking-chat-auth-inline .pdx-auth-input {
+    color: #1d1d1f !important;
+    font-size: 16px;
+    background: transparent !important;
+    padding: 0;
+    height: 100%;
+  }
+
+  #paxdesign-booking-root .paxdesign-booking-chat-auth-inline .pdx-auth-input::placeholder {
+    color: #86868b;
+  }
+
+  #paxdesign-booking-root .paxdesign-booking-chat-auth-inline .pdx-auth-submit,
+  #paxdesign-booking-root .paxdesign-booking-chat-auth-inline .pdx-btn-pearl,
+  #paxdesign-booking-root .paxdesign-booking-chat-auth-inline .pdx-btn-pearl .pdx-btn-pearl__wrap {
+    width: 100%;
+    min-height: 36px;
+    height: 36px;
+    margin: 0;
+    padding: 0 16px;
+    font-size: 15px;
+    font-weight: 400;
+    color: #fff !important;
+    background: #0071e3 !important;
+    border: 0;
+    border-radius: 10px;
+    box-shadow: none !important;
+    transform: none !important;
+  }
+
+  #paxdesign-booking-root .paxdesign-booking-chat-auth-inline .pdx-btn-pearl .pdx-btn-pearl__wrap::before,
+  #paxdesign-booking-root .paxdesign-booking-chat-auth-inline .pdx-btn-pearl .pdx-btn-pearl__wrap::after,
+  #paxdesign-booking-root .paxdesign-booking-chat-auth-inline .pdx-btn-pearl .pdx-cx-icon {
+    display: none !important;
+  }
+
+  #paxdesign-booking-root .paxdesign-booking-chat-auth-inline .pdx-auth-link {
+    color: #0066cc;
+    font-size: 13px;
+    font-weight: 400;
+  }
+
+  #paxdesign-booking-root .paxdesign-booking-chat-auth-inline .pdx-auth-link[data-view="register"],
+  #paxdesign-booking-root .paxdesign-booking-chat-auth-inline .pdx-auth-link[data-view="login"] {
+    display: none;
+  }
+
+  #paxdesign-booking-root .paxdesign-booking-chat-auth-inline .pdx-auth-apple-divider {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    margin: 8px 0;
+    color: #86868b;
+    font-size: 12px;
+  }
+
+  #paxdesign-booking-root .paxdesign-booking-chat-auth-inline .pdx-auth-apple-divider::before,
+  #paxdesign-booking-root .paxdesign-booking-chat-auth-inline .pdx-auth-apple-divider::after {
+    content: "";
+    flex: 1;
+    height: 1px;
+    background: #d2d2d7;
+  }
+
+  #paxdesign-booking-root .paxdesign-booking-chat-auth-inline .pdx-auth-social-wrap {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+    margin: 0 0 8px;
+  }
+
+  #paxdesign-booking-root .paxdesign-booking-chat-auth-inline .pdx-auth-apple-btn,
+  #paxdesign-booking-root .paxdesign-booking-chat-auth-inline .pdx-auth-github-btn {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 8px;
+    width: 100%;
+    min-height: 36px;
+    height: 36px;
+    padding: 0 16px;
+    font-size: 14px;
+    font-weight: 500;
+    color: #fff;
+    background: #000;
+    border: 0;
+    border-radius: 10px;
+  }
+
+  #paxdesign-booking-root .paxdesign-booking-chat-auth-inline .pdx-auth-github-btn {
+    background: #24292f;
+  }
+
+  #paxdesign-booking-root .paxdesign-booking-chat-auth-inline .pdx-auth-message {
+    font-size: 13px;
+    line-height: 1.35;
+    color: #1d1d1f;
+  }
+
+  #paxdesign-booking-root .paxdesign-booking-chat-auth-inline .pdx-auth-message--error {
+    color: #bf0022;
+  }
+
+@media (max-width: 768px) {
+  #paxdesign-booking-root .paxdesign-booking-chat-auth-gate {
+    overflow: hidden;
+  }
+
+  #paxdesign-booking-root .paxdesign-booking-chat-auth-gate-inner {
+    max-width: min(360px, 100%);
+    padding: 44px 20px 12px;
+  }
+
+  #paxdesign-booking-root .paxdesign-booking-chat-auth-inline .pdx-auth-social-wrap {
+    margin: 0 0 6px;
+  }
+
+  #paxdesign-booking-root .paxdesign-booking-chat-auth-inline .pdx-auth-apple-divider {
+    margin: 4px 0 8px;
+  }
+
+  #paxdesign-booking-root .paxdesign-booking-chat-auth-inline .pdx-auth-submit-wrap {
+    margin-top: 8px;
+  }
+}
+
+@media (max-width: 768px) and (max-height: 700px) {
+  #paxdesign-booking-root .paxdesign-booking-chat-auth-gate-inner {
+    padding: 36px 16px 10px;
+    gap: 8px;
+    justify-content: flex-start;
+  }
+}
+
 #paxdesign-booking-root .paxdesign-booking-chat-agent-head--assistant,
 #paxdesign-booking-root .paxdesign-booking-chat-agent-head--customer {
   display: flex;
@@ -3490,15 +3811,15 @@ html.paxdesign-scroll-lock body {
 
 @media (max-width: 480px) {
   #paxdesign-booking-root .paxdesign-booking-chat-entry-btn {
-    min-height: 34px;
-    font-size: 0.74rem;
-    padding: 7px 12px;
+    min-height: 40px;
+    font-size: 0.86rem;
+    padding: 8px 14px;
   }
 
   #paxdesign-booking-root .paxdesign-booking-mode-btn {
-    font-size: 0.72rem;
+    font-size: 13px;
     padding: 8px 8px;
-    min-height: 34px;
+    min-height: 36px;
   }
 }
 
