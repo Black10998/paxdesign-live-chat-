@@ -482,9 +482,86 @@ class PAXdesign_Cybercrime_Tickets {
             if ($timeline_audience === 'admin') {
                 $out['activity_indicators'] = self::build_activity_indicators($row, $out['timeline']);
             }
+            self::append_report_sync_meta($out, $out['timeline'] ?? array());
         }
 
         return $out;
+    }
+
+    /**
+     * Derive admin sync metadata from the timeline payload the client renders.
+     *
+     * @param array<string, mixed>              $out
+     * @param array<int, array<string, mixed>>  $timeline
+     */
+    public static function append_report_sync_meta(array &$out, array $timeline = array()) {
+        $max_id = 0;
+        $count = 0;
+        foreach ($timeline as $entry) {
+            if (!is_array($entry)) {
+                continue;
+            }
+            $count++;
+            $max_id = max($max_id, (int) ($entry['id'] ?? 0));
+        }
+        $out['timeline_max_id'] = $max_id;
+        $out['timeline_count'] = $count;
+        $out['sync_revision'] = self::build_sync_revision(
+            (string) ($out['updated_at'] ?? ''),
+            $max_id,
+            $count,
+            (string) ($out['status'] ?? '')
+        );
+    }
+
+    /**
+     * @param string $updated_at
+     * @param int    $timeline_max_id
+     * @param int    $timeline_count
+     * @param string $status
+     * @return string
+     */
+    public static function build_sync_revision($updated_at, $timeline_max_id, $timeline_count, $status = '') {
+        return hash(
+            'crc32b',
+            sanitize_text_field((string) $updated_at)
+            . '|' . max(0, (int) $timeline_max_id)
+            . '|' . max(0, (int) $timeline_count)
+            . '|' . sanitize_key((string) $status)
+        );
+    }
+
+    /**
+     * @param string               $reference_id
+     * @param array<string, mixed>|null $row
+     * @return array<string, mixed>
+     */
+    public static function report_sync_snapshot($reference_id, $row = null) {
+        if (!is_array($row)) {
+            $row = self::get_report_row($reference_id);
+        }
+        if (!is_array($row)) {
+            return array(
+                'updated_at'       => '',
+                'timeline_max_id'  => 0,
+                'timeline_count'   => 0,
+                'status'           => '',
+                'sync_revision'    => '',
+            );
+        }
+        $timeline = self::list_official_messages($reference_id, 200, '', 'admin');
+        $snapshot = array(
+            'updated_at' => (string) ($row['updated_at'] ?? ''),
+            'status'     => self::normalize_workflow_status((string) ($row['status'] ?? '')),
+        );
+        self::append_report_sync_meta($snapshot, $timeline);
+        return array(
+            'updated_at'      => (string) ($snapshot['updated_at'] ?? ''),
+            'timeline_max_id' => (int) ($snapshot['timeline_max_id'] ?? 0),
+            'timeline_count'  => (int) ($snapshot['timeline_count'] ?? 0),
+            'status'          => (string) ($snapshot['status'] ?? ''),
+            'sync_revision'   => (string) ($snapshot['sync_revision'] ?? ''),
+        );
     }
 
     /**

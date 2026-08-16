@@ -44,6 +44,94 @@
   var lastSavedStatus = statusSelect ? statusSelect.value : '';
   var statusSaveTimer = null;
   var closedStatuses = ['resolved', 'closed', 'rejected'];
+  var syncSnapshot = null;
+  var mutationDepth = 0;
+  var pollRequestSeq = 0;
+  var currentReport = null;
+
+  if (cfg.initialSync && typeof cfg.initialSync === 'object') {
+    syncSnapshot = {
+      updatedAt: String(cfg.initialSync.updated_at || ''),
+      timelineMaxId: parseInt(cfg.initialSync.timeline_max_id, 10) || 0,
+      timelineCount: parseInt(cfg.initialSync.timeline_count, 10) || 0,
+      status: String(cfg.initialSync.status || ''),
+      syncRevision: String(cfg.initialSync.sync_revision || '')
+    };
+  }
+
+  function syncFromReport(report) {
+    if (!report || typeof report !== 'object') {
+      return null;
+    }
+    return {
+      updatedAt: String(report.updated_at || ''),
+      timelineMaxId: parseInt(report.timeline_max_id, 10) || 0,
+      timelineCount: parseInt(report.timeline_count, 10) || 0,
+      status: String(report.status || ''),
+      syncRevision: String(report.sync_revision || '')
+    };
+  }
+
+  function compareSync(incoming, current) {
+    if (!incoming || !current) {
+      return 0;
+    }
+    if (incoming.syncRevision && current.syncRevision && incoming.syncRevision === current.syncRevision) {
+      return 0;
+    }
+    if (incoming.timelineMaxId !== current.timelineMaxId) {
+      return incoming.timelineMaxId > current.timelineMaxId ? 1 : -1;
+    }
+    if (incoming.timelineCount !== current.timelineCount) {
+      return incoming.timelineCount > current.timelineCount ? 1 : -1;
+    }
+    if (incoming.updatedAt !== current.updatedAt) {
+      return incoming.updatedAt > current.updatedAt ? 1 : -1;
+    }
+    if (incoming.status !== current.status) {
+      return incoming.updatedAt >= current.updatedAt ? 1 : -1;
+    }
+    return 0;
+  }
+
+  function shouldApplyReport(report, source) {
+    var incoming = syncFromReport(report);
+    if (!incoming) {
+      return false;
+    }
+    if (!syncSnapshot) {
+      return true;
+    }
+    var cmp = compareSync(incoming, syncSnapshot);
+    if (source === 'poll' || source === 'mark_read') {
+      if (mutationDepth > 0 && cmp <= 0) {
+        return false;
+      }
+      if (cmp < 0) {
+        return false;
+      }
+      return true;
+    }
+    if (source === 'mutation') {
+      return true;
+    }
+    return cmp >= 0;
+  }
+
+  function rememberSync(report) {
+    var incoming = syncFromReport(report);
+    if (incoming) {
+      syncSnapshot = incoming;
+    }
+  }
+
+  function beginMutation() {
+    mutationDepth += 1;
+  }
+
+  function endMutation() {
+    mutationDepth = Math.max(0, mutationDepth - 1);
+  }
 
   function isClosedStatus(status) {
     return closedStatuses.indexOf(status || '') !== -1;
@@ -188,14 +276,15 @@
     }
   }
 
-  function markStaffRead(refOverride) {
+  function markStaffRead(refOverride, options) {
+    options = options || {};
     return postAction('paxdesign_cybercrime_admin_mark_read', {}, refOverride || referenceId || '')
       .then(function (data) {
         if (data.summary) {
           applyUnreadSummary(data.summary);
         }
-        if (view === 'detail' && data.report) {
-          applyReport(data.report);
+        if (view === 'detail' && data.report && options.applyReport !== false) {
+          applyReport(data.report, 'mark_read');
         }
         return data;
       })
@@ -215,15 +304,19 @@
   }
 
   function pollUnreadSummary(refForDetail) {
+    var requestSeq = ++pollRequestSeq;
     return postAction('paxdesign_cybercrime_admin_unread', {}, refForDetail || '')
       .then(function (data) {
+        if (requestSeq !== pollRequestSeq) {
+          return data;
+        }
         if (data.summary) {
           applyUnreadSummary(data.summary);
         } else {
           applyUnreadSummary(data);
         }
         if (view === 'detail' && data.report) {
-          applyReport(data.report);
+          applyReport(data.report, 'poll');
         }
         return data;
       })
@@ -538,10 +631,11 @@
 
     btn.disabled = true;
     setFeedback(replyFeedback, text('deleting', 'Deleting…'), 'saving');
+    beginMutation();
 
     postAction('paxdesign_cybercrime_admin_delete_message', { message_id: messageId })
       .then(function (data) {
-        applyReport(data.report);
+        applyReport(data.report, 'mutation');
         setFeedback(replyFeedback, data.message || text('deleteSuccess', 'Message deleted.'), 'success');
         window.setTimeout(function () {
           if (replyFeedback && replyFeedback.textContent === (data.message || text('deleteSuccess', 'Message deleted.'))) {
@@ -552,6 +646,9 @@
       .catch(function (error) {
         btn.disabled = false;
         setFeedback(replyFeedback, error.message || text('error', 'Something went wrong.'), 'error');
+      })
+      .then(function () {
+        endMutation();
       });
   }
 
@@ -591,10 +688,16 @@
     }
   }
 
-  function applyReport(report) {
+  function applyReport(report, source) {
+    source = source || 'poll';
     if (!report) {
-      return;
+      return false;
     }
+    if (!shouldApplyReport(report, source)) {
+      return false;
+    }
+    rememberSync(report);
+    currentReport = report;
     updateStatusBadge(report);
     updateWorkflow(report.status || '');
     renderTimeline(report.timeline || []);
@@ -605,6 +708,7 @@
       statusSelect.value = report.status;
       lastSavedStatus = report.status;
     }
+    return true;
   }
 
   function saveStatus(status) {
@@ -613,10 +717,11 @@
     }
 
     setFeedback(statusFeedback, text('saving', 'Saving…'), 'saving');
+    beginMutation();
 
     return postAction('paxdesign_cybercrime_admin_status', { status: status })
       .then(function (data) {
-        applyReport(data.report);
+        applyReport(data.report, 'mutation');
         if (isClosedStatus(status)) {
           clearUnreadForReference(referenceId);
         }
@@ -626,7 +731,7 @@
             setFeedback(statusFeedback, '', '');
           }
         }, 2500);
-        return markStaffRead(referenceId).then(function () {
+        return markStaffRead(referenceId, { applyReport: false }).then(function () {
           return data;
         });
       })
@@ -635,6 +740,10 @@
           statusSelect.value = lastSavedStatus;
         }
         setFeedback(statusFeedback, error.message || text('error', 'Something went wrong.'), 'error');
+      })
+      .then(function (result) {
+        endMutation();
+        return result;
       });
   }
 
@@ -695,6 +804,7 @@
 
     setSubmitEnabled(submitBtn, false);
     setFeedback(replyFeedback, text('sending', 'Sending…'), 'saving');
+    beginMutation();
 
     var payload = {
       message: message,
@@ -709,7 +819,7 @@
 
     return postAction('paxdesign_cybercrime_admin_reply', payload)
       .then(function (data) {
-        applyReport(data.report);
+        applyReport(data.report, 'mutation');
         if (messageEl) {
           messageEl.value = '';
         }
@@ -726,6 +836,7 @@
       })
       .then(function () {
         setSubmitEnabled(submitBtn, true);
+        endMutation();
       });
   }
 
@@ -760,10 +871,11 @@
 
       setSubmitEnabled(submitBtn, false);
       setFeedback(internalNoteFeedback, text('addingNote', 'Adding note…'), 'saving');
+      beginMutation();
 
       postAction('paxdesign_cybercrime_admin_internal_note', { message: message })
         .then(function (data) {
-          applyReport(data.report);
+          applyReport(data.report, 'mutation');
           if (noteEl) {
             noteEl.value = '';
           }
@@ -774,6 +886,7 @@
         })
         .then(function () {
           setSubmitEnabled(submitBtn, true);
+          endMutation();
         });
     });
   }

@@ -53,7 +53,10 @@ ccs_evidence_assert(strpos($tickets, 'allow_delete') !== false, 'tickets exposes
 ccs_evidence_assert(strpos($tickets, 'admin_timeline_kind') !== false, 'tickets classifies admin conversation rows');
 ccs_evidence_assert(strpos($tickets, 'request_evidence') !== false, 'tickets stores request_evidence on staff reply');
 ccs_evidence_assert(strpos($tickets, 'delete_staff_message') !== false, 'tickets implements delete_staff_message');
-ccs_evidence_assert(strpos($tickets, 'ajax_admin_delete_message') !== false, 'tickets registers delete message ajax');
+ccs_evidence_assert(strpos($tickets, 'append_report_sync_meta') !== false, 'tickets exposes sync revision metadata');
+ccs_evidence_assert(strpos($tickets, 'sync_revision') !== false, 'tickets builds sync_revision token');
+ccs_evidence_assert(strpos($adminJs, 'shouldApplyReport') !== false, 'admin JS reconciles poll vs mutation state');
+ccs_evidence_assert(strpos($adminJs, 'compareSync') !== false, 'admin JS compares sync revisions');
 
 exec('node --check ' . escapeshellarg($root . '/assets/js/cybercrime-admin.js') . ' 2>&1', $adminJsCheck, $adminJsCode);
 ccs_evidence_assert($adminJsCode === 0, 'node --check cybercrime-admin.js');

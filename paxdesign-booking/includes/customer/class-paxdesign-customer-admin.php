@@ -150,6 +150,10 @@ class PAXdesign_Customer_Admin {
 
         $reference = sanitize_text_field(wp_unslash($_GET['reference'] ?? ''));
         $view = $reference !== '' ? 'detail' : 'list';
+        $initial_sync = null;
+        if ($reference !== '' && class_exists('PAXdesign_Cybercrime_Tickets')) {
+            $initial_sync = PAXdesign_Cybercrime_Tickets::report_sync_snapshot($reference);
+        }
 
         wp_enqueue_script(
             'paxdesign-cybercrime-admin',
@@ -163,6 +167,7 @@ class PAXdesign_Customer_Admin {
             'nonce'     => wp_create_nonce(PAXdesign_Cybercrime_Tickets::ADMIN_NONCE_ACTION),
             'view'      => $view,
             'reference' => $reference,
+            'initialSync' => $initial_sync,
             'statusClasses' => array(
                 'submitted'             => 'pax-cc-status--submitted',
                 'in_review'             => 'pax-cc-status--in_review',

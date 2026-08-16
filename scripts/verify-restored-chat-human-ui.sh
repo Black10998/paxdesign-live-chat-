@@ -168,9 +168,9 @@ grep -q "isDeletableEntry" "${tmpdir}/cybercrime-admin.js" \
   && ok "admin JS keeps delete eligibility after poll refresh" \
   || fail "Delete eligibility helper missing from live cybercrime-admin.js"
 
-grep -q "pax-cc-convo__delete" "${tmpdir}/cybercrime-admin.js" \
-  && ok "admin JS uses conversation delete buttons" \
-  || fail "Conversation delete buttons missing from live cybercrime-admin.js"
+grep -q "shouldApplyReport" "${tmpdir}/cybercrime-admin.js" \
+  && ok "admin JS reconciles poll responses against sync revision" \
+  || fail "Sync reconciliation missing from live cybercrime-admin.js"
 
 grep -q "timelineEvidenceInlineHtml" "${tmpdir}/apple-cybercrime-support.js" \
   && ok "portal JS includes inline evidence request CTA" \
