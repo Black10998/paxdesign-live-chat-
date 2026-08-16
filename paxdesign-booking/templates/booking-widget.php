@@ -133,7 +133,7 @@ $chat_social_ready  = $chat_github_ready || $chat_apple_ready;
                 <?php endif; ?>
               </div>
               <div class="paxdesign-booking-chat-auth-divider" id="paxdesignChatAuthDivider"<?php echo $chat_social_ready ? '' : ' hidden'; ?> aria-hidden="true"><span>or</span></div>
-              <div class="paxdesign-booking-chat-auth-actions<?php echo $chat_social_ready ? ' paxdesign-booking-chat-auth-actions--with-social' : ''; ?>" id="paxdesignChatAuthActions">
+              <div class="paxdesign-booking-chat-auth-actions" id="paxdesignChatAuthActions">
                 <button type="button" class="paxdesign-booking-chat-auth-login-btn" id="paxdesignChatAuthLogin"><?php echo esc_html__('Sign In', 'paxdesign-booking'); ?></button>
               </div>
             </div>
