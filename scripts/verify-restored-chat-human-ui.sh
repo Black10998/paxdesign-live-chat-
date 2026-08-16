@@ -31,9 +31,9 @@ curl -fsSL "${SITE}/wp-content/plugins/paxdesign-booking/assets/js/cybercrime-ad
 curl -fsSL "${SITE}/wp-content/plugins/paxdesign-booking/paxdesign-booking.php?v=${STAMP}" \
   -o "${tmpdir}/paxdesign-booking.php" || true
 
-grep -q "Version: 3.174.115" "${tmpdir}/chat-script.js" \
-  && ok "chat-script.js cache-bust version 3.174.115" \
-  || fail "chat-script.js is not the patched 3.174.115 file"
+grep -q "Version: 3.174.116" "${tmpdir}/chat-script.js" \
+  && ok "chat-script.js cache-bust version 3.174.116" \
+  || fail "chat-script.js is not the patched 3.174.116 file"
 
 grep -q "var appliedMessageSeq" "${tmpdir}/chat-script.js" \
   && grep -q "function getIncrementalSince" "${tmpdir}/chat-script.js" \
@@ -52,8 +52,9 @@ grep -q "function ensureMicrophonePermission" "${tmpdir}/chat-script.js" \
 
 grep -q "function showLauncherLoading" "${tmpdir}/booking-script.js" \
   && grep -q "function showChatOpenLoading" "${tmpdir}/booking-script.js" \
-  && grep -q "hideChatOpenLoading" "${tmpdir}/booking-script.js" \
-  && grep -q "CHAT_OPEN_LOADER_MIN_MS" "${tmpdir}/booking-script.js" \
+  && grep -q "function beginLauncherOpen" "${tmpdir}/booking-script.js" \
+  && grep -q "function visualViewportInsets" "${tmpdir}/booking-script.js" \
+  && ! grep -q "CHAT_OPEN_LOADER_MIN_MS" "${tmpdir}/booking-script.js" \
   && grep -q "paxdesign-booking-launcher-spinner" "${tmpdir}/booking-styles.css" \
   && grep -q "paxdesign-chat-open-loader" "${tmpdir}/booking-styles.css" \
   && ok "instant launcher and viewport open loading indicator present" \

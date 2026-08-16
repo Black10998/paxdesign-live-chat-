@@ -45,9 +45,9 @@
   };
 
   if ('requestIdleCallback' in window) {
-    requestIdleCallback(preloadChat, { timeout: 5000 });
+    requestIdleCallback(preloadChat, { timeout: 2000 });
   } else {
-    setTimeout(preloadChat, 4000);
+    setTimeout(preloadChat, 1500);
   }
 
   function shouldPreloadFromEvent(target) {
