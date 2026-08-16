@@ -1,4 +1,4 @@
-name: Guard production baseline 3.174.97
+name: Guard production baseline 3.174.98
 
 on:
   pull_request:
@@ -25,3 +25,5 @@ jobs:
         run: php tests/merge-integration/run.php
       - name: GitHub website login guards
         run: php tests/github-web-login/run.php
+      - name: Assistant intent guards
+        run: php tests/assistant-intent/run.php

@@ -32,8 +32,8 @@ $i18n = file_get_contents($root . '/includes/class-paxdesign-cybercrime-i18n.php
 $admin = file_get_contents($root . '/includes/customer/class-paxdesign-customer-admin.php');
 $adminJs = file_get_contents($root . '/assets/js/cybercrime-admin.js');
 
-assert_true(strpos($boot, "define('PAXDESIGN_BOOKING_VERSION', '3.174.97')") !== false, 'plugin version 3.174.97');
-assert_true(strpos($js, 'Version: 3.174.97') !== false, 'chat-script cache-bust 3.174.97');
+assert_true(strpos($boot, "define('PAXDESIGN_BOOKING_VERSION', '3.174.98')") !== false, 'plugin version 3.174.98');
+assert_true(strpos($js, 'Version: 3.174.98') !== false, 'chat-script cache-bust 3.174.98');
 assert_true(strpos($js, 'uploadHumanAttachFile') !== false, 'JS upload handler');
 assert_true(strpos($js, 'paxdesign-chat-admin-active') !== false, 'JS human takeover class');
 assert_true(strpos($js, 'paxdesign_chat_live_user_attach') !== false, 'JS posts attach action');
@@ -66,7 +66,9 @@ assert_true(strpos($js, 'function pinToLatestMessage') !== false, 'open pins to 
 assert_true(strpos($widget, 'paxdesignChatEndWrap') === false, 'widget has no end-chat wrap');
 assert_true(strpos($knowledge, 'Immer auf Deutsch') === false, 'knowledge prompt does not force German');
 assert_true(strpos($knowledge, 'SAME language as the latest customer message') !== false, 'knowledge matches customer language');
-assert_true(strpos($knowledge, 'Do not repeat the question') !== false, 'knowledge understands full intent');
+assert_true(strpos($knowledge, 'the items below ARE that request') !== false, 'account context treats listed items as the submitted request');
+assert_true(strpos($knowledge, 'Never ask them to describe or repeat a request') !== false, 'assistant must not re-ask a known request');
+assert_true(strpos($chat, 'PAXdesign_Chat_Intent::detect') !== false, 'chat prompt runs intent detection');
 assert_true(strpos($knowledge, 'ONE clear step at a time') !== false, 'CCS one-step guidance');
 assert_true(strpos($knowledge, 'NEVER ask them to sign in') !== false, 'logged-in users are not asked to sign in');
 assert_true(strpos($chat, 'This customer IS already logged in') !== false, 'chat prompt knows session auth');
@@ -83,6 +85,7 @@ $syntax = array(
     $root . '/paxdesign-booking.php',
     $root . '/includes/class-paxdesign-chat-live.php',
     $root . '/includes/class-paxdesign-message-store.php',
+    $root . '/includes/class-paxdesign-chat-intent.php',
     $root . '/includes/class-paxdesign-chat.php',
     $root . '/includes/class-paxdesign-chat-knowledge.php',
     $root . '/includes/class-paxdesign-cybercrime-i18n.php',

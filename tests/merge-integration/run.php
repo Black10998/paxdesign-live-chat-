@@ -93,7 +93,7 @@ mi_assert(count($vip_gifs) === 10, 'Expected 10 restored VIP avatar GIFs, got ' 
 // Production baseline: live 3.174.92 — do not keep the 3.176.x CCS AI rewrite
 // ---------------------------------------------------------------------------
 $bootstrap = file_get_contents($plugin . '/paxdesign-booking.php');
-mi_assert(strpos($bootstrap, "PAXDESIGN_BOOKING_VERSION', '3.174.97'") !== false, 'Plugin version must be 3.174.97');
+mi_assert(strpos($bootstrap, "PAXDESIGN_BOOKING_VERSION', '3.174.98'") !== false, 'Plugin version must be 3.174.98');
 mi_assert(strpos($bootstrap, 'class-paxdesign-cybercrime-i18n.php') !== false, 'Compact CCS i18n must remain');
 foreach (array(
     'class-paxdesign-cybercrime-ai-case.php',
@@ -110,7 +110,7 @@ mi_assert(is_readable($plugin . '/includes/class-paxdesign-message-store.php'), 
 $chat_js = file_get_contents($plugin . '/assets/js/chat-script.js');
 mi_assert(strpos($chat_js, 'skipping stacked sync') === false, 'Chat must not contain the 3.176 stacked-sync rewrite');
 mi_assert(strpos($chat_js, 'var openInstant') === false, 'Chat must not contain the 3.176 instant-open rewrite');
-mi_assert(strpos($chat_js, 'Version: 3.174.97') !== false, 'Chat JS must be cache-bust 3.174.97');
+mi_assert(strpos($chat_js, 'Version: 3.174.98') !== false, 'Chat JS must be cache-bust 3.174.98');
 mi_assert(strpos($chat_js, 'Gespräch beenden') === false, 'Customer chat must not include Gespräch beenden');
 mi_assert(strpos($chat_js, 'uploadHumanAttachFile') !== false, 'Human-composer attach handler must remain');
 
@@ -139,4 +139,4 @@ $deploy = file_get_contents($root . '/.github/workflows/deploy-customer-platform
 mi_assert(strpos($deploy, 'wp plugin deactivate paxdesign-toolbar') !== false, 'Deploy guard must deactivate any reappearing toolbar');
 mi_assert(strpos($deploy, 'rm -rf wp-content/plugins/paxdesign-toolbar') !== false, 'Deploy guard must remove toolbar from server');
 
-echo "OK: merge-integration checks passed (levels, badge, username, mobile menu, avatars, 3.174.97 baseline, toolbar removed)\n";
+echo "OK: merge-integration checks passed (levels, badge, username, mobile menu, avatars, 3.174.98 baseline, toolbar removed)\n";

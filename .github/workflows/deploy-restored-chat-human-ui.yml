@@ -5,7 +5,7 @@ name: Deploy restored chat human UI
 on:
   push:
     branches:
-      - cursor/chat-mobile-layout-9e84
+      - cursor/chat-assistant-understanding-9e84
     paths:
       - 'deploy-patches/restored-chat-human-ui/**'
       - '.github/workflows/deploy-restored-chat-human-ui.yml'
@@ -51,6 +51,9 @@ jobs:
           TARGET="${WP_PATH%/}/wp-content/plugins/paxdesign-booking"
           SRC="deploy-patches/restored-chat-human-ui"
           REMOTE="${WP_SSH_USER}@${WP_SSH_HOST}"
+          rsync -az -e "ssh ${SSH_OPTS[*]}" \
+            "$SRC/includes/class-paxdesign-chat-intent.php" \
+            "${REMOTE}:${TARGET}/includes/class-paxdesign-chat-intent.php"
           rsync -az -e "ssh ${SSH_OPTS[*]}" \
             "$SRC/paxdesign-booking.php" \
             "${REMOTE}:${TARGET}/paxdesign-booking.php"

@@ -332,13 +332,14 @@ class PAXdesign_Chat_Knowledge {
         }, $company['process'], array_keys($company['process'])));
 
         $style_block = $style !== '' ? $style : implode("\n", array(
-            '- Read the customer\'s COMPLETE latest message and intent first. Do not repeat the question back to them.',
-            '- Give a direct, relevant answer to what they actually asked.',
+            '- Read the customer\'s COMPLETE latest message and the conversation so far. Identify the actual intent before answering.',
+            '- Give a direct, factual answer to what they actually asked. Never echo or rephrase the question.',
+            '- If they ask about a submitted request, status, appointment, invoice, project, or report, use account context. Never ask "What is your request?" when that data is already listed.',
             '- Reply in the SAME language as the latest customer message (German, English, or Arabic). Never force German if they wrote in another language.',
             '- Keep answers short: at most 2–3 short paragraphs or 3–5 bullets.',
             '- Professional, friendly, advisory — not overly technical.',
-            '- At most one focused follow-up question per reply.',
-            '- Qualify leads step by step. Never dump every question at once.',
+            '- At most one focused follow-up question per reply, and only if a needed fact is truly missing.',
+            '- Qualify new sales leads step by step. Never dump every question at once. Do not treat an existing-account question as a new lead.',
         ));
 
         $price_block = '';
@@ -370,9 +371,11 @@ class PAXdesign_Chat_Knowledge {
             $company['statement'],
             '',
             '## Deine Rolle',
+            '- Du bist ein echter Kundenassistent: zuerst die aktuelle Frage verstehen und mit echten Daten beantworten, dann erst beraten.',
             '- Du kennst alle PAXDesign-Leistungen präzise und berätst wie ein erfahrener Mitarbeiter — nicht generisch.',
-            '- Du führst Besucher zum passenden Service und qualifizierst Leads für die Erstberatung.',
-            '- Keine übertriebenen Versprechen, keine erfundenen Projektdetails.',
+            '- Bei eingeloggten Kunden: Anfragen, Status, Termine, Dateien und Projekte aus dem Account-Kontext beantworten. Nicht nach der Anfrage fragen, wenn sie bereits vorliegt.',
+            '- Du führst neue Besucher zum passenden Service und qualifizierst Leads für die Erstberatung.',
+            '- Keine übertriebenen Versprechen, keine erfundenen Projektdetails, Statuswerte oder Referenznummern.',
             '',
             '## Antwort-Stil',
             $style_block,
@@ -390,10 +393,10 @@ class PAXdesign_Chat_Knowledge {
             $booking_block,
             '',
             '## Live-Agent / Mitarbeiter',
-            '- Wenn der Kunde einen echten Menschen, Mitarbeiter, Live Agent, Live Chat, Support-Mitarbeiter oder Ahmad sprechen möchte:',
-            '  1. Frage NICHT sofort weiter — stelle zuerst EINE kurze Qualifizierungsfrage:',
-            '     „Gerne. Damit ich Sie richtig weiterleiten kann: Worum geht es kurz — Website, AI Chatbot, Booking, Support oder ein anderes Thema?"',
-            '  2. Nach der kurzen Antwort des Kunden: „Danke. Ich leite Sie jetzt an einen PAXDesign-Mitarbeiter weiter."',
+            '- Wenn der Kunde nach einer bereits eingereichten Anfrage, dem Status, einem Termin, einer Rechnung oder einem Projekt fragt: beantworte das aus dem Account-Kontext. Das ist KEIN Live-Agent-Wunsch und keine Qualifizierungsfrage.',
+            '- Wenn der Kunde ausdrücklich einen echten Menschen, Mitarbeiter, Live Agent, Live Chat, Support-Mitarbeiter oder Ahmad sprechen möchte:',
+            '  1. Wenn das Thema aus dem Account-Kontext oder der Nachricht schon klar ist, leite direkt weiter — frage nicht „Worum geht es?"',
+            '  2. Nur wenn wirklich kein Thema bekannt ist, stelle EINE kurze Qualifizierungsfrage.',
             '- Während auf einen Mitarbeiter gewartet wird: keine langen KI-Antworten, keine Sales-Pitches.',
             '',
             '## Beispiel (Website-Anfrage)',
@@ -425,10 +428,11 @@ class PAXdesign_Chat_Knowledge {
         $lines = array(
             '## Customer account context (private — only for this logged-in customer)',
             '- AUTHENTICATION: this customer IS already logged in (WordPress session). NEVER ask them to sign in, create an account, or log in again.',
-            '- Use ONLY the facts below for account, project, request, appointment, invoice/file, and notification questions.',
-            '- If the customer asks about their project, order, invoice, appointment, or files, answer from this data.',
+            '- Use ONLY the facts below for account, project, request, appointment, invoice/file, notification, and Cybercrime questions.',
+            '- If they ask "What is the request I submitted?" or "What is the status of my request?", the items below ARE that request. Answer with the description, reference, status, dates, and next step.',
+            '- Never ask them to describe or repeat a request that is listed here.',
             '- If nothing relevant exists below, say honestly that nothing is on file yet and offer next steps.',
-            '- Never invent statuses, dates, amounts, documents, or appointments.',
+            '- Never invent statuses, dates, amounts, documents, appointments, or reference numbers.',
         );
 
         if ($user instanceof WP_User) {
@@ -443,16 +447,21 @@ class PAXdesign_Chat_Knowledge {
                 $lines[] = '- Projects (' . count($projects) . '):';
                 foreach (array_slice($projects, 0, 5) as $project) {
                     $summary = sprintf(
-                        '  • %s — %s | status: %s | progress: %d%%',
+                        '  • %s — %s | status: %s | progress: %d%% | updated: %s',
                         (string) ($project['ref'] ?? ''),
                         (string) ($project['title'] ?? ''),
                         (string) ($project['status'] ?? ''),
-                        (int) ($project['progress'] ?? 0)
+                        (int) ($project['progress'] ?? 0),
+                        (string) ($project['updated_at'] ?? '')
                     );
                     if (!empty($project['expected_completion'])) {
                         $summary .= ' | expected completion: ' . (string) $project['expected_completion'];
                     }
                     $lines[] = $summary;
+                    if (!empty($project['description'])) {
+                        $lines[] = '    summary: ' . self::clip_context_text($project['description'], 220);
+                    }
+                    $lines[] = '    next step: ' . self::next_step_for_status((string) ($project['status'] ?? ''), 'project');
                 }
             }
         }
@@ -465,10 +474,11 @@ class PAXdesign_Chat_Knowledge {
                 $lines[] = '- Service requests / orders (' . count($orders) . '):';
                 foreach (array_slice($orders, 0, 5) as $order) {
                     $summary = sprintf(
-                        '  • %s — %s | status: %s',
+                        '  • %s — %s | status: %s | submitted: %s',
                         (string) ($order['ref'] ?? ''),
                         (string) ($order['service_label'] ?? ''),
-                        (string) ($order['status'] ?? '')
+                        (string) ($order['status'] ?? ''),
+                        (string) ($order['created_at'] ?? '')
                     );
                     if (!empty($order['expected_delivery'])) {
                         $summary .= ' | expected delivery: ' . (string) $order['expected_delivery'];
@@ -477,6 +487,16 @@ class PAXdesign_Chat_Knowledge {
                         $summary .= ' | linked appointment booking_id: ' . (int) $order['booking_id'];
                     }
                     $lines[] = $summary;
+                    if (!empty($order['description'])) {
+                        $lines[] = '    request details: ' . self::clip_context_text($order['description'], 240);
+                    } else {
+                        $lines[] = '    request details: (no extra description on file; the service above is the submitted request)';
+                    }
+                    $note = self::latest_customer_order_note($user_id, (int) ($order['id'] ?? 0));
+                    if ($note !== '') {
+                        $lines[] = '    latest customer-visible update: ' . $note;
+                    }
+                    $lines[] = '    next step: ' . self::next_step_for_status((string) ($order['status'] ?? ''), 'order');
                 }
             }
 
@@ -493,6 +513,29 @@ class PAXdesign_Chat_Knowledge {
                         (string) ($booking['booking_time'] ?? ''),
                         (string) ($booking['status'] ?? 'pending')
                     );
+                    if (!empty($booking['message'])) {
+                        $lines[] = '    booking request: ' . self::clip_context_text($booking['message'], 200);
+                    }
+                }
+            }
+
+            $recent_bookings = self::list_recent_bookings_for_user($user_id, 8);
+            if (empty($recent_bookings)) {
+                $lines[] = '- Submitted booking requests: none on file for this account email';
+            } else {
+                $lines[] = '- Submitted booking requests (' . count($recent_bookings) . ' recent, including past dates):';
+                foreach ($recent_bookings as $booking) {
+                    $lines[] = sprintf(
+                        '  • %s on %s %s | status: %s | submitted: %s',
+                        (string) ($booking['service'] ?? 'Appointment'),
+                        (string) ($booking['booking_date'] ?? ''),
+                        (string) ($booking['booking_time'] ?? ''),
+                        (string) ($booking['status'] ?? 'pending'),
+                        (string) ($booking['created_at'] ?? '')
+                    );
+                    if (!empty($booking['message'])) {
+                        $lines[] = '    request details: ' . self::clip_context_text($booking['message'], 200);
+                    }
                 }
             }
 
@@ -513,6 +556,17 @@ class PAXdesign_Chat_Knowledge {
         if (class_exists('PAXdesign_Customer_Notifications')) {
             $unread = PAXdesign_Customer_Notifications::unread_count($user_id);
             $lines[] = '- Unread portal notifications: ' . (int) $unread;
+            if (method_exists('PAXdesign_Customer_Notifications', 'list_for_user')) {
+                $recent_notes = PAXdesign_Customer_Notifications::list_for_user($user_id, false, 5);
+                if (!empty($recent_notes)) {
+                    $lines[] = '- Recent portal notifications:';
+                    foreach (array_slice($recent_notes, 0, 5) as $note) {
+                        $lines[] = '  • ' . (string) ($note['created_at'] ?? '') . ': '
+                            . (string) ($note['title'] ?? '') . ' — '
+                            . self::clip_context_text((string) ($note['body'] ?? ''), 140);
+                    }
+                }
+            }
         }
 
         if (class_exists('PAXdesign_Cybercrime_Intake')) {
@@ -531,7 +585,121 @@ class PAXdesign_Chat_Knowledge {
             }
         }
 
+        $has_items = (bool) preg_match('/^  • /m', implode("\n", $lines));
+        if ($has_items) {
+            $lines[] = '- When the customer says "my request" / "the request I submitted", use the most recent service request, booking request, project, or Cybercrime report above. Do not ask them what it was.';
+        } else {
+            $lines[] = '- No submitted request, booking, project, or report is on file for this account yet.';
+        }
+
         return implode("\n", $lines);
+    }
+
+    /**
+     * @param mixed $text
+     * @param int   $max
+     * @return string
+     */
+    private static function clip_context_text($text, $max = 220) {
+        $text = trim(preg_replace('/\s+/', ' ', wp_strip_all_tags((string) $text)));
+        if ($text === '') {
+            return '';
+        }
+        $max = max(40, (int) $max);
+        $len = function_exists('mb_strlen') ? mb_strlen($text) : strlen($text);
+        if ($len <= $max) {
+            return $text;
+        }
+        $cut = function_exists('mb_substr') ? mb_substr($text, 0, $max - 3) : substr($text, 0, $max - 3);
+        return rtrim($cut) . '...';
+    }
+
+    /**
+     * @param string $status
+     * @param string $kind order|project
+     * @return string
+     */
+    private static function next_step_for_status($status, $kind = 'order') {
+        $status = sanitize_key((string) $status);
+        switch ($status) {
+            case 'completed':
+            case 'done':
+                return 'This item is completed. No action needed unless the customer has a new question.';
+            case 'cancelled':
+            case 'canceled':
+            case 'rejected':
+                return 'This item is closed. Offer to explain why from listed updates, or help start a new request.';
+            case 'in_progress':
+            case 'processing':
+            case 'active':
+                return 'The PAXDesign team is working on it. The customer can wait; they do not need to resubmit.';
+            case 'confirmed':
+                return 'The appointment is confirmed. The customer should attend at the listed date and time.';
+            case 'planning':
+                return 'The project is in planning. The team will follow up; the customer does not need to resubmit.';
+            default:
+                return $kind === 'project'
+                    ? 'The team has this project on file and will follow up. The customer does not need to resubmit.'
+                    : 'The team has received this request and will follow up. The customer does not need to resubmit.';
+        }
+    }
+
+    /**
+     * @param int $user_id
+     * @param int $order_id
+     * @return string
+     */
+    private static function latest_customer_order_note($user_id, $order_id) {
+        $user_id = absint($user_id);
+        $order_id = absint($order_id);
+        if ($user_id <= 0 || $order_id <= 0 || !class_exists('PAXdesign_Customer_Orders')) {
+            return '';
+        }
+        if (!method_exists('PAXdesign_Customer_Orders', 'get_for_user')) {
+            return '';
+        }
+        $detail = PAXdesign_Customer_Orders::get_for_user($user_id, $order_id);
+        if (!is_array($detail) || empty($detail['notes']) || !is_array($detail['notes'])) {
+            return '';
+        }
+        $note = $detail['notes'][0];
+        $body = is_array($note) ? (string) ($note['body'] ?? '') : '';
+        if ($body === '') {
+            return '';
+        }
+        $when = is_array($note) ? (string) ($note['created_at'] ?? '') : '';
+        return trim($when . ' ' . self::clip_context_text($body, 180));
+    }
+
+    /**
+     * Recent booking rows for the customer's email, including past dates.
+     *
+     * @param int $user_id
+     * @param int $limit
+     * @return array<int, array<string, mixed>>
+     */
+    private static function list_recent_bookings_for_user($user_id, $limit = 8) {
+        global $wpdb;
+        $user = get_user_by('id', absint($user_id));
+        if (!$user) {
+            return array();
+        }
+        $bookings = $wpdb->prefix . 'paxdesign_bookings';
+        if ($wpdb->get_var($wpdb->prepare('SHOW TABLES LIKE %s', $bookings)) !== $bookings) {
+            return array();
+        }
+        $limit = max(1, min(12, (int) $limit));
+        $rows = $wpdb->get_results($wpdb->prepare(
+            "SELECT id, service, booking_date, booking_time, status, message, created_at
+             FROM $bookings
+             WHERE customer_email = %s
+             ORDER BY created_at DESC
+             LIMIT %d",
+            $user->user_email,
+            $limit
+        ), ARRAY_A);
+
+        return is_array($rows) ? $rows : array();
     }
 
     /**
@@ -557,7 +725,8 @@ class PAXdesign_Chat_Knowledge {
             '- Help with Cybercrime Support: explaining the service, guiding the website report form, and answering status questions.',
             '- For authenticated customers, use the Cybercrime Support report facts from the account context (reference, category, status, dates, summary).',
             '- If they are already logged in, NEVER ask them to sign in.',
-            '- Answer questions like "What is my request number?", "Why did I submit this report?", "What is the current status?" from those report facts only.',
+            '- Answer questions like "What is my request number?", "What is the request I submitted?", "Why did I submit this report?", "What is the current status?" from those report facts only.',
+            '- If a submitted report is already in account context, do not ask what the request was and do not restart the form.',
             '- Never invent a reference number, status change, or team message that is not listed in the account context.',
             '- Do NOT pitch unrelated services unless the visitor explicitly asks.',
             '- Treat all details as sensitive; never ask for passwords, OTP codes, seed phrases, or full payment card numbers.',

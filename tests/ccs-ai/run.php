@@ -30,6 +30,7 @@ ccs_assert(strpos($boot, 'class-paxdesign-cybercrime-ai-workflow.php') === false
 $knowledge = file_get_contents($includes . '/class-paxdesign-chat-knowledge.php');
 ccs_assert(strpos($knowledge, 'ONE clear step at a time') !== false, 'CCS assistant must guide one step at a time');
 ccs_assert(strpos($knowledge, '1 Identity → 2 Incident → 3 Evidence → 4 Review') !== false, 'CCS steps must match the website form');
+ccs_assert(strpos($knowledge, 'do not restart the form') !== false, 'CCS status questions must not restart the form');
 
 $tickets = file_get_contents($includes . '/class-paxdesign-cybercrime-tickets.php');
 ccs_assert(strpos($tickets, "'rejected'") !== false, 'tickets must include rejected status');

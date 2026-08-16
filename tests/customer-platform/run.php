@@ -64,6 +64,8 @@ cx_assert_true(strpos($language_routing, 'persist_session_language') !== false, 
 
 $chat_knowledge = file_get_contents(dirname(__DIR__, 2) . '/paxdesign-booking/includes/class-paxdesign-chat-knowledge.php');
 cx_assert_true(strpos($chat_knowledge, 'build_customer_account_context_block') !== false, 'Chat knowledge must build customer account context block');
+cx_assert_true(strpos($chat, 'PAXdesign_Chat_Intent::detect') !== false, 'Chat must detect customer intent before answering');
+cx_assert_true(strpos($chat_knowledge, 'request details:') !== false, 'Account context must include submitted request details');
 
 $customer_orders = file_get_contents($customer_dir . '/class-paxdesign-customer-orders.php');
 cx_assert_true(strpos($customer_orders, 'upcoming_bookings_for_user') !== false, 'Customer orders must expose upcoming bookings for AI context');
@@ -172,7 +174,7 @@ cx_assert_true(strpos($chat_knowledge, 'ONE clear step at a time') !== false, 'T
 
 $ccs_js = file_get_contents($ccs_root . '/assets/js/chat-script.js');
 cx_assert_true(strpos($ccs_js, 'skipping stacked sync') === false, 'Chat JS must not contain the 3.176 stacked-sync rewrite');
-cx_assert_true(strpos($ccs_js, 'Version: 3.174.97') !== false, 'Chat JS must be the 3.174.97 baseline');
+cx_assert_true(strpos($ccs_js, 'Version: 3.174.98') !== false, 'Chat JS must be the 3.174.98 baseline');
 
 $ccs_css = file_get_contents($ccs_root . '/assets/css/booking-styles.css');
 cx_assert_true(strpos($ccs_css, '#063226') !== false, 'Human composer dark-green color must remain');

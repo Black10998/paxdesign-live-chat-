@@ -285,18 +285,28 @@ class PAXdesign_Chat {
     }
 
     /**
-     * System prompt with language rules and optional authenticated account context.
+     * System prompt with language rules, intent, and optional authenticated account context.
      *
      * @param string $customer_language de|en|ar
      * @param int    $user_id
      * @param string $session_id
+     * @param string $latest_user_message
+     * @param string $recent_conversation
      * @return string
      */
-    public function build_ai_system_prompt($customer_language = '', $user_id = 0, $session_id = '') {
+    public function build_ai_system_prompt($customer_language = '', $user_id = 0, $session_id = '', $latest_user_message = '', $recent_conversation = '') {
         $prompt = $this->get_system_prompt($customer_language);
         $user_id = absint($user_id);
         $page_context = $this->resolve_page_context($session_id);
         $focus_reference = ($page_context === 'cybercrime-support') ? $this->resolve_page_reference($session_id) : '';
+        $intent = class_exists('PAXdesign_Chat_Intent')
+            ? PAXdesign_Chat_Intent::detect($latest_user_message, $recent_conversation)
+            : 'general';
+
+        if (class_exists('PAXdesign_Chat_Intent')) {
+            $prompt .= "\n\n" . PAXdesign_Chat_Intent::operating_rules_block();
+            $prompt .= "\n\n" . PAXdesign_Chat_Intent::instruction_block($intent, $user_id > 0);
+        }
 
         if ($user_id > 0 && class_exists('PAXdesign_Chat_Knowledge')) {
             $context = PAXdesign_Chat_Knowledge::build_customer_account_context_block($user_id, $session_id, $focus_reference);
@@ -305,7 +315,7 @@ class PAXdesign_Chat {
             }
             $prompt .= "\n\n## Authentication\n- This customer IS already logged in (current WordPress session / authentication state).\n- NEVER ask them to sign in, create an account, or log in again.\n- Do not mention a login gate or 'please log in'.";
         } else {
-            $prompt .= "\n\n## Authentication\n- This visitor is not logged in.\n- Only ask them to sign in when a portal action truly requires an account (for example submitting a Cybercrime report).";
+            $prompt .= "\n\n## Authentication\n- This visitor is not logged in.\n- Only ask them to sign in when a portal action truly requires an account (for example submitting a Cybercrime report or looking up a submitted request).";
         }
 
         if ($page_context === 'cybercrime-support' && class_exists('PAXdesign_Chat_Knowledge')) {
@@ -317,6 +327,36 @@ class PAXdesign_Chat {
         }
 
         return $prompt;
+    }
+
+    /**
+     * Latest user text plus a short transcript for follow-up intent.
+     *
+     * @param array<int, array<string, mixed>> $messages
+     * @return array{0:string,1:string}
+     */
+    private function conversation_prompt_inputs($messages) {
+        $latest = '';
+        $excerpt = array();
+        if (!is_array($messages)) {
+            return array('', '');
+        }
+        foreach ($messages as $msg) {
+            if (!is_array($msg)) {
+                continue;
+            }
+            $role = isset($msg['role']) ? (string) $msg['role'] : '';
+            $content = trim((string) ($msg['content'] ?? ''));
+            if ($content === '' || !in_array($role, array('user', 'assistant'), true)) {
+                continue;
+            }
+            $excerpt[] = strtoupper($role) . ': ' . $content;
+            if ($role === 'user') {
+                $latest = $content;
+            }
+        }
+        $excerpt = array_slice($excerpt, -8);
+        return array($latest, implode("\n", $excerpt));
     }
 
     /**
@@ -725,8 +765,9 @@ class PAXdesign_Chat {
             $headers['X-PAX-Chat-Token'] = $secret;
         }
 
+        list($latest_user_message, $recent_conversation) = $this->conversation_prompt_inputs($messages);
         $worker_messages = array_merge(
-            array(array('role' => 'system', 'content' => $this->build_ai_system_prompt($customer_language, $user_id, $session_id))),
+            array(array('role' => 'system', 'content' => $this->build_ai_system_prompt($customer_language, $user_id, $session_id, $latest_user_message, $recent_conversation))),
             array_values(array_filter($this->trim_conversation_history($messages), function ($msg) {
                 return $msg['role'] !== 'system';
             }))
@@ -776,8 +817,9 @@ class PAXdesign_Chat {
             wp_send_json_error(array('message' => 'Chat-Server unterstützt keine Streaming-Verbindung (cURL fehlt).'));
         }
 
+        list($latest_user_message, $recent_conversation) = $this->conversation_prompt_inputs($messages);
         $openai_messages = array(
-            array('role' => 'system', 'content' => $this->build_ai_system_prompt($customer_language, $user_id, $session_id)),
+            array('role' => 'system', 'content' => $this->build_ai_system_prompt($customer_language, $user_id, $session_id, $latest_user_message, $recent_conversation)),
         );
         foreach ($messages as $msg) {
             if ($msg['role'] !== 'system') {
@@ -985,7 +1027,7 @@ class PAXdesign_Chat {
     /**
      * Keep recent turns only — smaller payloads reach the model faster.
      */
-    private function trim_conversation_history($messages, $max_turns = 12) {
+    private function trim_conversation_history($messages, $max_turns = 16) {
         if (!is_array($messages) || count($messages) <= $max_turns) {
             return $messages;
         }
@@ -1365,8 +1407,9 @@ class PAXdesign_Chat {
             return new WP_Error('not_configured', __('Chat is not configured yet. Please contact support.', 'paxdesign-booking'), array('status' => 503));
         }
 
+        list($latest_user_message, $recent_conversation) = $this->conversation_prompt_inputs($messages);
         $openai_messages = array(
-            array('role' => 'system', 'content' => $this->build_ai_system_prompt($customer_language, $user_id, $session_id)),
+            array('role' => 'system', 'content' => $this->build_ai_system_prompt($customer_language, $user_id, $session_id, $latest_user_message, $recent_conversation)),
         );
         foreach ($messages as $msg) {
             if ($msg['role'] !== 'system') {

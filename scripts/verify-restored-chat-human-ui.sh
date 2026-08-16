@@ -29,9 +29,9 @@ curl -fsSL "${SITE}/wp-content/plugins/paxdesign-booking/assets/js/cybercrime-ad
 curl -fsSL "${SITE}/wp-content/plugins/paxdesign-booking/paxdesign-booking.php?v=${STAMP}" \
   -o "${tmpdir}/paxdesign-booking.php" || true
 
-grep -q "Version: 3.174.97" "${tmpdir}/chat-script.js" \
-  && ok "chat-script.js cache-bust version 3.174.97" \
-  || fail "chat-script.js is not the patched 3.174.97 file"
+grep -q "Version: 3.174.98" "${tmpdir}/chat-script.js" \
+  && ok "chat-script.js cache-bust version 3.174.98" \
+  || fail "chat-script.js is not the patched 3.174.98 file"
 
 grep -q "function pinToLatestMessage" "${tmpdir}/chat-script.js" \
   && ok "instant pin-to-latest is present" \
