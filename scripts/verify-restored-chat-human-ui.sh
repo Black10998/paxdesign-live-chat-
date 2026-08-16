@@ -29,9 +29,22 @@ curl -fsSL "${SITE}/wp-content/plugins/paxdesign-booking/assets/js/cybercrime-ad
 curl -fsSL "${SITE}/wp-content/plugins/paxdesign-booking/paxdesign-booking.php?v=${STAMP}" \
   -o "${tmpdir}/paxdesign-booking.php" || true
 
-grep -q "Version: 3.174.101" "${tmpdir}/chat-script.js" \
-  && ok "chat-script.js cache-bust version 3.174.101" \
-  || fail "chat-script.js is not the patched 3.174.101 file"
+grep -q "Version: 3.174.102" "${tmpdir}/chat-script.js" \
+  && ok "chat-script.js cache-bust version 3.174.102" \
+  || fail "chat-script.js is not the patched 3.174.102 file"
+
+grep -q "paxdesign-chat-auth-locked .paxdesign-booking-container" "${tmpdir}/booking-styles.css" \
+  && grep -q "flex-direction: column" "${tmpdir}/booking-styles.css" \
+  && ok "login panel stacks below the header instead of overlapping it" \
+  || fail "login panel still overlaps the chat header"
+
+grep -qF ".paxdesign-booking-chat-auth-gate-inner:has(.paxdesign-booking-chat-auth-inline .pdx-auth-form) .paxdesign-booking-chat-auth-gate-intro" "${tmpdir}/booking-styles.css" \
+  && ok "duplicate login headline hides once inline form mounts" \
+  || fail "login headline duplication rule missing"
+
+grep -q "overflow-wrap: anywhere" "${tmpdir}/booking-styles.css" \
+  && ok "login labels and links wrap instead of overlapping" \
+  || fail "login text wrapping rule missing"
 
 grep -q "function pinToLatestMessage" "${tmpdir}/chat-script.js" \
   && ok "instant pin-to-latest is present" \

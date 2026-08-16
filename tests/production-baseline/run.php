@@ -1,6 +1,6 @@
 <?php
 /**
- * Guard: GitHub paxdesign-booking must match the live 3.174.101 baseline.
+ * Guard: GitHub paxdesign-booking must match the live 3.174.102 baseline.
  * Rejects the later 3.176.x chat rewrite and CCS AI form-fill classes.
  */
 $root = dirname(__DIR__, 2);
@@ -24,8 +24,8 @@ $knowledge = file_get_contents($plugin . '/includes/class-paxdesign-chat-knowled
 $css = file_get_contents($plugin . '/assets/css/booking-styles.css');
 $widget = file_get_contents($plugin . '/templates/booking-widget.php');
 
-pb_ok(strpos($boot, "define('PAXDESIGN_BOOKING_VERSION', '3.174.101')") !== false, 'plugin version 3.174.101');
-pb_ok(strpos($js, 'Version: 3.174.101') !== false, 'chat-script cache-bust 3.174.101');
+pb_ok(strpos($boot, "define('PAXDESIGN_BOOKING_VERSION', '3.174.102')") !== false, 'plugin version 3.174.102');
+pb_ok(strpos($js, 'Version: 3.174.102') !== false, 'chat-script cache-bust 3.174.102');
 pb_ok(strpos($js, 'skipping stacked sync') === false, 'chat-script is not the 3.176 freeze/unfreeze rewrite');
 pb_ok(strpos($js, 'var openInstant') === false, 'chat-script does not use the 3.176 instant-open rewrite');
 pb_ok(strpos($js, 'var stickToBottom') !== false, 'WhatsApp stick-to-bottom is present');
@@ -58,6 +58,10 @@ pb_ok(strpos($js, "context: 'page'") !== false, 'chat login uses the account-pag
 pb_ok(strpos($css, 'font-size: 16px') !== false, 'mobile composer uses 16px text to avoid overflow/zoom');
 pb_ok(strpos($css, 'paxdesign-chat-mode-active.paxdesign-mobile-chat-mode') !== false, 'mobile sheet overrides the 520px desktop chat height');
 pb_ok(strpos($css, 'font-size: 22px') !== false, 'chat login title matches the Apple account page');
+pb_ok(strpos($css, 'paxdesign-chat-auth-locked .paxdesign-booking-container') !== false && strpos($css, 'flex-direction: column') !== false, 'login panel stacks below the header instead of overlapping it');
+pb_ok(strpos($css, '.paxdesign-booking-chat-auth-gate-inner:has(.paxdesign-booking-chat-auth-inline .pdx-auth-form) .paxdesign-booking-chat-auth-gate-intro') !== false, 'duplicate login headline is hidden once the inline form is mounted');
+pb_ok(strpos($css, '.paxdesign-booking-chat-auth-gate-inner') !== false && strpos($css, 'overflow: hidden') !== false, 'login panel does not rely on internal scrolling');
+pb_ok(strpos($css, 'overflow-wrap: anywhere') !== false, 'login labels and links wrap instead of overlapping');
 $booking_js = file_get_contents($plugin . '/assets/js/booking-script.js');
 pb_ok(strpos($booking_js, 'function applyCompactWidgetFrame') !== false, 'chat sizes to a compact card on desktop and mobile');
 pb_ok(strpos($booking_js, 'function keyboardOcclusionPx') !== false, 'keyboard occlusion is measured from visualViewport');
@@ -101,4 +105,4 @@ if ($fail > 0) {
     fwrite(STDERR, "$fail production-baseline assertion(s) failed\n");
     exit(1);
 }
-echo "Production baseline 3.174.101 guards passed.\n";
+echo "Production baseline 3.174.102 guards passed.\n";
