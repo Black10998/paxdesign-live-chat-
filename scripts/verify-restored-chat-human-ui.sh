@@ -29,9 +29,9 @@ curl -fsSL "${SITE}/wp-content/plugins/paxdesign-booking/assets/js/cybercrime-ad
 curl -fsSL "${SITE}/wp-content/plugins/paxdesign-booking/paxdesign-booking.php?v=${STAMP}" \
   -o "${tmpdir}/paxdesign-booking.php" || true
 
-grep -q "Version: 3.174.107" "${tmpdir}/chat-script.js" \
-  && ok "chat-script.js cache-bust version 3.174.107" \
-  || fail "chat-script.js is not the patched 3.174.107 file"
+grep -q "Version: 3.174.108" "${tmpdir}/chat-script.js" \
+  && ok "chat-script.js cache-bust version 3.174.108" \
+  || fail "chat-script.js is not the patched 3.174.108 file"
 
 grep -q "var appliedMessageSeq" "${tmpdir}/chat-script.js" \
   && grep -q "function getIncrementalSince" "${tmpdir}/chat-script.js" \
@@ -40,9 +40,13 @@ grep -q "var appliedMessageSeq" "${tmpdir}/chat-script.js" \
   && ok "website unified sync merge cursors present" \
   || fail "unified sync client markers missing from chat-script.js"
 
-grep -q "function scheduleUnifiedSync" "${tmpdir}/chat-script.js" \
-  && ok "website unified sync coordinator present" \
-  || fail "scheduleUnifiedSync missing"
+grep -q "function keepComposerFocus" "${tmpdir}/chat-script.js" \
+  && ok "composer focus retention present" \
+  || fail "keepComposerFocus missing from chat-script.js"
+
+grep -q "function reconcileSyncedUserMessage" "${tmpdir}/chat-script.js" \
+  && ok "user message dedup reconciliation present" \
+  || fail "reconcileSyncedUserMessage missing from chat-script.js"
 
 grep -q "function getSiteHeaderBottom" "${tmpdir}/booking-script.js" \
   && ok "mobile keyboard header clamp present" \

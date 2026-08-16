@@ -1,6 +1,6 @@
 /**
  * PAXdesign AI Chat — Sales & Booking Assistant
- * Version: 3.174.107
+ * Version: 3.174.108
  */
 (function () {
   'use strict';
@@ -1815,20 +1815,22 @@
     notifyLayout();
     scheduleLivePolling();
     if (getSessionId()) startCustomerStream();
-    beginChatReadiness({ reuseSession: true, background: true, blockUi: false }).then(function (ready) {
-      if (!ready) return;
-      pinToLatestMessage();
-      if (chatHandler === 'closed' && isSessionArchived(getSessionId()) && !isPersistentAccountChat()) {
-        fetchSessionFromServer(true).then(function () {
-          var hasHistory = messages.length > 0 || (config && config.chatMessageCount > 0);
-          if (!hasHistory) {
-            beginFreshSessionSilently();
-          } else {
-            pinToLatestMessage();
-          }
-        });
-      }
-    });
+    window.setTimeout(function () {
+      beginChatReadiness({ reuseSession: true, background: true, blockUi: false }).then(function (ready) {
+        if (!ready) return;
+        pinToLatestMessage();
+        if (chatHandler === 'closed' && isSessionArchived(getSessionId()) && !isPersistentAccountChat()) {
+          fetchSessionFromServer(true).then(function () {
+            var hasHistory = messages.length > 0 || (config && config.chatMessageCount > 0);
+            if (!hasHistory) {
+              beginFreshSessionSilently();
+            } else {
+              pinToLatestMessage();
+            }
+          });
+        }
+      });
+    }, 0);
   }
 
   function onWidgetClose() {
@@ -2712,6 +2714,52 @@
     seenMsgId(msg.id);
     var dedupKey = messageDedupKey(msg);
     if (dedupKey) domClientMsgIds[dedupKey] = msg.id;
+  }
+
+  function upgradeMessageServerId(localId, serverMsg) {
+    if (!serverMsg || !serverMsg.id || localId === serverMsg.id) return;
+    var dedupKey = messageDedupKey(serverMsg);
+    delete domMsgIds[localId];
+    domMsgIds[serverMsg.id] = true;
+    seenMsgId(serverMsg.id);
+    if (dedupKey) domClientMsgIds[dedupKey] = serverMsg.id;
+    var msgEl = threadEl && threadEl.querySelector('[data-msg-id="' + localId + '"]');
+    if (msgEl) {
+      msgEl.setAttribute('data-msg-id', String(serverMsg.id));
+    }
+    messages.forEach(function (m) {
+      if (m && m.id === localId) {
+        m.id = serverMsg.id;
+        if (serverMsg.client_msg_id) m.client_msg_id = serverMsg.client_msg_id;
+      }
+    });
+    if (chatMessageMap[localId]) {
+      chatMessageMap[serverMsg.id] = chatMessageMap[localId];
+      chatMessageMap[localId].id = serverMsg.id;
+      delete chatMessageMap[localId];
+    }
+    updateCustomerLinkScanMessage(serverMsg);
+  }
+
+  function reconcileSyncedUserMessage(msg) {
+    var dedupKey = messageDedupKey(msg);
+    if (!dedupKey || !domClientMsgIds[dedupKey]) return false;
+    var localId = domClientMsgIds[dedupKey];
+    if (localId && msg.id && localId !== msg.id) {
+      upgradeMessageServerId(localId, msg);
+    }
+    return true;
+  }
+
+  function keepComposerFocus() {
+    if (!input || input.disabled) return;
+    window.setTimeout(function () {
+      try {
+        input.focus({ preventScroll: true });
+      } catch (e) {
+        input.focus();
+      }
+    }, 0);
   }
 
   function loadConsultationLogged(sessionId) {
@@ -3718,6 +3766,7 @@
       if (!msg || !msg.id) return;
       msg = maskCustomerLinkScanMessage(msg);
       if (isMessagePermanentlyDeleted(msg.id)) return;
+      if (msg.role === 'user' && reconcileSyncedUserMessage(msg)) return;
       if (isDuplicateMessage(msg)) return;
       if (msg.role === 'assistant' && isStreaming) return;
       if (msg.role === 'assistant' && streamingMsgId && msg.id === streamingMsgId) return;
@@ -5276,6 +5325,7 @@
     stickToBottom = true;
     renderMessageDom('user', text, userId, renderOpts);
     messages.push({ role: 'user', content: text, id: userId, client_msg_id: clientMsgId });
+    rememberMessageIdentity({ id: userId, role: 'user', content: text, client_msg_id: clientMsgId });
     if (!opts.skipSync) {
       lastUserSyncPromise = syncChatLog();
     }
@@ -5549,6 +5599,7 @@
     input.value = '';
     autoResizeInput();
     updateSendButton();
+    keepComposerFocus();
 
     if (handleLiveAgentFlow(text)) return;
 
@@ -5579,14 +5630,17 @@
         .finally(function () {
           isStreaming = false;
           updateSendButton();
+          keepComposerFocus();
         });
       return;
     }
 
-    appendUserMessage(text);
+    var aiClientMsgId = newClientMessageId();
+    appendUserMessage(text, { clientMsgId: aiClientMsgId });
     lastUserSyncPromise.then(function () {
       isStreaming = true;
       updateSendButton();
+      keepComposerFocus();
       showTyping();
       var assistantClientMsgId = newClientMessageId();
 
@@ -5595,6 +5649,7 @@
       formData.append('nonce', config.nonce);
       stampChatRequest(formData);
       formData.append('session_id', getSessionId());
+      formData.append('client_msg_id', aiClientMsgId);
       formData.append('assistant_client_msg_id', assistantClientMsgId);
       formData.append('messages', JSON.stringify(messages.filter(function (m) {
         return m.role === 'user' || m.role === 'assistant';
@@ -5790,7 +5845,12 @@
   }
 
   form.addEventListener('submit', handleSend);
-  if (sendBtn) sendBtn.addEventListener('click', handleSend);
+  if (sendBtn) {
+    sendBtn.addEventListener('mousedown', function (e) {
+      e.preventDefault();
+    });
+    sendBtn.addEventListener('click', handleSend);
+  }
   if (newSessionBtn) {
     newSessionBtn.addEventListener('click', function (e) {
       e.preventDefault();

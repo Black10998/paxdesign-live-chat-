@@ -123,7 +123,7 @@ jobs:
           TARGET="${WP_PATH%/}/wp-content/plugins/paxdesign-booking"
           REMOTE="${WP_SSH_USER}@${WP_SSH_HOST}"
           ssh "${SSH_OPTS[@]}" "$REMOTE" \
-            "grep -q 'class PAXdesign_Conversation_Sync' '${TARGET}/includes/class-paxdesign-conversation-sync.php' && grep -q '3.174.107' '${TARGET}/paxdesign-booking.php'"
+            "grep -q 'class PAXdesign_Conversation_Sync' '${TARGET}/includes/class-paxdesign-conversation-sync.php' && grep -q '3.174.108' '${TARGET}/paxdesign-booking.php'"
 
       - name: Verify live chat assets
         run: |

@@ -1,6 +1,6 @@
 /**
  * PAXdesign Booking System JavaScript
- * Version: 3.174.107 — scoped to #paxdesign-booking-root
+ * Version: 3.174.108 — scoped to #paxdesign-booking-root
  */
 
 (function($) {
@@ -513,9 +513,10 @@
             var $widget = $in('.paxdesign-booking-widget');
             var opening = !$widget.hasClass('paxdesign-is-active');
 
-            if (opening) {
-                ensureChatReady(openWidget);
-            } else {
+        if (opening) {
+            openWidget();
+            ensureChatReady(runChatInit);
+        } else {
                 closeDialog();
             }
         });
@@ -611,6 +612,7 @@
 
         bindMobileViewportGuard();
         applyCompactWidgetFrame();
+        ensureChatReady(function () {});
         if (isMobileViewport()) {
             getSiteHeaderBottom();
             root().on('touchstart.paxMobilePreload', '.paxdesign-booking-button', function () {
@@ -1031,7 +1033,8 @@
     window.PAXdesignBooking = {
         openFromChat: openBookingFromChat,
         open: function () {
-            ensureChatReady(openWidget);
+            openWidget();
+            ensureChatReady(runChatInit);
         },
         switchMode: switchWidgetMode,
         close: closeDialog
@@ -1066,38 +1069,30 @@
             getSiteHeaderBottom();
             applyCompactWidgetFrame();
             forceReflow($widget[0]);
-
-            if (hasChat) {
-                runChatInit();
-            }
-
             applyCompactWidgetFrame();
             forceReflow($widget[0]);
-
-            requestAnimationFrame(function () {
-                applyCompactWidgetFrame();
-                revealPreparedWidget($widget);
-            });
+            revealPreparedWidget($widget);
         } else {
             applyCompactWidgetFrame();
             $widget.addClass('paxdesign-is-active').attr('aria-hidden', 'false');
             root().addClass('paxdesign-widget-open');
-            if (hasChat) {
-                runChatInit();
-            }
+            $widget.addClass('paxdesign-is-active').attr('aria-hidden', 'false');
+            root().addClass('paxdesign-widget-open');
             applyCompactWidgetFrame();
             pinChatToLatest();
         }
 
-        refreshTeamMembers(function() {
-            renderTeamCards();
-            if ($in('#paxdesignCalendarDays').children().length === 0) {
-                renderCalendar();
-            }
-            setTimeout(function() {
-                applyPreselectedServiceFlow();
-            }, 50);
-        });
+        if (!hasChat || currentWidgetMode !== 'chat') {
+            refreshTeamMembers(function() {
+                renderTeamCards();
+                if ($in('#paxdesignCalendarDays').children().length === 0) {
+                    renderCalendar();
+                }
+                setTimeout(function() {
+                    applyPreselectedServiceFlow();
+                }, 50);
+            });
+        }
     }
 
     /** Open Live Chat panel and run entry organizer (Live Agent vs KI). */
