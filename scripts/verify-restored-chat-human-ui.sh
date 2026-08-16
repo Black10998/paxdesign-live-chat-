@@ -29,9 +29,9 @@ curl -fsSL "${SITE}/wp-content/plugins/paxdesign-booking/assets/js/cybercrime-ad
 curl -fsSL "${SITE}/wp-content/plugins/paxdesign-booking/paxdesign-booking.php?v=${STAMP}" \
   -o "${tmpdir}/paxdesign-booking.php" || true
 
-grep -q "Version: 3.174.106" "${tmpdir}/chat-script.js" \
-  && ok "chat-script.js cache-bust version 3.174.106" \
-  || fail "chat-script.js is not the patched 3.174.106 file"
+grep -q "Version: 3.174.107" "${tmpdir}/chat-script.js" \
+  && ok "chat-script.js cache-bust version 3.174.107" \
+  || fail "chat-script.js is not the patched 3.174.107 file"
 
 grep -q "var appliedMessageSeq" "${tmpdir}/chat-script.js" \
   && grep -q "function getIncrementalSince" "${tmpdir}/chat-script.js" \
@@ -47,6 +47,14 @@ grep -q "function scheduleUnifiedSync" "${tmpdir}/chat-script.js" \
 grep -q "function getSiteHeaderBottom" "${tmpdir}/booking-script.js" \
   && ok "mobile keyboard header clamp present" \
   || fail "getSiteHeaderBottom missing from booking-script.js"
+
+grep -q "paxdesign-is-preparing" "${tmpdir}/booking-script.js" \
+  && ok "mobile first-open prepare phase present" \
+  || fail "paxdesign-is-preparing missing from booking-script.js"
+
+grep -q "paxdesign-frame-managed" "${tmpdir}/booking-styles.css" \
+  && ok "JS-managed mobile frame CSS present" \
+  || fail "paxdesign-frame-managed missing from booking-styles.css"
 
 grep -q "function transitionAfterLogin" "${tmpdir}/chat-script.js" \
   && ok "instant login transition present" \

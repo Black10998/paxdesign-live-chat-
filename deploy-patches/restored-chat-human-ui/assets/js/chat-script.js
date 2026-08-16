@@ -1,6 +1,6 @@
 /**
  * PAXdesign AI Chat — Sales & Booking Assistant
- * Version: 3.174.106
+ * Version: 3.174.107
  */
 (function () {
   'use strict';
@@ -1807,25 +1807,24 @@
     }
     hideAuthGate();
     hideReadinessOverlay();
-    concealThreadUntilPinned();
     paintCachedThreadIfNeeded();
     stickToBottom = true;
     updateInputState();
     updateEntryUi();
-    revealPinnedThread();
+    pinToLatestMessage();
     notifyLayout();
     scheduleLivePolling();
     if (getSessionId()) startCustomerStream();
     beginChatReadiness({ reuseSession: true, background: true, blockUi: false }).then(function (ready) {
       if (!ready) return;
-      revealPinnedThread();
+      pinToLatestMessage();
       if (chatHandler === 'closed' && isSessionArchived(getSessionId()) && !isPersistentAccountChat()) {
         fetchSessionFromServer(true).then(function () {
           var hasHistory = messages.length > 0 || (config && config.chatMessageCount > 0);
           if (!hasHistory) {
             beginFreshSessionSilently();
           } else {
-            revealPinnedThread();
+            pinToLatestMessage();
           }
         });
       }

@@ -350,9 +350,21 @@
   animation: paxdesign-widget-slide-in 0.28s var(--pax-ease) both;
 }
 
+/* Measured off-screen before first paint — no visible jump on mobile */
+#paxdesign-booking-root .paxdesign-booking-widget.paxdesign-is-preparing {
+  display: flex;
+  visibility: hidden;
+  pointer-events: none;
+  animation: none;
+}
+
 @media (max-width: 768px) {
   #paxdesign-booking-root .paxdesign-booking-widget.paxdesign-is-active {
-    animation: paxdesign-widget-open-mobile 0.36s cubic-bezier(0.22, 1, 0.36, 1) both;
+    animation: none;
+  }
+
+  #paxdesign-booking-root.paxdesign-frame-managed .paxdesign-booking-widget.paxdesign-is-active {
+    animation: none;
   }
 }
 
@@ -1687,6 +1699,28 @@ body.paxdesign-agent-profile-open {
     transform: none;
   }
 
+  /* JS inline frame owns position/size once the widget opens — avoids CSS/JS fight on first paint */
+  #paxdesign-booking-root.paxdesign-frame-managed .paxdesign-booking-widget,
+  #paxdesign-booking-root.paxdesign-frame-managed.paxdesign-mobile-chat-mode .paxdesign-booking-widget,
+  #paxdesign-booking-root.paxdesign-frame-managed.paxdesign-chat-mode-active .paxdesign-booking-widget {
+    top: auto;
+    right: auto;
+    left: auto;
+    bottom: auto;
+    width: auto;
+    max-width: none;
+    height: auto;
+    max-height: none;
+    min-height: 0;
+  }
+
+  #paxdesign-booking-root.paxdesign-frame-managed .paxdesign-booking-container,
+  #paxdesign-booking-root.paxdesign-frame-managed .paxdesign-booking-frame,
+  #paxdesign-booking-root.paxdesign-frame-managed .paxdesign-booking-frame-inner {
+    max-height: none;
+    height: 100%;
+  }
+
   #paxdesign-booking-root .paxdesign-booking-container,
   #paxdesign-booking-root .paxdesign-booking-frame,
   #paxdesign-booking-root .paxdesign-booking-frame-inner {
@@ -2291,6 +2325,19 @@ body.paxdesign-agent-profile-open {
     max-height: min(420px, calc(100svh - 80px));
     min-height: 0;
     transform: none;
+  }
+
+  #paxdesign-booking-root.paxdesign-frame-managed.paxdesign-chat-mode-active .paxdesign-booking-widget,
+  #paxdesign-booking-root.paxdesign-frame-managed.paxdesign-mobile-chat-mode .paxdesign-booking-widget,
+  #paxdesign-booking-root.paxdesign-frame-managed.paxdesign-chat-mode-active.paxdesign-mobile-chat-mode .paxdesign-booking-widget {
+    top: auto;
+    right: auto;
+    left: auto;
+    bottom: auto;
+    width: auto;
+    height: auto;
+    max-width: none;
+    max-height: none;
   }
 
   #paxdesign-booking-root.paxdesign-chat-mode-active .paxdesign-booking-container,
