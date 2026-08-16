@@ -341,17 +341,39 @@
     return '<span class="pdx-header-user-identity">' + avatarHtml + textHtml + '</span>';
   }
 
+  normalizeConfiguredAvatarPresets();
+
   function defaultAvatarUrl() {
     return normalizeAvatarAssetUrl(C.defaultAvatarUrl || '');
   }
 
   function normalizeAvatarAssetUrl(url) {
     if (!url) return '';
-    var normalized = String(url).replace(/(\/avatars\/pax-\d{2,3})\.svg(\?.*)?$/i, '$1.gif');
-    if (normalized.indexOf('/avatars/pax-') !== -1 && /\.gif(\?|$)/i.test(normalized) && normalized.indexOf('?') === -1 && C.version) {
-      normalized += '?v=' + encodeURIComponent(C.version);
+    var normalized = String(url).replace(/(\/avatars(?:-vip)?\/pax-(?:vip-)?\d{2,3})\.svg(\?.*)?$/i, '$1.gif');
+    if (/\/avatars(?:-vip)?\/pax-(?:vip-)?\d{2,3}\.gif(\?|$)/i.test(normalized) && normalized.indexOf('v=') === -1 && C.version) {
+      normalized += (normalized.indexOf('?') === -1 ? '?' : '&') + 'v=' + encodeURIComponent(C.version);
     }
     return normalized;
+  }
+
+  function normalizeConfiguredAvatarPresets() {
+    if (Array.isArray(C.avatarPresets)) {
+      C.avatarPresets = C.avatarPresets.map(function (preset) {
+        if (!preset || preset.type === 'none' || preset.id === 'pax-none') return preset;
+        preset.url = normalizeAvatarAssetUrl(preset.url || '');
+        return preset;
+      });
+    }
+    if (Array.isArray(C.vipAvatarPresets)) {
+      C.vipAvatarPresets = C.vipAvatarPresets.map(function (preset) {
+        if (!preset) return preset;
+        preset.url = normalizeAvatarAssetUrl(preset.url || '');
+        return preset;
+      });
+    }
+    if (C.avatarUrl) C.avatarUrl = normalizeAvatarAssetUrl(C.avatarUrl);
+    if (C.avatarFallbackUrl) C.avatarFallbackUrl = normalizeAvatarAssetUrl(C.avatarFallbackUrl);
+    if (C.defaultAvatarUrl) C.defaultAvatarUrl = normalizeAvatarAssetUrl(C.defaultAvatarUrl);
   }
 
   function accountAvatarPresetUrl(presetId) {
@@ -4833,7 +4855,24 @@
     }
 
     function updateChatChrome() {
-      /* Persistent conversation — no end-chat control for signed-in customers. */
+      var tools = container.querySelector('.pdx-portal-chat-tools');
+      var formEl = container.querySelector('#pdx-portal-chat-form');
+      var textarea = formEl ? formEl.querySelector('textarea') : null;
+      var humanConnected = state.handler === 'admin';
+      var humanQueue = state.handler === 'admin' || state.handler === 'live_request';
+      if (formEl) {
+        formEl.classList.toggle('pdx-portal-chat-form--human-connected', humanConnected);
+        formEl.classList.toggle('pdx-portal-chat-form--human-queue', humanQueue);
+      }
+      if (textarea) {
+        textarea.placeholder = humanConnected
+          ? t('message_to_support', 'Message to support…')
+          : t('write_message', 'Write a message…');
+      }
+      if (tools) {
+        tools.hidden = !humanQueue;
+        tools.setAttribute('aria-hidden', humanQueue ? 'false' : 'true');
+      }
     }
 
     function renderMessages() {
@@ -5101,13 +5140,21 @@
     init: function () {
       ensureAccountAvatarFallbackHandler();
       createAuthBar();
+      normalizeConfiguredAvatarPresets();
       if (isAuthPage()) {
         initAuthPage();
       } else {
         createOverlay();
       }
       handleUrlParams();
-      syncSessionFromServer('init', { cacheBust: true });
+      syncSessionFromServer('init', { cacheBust: true }).then(function () {
+        if (user.logged_in) {
+          return refreshAccountAvatarPresets().then(function () {
+            updateAuthBar();
+          });
+        }
+        return false;
+      });
       bindSessionAutoSync();
       window.addEventListener('resize', function () {
         updateAuthBar();
@@ -5130,6 +5177,7 @@
     openAccountSection: setAccountSection,
     closeCustomerPortal: closeCustomerPortal,
     customerApiFetch: customerApiFetch,
+    customerApiFormData: customerApiFormData,
     customerApiStream: customerApiStream,
     refreshUser: refreshUser,
     syncSession: syncSessionFromServer,

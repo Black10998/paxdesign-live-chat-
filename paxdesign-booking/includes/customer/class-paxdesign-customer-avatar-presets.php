@@ -151,12 +151,14 @@ class PAXdesign_Customer_Avatar_Presets {
         if ($url === '') {
             return '';
         }
-        $normalized = preg_replace('#(/avatars/pax-\d{2,3})\.svg(\?|$)#i', '$1.gif$2', $url);
+        $normalized = preg_replace('#(/avatars(?:-vip)?/pax-(?:vip-)?\d{2,3})\.svg(\?|$)#i', '$1.gif$2', $url);
         if ($normalized === null) {
             return $url;
         }
-        if ($normalized !== $url && strpos($normalized, '?') === false) {
-            return esc_url_raw(add_query_arg('v', PAXDESIGN_BOOKING_VERSION, $normalized));
+        if (preg_match('#/avatars(?:-vip)?/pax-(?:vip-)?\d{2,3}\.gif(\?|$)#i', $normalized)) {
+            if (strpos($normalized, 'v=') === false) {
+                $normalized = add_query_arg('v', PAXDESIGN_BOOKING_VERSION, $normalized);
+            }
         }
         return esc_url_raw($normalized);
     }

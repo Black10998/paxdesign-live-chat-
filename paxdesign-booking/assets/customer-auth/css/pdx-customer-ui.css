@@ -1223,6 +1223,17 @@
   color: var(--pdx-cx-text);
   padding: 8px 10px;
   font-family: inherit;
+  transition: background-color 0.2s ease, border-color 0.2s ease, box-shadow 0.2s ease;
+}
+
+.pdx-portal-chat-form--human-connected textarea {
+  background: rgba(52, 199, 89, 0.14);
+  border-color: rgba(52, 199, 89, 0.72);
+  box-shadow: inset 0 0 0 1px rgba(52, 199, 89, 0.18);
+}
+
+.pdx-portal-chat-form--human-connected textarea::placeholder {
+  color: rgba(22, 101, 52, 0.72);
 }
 
 .pdx-portal-notify-list {
