@@ -42,9 +42,87 @@
         }
     }
 
+    function buildChatReturnUrlEarly() {
+        try {
+            var url = new URL(window.location.href);
+            url.searchParams.set('pax_chat_open', '1');
+            return url.pathname + url.search + (url.hash || '');
+        } catch (e) {
+            return window.location.pathname + window.location.search + (window.location.hash || '');
+        }
+    }
+
+    function rememberChatReturnTargetEarly(returnTo) {
+        try {
+            sessionStorage.setItem('pax_chat_return_to', returnTo);
+            sessionStorage.setItem('pax_chat_pending_open', '1');
+        } catch (err) {}
+    }
+
+    function shouldShowGuestAuthGateEarly() {
+        var $gate = $in('#paxdesignChatAuthGate');
+        if (!$gate.length) {
+            return false;
+        }
+        return root().attr('data-pax-chat-require-login') === '1'
+            && root().attr('data-pax-chat-guest') === '1';
+    }
+
+    function bindGuestAuthGateControls() {
+        var $gate = $in('#paxdesignChatAuthGate');
+        if (!$gate.length || $gate.data('paxGuestAuthBound')) {
+            return;
+        }
+        $gate.data('paxGuestAuthBound', true);
+
+        var returnTo = buildChatReturnUrlEarly();
+        rememberChatReturnTargetEarly(returnTo);
+
+        $in('#paxdesignChatAuthLogin').on('click', function (event) {
+            event.preventDefault();
+            var loginBase = '/account/';
+            window.location.href = loginBase + '?return_to=' + encodeURIComponent(returnTo);
+        });
+
+        $gate.find('[data-pax-chat-github]').on('click', function (event) {
+            event.preventDefault();
+            var base = root().attr('data-pax-chat-github-start') || '';
+            if (!base) {
+                return;
+            }
+            var join = base.indexOf('?') >= 0 ? '&' : '?';
+            window.location.href = base + join + 'return_to=' + encodeURIComponent(returnTo);
+        });
+
+        $gate.find('[data-pax-chat-apple]').on('click', function (event) {
+            event.preventDefault();
+            var base = root().attr('data-pax-chat-apple-start') || '';
+            if (!base) {
+                return;
+            }
+            var join = base.indexOf('?') >= 0 ? '&' : '?';
+            window.location.href = base + join + 'return_to=' + encodeURIComponent(returnTo);
+        });
+    }
+
+    function showGuestAuthGateEarly() {
+        if (!shouldShowGuestAuthGateEarly()) {
+            return false;
+        }
+        showChatShellLoading(false);
+        bindGuestAuthGateControls();
+        var $gate = $in('#paxdesignChatAuthGate');
+        $gate.prop('hidden', false);
+        root().addClass('paxdesign-chat-auth-locked');
+        return true;
+    }
+
     function openChatFromLauncher() {
         openWidget();
-        showChatShellLoading(true);
+        var guestAuthVisible = showGuestAuthGateEarly();
+        if (!guestAuthVisible) {
+            showChatShellLoading(true);
+        }
         preloadChatAssets();
         ensureChatReady(function () {
             runChatInit();

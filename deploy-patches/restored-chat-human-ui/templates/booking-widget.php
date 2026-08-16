@@ -11,7 +11,27 @@ if (!defined('ABSPATH')) {
 $team_members = PAXdesign_Booking::get_instance()->get_team_members();
 ?>
 
-<div id="paxdesign-booking-root" class="paxdesign-booking paxdesign-booking-wrapper paxdesign-booking-root" aria-live="polite">
+<?php
+$chat_require_login = get_option( 'paxdesign_customer_require_login_for_chat', '1' ) === '1';
+$chat_guest         = ! is_user_logged_in();
+$chat_github_ready  = class_exists( 'PAXdesign_Auth_GitHub' ) && PAXdesign_Auth_GitHub::is_web_configured();
+$chat_apple_ready   = class_exists( 'PAXdesign_Auth_Apple' ) && PAXdesign_Auth_Apple::is_web_configured();
+$chat_social_ready  = $chat_github_ready || $chat_apple_ready;
+?>
+
+<div
+  id="paxdesign-booking-root"
+  class="paxdesign-booking paxdesign-booking-wrapper paxdesign-booking-root"
+  aria-live="polite"
+  data-pax-chat-require-login="<?php echo $chat_require_login ? '1' : '0'; ?>"
+  data-pax-chat-guest="<?php echo $chat_guest ? '1' : '0'; ?>"
+  <?php if ( $chat_github_ready ) : ?>
+  data-pax-chat-github-start="<?php echo esc_url( PAXdesign_Auth_GitHub::web_start_url() ); ?>"
+  <?php endif; ?>
+  <?php if ( $chat_apple_ready ) : ?>
+  data-pax-chat-apple-start="<?php echo esc_url( PAXdesign_Auth_Apple::web_start_url() ); ?>"
+  <?php endif; ?>
+>
 
   <!-- Floating Apple-style Support Message launcher -->
   <div
@@ -104,9 +124,16 @@ $team_members = PAXdesign_Booking::get_instance()->get_team_members();
                 <h3 class="paxdesign-booking-chat-auth-gate-title" id="paxdesignChatAuthGateTitle"><?php echo esc_html__('Continue to Live Chat', 'paxdesign-booking'); ?></h3>
                 <p class="paxdesign-booking-chat-auth-gate-sub" id="paxdesignChatAuthGateSubtitle"><?php echo esc_html__('Sign in to message our team.', 'paxdesign-booking'); ?></p>
               </div>
-              <div class="paxdesign-booking-chat-auth-social" id="paxdesignChatAuthSocial" hidden></div>
-              <div class="paxdesign-booking-chat-auth-divider" id="paxdesignChatAuthDivider" hidden aria-hidden="true"><span>or</span></div>
-              <div class="paxdesign-booking-chat-auth-actions" id="paxdesignChatAuthActions">
+              <div class="paxdesign-booking-chat-auth-social" id="paxdesignChatAuthSocial"<?php echo $chat_social_ready ? '' : ' hidden'; ?>>
+                <?php if ( $chat_github_ready ) : ?>
+                <button type="button" class="paxdesign-booking-chat-auth-github-btn" data-pax-chat-github="1"><?php echo esc_html__( 'Sign in with GitHub', 'paxdesign-booking' ); ?></button>
+                <?php endif; ?>
+                <?php if ( $chat_apple_ready ) : ?>
+                <button type="button" class="paxdesign-booking-chat-auth-apple-btn" data-pax-chat-apple="1"><?php echo esc_html__( 'Sign in with Apple', 'paxdesign-booking' ); ?></button>
+                <?php endif; ?>
+              </div>
+              <div class="paxdesign-booking-chat-auth-divider" id="paxdesignChatAuthDivider"<?php echo $chat_social_ready ? '' : ' hidden'; ?> aria-hidden="true"><span>or</span></div>
+              <div class="paxdesign-booking-chat-auth-actions<?php echo $chat_social_ready ? ' paxdesign-booking-chat-auth-actions--with-social' : ''; ?>" id="paxdesignChatAuthActions">
                 <button type="button" class="paxdesign-booking-chat-auth-login-btn" id="paxdesignChatAuthLogin"><?php echo esc_html__('Sign In', 'paxdesign-booking'); ?></button>
               </div>
             </div>
