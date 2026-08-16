@@ -18,6 +18,7 @@ function assert_true($cond, $message) {
 }
 
 $js = file_get_contents($root . '/assets/js/chat-script.js');
+$bookingJs = file_get_contents($root . '/assets/js/booking-script.js');
 $css = file_get_contents($root . '/assets/css/booking-styles.css');
 $live = file_get_contents($root . '/includes/class-paxdesign-chat-live.php');
 $store = file_get_contents($root . '/includes/class-paxdesign-message-store.php');
@@ -31,8 +32,8 @@ $i18n = file_get_contents($root . '/includes/class-paxdesign-cybercrime-i18n.php
 $admin = file_get_contents($root . '/includes/customer/class-paxdesign-customer-admin.php');
 $adminJs = file_get_contents($root . '/assets/js/cybercrime-admin.js');
 
-assert_true(strpos($boot, "define('PAXDESIGN_BOOKING_VERSION', '3.174.96')") !== false, 'plugin version 3.174.96');
-assert_true(strpos($js, 'Version: 3.174.96') !== false, 'chat-script cache-bust 3.174.96');
+assert_true(strpos($boot, "define('PAXDESIGN_BOOKING_VERSION', '3.174.97')") !== false, 'plugin version 3.174.97');
+assert_true(strpos($js, 'Version: 3.174.97') !== false, 'chat-script cache-bust 3.174.97');
 assert_true(strpos($js, 'uploadHumanAttachFile') !== false, 'JS upload handler');
 assert_true(strpos($js, 'paxdesign-chat-admin-active') !== false, 'JS human takeover class');
 assert_true(strpos($js, 'paxdesign_chat_live_user_attach') !== false, 'JS posts attach action');
@@ -47,6 +48,10 @@ assert_true(strpos($css, 'top: max(8px, env(safe-area-inset-top, 0px))') !== fal
 assert_true(strpos($css, 'overflow-wrap: anywhere') !== false, 'mobile bubbles wrap instead of overflowing');
 assert_true(strpos($css, 'paxdesign-chat-mode-active.paxdesign-mobile-chat-mode') !== false, 'mobile sheet beats the 520px desktop chat height');
 assert_true(strpos($css, 'font-size: 22px') !== false, 'in-chat login title matches /account/');
+assert_true(strpos($bookingJs, 'function fitWidgetToVisualViewport') !== false, 'mobile chat sizes to the visual viewport');
+assert_true(strpos($bookingJs, 'function keyboardOcclusionPx') !== false, 'keyboard occlusion uses visualViewport');
+assert_true(strpos($js, 'pinToLatestMessage: pinToLatestMessage') !== false, 'keyboard resize can pin to the latest message');
+assert_true(strpos($css, 'border-radius: 12px 12px 0 0') !== false, 'keyboard-open composer sits flush above the keyboard');
 assert_true(strpos($css, '#063226') !== false, 'CSS dark green composer');
 assert_true(strpos($css, 'paxdesign-booking-chat-attach-menu') !== false, 'CSS attach menu');
 assert_true(strpos($css, 'display: none !important') !== false && strpos($css, 'paxdesign-booking-chat-end-wrap') !== false, 'end-chat CSS hidden');

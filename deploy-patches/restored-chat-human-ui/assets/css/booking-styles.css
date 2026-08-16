@@ -2,7 +2,7 @@
  * PAXdesign Booking System — Scoped Frontend UI
  * Version: 3.3.2
  * All rules scoped to #paxdesign-booking-root — no global leakage.
- * Mobile chat sheet: full-phone Apple layout (3.174.96).
+ * Mobile chat sheet: visualViewport fit + keyboard-aware composer (3.174.97).
  */
 
 /* ─── Root Isolation Shell ──────────────────────────────────────────────── */
@@ -1855,12 +1855,25 @@ body.paxdesign-agent-profile-open {
 
   #paxdesign-booking-root.paxdesign-keyboard-open .paxdesign-booking-chat-quick-actions,
   #paxdesign-booking-root.paxdesign-keyboard-open .paxdesign-booking-chat-disclaimer,
-  #paxdesign-booking-root.paxdesign-keyboard-open .paxdesign-booking-chat-auth-gate-intro {
+  #paxdesign-booking-root.paxdesign-keyboard-open .paxdesign-booking-chat-auth-gate-intro,
+  #paxdesign-booking-root.paxdesign-keyboard-open .paxdesign-booking-mode-switch,
+  #paxdesign-booking-root.paxdesign-keyboard-open .paxdesign-booking-header-subtitle,
+  #paxdesign-booking-root.paxdesign-keyboard-open .paxdesign-booking-chat-notify {
     display: none;
   }
 
+  #paxdesign-booking-root.paxdesign-keyboard-open .paxdesign-booking-header {
+    padding: 8px 12px;
+  }
+
+  #paxdesign-booking-root.paxdesign-keyboard-open .paxdesign-booking-chat-input-area {
+    padding: 6px 12px 8px;
+  }
+
   #paxdesign-booking-root.paxdesign-keyboard-open .paxdesign-booking-widget {
-    transition: max-height 0.2s ease, top 0.2s ease;
+    border-radius: 12px 12px 0 0;
+    filter: none;
+    transition: none;
   }
 
   #paxdesign-booking-root .paxdesign-booking-chat-input {

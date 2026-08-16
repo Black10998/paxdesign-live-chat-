@@ -1,6 +1,6 @@
 /**
  * PAXdesign AI Chat — Sales & Booking Assistant
- * Version: 3.174.96
+ * Version: 3.174.97
  */
 (function () {
   'use strict';
@@ -5594,6 +5594,7 @@
     onOpen: onWidgetOpen,
     onClose: onWidgetClose,
     abort: abortStream,
+    pinToLatestMessage: pinToLatestMessage,
     sendMessage: sendMessage,
     canUseChat: canUseChat,
     beginReadiness: beginChatReadiness,

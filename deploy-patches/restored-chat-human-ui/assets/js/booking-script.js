@@ -699,45 +699,124 @@
             window.visualViewport.addEventListener('resize', onViewportChange);
             window.visualViewport.addEventListener('scroll', onViewportChange);
         }
+        window.addEventListener('resize', onViewportChange);
         window.addEventListener('orientationchange', function() {
-            setTimeout(adjustMobileLayout, 100);
+            setTimeout(function() {
+                adjustMobileLayout(false);
+            }, 120);
+        });
+
+        root().on(
+            'focusin.paxMobile',
+            '.paxdesign-booking-chat-input, .paxdesign-booking-chat-auth-gate input, .paxdesign-booking-chat-auth-gate textarea',
+            function() {
+                adjustMobileLayout(true);
+            }
+        );
+        root().on(
+            'focusout.paxMobile',
+            '.paxdesign-booking-chat-input, .paxdesign-booking-chat-auth-gate input, .paxdesign-booking-chat-auth-gate textarea',
+            function() {
+                setTimeout(function() {
+                    adjustMobileLayout(false);
+                }, 80);
+            }
+        );
+    }
+
+    function composerOrAuthFocused() {
+        var el = document.activeElement;
+        if (!el) return false;
+        return $in(el).closest('.paxdesign-booking-chat-input-area, .paxdesign-booking-chat-auth-gate').length > 0;
+    }
+
+    function keyboardOcclusionPx() {
+        if (!window.visualViewport) return 0;
+        var vv = window.visualViewport;
+        return Math.max(0, window.innerHeight - vv.height - vv.offsetTop);
+    }
+
+    function keepPagePinned() {
+        if (!$('html').hasClass('paxdesign-scroll-lock')) return;
+        var y = scrollLockY || 0;
+        if ((window.scrollY || window.pageYOffset || 0) !== y) {
+            window.scrollTo(0, y);
+        }
+    }
+
+    function pinChatToLatest() {
+        requestAnimationFrame(function() {
+            if (window.PAXdesignChat && typeof window.PAXdesignChat.pinToLatestMessage === 'function') {
+                window.PAXdesignChat.pinToLatestMessage();
+            }
+        });
+    }
+
+    function fitWidgetToVisualViewport(keyboardOpen) {
+        var inset = keyboardOpen ? 0 : 8;
+        var $widget = $in('.paxdesign-booking-widget');
+        var top;
+        var left;
+        var width;
+        var height;
+        var vv = window.visualViewport;
+
+        if (vv) {
+            top = Math.max(0, vv.offsetTop) + inset;
+            left = Math.max(0, vv.offsetLeft) + inset;
+            width = Math.max(200, vv.width - inset * 2);
+            height = Math.max(160, vv.height - inset * 2);
+        } else {
+            top = inset;
+            left = inset;
+            width = Math.max(200, window.innerWidth - inset * 2);
+            height = Math.max(160, window.innerHeight - inset * 2);
+        }
+
+        $widget.css({
+            top: top + 'px',
+            left: left + 'px',
+            right: 'auto',
+            bottom: 'auto',
+            width: width + 'px',
+            maxWidth: 'none',
+            height: height + 'px',
+            maxHeight: height + 'px'
         });
     }
 
     function adjustMobileLayout(forceKeyboard) {
         var $widget = $in('.paxdesign-booking-widget');
         if (!$widget.hasClass('paxdesign-is-active') || !isMobileViewport()) {
-            $widget.css({ top: '', bottom: '', maxHeight: '', height: '' });
+            $widget.css({
+                top: '',
+                bottom: '',
+                left: '',
+                right: '',
+                width: '',
+                height: '',
+                maxHeight: '',
+                maxWidth: ''
+            });
             root().removeClass('paxdesign-keyboard-open');
             return;
         }
 
-        var isChat = root().hasClass('paxdesign-mobile-chat-mode');
-        var keyboardOpen = false;
+        keepPagePinned();
 
-        if (window.visualViewport && (forceKeyboard === true || document.activeElement && (
-            $in(document.activeElement).closest('.paxdesign-booking-chat-input-area').length ||
-            $in(document.activeElement).closest('.paxdesign-booking-chat-auth-gate').length
-        ))) {
-            var vv = window.visualViewport;
-            keyboardOpen = isChat && (vv.height < window.innerHeight * 0.75);
-        }
+        var focused = forceKeyboard === true || composerOrAuthFocused();
+        var occluded = keyboardOcclusionPx();
+        var keyboardOpen = occluded > 80 || (focused && occluded > 24);
+        var flushToKeyboard = focused || keyboardOpen;
 
-        if (keyboardOpen) {
+        if (flushToKeyboard) {
             root().addClass('paxdesign-keyboard-open');
-            var topPos = window.visualViewport.offsetTop + 8;
-            var availHeight = window.visualViewport.height - 16;
-            $widget.css({
-                top: topPos + 'px',
-                bottom: 'auto',
-                height: Math.max(160, availHeight) + 'px',
-                maxHeight: Math.max(160, availHeight) + 'px'
-            });
-            return;
+        } else {
+            root().removeClass('paxdesign-keyboard-open');
         }
 
-        root().removeClass('paxdesign-keyboard-open');
-        $widget.css({ top: '', bottom: '', height: '', maxHeight: '' });
+        fitWidgetToVisualViewport(flushToKeyboard);
+        pinChatToLatest();
     }
 
     window.PAXdesignBookingMobile = {
@@ -884,7 +963,16 @@
             window.PAXdesignChat.onClose();
         }
         $in('.paxdesign-booking-widget').removeClass('paxdesign-is-active').attr('aria-hidden', 'true');
-        $in('.paxdesign-booking-widget').css({ top: '', bottom: '', maxHeight: '', height: '' });
+        $in('.paxdesign-booking-widget').css({
+            top: '',
+            bottom: '',
+            left: '',
+            right: '',
+            width: '',
+            height: '',
+            maxHeight: '',
+            maxWidth: ''
+        });
         root().removeClass('paxdesign-widget-open paxdesign-mobile-chat-mode paxdesign-keyboard-open');
         unlockPageScroll();
         resetWidgetMode();
