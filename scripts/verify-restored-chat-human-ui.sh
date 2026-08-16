@@ -63,6 +63,10 @@ grep -q "showChatShellLoading" "${tmpdir}/booking-script.js" 2>/dev/null \
   && ok "booking-script shell loader present" \
   || fail "booking-script shell loader missing"
 
+grep -q "showGuestAuthGateEarly" "${tmpdir}/booking-script.js" 2>/dev/null \
+  && ok "booking-script shows guest auth gate before chat bootstrap" \
+  || fail "booking-script instant guest auth gate missing"
+
 grep -q "syncGesture: true" "${tmpdir}/chat-script.js" \
   && ok "speech recognition starts synchronously in user gesture" \
   || fail "syncGesture mic flow missing"

@@ -78,6 +78,9 @@ assert_true(strpos($widgetPerf, "self::asset_version('assets/js/chat-script.js')
 $bookingJs = @file_get_contents($root . '/assets/js/booking-script.js');
 assert_true($bookingJs !== false && strpos($bookingJs, 'showChatShellLoading') !== false, 'booking-script shell loader');
 assert_true($bookingJs !== false && strpos($bookingJs, 'maybeOpenChatFromReturnUrl') !== false, 'booking-script reopens chat after login return');
+assert_true($bookingJs !== false && strpos($bookingJs, 'showGuestAuthGateEarly') !== false, 'booking-script shows auth gate before chat bootstrap');
+assert_true(strpos($widget, 'data-pax-chat-guest') !== false, 'widget exposes guest auth state for instant gate');
+assert_true(strpos($widget, 'data-pax-chat-github-start') !== false || strpos($widget, 'data-pax-chat-apple-start') !== false || strpos($widget, 'paxdesign-booking-chat-auth-github-btn') !== false, 'widget can render social login server-side');
 assert_true(strpos($widget, 'KI-generierte Antworten') === false, 'widget has no KI disclaimer');
 assert_true(strpos($js, 'function pinToLatestMessage') !== false, 'open pins to latest message');
 assert_true(strpos($widget, 'paxdesignChatEndWrap') === false, 'widget has no end-chat wrap');
