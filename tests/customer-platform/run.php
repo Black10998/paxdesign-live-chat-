@@ -172,7 +172,7 @@ cx_assert_true(strpos($chat_knowledge, 'ONE clear step at a time') !== false, 'T
 
 $ccs_js = file_get_contents($ccs_root . '/assets/js/chat-script.js');
 cx_assert_true(strpos($ccs_js, 'skipping stacked sync') === false, 'Chat JS must not contain the 3.176 stacked-sync rewrite');
-cx_assert_true(strpos($ccs_js, 'Version: 3.174.95') !== false, 'Chat JS must be the 3.174.95 baseline');
+cx_assert_true(strpos($ccs_js, 'Version: 3.174.96') !== false, 'Chat JS must be the 3.174.96 baseline');
 
 $ccs_css = file_get_contents($ccs_root . '/assets/css/booking-styles.css');
 cx_assert_true(strpos($ccs_css, '#063226') !== false, 'Human composer dark-green color must remain');

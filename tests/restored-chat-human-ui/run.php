@@ -31,8 +31,8 @@ $i18n = file_get_contents($root . '/includes/class-paxdesign-cybercrime-i18n.php
 $admin = file_get_contents($root . '/includes/customer/class-paxdesign-customer-admin.php');
 $adminJs = file_get_contents($root . '/assets/js/cybercrime-admin.js');
 
-assert_true(strpos($boot, "define('PAXDESIGN_BOOKING_VERSION', '3.174.95')") !== false, 'plugin version 3.174.95');
-assert_true(strpos($js, 'Version: 3.174.95') !== false, 'chat-script cache-bust 3.174.95');
+assert_true(strpos($boot, "define('PAXDESIGN_BOOKING_VERSION', '3.174.96')") !== false, 'plugin version 3.174.96');
+assert_true(strpos($js, 'Version: 3.174.96') !== false, 'chat-script cache-bust 3.174.96');
 assert_true(strpos($js, 'uploadHumanAttachFile') !== false, 'JS upload handler');
 assert_true(strpos($js, 'paxdesign-chat-admin-active') !== false, 'JS human takeover class');
 assert_true(strpos($js, 'paxdesign_chat_live_user_attach') !== false, 'JS posts attach action');
@@ -45,6 +45,8 @@ assert_true(strpos($widget, 'pdx-auth-page-form-wrap') !== false, 'chat login pa
 assert_true(strpos($css, '--pax-mobile-widget-max-chat: none') !== false, 'mobile chat is a full phone sheet');
 assert_true(strpos($css, 'top: max(8px, env(safe-area-inset-top, 0px))') !== false, 'mobile widget is aligned to the viewport');
 assert_true(strpos($css, 'overflow-wrap: anywhere') !== false, 'mobile bubbles wrap instead of overflowing');
+assert_true(strpos($css, 'paxdesign-chat-mode-active.paxdesign-mobile-chat-mode') !== false, 'mobile sheet beats the 520px desktop chat height');
+assert_true(strpos($css, 'font-size: 22px') !== false, 'in-chat login title matches /account/');
 assert_true(strpos($css, '#063226') !== false, 'CSS dark green composer');
 assert_true(strpos($css, 'paxdesign-booking-chat-attach-menu') !== false, 'CSS attach menu');
 assert_true(strpos($css, 'display: none !important') !== false && strpos($css, 'paxdesign-booking-chat-end-wrap') !== false, 'end-chat CSS hidden');

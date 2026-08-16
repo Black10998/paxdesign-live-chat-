@@ -1,6 +1,6 @@
 <?php
 /**
- * Guard: GitHub paxdesign-booking must match the live 3.174.95 baseline.
+ * Guard: GitHub paxdesign-booking must match the live 3.174.96 baseline.
  * Rejects the later 3.176.x chat rewrite and CCS AI form-fill classes.
  */
 $root = dirname(__DIR__, 2);
@@ -24,8 +24,8 @@ $knowledge = file_get_contents($plugin . '/includes/class-paxdesign-chat-knowled
 $css = file_get_contents($plugin . '/assets/css/booking-styles.css');
 $widget = file_get_contents($plugin . '/templates/booking-widget.php');
 
-pb_ok(strpos($boot, "define('PAXDESIGN_BOOKING_VERSION', '3.174.95')") !== false, 'plugin version 3.174.95');
-pb_ok(strpos($js, 'Version: 3.174.95') !== false, 'chat-script cache-bust 3.174.95');
+pb_ok(strpos($boot, "define('PAXDESIGN_BOOKING_VERSION', '3.174.96')") !== false, 'plugin version 3.174.96');
+pb_ok(strpos($js, 'Version: 3.174.96') !== false, 'chat-script cache-bust 3.174.96');
 pb_ok(strpos($js, 'skipping stacked sync') === false, 'chat-script is not the 3.176 freeze/unfreeze rewrite');
 pb_ok(strpos($js, 'var openInstant') === false, 'chat-script does not use the 3.176 instant-open rewrite');
 pb_ok(strpos($js, 'var stickToBottom') !== false, 'WhatsApp stick-to-bottom is present');
@@ -50,6 +50,8 @@ pb_ok(strpos($css, '#paxdesign-booking-root .paxdesign-booking-chat-auth-gate') 
 pb_ok(strpos($widget, 'pdx-auth-page-form-wrap') !== false, 'chat login mounts the account-page form styles');
 pb_ok(strpos($js, "context: 'page'") !== false, 'chat login uses the account-page auth form');
 pb_ok(strpos($css, 'font-size: 16px') !== false, 'mobile composer uses 16px text to avoid overflow/zoom');
+pb_ok(strpos($css, 'paxdesign-chat-mode-active.paxdesign-mobile-chat-mode') !== false, 'mobile sheet overrides the 520px desktop chat height');
+pb_ok(strpos($css, 'font-size: 22px') !== false, 'chat login title matches the Apple account page');
 
 $overlay_files = array(
     'paxdesign-booking.php',
@@ -84,4 +86,4 @@ if ($fail > 0) {
     fwrite(STDERR, "$fail production-baseline assertion(s) failed\n");
     exit(1);
 }
-echo "Production baseline 3.174.95 guards passed.\n";
+echo "Production baseline 3.174.96 guards passed.\n";
