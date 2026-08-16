@@ -170,14 +170,15 @@ grep -q "pax-ccs-resubmit-preview" "${tmpdir}/ccs-page.html" \
   && ok "cybercrime portal template includes evidence preview UI" \
   || fail "evidence preview markup missing from live cybercrime-support page"
 
-curl -fsSL "${SITE}/wp-content/plugins/paxdesign-booking/includes/class-paxdesign-cybercrime-intake.php?v=${STAMP}" \
-  -o "${tmpdir}/cybercrime-intake.php" 2>/dev/null || true
-if [ -f "${tmpdir}/cybercrime-intake.php" ] && grep -q "ajax_download_attachment" "${tmpdir}/cybercrime-intake.php" 2>/dev/null; then
-  ok "live intake includes secure attachment download handler"
-elif grep -q "paxdesign_cybercrime_attachment" "${tmpdir}/cybercrime-admin.js"; then
-  ok "live admin wired for secure attachment downloads"
+curl -fsSL "${SITE}/wp-content/plugins/paxdesign-booking/includes/class-paxdesign-cybercrime-tickets.php?v=${STAMP}" \
+  -o "${tmpdir}/cybercrime-tickets.php" 2>/dev/null || true
+if [ -s "${tmpdir}/cybercrime-tickets.php" ] && grep -q "ajax_customer_resubmit" "${tmpdir}/cybercrime-tickets.php" 2>/dev/null; then
+  ok "live tickets handler includes customer resubmit endpoint"
+elif grep -q "paxdesign_cybercrime_customer_resubmit" "${tmpdir}/apple-cybercrime-support.js" \
+  && grep -q "renderAttachments" "${tmpdir}/cybercrime-admin.js"; then
+  ok "live portal/admin wired for evidence resubmit + secure attachment gallery"
 else
-  fail "secure attachment download handler not detected on live site"
+  fail "evidence resubmit backend not detected on live site"
 fi
 
 # Must still be the restored baseline, not the later GitHub chat freeze/unfreeze work.
