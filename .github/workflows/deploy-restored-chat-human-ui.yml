@@ -6,8 +6,6 @@ on:
   push:
     branches:
       - main
-      - cursor/chat-ui-compact-9e84
-      - cursor/desktop-chat-regression-fix-7c3f
     paths:
       - 'deploy-patches/restored-chat-human-ui/**'
       - '.github/workflows/deploy-restored-chat-human-ui.yml'
