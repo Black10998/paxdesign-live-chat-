@@ -49,6 +49,7 @@ $overlay_files = array(
     'paxdesign-booking.php',
     'assets/js/chat-script.js',
     'assets/js/booking-script.js',
+    'assets/js/widget-loader.js',
     'assets/css/booking-styles.css',
     'assets/js/cybercrime-admin.js',
     'includes/class-paxdesign-chat.php',
