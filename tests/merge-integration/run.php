@@ -105,13 +105,38 @@ foreach (array(
 ) as $needle) {
     mi_assert(strpos($bootstrap, $needle) !== false, "Bootstrap must keep CCS AI require: $needle");
 }
-mi_assert(strpos($bootstrap, "PAXDESIGN_BOOKING_VERSION', '3.176.0'") !== false, 'Merged plugin version must be 3.176.0');
+mi_assert(strpos($bootstrap, "PAXDESIGN_BOOKING_VERSION', '3.176.1'") !== false, 'Merged plugin version must be 3.176.1');
 
 // KEEP: messaging + chat reliability files still present
 mi_assert(is_readable($plugin . '/includes/class-paxdesign-message-store.php'), 'Message store must remain');
 $chat_js = file_get_contents($plugin . '/assets/js/chat-script.js');
 mi_assert(strpos($chat_js, 'function assistantAlreadyShownForLatestTurn') !== false, 'Chat must keep one-bubble-per-turn logic');
 mi_assert(strpos($chat_js, 'scrollToBottom(true)') !== false, 'Chat must keep pin-to-latest behavior');
+
+// FIX: chat must open instantly (no blocking readiness overlay for a restored
+// session); the session/history/poll sync runs in the background.
+mi_assert(strpos($chat_js, 'var openInstant') !== false, 'Chat open must have the instant (non-blocking) fast path');
+mi_assert(
+    preg_match('/openInstant\s*=\s*!options\.force\s*&&\s*!!options\.reuseSession\s*&&\s*!!getSessionId\(\)\s*&&\s*sessionRestored/', $chat_js) === 1,
+    'Instant open must trigger when a session is already restored'
+);
+mi_assert(
+    preg_match('/if\s*\(openInstant\)\s*\{[^}]*return Promise\.resolve\(true\)/s', $chat_js) === 1,
+    'Instant open must return immediately so the UI is interactive without waiting on the sync chain'
+);
+mi_assert(strpos($chat_js, 'runChatReadinessChecks(options)') !== false, 'Background readiness sync (session/history/poll) must still run');
+
+// FIX: header level badge shows only the metal tier (e.g. "Gold") — no "Level N"
+$auth_js2 = file_get_contents($plugin . '/assets/customer-auth/js/pax-auth.js');
+mi_assert(strpos($auth_js2, 'level_metal') !== false, 'Header badge must use the metal tier field');
+mi_assert(
+    preg_match('/if\s*\(opts\.header\)\s*\{.*?level\.level_metal.*?escHtml\(metal\)/s', $auth_js2) === 1,
+    'Header badge must render only the metal (Gold) — not the "Level N" label'
+);
+mi_assert(
+    preg_match('/if\s*\(opts\.header\)\s*\{(?:(?!escHtml\(level\.level_label\)).)*?return/s', $auth_js2) === 1,
+    'Header badge must not render the level_label ("PAXDesign Level NN — ...") in the header'
+);
 
 // ---------------------------------------------------------------------------
 // DELETE: paxdesign-toolbar must be gone; migration + deploy guard retained

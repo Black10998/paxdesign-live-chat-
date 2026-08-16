@@ -279,7 +279,7 @@ jobs:
           grep -Eq "markStaffRead|paxdesign_cybercrime_admin_mark_read" /tmp/cybercrime-admin.js
           grep -Eq "paxCybercrimeAdminApplyUnread|paxdesign_cybercrime_admin_unread" /tmp/cybercrime-admin-notifications.js
           grep -Eq "paxdesign_cybercrime_admin_status|pax-cc-close-ticket|REQUEST_TIMEOUT_MS|markStaffRead" /tmp/cybercrime-admin.js
-          grep -Eq "paxdesign-booking[^\"']*ver=3\.176\.0" /tmp/ccs-page.html
+          grep -Eq "paxdesign-booking[^\"']*ver=3\.176\.1" /tmp/ccs-page.html
           grep -Eq "queueBackgroundRealtimeSync|shouldSkipHistoryFetch|HISTORY_INITIAL" /tmp/chat-script.js
           grep -Eq "isCybercrimeCaseChat|dispatchCcsCaseUpdate" /tmp/chat-script.js
           grep -Eq "renderPortalRecordsSection|renderPortalCybercrimeDetail|cybercrime/reports" /tmp/pax-auth.js
