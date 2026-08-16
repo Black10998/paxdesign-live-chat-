@@ -1278,8 +1278,16 @@ class PAXdesign_Cybercrime_Intake {
         if ($path === '' || !is_readable($path)) {
             return false;
         }
+        $size = filesize($path);
+        if ($size === false || $size < 64) {
+            return false;
+        }
         $head = @file_get_contents($path, false, null, 0, 5);
-        return is_string($head) && $head === '%PDF-';
+        if (!is_string($head) || $head !== '%PDF-') {
+            return false;
+        }
+        $tail = @file_get_contents($path, false, null, max(0, $size - 2048));
+        return is_string($tail) && strpos($tail, '%%EOF') !== false;
     }
 
     /**
