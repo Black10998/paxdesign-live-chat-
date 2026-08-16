@@ -172,6 +172,10 @@ grep -q "shouldApplyReport" "${tmpdir}/cybercrime-admin.js" \
   && ok "admin JS reconciles poll responses against sync revision" \
   || fail "Sync reconciliation missing from live cybercrime-admin.js"
 
+grep -q "attachmentsSignature" "${tmpdir}/cybercrime-admin.js" \
+  && ok "admin JS tracks attachment signature for sync refresh" \
+  || fail "attachment sync signature missing from live cybercrime-admin.js"
+
 grep -q "timelineEvidenceInlineHtml" "${tmpdir}/apple-cybercrime-support.js" \
   && ok "portal JS includes inline evidence request CTA" \
   || fail "inline evidence request CTA missing from live portal JS"
@@ -207,6 +211,9 @@ if [ -s "${tmpdir}/cybercrime-tickets.php" ] && grep -q "ajax_customer_resubmit"
   grep -q "timeline_evidence_signature" "${tmpdir}/cybercrime-tickets.php" \
     && ok "live tickets handler includes timeline evidence sync signature" \
     || fail "timeline evidence signature missing from live tickets handler"
+  grep -q "collect_report_attachments" "${tmpdir}/cybercrime-tickets.php" \
+    && ok "live tickets handler merges timeline attachments for admin" \
+    || fail "collect_report_attachments missing from live tickets handler"
 elif grep -q "paxdesign_cybercrime_customer_resubmit" "${tmpdir}/apple-cybercrime-support.js" \
   && grep -q "renderAttachments" "${tmpdir}/cybercrime-admin.js"; then
   ok "live portal/admin wired for evidence resubmit + secure attachment gallery"

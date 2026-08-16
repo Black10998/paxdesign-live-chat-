@@ -51,6 +51,11 @@ ccs_evidence_assert(strpos($portalJs, 'pax-ccs-portal__evidence-request-btn') !=
 ccs_evidence_assert(strpos($portalCss, 'pax-ccs-portal__evidence-request-btn') !== false, 'portal CSS styles evidence upload button');
 ccs_evidence_assert(strpos($portalCss, '-webkit-text-fill-color: #fff !important') !== false, 'portal CSS locks evidence button text contrast');
 ccs_evidence_assert(strpos($tickets, 'timeline_evidence_signature') !== false, 'tickets builds timeline evidence signature');
+ccs_evidence_assert(strpos($tickets, 'collect_report_attachments') !== false, 'tickets merges report and message attachments for admin');
+ccs_evidence_assert(strpos($tickets, 'sync_report_attachments_column') !== false, 'tickets syncs report attachments after customer evidence upload');
+ccs_evidence_assert(strpos($tickets, 'attachments_signature') !== false, 'tickets builds attachments signature for sync');
+ccs_evidence_assert(strpos($tickets, 'find_stored_attachment') !== false, 'tickets resolves attachments from report and timeline messages');
+ccs_evidence_assert(strpos($intake, 'find_stored_attachment') !== false, 'intake download checks timeline message attachments');
 ccs_evidence_assert(strpos($adminJs, 'pax-cc-request-evidence') !== false, 'admin JS handles request evidence checkbox');
 ccs_evidence_assert(strpos($adminJs, 'request_evidence') !== false, 'admin JS sends request_evidence flag');
 ccs_evidence_assert(strpos($adminJs, 'isDeletableEntry') !== false, 'admin JS derives delete eligibility client-side');
@@ -63,7 +68,7 @@ ccs_evidence_assert(strpos($tickets, 'delete_staff_message') !== false, 'tickets
 ccs_evidence_assert(strpos($tickets, 'append_report_sync_meta') !== false, 'tickets exposes sync revision metadata');
 ccs_evidence_assert(strpos($tickets, 'sync_revision') !== false, 'tickets builds sync_revision token');
 ccs_evidence_assert(strpos($adminJs, 'shouldApplyReport') !== false, 'admin JS reconciles poll vs mutation state');
-ccs_evidence_assert(strpos($adminJs, 'compareSync') !== false, 'admin JS compares sync revisions');
+ccs_evidence_assert(strpos($adminJs, 'attachmentsSignature') !== false, 'admin JS tracks attachment signature for sync');
 
 exec('node --check ' . escapeshellarg($root . '/assets/js/cybercrime-admin.js') . ' 2>&1', $adminJsCheck, $adminJsCode);
 ccs_evidence_assert($adminJsCode === 0, 'node --check cybercrime-admin.js');

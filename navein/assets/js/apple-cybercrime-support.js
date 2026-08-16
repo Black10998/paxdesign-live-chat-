@@ -1123,6 +1123,8 @@
       report.updated_at || '',
       report.sync_revision || '',
       report.timeline_evidence_signature || '',
+      report.attachments_signature || '',
+      report.attachments_count || 0,
       report.next_action || '',
       report.unread_count || 0,
       rejection.reason_key || '',
@@ -1722,6 +1724,8 @@
       timelineMaxId: parseInt(report.timeline_max_id, 10) || 0,
       timelineCount: parseInt(report.timeline_count, 10) || 0,
       timelineEvidenceSignature: String(report.timeline_evidence_signature || ''),
+      attachmentsCount: parseInt(report.attachments_count, 10) || 0,
+      attachmentsSignature: String(report.attachments_signature || ''),
       status: String(report.status || ''),
       syncRevision: String(report.sync_revision || '')
     };
@@ -1742,6 +1746,12 @@
     }
     if (incoming.timelineEvidenceSignature !== current.timelineEvidenceSignature) {
       return incoming.timelineEvidenceSignature > current.timelineEvidenceSignature ? 1 : -1;
+    }
+    if (incoming.attachmentsCount !== current.attachmentsCount) {
+      return incoming.attachmentsCount > current.attachmentsCount ? 1 : -1;
+    }
+    if (incoming.attachmentsSignature !== current.attachmentsSignature) {
+      return incoming.attachmentsSignature > current.attachmentsSignature ? 1 : -1;
     }
     if (incoming.updatedAt !== current.updatedAt) {
       return incoming.updatedAt > current.updatedAt ? 1 : -1;

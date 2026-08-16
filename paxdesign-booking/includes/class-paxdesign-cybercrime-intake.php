@@ -1154,19 +1154,23 @@ class PAXdesign_Cybercrime_Intake {
             wp_die(esc_html__('You cannot access this file.', 'paxdesign-booking'), '', array('response' => 403));
         }
 
-        $attachments = json_decode((string) ($row['attachments'] ?? ''), true);
-        if (!is_array($attachments)) {
-            $attachments = array();
-        }
-
         $match = null;
-        foreach ($attachments as $attachment) {
-            if (!is_array($attachment)) {
-                continue;
+        if (class_exists('PAXdesign_Cybercrime_Tickets')) {
+            $match = PAXdesign_Cybercrime_Tickets::find_stored_attachment($reference, $file, $row);
+        }
+        if (!$match) {
+            $attachments = json_decode((string) ($row['attachments'] ?? ''), true);
+            if (!is_array($attachments)) {
+                $attachments = array();
             }
-            if (sanitize_file_name((string) ($attachment['name'] ?? '')) === $file) {
-                $match = $attachment;
-                break;
+            foreach ($attachments as $attachment) {
+                if (!is_array($attachment)) {
+                    continue;
+                }
+                if (sanitize_file_name((string) ($attachment['name'] ?? '')) === $file) {
+                    $match = $attachment;
+                    break;
+                }
             }
         }
 

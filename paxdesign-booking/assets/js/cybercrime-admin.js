@@ -54,6 +54,8 @@
       updatedAt: String(cfg.initialSync.updated_at || ''),
       timelineMaxId: parseInt(cfg.initialSync.timeline_max_id, 10) || 0,
       timelineCount: parseInt(cfg.initialSync.timeline_count, 10) || 0,
+      attachmentsCount: parseInt(cfg.initialSync.attachments_count, 10) || 0,
+      attachmentsSignature: String(cfg.initialSync.attachments_signature || ''),
       status: String(cfg.initialSync.status || ''),
       syncRevision: String(cfg.initialSync.sync_revision || '')
     };
@@ -67,6 +69,8 @@
       updatedAt: String(report.updated_at || ''),
       timelineMaxId: parseInt(report.timeline_max_id, 10) || 0,
       timelineCount: parseInt(report.timeline_count, 10) || 0,
+      attachmentsCount: parseInt(report.attachments_count, 10) || 0,
+      attachmentsSignature: String(report.attachments_signature || ''),
       status: String(report.status || ''),
       syncRevision: String(report.sync_revision || '')
     };
@@ -84,6 +88,12 @@
     }
     if (incoming.timelineCount !== current.timelineCount) {
       return incoming.timelineCount > current.timelineCount ? 1 : -1;
+    }
+    if (incoming.attachmentsCount !== current.attachmentsCount) {
+      return incoming.attachmentsCount > current.attachmentsCount ? 1 : -1;
+    }
+    if (incoming.attachmentsSignature !== current.attachmentsSignature) {
+      return incoming.attachmentsSignature > current.attachmentsSignature ? 1 : -1;
     }
     if (incoming.updatedAt !== current.updatedAt) {
       return incoming.updatedAt > current.updatedAt ? 1 : -1;
@@ -389,7 +399,10 @@
       return '';
     }
     var items = files.map(function (file) {
-      if (!file || !file.url) {
+      if (!file) {
+        return '';
+      }
+      if (!file.url) {
         return '';
       }
       var name = escapeHtml(file.name || 'file');

@@ -401,16 +401,7 @@ class PAXdesign_Cybercrime_Tickets {
         if (!is_array($payload)) {
             $payload = array();
         }
-        $attachments = json_decode((string) ($row['attachments'] ?? ''), true);
-        if (!is_array($attachments)) {
-            $attachments = array();
-        }
-        if (class_exists('PAXdesign_Cybercrime_Intake')) {
-            $attachments = PAXdesign_Cybercrime_Intake::enrich_attachments(
-                (string) ($row['reference_id'] ?? ''),
-                $attachments
-            );
-        }
+        $attachments = self::collect_report_attachments((string) ($row['reference_id'] ?? ''), $row);
 
         $raw_status = sanitize_key((string) ($row['status'] ?? ''));
         $workflow_status = self::normalize_workflow_status($raw_status);
@@ -482,7 +473,12 @@ class PAXdesign_Cybercrime_Tickets {
             if ($timeline_audience === 'admin') {
                 $out['activity_indicators'] = self::build_activity_indicators($row, $out['timeline']);
             }
-            self::append_report_sync_meta($out, $out['timeline'] ?? array());
+            self::append_report_sync_meta(
+                $out,
+                $out['timeline'] ?? array(),
+                (string) ($row['reference_id'] ?? ''),
+                $row
+            );
         }
 
         return $out;
@@ -493,8 +489,10 @@ class PAXdesign_Cybercrime_Tickets {
      *
      * @param array<string, mixed>              $out
      * @param array<int, array<string, mixed>>  $timeline
+     * @param string                            $reference_id
+     * @param array<string, mixed>|null         $row
      */
-    public static function append_report_sync_meta(array &$out, array $timeline = array()) {
+    public static function append_report_sync_meta(array &$out, array $timeline = array(), $reference_id = '', $row = null) {
         $max_id = 0;
         $count = 0;
         foreach ($timeline as $entry) {
@@ -505,15 +503,26 @@ class PAXdesign_Cybercrime_Tickets {
             $max_id = max($max_id, (int) ($entry['id'] ?? 0));
         }
         $evidence_signature = self::timeline_evidence_signature($timeline);
+        $reference_id = sanitize_text_field((string) $reference_id);
+        if ($reference_id === '' && !empty($out['reference_id'])) {
+            $reference_id = sanitize_text_field((string) $out['reference_id']);
+        }
+        $stored_attachments = $reference_id !== ''
+            ? self::collect_stored_attachments($reference_id, $row)
+            : array();
+        $attachments_signature = self::attachments_signature($stored_attachments);
         $out['timeline_max_id'] = $max_id;
         $out['timeline_count'] = $count;
         $out['timeline_evidence_signature'] = $evidence_signature;
+        $out['attachments_count'] = count($stored_attachments);
+        $out['attachments_signature'] = $attachments_signature;
         $out['sync_revision'] = self::build_sync_revision(
             (string) ($out['updated_at'] ?? ''),
             $max_id,
             $count,
             (string) ($out['status'] ?? ''),
-            $evidence_signature
+            $evidence_signature,
+            $attachments_signature
         );
     }
 
@@ -542,9 +551,10 @@ class PAXdesign_Cybercrime_Tickets {
      * @param int    $timeline_count
      * @param string $status
      * @param string $evidence_signature
+     * @param string $attachments_signature
      * @return string
      */
-    public static function build_sync_revision($updated_at, $timeline_max_id, $timeline_count, $status = '', $evidence_signature = '') {
+    public static function build_sync_revision($updated_at, $timeline_max_id, $timeline_count, $status = '', $evidence_signature = '', $attachments_signature = '') {
         return hash(
             'crc32b',
             sanitize_text_field((string) $updated_at)
@@ -552,7 +562,170 @@ class PAXdesign_Cybercrime_Tickets {
             . '|' . max(0, (int) $timeline_count)
             . '|' . sanitize_key((string) $status)
             . '|' . sanitize_text_field((string) $evidence_signature)
+            . '|' . sanitize_text_field((string) $attachments_signature)
         );
+    }
+
+    /**
+     * Normalize one stored attachment record for persistence/API output.
+     *
+     * @param array<string, mixed> $attachment
+     * @return array<string, string>|null
+     */
+    public static function normalize_stored_attachment($attachment) {
+        if (!is_array($attachment)) {
+            return null;
+        }
+        $name = sanitize_file_name((string) ($attachment['name'] ?? ''));
+        if ($name === '') {
+            return null;
+        }
+        $out = array(
+            'field' => sanitize_key((string) ($attachment['field'] ?? '')),
+            'name'  => $name,
+            'type'  => sanitize_mime_type((string) ($attachment['type'] ?? '')),
+            'size'  => (string) ($attachment['size'] ?? ''),
+        );
+        if (!empty($attachment['path'])) {
+            $out['path'] = ltrim(str_replace('\\', '/', (string) $attachment['path']), '/');
+        }
+        return $out;
+    }
+
+    /**
+     * Merge report-level and timeline message attachment records.
+     *
+     * @param string                    $reference_id
+     * @param array<string, mixed>|null $row
+     * @return array<int, array<string, string>>
+     */
+    public static function collect_stored_attachments($reference_id, $row = null) {
+        $reference_id = sanitize_text_field((string) $reference_id);
+        if ($reference_id === '') {
+            return array();
+        }
+        if (!is_array($row)) {
+            $row = self::get_report_row($reference_id);
+        }
+        $merged = array();
+        $seen = array();
+
+        $add = static function ($attachment) use (&$merged, &$seen) {
+            $normalized = self::normalize_stored_attachment($attachment);
+            if (!$normalized) {
+                return;
+            }
+            $key = $normalized['name'] . '|' . ($normalized['path'] ?? '');
+            if (isset($seen[$key])) {
+                return;
+            }
+            $seen[$key] = true;
+            $merged[] = $normalized;
+        };
+
+        if (is_array($row)) {
+            $stored = json_decode((string) ($row['attachments'] ?? ''), true);
+            if (is_array($stored)) {
+                foreach ($stored as $attachment) {
+                    $add($attachment);
+                }
+            }
+        }
+
+        foreach (self::list_messages($reference_id, 500) as $entry) {
+            if (!is_array($entry)) {
+                continue;
+            }
+            $meta = is_array($entry['meta'] ?? null) ? $entry['meta'] : array();
+            if (empty($meta['attachments']) || !is_array($meta['attachments'])) {
+                continue;
+            }
+            foreach ($meta['attachments'] as $attachment) {
+                $add($attachment);
+            }
+        }
+
+        return $merged;
+    }
+
+    /**
+     * @param string                    $reference_id
+     * @param array<string, mixed>|null $row
+     * @return array<int, array<string, mixed>>
+     */
+    public static function collect_report_attachments($reference_id, $row = null) {
+        $stored = self::collect_stored_attachments($reference_id, $row);
+        if (class_exists('PAXdesign_Cybercrime_Intake')) {
+            return PAXdesign_Cybercrime_Intake::enrich_attachments($reference_id, $stored);
+        }
+        return $stored;
+    }
+
+    /**
+     * Stable signature of all stored attachments for client sync.
+     *
+     * @param array<int, array<string, string>> $attachments
+     * @return string
+     */
+    public static function attachments_signature(array $attachments) {
+        $parts = array();
+        foreach ($attachments as $attachment) {
+            if (!is_array($attachment)) {
+                continue;
+            }
+            $name = sanitize_file_name((string) ($attachment['name'] ?? ''));
+            if ($name === '') {
+                continue;
+            }
+            $parts[] = $name . ':' . (string) ($attachment['size'] ?? '') . ':' . (string) ($attachment['path'] ?? '');
+        }
+        sort($parts, SORT_STRING);
+        return implode(',', $parts);
+    }
+
+    /**
+     * @param string                    $reference_id
+     * @param string                    $file_name
+     * @param array<string, mixed>|null $row
+     * @return array<string, string>|null
+     */
+    public static function find_stored_attachment($reference_id, $file_name, $row = null) {
+        $file_name = sanitize_file_name((string) $file_name);
+        if ($file_name === '') {
+            return null;
+        }
+        foreach (self::collect_stored_attachments($reference_id, $row) as $attachment) {
+            if (sanitize_file_name((string) ($attachment['name'] ?? '')) === $file_name) {
+                return $attachment;
+            }
+        }
+        return null;
+    }
+
+    /**
+     * Persist the union of report + timeline attachments on the report row.
+     *
+     * @param string $reference_id
+     * @return bool
+     */
+    public static function sync_report_attachments_column($reference_id) {
+        $reference_id = sanitize_text_field((string) $reference_id);
+        if ($reference_id === '') {
+            return false;
+        }
+        $stored = self::collect_stored_attachments($reference_id);
+        global $wpdb;
+        $updated = $wpdb->update(
+            PAXdesign_Cybercrime_Intake::table_name(),
+            array(
+                'attachments' => wp_json_encode($stored),
+                'updated_at'  => current_time('mysql', true),
+            ),
+            array('reference_id' => $reference_id),
+            array('%s', '%s'),
+            array('%s')
+        );
+        return $updated !== false;
     }
 
     /**
@@ -578,12 +751,14 @@ class PAXdesign_Cybercrime_Tickets {
             'updated_at' => (string) ($row['updated_at'] ?? ''),
             'status'     => self::normalize_workflow_status((string) ($row['status'] ?? '')),
         );
-        self::append_report_sync_meta($snapshot, $timeline);
+        self::append_report_sync_meta($snapshot, $timeline, $reference_id, $row);
         return array(
             'updated_at'                  => (string) ($snapshot['updated_at'] ?? ''),
             'timeline_max_id'             => (int) ($snapshot['timeline_max_id'] ?? 0),
             'timeline_count'              => (int) ($snapshot['timeline_count'] ?? 0),
             'timeline_evidence_signature' => (string) ($snapshot['timeline_evidence_signature'] ?? ''),
+            'attachments_count'           => (int) ($snapshot['attachments_count'] ?? 0),
+            'attachments_signature'       => (string) ($snapshot['attachments_signature'] ?? ''),
             'status'                      => (string) ($snapshot['status'] ?? ''),
             'sync_revision'               => (string) ($snapshot['sync_revision'] ?? ''),
         );
@@ -1463,25 +1638,6 @@ class PAXdesign_Cybercrime_Tickets {
             return new WP_Error('message_required', __('Please attach a file or add a message.', 'paxdesign-booking'), array('code' => 'message_required'));
         }
 
-        if ($has_files) {
-            $existing = json_decode((string) ($row['attachments'] ?? ''), true);
-            if (!is_array($existing)) {
-                $existing = array();
-            }
-            $merged = array_merge($existing, $uploads);
-            global $wpdb;
-            $wpdb->update(
-                PAXdesign_Cybercrime_Intake::table_name(),
-                array(
-                    'attachments' => wp_json_encode($merged),
-                    'updated_at'  => current_time('mysql', true),
-                ),
-                array('reference_id' => sanitize_text_field((string) $reference_id)),
-                array('%s', '%s'),
-                array('%s')
-            );
-        }
-
         if ($body === '') {
             $lang = class_exists('PAXdesign_Cybercrime_I18n')
                 ? PAXdesign_Cybercrime_I18n::from_report($row)
@@ -1499,6 +1655,10 @@ class PAXdesign_Cybercrime_Tickets {
         $message_id = self::add_message($reference_id, 'customer', $body, 'portal', $user_id, $meta);
         if (!$message_id) {
             return new WP_Error('save_failed', __('Could not save your update.', 'paxdesign-booking'));
+        }
+
+        if ($has_files && !self::sync_report_attachments_column($reference_id)) {
+            error_log('[PAXdesign Cybercrime] Could not sync report attachments for ' . $reference_id);
         }
 
         self::update_status($reference_id, 'in_review', $user_id, '', false, false);
