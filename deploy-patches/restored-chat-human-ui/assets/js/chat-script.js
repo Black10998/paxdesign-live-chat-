@@ -1,6 +1,6 @@
 /**
  * PAXdesign AI Chat — Sales & Booking Assistant
- * Version: 3.174.109
+ * Version: 3.174.110
  */
 (function () {
   'use strict';
@@ -1681,6 +1681,7 @@
     initRatingUi();
     initSoundToggle();
     initPlusToggle();
+    initComposerAttachments();
     initVoiceInput();
     bindComposerFocusGuards();
     if (isPersistentAccountChat()) {
@@ -2785,18 +2786,16 @@
   function bindComposerFocusGuards() {
     if (root.dataset.composerFocusBound === '1') return;
     root.dataset.composerFocusBound = '1';
+    var focusGuardSelector =
+      '.paxdesign-booking-chat-plus, .paxdesign-booking-chat-media, .paxdesign-booking-chat-file, .paxdesign-booking-chat-send, .paxdesign-booking-chat-attach-item, .paxdesign-booking-chat-quick-btn';
     root.addEventListener('mousedown', function (e) {
-      var control = e.target.closest(
-        '.paxdesign-booking-chat-plus, .paxdesign-booking-chat-voice, .paxdesign-booking-chat-send, .paxdesign-booking-chat-attach-item, .paxdesign-booking-chat-quick-btn'
-      );
+      var control = e.target.closest(focusGuardSelector);
       if (control && root.contains(control)) {
         preventComposerBlur(e);
       }
     }, true);
     root.addEventListener('touchstart', function (e) {
-      var control = e.target.closest(
-        '.paxdesign-booking-chat-plus, .paxdesign-booking-chat-voice, .paxdesign-booking-chat-send, .paxdesign-booking-chat-attach-item, .paxdesign-booking-chat-quick-btn'
-      );
+      var control = e.target.closest(focusGuardSelector);
       if (control && root.contains(control)) {
         preventComposerBlur(e);
       }
@@ -2838,12 +2837,34 @@
     maybeRestoreComposerFocus();
   }
 
-  function startVoiceInput() {
-    if (!input || input.disabled || chatHandler === 'closed' || isStreaming) return;
-    if (!speechRecognitionSupported()) {
-      showError('Spracheingabe wird in diesem Browser nicht unterstützt.');
-      return;
+  function requestMicrophoneAccess() {
+    if (!navigator.mediaDevices || typeof navigator.mediaDevices.getUserMedia !== 'function') {
+      return Promise.reject({ code: 'unsupported' });
     }
+    return navigator.mediaDevices.getUserMedia({ audio: true }).then(function (stream) {
+      if (stream && stream.getTracks) {
+        stream.getTracks().forEach(function (track) {
+          try { track.stop(); } catch (e) {}
+        });
+      }
+      return true;
+    });
+  }
+
+  function microphoneAccessErrorMessage(err) {
+    if (!err) return 'Mikrofon-Zugriff nicht verfügbar.';
+    if (err.code === 'unsupported') return 'Mikrofon wird in diesem Browser nicht unterstützt.';
+    var name = err.name || err.code || '';
+    if (name === 'NotAllowedError' || name === 'PermissionDeniedError' || name === 'not-allowed') {
+      return 'Mikrofon-Zugriff verweigert.';
+    }
+    if (name === 'NotFoundError' || name === 'DevicesNotFoundError') {
+      return 'Kein Mikrofon gefunden.';
+    }
+    return 'Mikrofon-Zugriff nicht verfügbar.';
+  }
+
+  function beginSpeechRecognition() {
     stopVoiceInput();
     var SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
     voiceRecognition = new SpeechRecognition();
@@ -2898,6 +2919,29 @@
     }
   }
 
+  function startVoiceInput() {
+    if (!input || input.disabled || chatHandler === 'closed' || isStreaming) return;
+    if (voiceListening) {
+      stopVoiceInput();
+      return;
+    }
+    composerWantsKeyboard = true;
+    keepComposerFocus();
+    if (voiceBtn) voiceBtn.classList.add('paxdesign-is-pending');
+    requestMicrophoneAccess().then(function () {
+      if (voiceBtn) voiceBtn.classList.remove('paxdesign-is-pending');
+      if (!speechRecognitionSupported()) {
+        showError('Spracheingabe wird in diesem Browser nicht unterstützt.');
+        return;
+      }
+      beginSpeechRecognition();
+    }).catch(function (err) {
+      if (voiceBtn) voiceBtn.classList.remove('paxdesign-is-pending');
+      showError(microphoneAccessErrorMessage(err));
+      maybeRestoreComposerFocus();
+    });
+  }
+
   function toggleVoiceInput(e) {
     if (e) {
       e.preventDefault();
@@ -2911,12 +2955,51 @@
     refreshVoiceInputMaxHeight();
     window.addEventListener('resize', refreshVoiceInputMaxHeight);
     if (!voiceBtn) return;
-    if (!speechRecognitionSupported()) {
-      voiceBtn.hidden = true;
+    voiceBtn.hidden = false;
+    voiceBtn.addEventListener('pointerdown', function (e) {
+      if (e.pointerType === 'mouse' && e.button !== 0) return;
+      toggleVoiceInput(e);
+    });
+  }
+
+  function openComposerAttachmentPicker(kind) {
+    closeComposerAttachMenu();
+    if (!isHumanMode()) {
+      showError(attachMenuLabel('humanOnly'));
+      maybeRestoreComposerFocus();
       return;
     }
-    voiceBtn.hidden = false;
-    voiceBtn.addEventListener('click', toggleVoiceInput);
+    if (!canUseChat()) {
+      showAuthGate();
+      maybeRestoreComposerFocus();
+      return;
+    }
+    composerWantsKeyboard = true;
+    ensureHumanAttachInputs();
+    var inputEl = document.getElementById(kind === 'image' ? 'paxdesignChatHumanImageAttach' : 'paxdesignChatHumanFileAttach');
+    window.setTimeout(function () {
+      triggerHiddenFileInput(inputEl);
+    }, 0);
+  }
+
+  function initComposerAttachments() {
+    if (root.dataset.composerAttachBound === '1') return;
+    root.dataset.composerAttachBound = '1';
+    ensureHumanAttachInputs();
+    var mediaBtn = root.querySelector('.paxdesign-booking-chat-media');
+    var fileBtn = root.querySelector('.paxdesign-booking-chat-file');
+    function bindPickerButton(btn, kind) {
+      if (!btn) return;
+      btn.hidden = false;
+      btn.addEventListener('pointerdown', function (e) {
+        if (e.pointerType === 'mouse' && e.button !== 0) return;
+        e.preventDefault();
+        e.stopPropagation();
+        openComposerAttachmentPicker(kind);
+      });
+    }
+    bindPickerButton(mediaBtn, 'image');
+    bindPickerButton(fileBtn, 'file');
   }
 
   function loadConsultationLogged(sessionId) {
@@ -4906,7 +4989,7 @@
     imageInput.type = 'file';
     imageInput.id = 'paxdesignChatHumanImageAttach';
     imageInput.className = 'paxdesign-chat-human-attach-input';
-    imageInput.accept = 'image/jpeg,image/png,image/webp,image/gif';
+    imageInput.accept = 'image/jpeg,image/png,image/webp,image/gif,image/*';
     imageInput.setAttribute('aria-hidden', 'true');
     imageInput.tabIndex = -1;
     var fileInput = document.createElement('input');
@@ -4922,11 +5005,13 @@
       var file = imageInput.files && imageInput.files[0];
       imageInput.value = '';
       if (file) uploadHumanAttachFile(file, 'image');
+      maybeRestoreComposerFocus();
     });
     fileInput.addEventListener('change', function () {
       var file = fileInput.files && fileInput.files[0];
       fileInput.value = '';
       if (file) uploadHumanAttachFile(file, 'file');
+      maybeRestoreComposerFocus();
     });
   }
 

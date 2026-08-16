@@ -1,6 +1,6 @@
 /**
  * PAXdesign Booking System JavaScript
- * Version: 3.174.108 — scoped to #paxdesign-booking-root
+ * Version: 3.174.110 — scoped to #paxdesign-booking-root
  */
 
 (function($) {
@@ -828,7 +828,8 @@
         $in('.paxdesign-booking-mode-panel').removeClass('paxdesign-is-active').attr('aria-hidden', 'true');
         $in('.paxdesign-booking-mode-panel[data-mode="chat"]').addClass('paxdesign-is-active').attr('aria-hidden', 'false');
         root().toggleClass('paxdesign-mobile-chat-mode', isMobileViewport());
-        root().addClass('paxdesign-chat-mode-active paxdesign-frame-managed');
+        root().addClass('paxdesign-chat-mode-active');
+        root().toggleClass('paxdesign-frame-managed', isMobileViewport());
         var titles = WIDGET_MODE_TITLES.chat;
         if ($in('#paxdesignWidgetTitle').length) {
             $in('#paxdesignWidgetTitle').text(titles.title);
@@ -1074,8 +1075,6 @@
             revealPreparedWidget($widget);
         } else {
             applyCompactWidgetFrame();
-            $widget.addClass('paxdesign-is-active').attr('aria-hidden', 'false');
-            root().addClass('paxdesign-widget-open');
             $widget.addClass('paxdesign-is-active').attr('aria-hidden', 'false');
             root().addClass('paxdesign-widget-open');
             applyCompactWidgetFrame();

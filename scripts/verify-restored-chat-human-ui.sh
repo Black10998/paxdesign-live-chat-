@@ -29,9 +29,9 @@ curl -fsSL "${SITE}/wp-content/plugins/paxdesign-booking/assets/js/cybercrime-ad
 curl -fsSL "${SITE}/wp-content/plugins/paxdesign-booking/paxdesign-booking.php?v=${STAMP}" \
   -o "${tmpdir}/paxdesign-booking.php" || true
 
-grep -q "Version: 3.174.109" "${tmpdir}/chat-script.js" \
-  && ok "chat-script.js cache-bust version 3.174.109" \
-  || fail "chat-script.js is not the patched 3.174.109 file"
+grep -q "Version: 3.174.110" "${tmpdir}/chat-script.js" \
+  && ok "chat-script.js cache-bust version 3.174.110" \
+  || fail "chat-script.js is not the patched 3.174.110 file"
 
 grep -q "var appliedMessageSeq" "${tmpdir}/chat-script.js" \
   && grep -q "function getIncrementalSince" "${tmpdir}/chat-script.js" \
@@ -42,16 +42,30 @@ grep -q "var appliedMessageSeq" "${tmpdir}/chat-script.js" \
 
 grep -q "paxdesign-booking-chat-voice" "${tmpdir}/chat-script.js" \
   && grep -q "function initVoiceInput" "${tmpdir}/chat-script.js" \
-  && ok "composer voice input present" \
-  || fail "voice input missing from chat-script.js"
+  && grep -q "function requestMicrophoneAccess" "${tmpdir}/chat-script.js" \
+  && ok "composer voice input with mic permission present" \
+  || fail "voice input / mic permission missing from chat-script.js"
+
+grep -q "function initComposerAttachments" "${tmpdir}/chat-script.js" \
+  && grep -q "paxdesign-booking-chat-media" "${tmpdir}/chat-script.js" \
+  && ok "dedicated composer media/file buttons present" \
+  || fail "composer attachment buttons missing from chat-script.js"
 
 grep -q "paxdesign-booking-chat-composer-row" "${tmpdir}/booking-styles.css" \
   && ok "separate send button composer row present" \
   || fail "composer row layout missing from booking-styles.css"
 
+grep -q "paxdesign-chat-focus-backdrop" "${tmpdir}/booking-styles.css" \
+  && ok "focus mode backdrop present" \
+  || fail "focus mode backdrop missing from booking-styles.css"
+
 grep -q "function keepComposerFocus" "${tmpdir}/chat-script.js" \
   && ok "composer focus retention present" \
   || fail "keepComposerFocus missing from chat-script.js"
+
+grep -q "function reconcileSyncedUserMessage" "${tmpdir}/chat-script.js" \
+  && ok "user message dedup reconciliation present" \
+  || fail "reconcileSyncedUserMessage missing from chat-script.js"
 
 grep -q "function scheduleUnifiedSync" "${tmpdir}/chat-script.js" \
   && ok "website unified sync coordinator present" \

@@ -289,6 +289,25 @@
   pointer-events: none;
 }
 
+/* Focus mode — dim/blur page behind chat; widget stays sharp */
+#paxdesign-booking-root .paxdesign-chat-focus-backdrop {
+  position: fixed;
+  inset: 0;
+  z-index: 99991;
+  pointer-events: none;
+  opacity: 0;
+  visibility: hidden;
+  background: rgba(0, 0, 0, 0.38);
+  backdrop-filter: blur(10px) saturate(120%);
+  -webkit-backdrop-filter: blur(10px) saturate(120%);
+  transition: opacity 0.22s ease, visibility 0.22s ease;
+}
+
+#paxdesign-booking-root.paxdesign-widget-open .paxdesign-chat-focus-backdrop {
+  opacity: 1;
+  visibility: visible;
+}
+
 #paxdesign-booking-root .paxdesign-booking-button .paxdesign-booking-launcher-icon {
   display: inline-flex;
   flex-shrink: 0;
@@ -1700,6 +1719,11 @@ body.paxdesign-agent-profile-open {
   }
 
   /* JS inline frame owns position/size once the widget opens — avoids CSS/JS fight on first paint */
+  #paxdesign-booking-root.paxdesign-frame-managed .paxdesign-booking-widget.paxdesign-is-preparing {
+    height: min(420px, 58svh, calc(100svh - 96px));
+    max-height: min(420px, calc(100svh - 80px));
+  }
+
   #paxdesign-booking-root.paxdesign-frame-managed .paxdesign-booking-widget,
   #paxdesign-booking-root.paxdesign-frame-managed.paxdesign-mobile-chat-mode .paxdesign-booking-widget,
   #paxdesign-booking-root.paxdesign-frame-managed.paxdesign-chat-mode-active .paxdesign-booking-widget {
@@ -1897,6 +1921,14 @@ body.paxdesign-agent-profile-open {
     height: 36px;
   }
 
+  #paxdesign-booking-root .paxdesign-booking-chat-media,
+  #paxdesign-booking-root .paxdesign-booking-chat-file {
+    width: 36px;
+    height: 36px;
+  }
+
+  #paxdesign-booking-root .paxdesign-booking-chat-media svg,
+  #paxdesign-booking-root .paxdesign-booking-chat-file svg,
   #paxdesign-booking-root .paxdesign-booking-chat-voice svg {
     width: 20px;
     height: 20px;
@@ -3144,6 +3176,56 @@ body.paxdesign-agent-profile-open {
   flex-shrink: 0;
 }
 
+#paxdesign-booking-root .paxdesign-booking-chat-media,
+#paxdesign-booking-root .paxdesign-booking-chat-file {
+  flex-shrink: 0;
+  width: 32px;
+  height: 32px;
+  margin: 0 0 1px;
+  padding: 0;
+  border: none;
+  border-radius: 8px;
+  background: transparent;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  color: rgb(170, 170, 170);
+  transition: color 0.2s ease, background-color 0.2s ease, transform 0.15s ease;
+}
+
+#paxdesign-booking-root .paxdesign-booking-chat-media svg,
+#paxdesign-booking-root .paxdesign-booking-chat-file svg {
+  width: 18px;
+  height: 18px;
+  display: block;
+}
+
+#paxdesign-booking-root .paxdesign-booking-chat-media:hover,
+#paxdesign-booking-root .paxdesign-booking-chat-media:focus-visible,
+#paxdesign-booking-root .paxdesign-booking-chat-file:hover,
+#paxdesign-booking-root .paxdesign-booking-chat-file:focus-visible {
+  color: #ffffff;
+  background: rgba(255, 255, 255, 0.06);
+}
+
+#paxdesign-booking-root.paxdesign-chat-admin-active .paxdesign-booking-chat-media svg path,
+#paxdesign-booking-root.paxdesign-chat-admin-active .paxdesign-booking-chat-media svg circle,
+#paxdesign-booking-root.paxdesign-chat-admin-active .paxdesign-booking-chat-file svg path,
+#paxdesign-booking-root.paxdesign-chat-admin-active .paxdesign-booking-chat-file svg polyline {
+  stroke: #86efac;
+}
+
+#paxdesign-booking-root.paxdesign-chat-admin-active .paxdesign-booking-chat-composer:focus-within .paxdesign-booking-chat-media svg path,
+#paxdesign-booking-root.paxdesign-chat-admin-active .paxdesign-booking-chat-composer:focus-within .paxdesign-booking-chat-file svg path {
+  stroke: #ecfdf5;
+}
+
+#paxdesign-booking-root .paxdesign-booking-chat-voice.paxdesign-is-pending {
+  opacity: 0.55;
+  pointer-events: none;
+}
+
 #paxdesign-booking-root .paxdesign-booking-chat-plus {
   cursor: pointer;
   width: fit-content;
@@ -4162,6 +4244,8 @@ html.paxdesign-scroll-lock body {
 #paxdesign-booking-root .paxdesign-booking-timeslot,
 #paxdesign-booking-root .paxdesign-booking-chat-send,
 #paxdesign-booking-root .paxdesign-booking-chat-plus,
+#paxdesign-booking-root .paxdesign-booking-chat-media,
+#paxdesign-booking-root .paxdesign-booking-chat-file,
 #paxdesign-booking-root .paxdesign-booking-chat-voice,
 #paxdesign-booking-root .paxdesign-booking-chat-notify,
 #paxdesign-booking-root .paxdesign-booking-chat-action {

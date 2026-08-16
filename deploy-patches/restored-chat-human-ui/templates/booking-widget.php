@@ -39,6 +39,8 @@ $team_members = PAXdesign_Booking::get_instance()->get_team_members();
     <span class="paxdesign-booking-launcher-label">Support Message</span>
   </div>
 
+  <div class="paxdesign-chat-focus-backdrop" aria-hidden="true"></div>
+
   <!-- Booking Panel -->
   <div class="paxdesign-booking-widget" aria-hidden="true">
     <div class="paxdesign-booking-frame">
@@ -441,6 +443,12 @@ $team_members = PAXdesign_Booking::get_instance()->get_team_members();
                       <span class="paxdesign-booking-chat-plus-tooltip">Schnellaktionen</span>
                     </button>
                   </div>
+                  <button type="button" class="paxdesign-booking-chat-media" aria-label="<?php echo esc_attr__('Foto senden', 'paxdesign-booking'); ?>" title="<?php echo esc_attr__('Foto senden', 'paxdesign-booking'); ?>">
+                    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M14.5 4h-5L7 7H4a2 2 0 0 0-2 2v9a2 2 0 0 0 2 2h16a2 2 0 0 0 2-2V9a2 2 0 0 0-2-2h-3l-2.5-3z"/><circle cx="12" cy="13" r="3"/></svg>
+                  </button>
+                  <button type="button" class="paxdesign-booking-chat-file" aria-label="<?php echo esc_attr__('Datei senden', 'paxdesign-booking'); ?>" title="<?php echo esc_attr__('Datei senden', 'paxdesign-booking'); ?>">
+                    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M15.5 2H8a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h8a2 2 0 0 0 2-2V7.5L15.5 2z"/><polyline points="14 2 14 8 20 8"/><path d="M12 18v-6"/><path d="M9 15h6"/></svg>
+                  </button>
                   <textarea
                     class="paxdesign-booking-chat-input"
                     placeholder="Message..."
