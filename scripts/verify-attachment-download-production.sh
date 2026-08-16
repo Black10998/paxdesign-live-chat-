@@ -91,8 +91,6 @@ foreach ($enriched as $item) {
       echo "WARN: skipping invalid PDF on disk (not browser-openable): $name\n";
       continue;
     }
-    $pdf_name = $name;
-    $pdf_path = $path;
   }
   PAXdesign_Cybercrime_Intake::$attachment_stream_dry_run = true;
   ob_start();
