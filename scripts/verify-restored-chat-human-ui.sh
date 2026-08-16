@@ -27,9 +27,9 @@ curl -fsSL "${SITE}/wp-content/plugins/paxdesign-booking/assets/js/cybercrime-ad
 curl -fsSL "${SITE}/wp-content/plugins/paxdesign-booking/paxdesign-booking.php?v=${STAMP}" \
   -o "${tmpdir}/paxdesign-booking.php" || true
 
-grep -q "Version: 3.174.93" "${tmpdir}/chat-script.js" \
-  && ok "chat-script.js cache-bust version 3.174.93" \
-  || fail "chat-script.js is not the patched 3.174.93 file"
+grep -q "Version: 3.174.94" "${tmpdir}/chat-script.js" \
+  && ok "chat-script.js cache-bust version 3.174.94" \
+  || fail "chat-script.js is not the patched 3.174.94 file"
 
 grep -q "function pinToLatestMessage" "${tmpdir}/chat-script.js" \
   && ok "instant pin-to-latest is present" \
@@ -85,6 +85,17 @@ if grep -q "skipping stacked sync" "${tmpdir}/chat-script.js"; then
 else
   ok "live chat-script.js is not the later GitHub chat rewrite"
 fi
+
+curl -fsSL "${SITE}/wp-content/plugins/paxdesign-booking/assets/customer-auth/js/pax-auth.js?v=${STAMP}" \
+  -o "${tmpdir}/pax-auth.js"
+
+grep -q "Sign in with GitHub" "${tmpdir}/pax-auth.js" \
+  && ok "website login includes Sign in with GitHub" \
+  || fail "Sign in with GitHub missing from live pax-auth.js"
+
+grep -q "githubWebStartUrl" "${tmpdir}/pax-auth.js" \
+  && ok "GitHub OAuth start helper is present" \
+  || fail "githubWebStartUrl missing from live pax-auth.js"
 
 curl -fsSL "${SITE}/?pax_chat_ui=${STAMP}" -o "${tmpdir}/home.html" || true
 if grep -q "KI-generierte Antworten" "${tmpdir}/home.html" 2>/dev/null; then
