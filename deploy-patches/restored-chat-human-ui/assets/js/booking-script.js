@@ -51,6 +51,24 @@
         });
     }
 
+    function maybeOpenChatFromReturnUrl() {
+        try {
+            var params = new URLSearchParams(window.location.search);
+            if (params.get('pax_chat_open') !== '1') {
+                return;
+            }
+            params.delete('pax_chat_open');
+            var cleanSearch = params.toString();
+            var cleanUrl = window.location.pathname + (cleanSearch ? '?' + cleanSearch : '') + window.location.hash;
+            if (window.history && window.history.replaceState) {
+                window.history.replaceState(null, '', cleanUrl);
+            }
+            setTimeout(function () {
+                openChatFromLauncher();
+            }, 150);
+        } catch (e) {}
+    }
+
     function beginLauncherOpen() {
         var $widget = $in('.paxdesign-booking-widget');
         if ($widget.hasClass('paxdesign-is-active')) {
@@ -540,6 +558,8 @@
     
     function initBookingSystem() {
         var $container = root();
+
+        maybeOpenChatFromReturnUrl();
 
         // Capture service selection from pricing/service cards before the widget opens.
         $(document).on('click', '.paxdesign-booking-trigger', function() {

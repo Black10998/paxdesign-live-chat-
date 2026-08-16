@@ -95,12 +95,12 @@ class PAXdesign_Chat {
             'chatSessionHasMessages' => false,
             'chatMessageCount' => 0,
             'aiAssistant'      => $ai_identity,
+            'loginPageUrl'     => class_exists('PAXdesign_Auth_Page')
+                ? PAXdesign_Auth_Page::page_url()
+                : home_url('/account/'),
             'authGate'         => array(
                 'title'       => __('Continue to Live Chat', 'paxdesign-booking'),
-                'subtitle'    => __('Sign in or create a free account to message our team. Your conversation stays synced across the website and app.', 'paxdesign-booking'),
-                'signIn'      => __('Sign In', 'paxdesign-booking'),
-                'register'    => __('Create Account', 'paxdesign-booking'),
-                'verifyHint'  => __('Verify your email to start chatting.', 'paxdesign-booking'),
+                'logIn'       => __('Log In', 'paxdesign-booking'),
             ),
             'quickActions'     => array(),
             'contactUrl'       => get_option('paxdesign_booking_contact_url', home_url('/')),
