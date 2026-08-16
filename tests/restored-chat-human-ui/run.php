@@ -55,10 +55,10 @@ assert_true(strpos($js, 'function startVoiceInput') !== false, 'JS voice input h
 assert_true(strpos($js, 'hideShellLoader') !== false, 'JS hides shell loader when chat is ready');
 assert_true(strpos($js, 'function requestMicrophoneFromUserGesture') !== false, 'JS requests mic from user gesture');
 assert_true(strpos($js, 'getUserMedia({ audio: true })') !== false, 'JS uses native audio getUserMedia');
-assert_true(strpos($js, 'function redirectToLoginPage') !== false, 'chat auth redirects to account login page');
-assert_true(strpos($js, 'pax_chat_open') !== false, 'chat return URL reopens widget after login');
-assert_true(strpos($js, 'loginPageUrl') !== false || strpos($chat, 'loginPageUrl') !== false, 'login page URL is configured server-side');
-assert_true(strpos($widget, 'paxdesignChatAuthLogin') !== false, 'widget has single Log In button');
+assert_true(strpos($js, 'rememberChatReturnTarget') !== false, 'chat auth stores return target before redirect');
+assert_true(strpos($js, 'pax_chat_return_to') !== false, 'chat return URL uses sessionStorage backup');
+assert_true(strpos($widget, 'paxdesign-booking-chat-auth-login-btn') !== false, 'widget uses header-style Sign In button');
+assert_true(strpos($widget, 'paxdesign-booking-chat-auth-gate-card') !== false, 'widget auth gate uses centered card layout');
 assert_true(strpos($widget, 'paxdesignChatAuthRegister') === false, 'widget has no register button');
 assert_true(strpos($widget, 'paxdesign-booking-chat-auth-inline') === false, 'widget has no inline auth form');
 assert_true(strpos($js, 'forceOpen: true') !== false, 'JS forces server history on widget open');

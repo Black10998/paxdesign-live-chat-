@@ -99,11 +99,14 @@ $team_members = PAXdesign_Booking::get_instance()->get_team_members();
         <?php if (get_option('paxdesign_customer_require_login_for_chat', '1') === '1') : ?>
         <div class="paxdesign-booking-chat-auth-gate" id="paxdesignChatAuthGate" hidden>
           <div class="paxdesign-booking-chat-auth-gate-inner" role="region" aria-labelledby="paxdesignChatAuthGateTitle">
-            <div class="paxdesign-booking-chat-auth-gate-intro">
-              <h3 class="paxdesign-booking-chat-auth-gate-title" id="paxdesignChatAuthGateTitle"><?php echo esc_html__('Continue to Live Chat', 'paxdesign-booking'); ?></h3>
-            </div>
-            <div class="paxdesign-booking-chat-auth-actions" id="paxdesignChatAuthActions">
-              <button type="button" class="paxdesign-booking-chat-auth-gate-btn paxdesign-booking-chat-auth-gate-btn--primary" id="paxdesignChatAuthLogin"><?php echo esc_html__('Log In', 'paxdesign-booking'); ?></button>
+            <div class="paxdesign-booking-chat-auth-gate-card">
+              <div class="paxdesign-booking-chat-auth-gate-intro">
+                <h3 class="paxdesign-booking-chat-auth-gate-title" id="paxdesignChatAuthGateTitle"><?php echo esc_html__('Continue to Live Chat', 'paxdesign-booking'); ?></h3>
+                <p class="paxdesign-booking-chat-auth-gate-sub" id="paxdesignChatAuthGateSubtitle"><?php echo esc_html__('Sign in to message our team.', 'paxdesign-booking'); ?></p>
+              </div>
+              <div class="paxdesign-booking-chat-auth-actions" id="paxdesignChatAuthActions">
+                <button type="button" class="pdx-cx-btn pdx-auth-signup-btn paxdesign-booking-chat-auth-login-btn" id="paxdesignChatAuthLogin"><?php echo esc_html__('Sign In', 'paxdesign-booking'); ?></button>
+              </div>
             </div>
           </div>
         </div>

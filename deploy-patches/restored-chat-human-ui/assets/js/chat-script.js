@@ -1437,9 +1437,17 @@
     }
   }
 
+  function rememberChatReturnTarget(returnTo) {
+    try {
+      sessionStorage.setItem('pax_chat_return_to', returnTo);
+      sessionStorage.setItem('pax_chat_pending_open', '1');
+    } catch (e) {}
+  }
+
   function redirectToLoginPage() {
     var loginBase = (config && config.loginPageUrl) ? config.loginPageUrl : '/account/';
     var returnTo = buildChatReturnUrl();
+    rememberChatReturnTarget(returnTo);
     var sep = loginBase.indexOf('?') >= 0 ? '&' : '?';
     window.location.href = loginBase + sep + 'return_to=' + encodeURIComponent(returnTo);
   }
@@ -1448,8 +1456,10 @@
     authGateEl = root.querySelector('#paxdesignChatAuthGate');
     if (config && config.authGate) {
       var titleEl = root.querySelector('#paxdesignChatAuthGateTitle');
+      var subEl = root.querySelector('#paxdesignChatAuthGateSubtitle');
       var loginBtn = root.querySelector('#paxdesignChatAuthLogin');
       if (titleEl && config.authGate.title) titleEl.textContent = config.authGate.title;
+      if (subEl && config.authGate.subtitle) subEl.textContent = config.authGate.subtitle;
       if (loginBtn && config.authGate.logIn) loginBtn.textContent = config.authGate.logIn;
     }
     if (authGateBound) return;
