@@ -31,8 +31,8 @@ $i18n = file_get_contents($root . '/includes/class-paxdesign-cybercrime-i18n.php
 $admin = file_get_contents($root . '/includes/customer/class-paxdesign-customer-admin.php');
 $adminJs = file_get_contents($root . '/assets/js/cybercrime-admin.js');
 
-assert_true(strpos($boot, "define('PAXDESIGN_BOOKING_VERSION', '3.174.93')") !== false, 'plugin version 3.174.93');
-assert_true(strpos($js, 'Version: 3.174.93') !== false, 'chat-script cache-bust 3.174.93');
+assert_true(strpos($boot, "define('PAXDESIGN_BOOKING_VERSION', '3.174.118')") !== false, 'plugin version 3.174.118');
+assert_true(strpos($js, 'Version: 3.174.118') !== false, 'chat-script cache-bust 3.174.118');
 assert_true(strpos($js, 'uploadHumanAttachFile') !== false, 'JS upload handler');
 assert_true(strpos($js, 'paxdesign-chat-admin-active') !== false, 'JS human takeover class');
 assert_true(strpos($js, 'paxdesign_chat_live_user_attach') !== false, 'JS posts attach action');
@@ -49,6 +49,14 @@ assert_true(strpos($js, 'skipping stacked sync') === false, 'patch is not the la
 assert_true(strpos($js, 'var openInstant') === false, 'patch does not use 3.176 instant-open');
 assert_true(strpos($js, 'var stickToBottom') !== false, 'WhatsApp stick-to-bottom is present');
 assert_true(strpos($js, 'background: true, blockUi: false') !== false, 'open stays usable during background sync');
+assert_true(strpos($widget, 'paxdesign-chat-shell-loader') !== false, 'widget has in-chat shell loader');
+assert_true(strpos($widget, 'paxdesign-booking-chat-voice') !== false, 'widget has voice input button');
+assert_true(strpos($js, 'function startVoiceInput') !== false, 'JS voice input handler');
+assert_true(strpos($js, 'hideShellLoader') !== false, 'JS hides shell loader when chat is ready');
+assert_true(strpos($js, 'return stream;') !== false && strpos($js, 'function ensureMicrophonePermission') !== false, 'mic permission keeps stream for reuse');
+
+$bookingJs = @file_get_contents($root . '/assets/js/booking-script.js');
+assert_true($bookingJs !== false && strpos($bookingJs, 'showChatShellLoading') !== false, 'booking-script shell loader');
 assert_true(strpos($widget, 'KI-generierte Antworten') === false, 'widget has no KI disclaimer');
 assert_true(strpos($js, 'function pinToLatestMessage') !== false, 'open pins to latest message');
 assert_true(strpos($widget, 'paxdesignChatEndWrap') === false, 'widget has no end-chat wrap');
@@ -90,6 +98,12 @@ $jsCheck = array();
 $jsCode = 0;
 exec('node --check ' . escapeshellarg($root . '/assets/js/chat-script.js') . ' 2>&1', $jsCheck, $jsCode);
 assert_true($jsCode === 0, 'node --check chat-script.js ' . implode(' ', $jsCheck));
+if ($bookingJs !== false && is_file($root . '/assets/js/booking-script.js')) {
+    $bookingJsCheck = array();
+    $bookingJsCode = 0;
+    exec('node --check ' . escapeshellarg($root . '/assets/js/booking-script.js') . ' 2>&1', $bookingJsCheck, $bookingJsCode);
+    assert_true($bookingJsCode === 0, 'node --check booking-script.js ' . implode(' ', $bookingJsCheck));
+}
 $adminJsCheck = array();
 $adminJsCode = 0;
 exec('node --check ' . escapeshellarg($root . '/assets/js/cybercrime-admin.js') . ' 2>&1', $adminJsCheck, $adminJsCode);

@@ -1,6 +1,6 @@
 /**
  * PAXdesign AI Chat — Sales & Booking Assistant
- * Version: 3.174.93
+ * Version: 3.174.117
  */
 (function () {
   'use strict';
@@ -29,7 +29,8 @@
   var form         = root.querySelector('.paxdesign-booking-chat-form');
   var input        = root.querySelector('.paxdesign-booking-chat-input');
   var sendBtn      = root.querySelector('.paxdesign-booking-chat-send');
-  var plusBtn      = root.querySelector('.paxdesign-booking-chat-plus');
+  var voiceBtn     = root.querySelector('.paxdesign-booking-chat-voice');
+  var plusBtn      = root.querySelector('.paxdesign-booking-chat-composer .paxdesign-booking-chat-plus');
   var notifyBtn    = root.querySelector('.paxdesign-booking-chat-notify');
   var honeypot     = root.querySelector('.paxdesign-booking-chat-honeypot');
   var closedBar    = root.querySelector('.paxdesign-booking-chat-closed-bar');
@@ -60,7 +61,25 @@
   var adminName          = '';
   var assignedAgent      = null;
   var pollSeq            = 0;
+  var appliedMessageSeq  = 0;
+  var unifiedSyncInFlight = null;
+  var unifiedSyncQueued  = false;
+  var unifiedSyncTimer   = 0;
   var pollTimer          = null;
+  var composerWantsKeyboard = false;
+  var sendInFlight            = false;
+  var voiceRecognition      = null;
+  var voiceListening        = false;
+  var voiceMicStream        = null;
+  var voiceAudioCtx         = null;
+  var voiceAnalyser         = null;
+  var voiceWaveRaf          = 0;
+  var voiceRecordingEl      = null;
+  var voiceWavePathEl       = null;
+  var voiceBaseText         = '';
+  var voiceMicPermission    = 'unknown';
+  var voiceMicSessionReady  = false;
+  var voiceInputMaxHeight   = 120;
   var HISTORY_INITIAL    = 10;
   var HISTORY_BATCH      = 10;
   var oldestLoadedSeq    = 0;
@@ -91,7 +110,6 @@
   var chatMessageMap     = {};
   var replyToId          = 0;
   var authGateEl         = null;
-  var authGateCloseBtn   = null;
   var authGateVerifyEl   = null;
   var authGateBound      = false;
 
@@ -291,8 +309,7 @@
     }
     var payload = data.payload || {};
     if (data.type === 'message' && Array.isArray(payload.message ? [payload.message] : payload.messages)) {
-      var msgs = payload.message ? [payload.message] : payload.messages;
-      applyIncomingMessages(msgs);
+      scheduleUnifiedSync('sse-message');
     }
     if (data.type === 'link_scan_updated' && payload.message) {
       if (!isMessagePermanentlyDeleted(payload.message.id)) {
@@ -320,7 +337,7 @@
     }
     if (data.type === 'handler' && payload.handler) {
       if (payload.message) {
-        applyIncomingMessages([payload.message]);
+        scheduleUnifiedSync('sse-handler-message');
       }
       onRealtimeHandlerChange(payload.handler, payload.admin_name || '');
     }
@@ -521,8 +538,25 @@
     if (!readinessEl || !chatPanelEl) return;
     readinessEl.hidden = true;
     readinessEl.setAttribute('aria-busy', 'false');
+    readinessEl.classList.remove('paxdesign-auth-transition');
     chatPanelEl.classList.remove('paxdesign-chat-readiness-active');
     readinessState = 'ready';
+  }
+
+  function showAuthTransitionOverlay() {
+    initChatReadinessUi();
+    if (!readinessEl) return;
+    if (readinessAutoRetryTimer) {
+      clearTimeout(readinessAutoRetryTimer);
+      readinessAutoRetryTimer = null;
+    }
+    readinessEl.classList.add('paxdesign-auth-transition');
+    readinessEl.hidden = false;
+    readinessEl.setAttribute('aria-busy', 'true');
+    if (readinessLoadingEl) readinessLoadingEl.hidden = false;
+    if (readinessErrorEl) readinessErrorEl.hidden = true;
+    readinessState = 'loading';
+    setReadinessPhase('readinessAuthenticating', 'Preparing your conversation…');
   }
 
   function cancelChatReadiness() {
@@ -657,6 +691,9 @@
 
   function finalizeChatReadinessUi() {
     hideReadinessOverlay();
+    if (window.PAXdesignBooking && typeof window.PAXdesignBooking.hideShellLoader === 'function') {
+      window.PAXdesignBooking.hideShellLoader();
+    }
     updateEntryUi();
     updateInputState();
     updateEndButtonUi();
@@ -745,6 +782,14 @@
   function updateStickToBottomFromScroll() {
     if (loadingOlderHistory) return;
     stickToBottom = isNearBottom(96);
+  }
+
+  function shouldPreserveHistoryDom() {
+    if (loadingOlderHistory) return true;
+    if (!stickToBottom) return true;
+    if (threadEl && threadEl.children.length > 0) return true;
+    if (messages.length > 0) return true;
+    return false;
   }
 
   function shouldSkipHistoryFetch(options) {
@@ -1107,7 +1152,9 @@
       streamEventSince = 0;
       streamCacheBustNext = true;
       sessionRestored = false;
-      resetSessionState();
+      if (!options.preserveUi) {
+        resetSessionState();
+      }
       lastAuthUserId = nextUserId;
       updateAuthGateUi();
 
@@ -1126,7 +1173,7 @@
 
       var boot;
       if (isPersistentAccountChat()) {
-        boot = refreshAuthenticatedChatSession().then(function () {
+        boot = refreshAuthenticatedChatSession({ skipHistory: true }).then(function () {
           return reopenAuthenticatedSessionIfNeeded();
         });
       } else {
@@ -1172,6 +1219,76 @@
     options = options || {};
     options.force = true;
     return silentRefreshChatSession(reason, options);
+  }
+
+  function transitionAfterLogin(options) {
+    options = options || {};
+    if (silentRefreshPromise && !options.force) return silentRefreshPromise;
+
+    var generation = ++silentRefreshGeneration;
+    var previousUserId = typeof options.previousUserId === 'number' ? options.previousUserId : lastAuthUserId;
+    var oldSessionId = cachedSessionId || getSessionId() || (config && config.chatSessionId) || '';
+
+    hideAuthGate();
+    clearInlineAuthForm();
+    root.classList.add('paxdesign-chat-direct-mode');
+    if (entryEl) entryEl.hidden = true;
+    if (quickActions) quickActions.hidden = true;
+    showAuthTransitionOverlay();
+    notifyLayout();
+
+    silentRefreshPromise = refreshChatAuthNonce().then(function () {
+      if (generation !== silentRefreshGeneration) return false;
+      if (oldSessionId) sendCustomerDisconnectBeacon();
+      stopChatRealtimeTransport();
+      clearUserSessionCache([previousUserId, getAuthUserId()], {
+        sessionIds: [oldSessionId],
+        allKnownSessions: false,
+      });
+      resetChatConfigSessionMeta();
+      cachedSessionId = null;
+      streamEventSince = 0;
+      streamCacheBustNext = true;
+      lastAuthUserId = getAuthUserId();
+      purgeGuestChatStorage();
+
+      return refreshAuthenticatedChatSession({ skipHistory: true }).then(function () {
+        return reopenAuthenticatedSessionIfNeeded();
+      }).then(function () {
+        if (generation !== silentRefreshGeneration) return false;
+        return fetchSessionFromServer(true, false);
+      }).then(function () {
+        if (generation !== silentRefreshGeneration) return false;
+        return pollUpdatesOnce(false);
+      }).then(function () {
+        if (generation !== silentRefreshGeneration) return false;
+        hideReadinessOverlay();
+        inferEntryChoiceFromHandler();
+        updateEntryUi();
+        updateInputState();
+        updateEndButtonUi();
+        scheduleLivePolling();
+        if (widgetOpen || isPersistentAccountChat()) startCustomerStream();
+        stickToBottom = true;
+        scrollToBottom(true);
+        notifyLayout();
+        if (widgetOpen && input && !input.disabled) {
+          try { input.focus({ preventScroll: true }); } catch (focusErr) {}
+        }
+        logReadiness('login_transition', 'OK', { sessionId: getSessionId() });
+        return true;
+      });
+    }).catch(function (err) {
+      hideReadinessOverlay();
+      logReadiness('login_transition', 'FAILED', {
+        error: err && err.message ? err.message : err,
+      });
+      return false;
+    }).finally(function () {
+      silentRefreshPromise = null;
+    });
+
+    return silentRefreshPromise;
   }
 
   function resetChatForAuthChange(clearUi) {
@@ -1251,6 +1368,15 @@
       return;
     }
 
+    if ((reason === 'login' || reason === 'verification') && widgetOpen && canUseChat()) {
+      cancelChatReadiness();
+      transitionAfterLogin({
+        previousUserId: previousUserId,
+        force: true,
+      });
+      return;
+    }
+
     var shouldRefresh = reason === 'login'
       || reason === 'logout'
       || reason === 'user_switch'
@@ -1294,7 +1420,6 @@
 
   function initAuthGate() {
     authGateEl = root.querySelector('#paxdesignChatAuthGate');
-    authGateCloseBtn = root.querySelector('#paxdesignChatAuthClose');
     authGateVerifyEl = root.querySelector('#paxdesignChatAuthGateVerify');
     if (config && config.authGate) {
       var titleEl = root.querySelector('#paxdesignChatAuthGateTitle');
@@ -1312,15 +1437,6 @@
         if (!btn) return;
         e.preventDefault();
         mountInlineAuthForm(btn.getAttribute('data-auth-view'));
-      });
-    }
-    if (authGateCloseBtn) {
-      authGateCloseBtn.addEventListener('click', function (e) {
-        e.preventDefault();
-        hideAuthGate();
-        if (window.PAXdesignBooking && typeof window.PAXdesignBooking.close === 'function') {
-          window.PAXdesignBooking.close();
-        }
       });
     }
     if (!window.__paxChatAuthSessionBound) {
@@ -1350,7 +1466,7 @@
       showAuthGate();
       window.PDXAuth.mountInlineAuth(inlineEl, view === 'register' ? 'register' : 'login', {
         compact: true,
-        context: 'chat',
+        context: 'page',
       });
       return;
     }
@@ -1368,7 +1484,7 @@
     clearInlineAuthForm();
     window.PDXAuth.mountInlineAuth(inlineEl, view || 'login', {
       compact: true,
-      context: 'chat',
+      context: 'page',
     });
     inlineEl.dataset.mounted = '1';
     inlineEl.dataset.authView = view || 'login';
@@ -1435,12 +1551,16 @@
     if (!isLoggedIn()) {
       mountInlineAuthForm('login');
     }
+    if (window.PAXdesignBookingMobile && typeof window.PAXdesignBookingMobile.adjustLayout === 'function') {
+      window.PAXdesignBookingMobile.adjustLayout(false);
+    }
   }
 
   function hideAuthGate() {
     if (authGateEl) authGateEl.hidden = true;
     root.classList.remove('paxdesign-chat-auth-locked');
     clearInlineAuthForm();
+    notifyLayout();
   }
 
   function adoptSessionId(sessionId, opts) {
@@ -1573,6 +1693,9 @@
     initRatingUi();
     initSoundToggle();
     initPlusToggle();
+    initComposerAttachments();
+    initVoiceInput();
+    bindComposerFocusGuards();
     if (isPersistentAccountChat()) {
       root.classList.add('paxdesign-chat-direct-mode');
       if (entryEl) entryEl.hidden = true;
@@ -1699,45 +1822,58 @@
     widgetOpen = true;
     initAuthGate();
     if (!canUseChat()) {
+      if (window.PAXdesignBooking && typeof window.PAXdesignBooking.hideShellLoader === 'function') {
+        window.PAXdesignBooking.hideShellLoader();
+      }
       showAuthGate();
       notifyLayout();
       return;
     }
     hideAuthGate();
     hideReadinessOverlay();
-    concealThreadUntilPinned();
     paintCachedThreadIfNeeded();
     stickToBottom = true;
     updateInputState();
     updateEntryUi();
-    revealPinnedThread();
+    pinToLatestMessage();
     notifyLayout();
     scheduleLivePolling();
     if (getSessionId()) startCustomerStream();
-    beginChatReadiness({ reuseSession: true, background: true, blockUi: false }).then(function (ready) {
-      if (!ready) return;
-      revealPinnedThread();
-      if (chatHandler === 'closed' && isSessionArchived(getSessionId()) && !isPersistentAccountChat()) {
-        fetchSessionFromServer(true).then(function () {
-          var hasHistory = messages.length > 0 || (config && config.chatMessageCount > 0);
-          if (!hasHistory) {
-            beginFreshSessionSilently();
-          } else {
-            revealPinnedThread();
+    window.setTimeout(function () {
+      beginChatReadiness({ reuseSession: true, background: true, blockUi: false }).then(function (ready) {
+        if (!ready) {
+          if (window.PAXdesignBooking && typeof window.PAXdesignBooking.hideShellLoader === 'function') {
+            window.PAXdesignBooking.hideShellLoader();
           }
-        });
-      }
-    });
+          return;
+        }
+        pinToLatestMessage();
+        if (chatHandler === 'closed' && isSessionArchived(getSessionId()) && !isPersistentAccountChat()) {
+          fetchSessionFromServer(true).then(function () {
+            var hasHistory = messages.length > 0 || (config && config.chatMessageCount > 0);
+            if (!hasHistory) {
+              beginFreshSessionSilently();
+            } else {
+              pinToLatestMessage();
+            }
+          });
+        }
+      });
+    }, 0);
   }
 
   function onWidgetClose() {
     widgetOpen = false;
-    cancelChatReadiness();
+    composerWantsKeyboard = false;
+    stopVoiceInput();
     hideReadinessOverlay();
-    stopCustomerStream();
-    sendCustomerDisconnectBeacon();
-    scheduleLivePolling();
     notifyLayout();
+    window.setTimeout(function () {
+      cancelChatReadiness();
+      stopCustomerStream();
+      sendCustomerDisconnectBeacon();
+      scheduleLivePolling();
+    }, 0);
   }
 
   function loadOpenCloseSoundFlags() {
@@ -2110,12 +2246,21 @@
     if (historyScrollBound || !messagesEl) return;
     historyScrollBound = true;
     messagesEl.addEventListener('scroll', function () {
-      updateStickToBottomFromScroll();
+      if (!loadingOlderHistory) {
+        updateStickToBottomFromScroll();
+      }
       if (!hasOlderMessages || loadingOlderHistory) return;
       if (messagesEl.scrollTop <= 80) {
         fetchOlderMessages();
       }
     }, { passive: true });
+    var relayout = function () {
+      if (stickToBottom) scrollToBottom(true);
+    };
+    window.addEventListener('resize', relayout);
+    if (window.visualViewport) {
+      window.visualViewport.addEventListener('resize', relayout);
+    }
   }
 
   function fetchOlderMessages() {
@@ -2181,6 +2326,7 @@
     syncLocalMessageCursor(messages);
     if (messagesEl) {
       messagesEl.scrollTop = messagesEl.scrollHeight - prevScrollHeight;
+      stickToBottom = isNearBottom();
     }
   }
 
@@ -2393,9 +2539,74 @@
     saveLiveAgentPhase();
   }
 
-  function syncLocalMessageCursor(messages, serverSeq) {
+  function highestAppliedSeq() {
     var maxId = 0;
     (messages || []).forEach(function (msg) {
+      if (msg && typeof msg.id === 'number' && msg.id > maxId) {
+        maxId = msg.id;
+      }
+    });
+    if (threadEl) {
+      threadEl.querySelectorAll('[data-msg-id]').forEach(function (el) {
+        var id = parseInt(el.getAttribute('data-msg-id'), 10);
+        if (!isNaN(id) && id > maxId) {
+          maxId = id;
+        }
+      });
+    }
+    return maxId;
+  }
+
+  function refreshAppliedSeq() {
+    appliedMessageSeq = Math.max(appliedMessageSeq, highestAppliedSeq(), localMsgId);
+    pollSeq = Math.max(pollSeq, appliedMessageSeq);
+  }
+
+  function getIncrementalSince() {
+    return Math.max(0, appliedMessageSeq);
+  }
+
+  function scheduleUnifiedSync(reason) {
+    if (!canUseChat() || !getSessionId()) return;
+    if (unifiedSyncInFlight) {
+      unifiedSyncQueued = true;
+      return;
+    }
+    if (unifiedSyncTimer) {
+      clearTimeout(unifiedSyncTimer);
+      unifiedSyncTimer = 0;
+    }
+    var delay = reason && reason.indexOf('sse') === 0 ? 0 : 16;
+    unifiedSyncTimer = window.setTimeout(function () {
+      unifiedSyncTimer = 0;
+      runUnifiedSync(false);
+    }, delay);
+  }
+
+  function runUnifiedSync(strict) {
+    if (unifiedSyncInFlight) {
+      unifiedSyncQueued = true;
+      return unifiedSyncInFlight;
+    }
+    if (sessionFetchInFlight && !strict) {
+      unifiedSyncQueued = true;
+      return Promise.resolve(null);
+    }
+    unifiedSyncInFlight = pollUpdatesOnce(!!strict).then(function (data) {
+      if (unifiedSyncQueued) {
+        unifiedSyncQueued = false;
+        window.setTimeout(function () { runUnifiedSync(false); }, 0);
+      }
+      return data;
+    }).finally(function () {
+      unifiedSyncInFlight = null;
+    });
+    return unifiedSyncInFlight;
+  }
+
+  function syncLocalMessageCursor(msgs, serverSeq) {
+    var maxId = 0;
+    (msgs || []).forEach(function (msg) {
       if (msg && typeof msg.id === 'number' && msg.id > maxId) {
         maxId = msg.id;
       }
@@ -2406,14 +2617,18 @@
     if (maxId > localMsgId) {
       localMsgId = maxId;
     }
+    if (maxId > appliedMessageSeq) {
+      appliedMessageSeq = maxId;
+    }
     if (typeof serverSeq === 'number') {
-      pollSeq = Math.max(pollSeq, serverSeq, localMsgId);
+      pollSeq = Math.max(pollSeq, appliedMessageSeq);
     }
   }
 
   function nextLocalId() {
     localMsgId += 1;
-    pollSeq = Math.max(pollSeq, localMsgId);
+    appliedMessageSeq = Math.max(appliedMessageSeq, localMsgId);
+    pollSeq = Math.max(pollSeq, appliedMessageSeq);
     return localMsgId;
   }
 
@@ -2532,6 +2747,568 @@
     seenMsgId(msg.id);
     var dedupKey = messageDedupKey(msg);
     if (dedupKey) domClientMsgIds[dedupKey] = msg.id;
+  }
+
+  function upgradeMessageServerId(localId, serverMsg) {
+    if (!serverMsg || !serverMsg.id || localId === serverMsg.id) return;
+    var dedupKey = messageDedupKey(serverMsg);
+    delete domMsgIds[localId];
+    domMsgIds[serverMsg.id] = true;
+    seenMsgId(serverMsg.id);
+    if (dedupKey) domClientMsgIds[dedupKey] = serverMsg.id;
+    var msgEl = threadEl && threadEl.querySelector('[data-msg-id="' + localId + '"]');
+    if (msgEl) {
+      msgEl.setAttribute('data-msg-id', String(serverMsg.id));
+    }
+    messages.forEach(function (m) {
+      if (m && m.id === localId) {
+        m.id = serverMsg.id;
+        if (serverMsg.client_msg_id) m.client_msg_id = serverMsg.client_msg_id;
+      }
+    });
+    if (chatMessageMap[localId]) {
+      chatMessageMap[serverMsg.id] = chatMessageMap[localId];
+      chatMessageMap[localId].id = serverMsg.id;
+      delete chatMessageMap[localId];
+    }
+    updateCustomerLinkScanMessage(serverMsg);
+  }
+
+  function reconcileSyncedUserMessage(msg) {
+    var dedupKey = messageDedupKey(msg);
+    if (!dedupKey || !domClientMsgIds[dedupKey]) return false;
+    var localId = domClientMsgIds[dedupKey];
+    if (localId && msg.id && localId !== msg.id) {
+      upgradeMessageServerId(localId, msg);
+    }
+    return true;
+  }
+
+  function keepComposerFocus() {
+    if (!input || input.disabled) return;
+    window.setTimeout(function () {
+      try {
+        input.focus({ preventScroll: true });
+      } catch (e) {
+        input.focus();
+      }
+    }, 0);
+  }
+
+  function maybeRestoreComposerFocus() {
+    if (composerWantsKeyboard && widgetOpen && input && !input.disabled) {
+      keepComposerFocus();
+    }
+  }
+
+  function preventComposerBlur(e) {
+    e.preventDefault();
+  }
+
+  function bindComposerFocusGuards() {
+    if (root.dataset.composerFocusBound === '1') return;
+    root.dataset.composerFocusBound = '1';
+    var focusGuardSelector =
+      '.paxdesign-booking-chat-plus, .paxdesign-booking-chat-media, .paxdesign-booking-chat-file, .paxdesign-booking-chat-voice, .paxdesign-booking-chat-attach-item, .paxdesign-booking-chat-quick-btn';
+    root.addEventListener('mousedown', function (e) {
+      var control = e.target.closest(focusGuardSelector);
+      if (control && root.contains(control)) {
+        preventComposerBlur(e);
+      }
+    }, true);
+    root.addEventListener('touchstart', function (e) {
+      var control = e.target.closest(focusGuardSelector);
+      if (control && root.contains(control)) {
+        preventComposerBlur(e);
+      }
+    }, { capture: true, passive: false });
+  }
+
+  function speechRecognitionSupported() {
+    return !!(window.SpeechRecognition || window.webkitSpeechRecognition);
+  }
+
+  function speechLangForChat() {
+    var lang = detectChatLanguage();
+    if (lang === 'ar') return 'ar-SA';
+    if (lang === 'en') return 'en-US';
+    return 'de-DE';
+  }
+
+  function refreshVoiceInputMaxHeight() {
+    voiceInputMaxHeight = window.matchMedia('(max-width: 768px)').matches ? 160 : 120;
+  }
+
+  function stopVoiceAnalyser() {
+    if (voiceWaveRaf) {
+      cancelAnimationFrame(voiceWaveRaf);
+      voiceWaveRaf = 0;
+    }
+    voiceAnalyser = null;
+    if (voiceAudioCtx) {
+      try { voiceAudioCtx.close(); } catch (e) {}
+      voiceAudioCtx = null;
+    }
+  }
+
+  function releaseVoiceMicStream() {
+    if (!voiceMicStream) return;
+    voiceMicStream.getTracks().forEach(function (track) {
+      try { track.stop(); } catch (e) {}
+    });
+    voiceMicStream = null;
+  }
+
+  function ensureVoiceRecordingUi() {
+    if (voiceRecordingEl) return;
+    var composer = root.querySelector('.paxdesign-booking-chat-composer');
+    if (!composer || !input) return;
+    voiceRecordingEl = document.createElement('div');
+    voiceRecordingEl.className = 'paxdesign-booking-chat-voice-recording';
+    voiceRecordingEl.hidden = true;
+    voiceRecordingEl.setAttribute('aria-hidden', 'true');
+    voiceRecordingEl.innerHTML =
+      '<span class="paxdesign-booking-chat-voice-recording-dot" aria-hidden="true"></span>' +
+      '<div class="paxdesign-booking-chat-voice-wave" aria-hidden="true">' +
+        '<svg class="paxdesign-booking-chat-voice-wave-svg" viewBox="0 0 240 28" preserveAspectRatio="none" xmlns="http://www.w3.org/2000/svg">' +
+          '<path class="paxdesign-booking-chat-voice-wave-path" d="M0,14 L240,14" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-dasharray="6 5"/>' +
+        '</svg>' +
+      '</div>' +
+      '<span class="paxdesign-booking-chat-voice-recording-label">Aufnahme</span>';
+    composer.insertBefore(voiceRecordingEl, input);
+    voiceWavePathEl = voiceRecordingEl.querySelector('.paxdesign-booking-chat-voice-wave-path');
+  }
+
+  function setVoiceRecordingUi(active) {
+    ensureVoiceRecordingUi();
+    if (voiceRecordingEl) {
+      voiceRecordingEl.hidden = !active;
+      voiceRecordingEl.setAttribute('aria-hidden', active ? 'false' : 'true');
+    }
+    if (input) input.classList.toggle('paxdesign-is-voice-hidden', active);
+    root.classList.toggle('paxdesign-voice-recording', active);
+  }
+
+  function tickVoiceWaveform() {
+    if (!voiceListening || !voiceAnalyser || !voiceWavePathEl) return;
+    var buffer = new Uint8Array(voiceAnalyser.fftSize);
+    voiceAnalyser.getByteTimeDomainData(buffer);
+    var sum = 0;
+    for (var i = 0; i < buffer.length; i++) {
+      var sample = (buffer[i] - 128) / 128;
+      sum += sample * sample;
+    }
+    var level = Math.min(1, Math.sqrt(sum / buffer.length) * 5);
+    var width = 240;
+    var mid = 14;
+    var amp = 2 + level * 11;
+    var phase = Date.now() / 110;
+    var parts = [];
+    for (var x = 0; x <= width; x += 4) {
+      var y = mid + Math.sin((x / width) * Math.PI * 10 + phase) * amp;
+      parts.push((x === 0 ? 'M' : 'L') + x + ',' + y.toFixed(1));
+    }
+    voiceWavePathEl.setAttribute('d', parts.join(' '));
+    voiceWaveRaf = requestAnimationFrame(tickVoiceWaveform);
+  }
+
+  function startVoiceWaveformFallback() {
+    stopVoiceAnalyser();
+    if (!voiceWavePathEl) return;
+    var phase = 0;
+    function tick() {
+      if (!voiceListening || !voiceWavePathEl) return;
+      phase += 0.22;
+      var level = 0.28 + (Math.sin(phase) * 0.5 + 0.5) * 0.35;
+      var width = 240;
+      var mid = 14;
+      var amp = 2 + level * 11;
+      var parts = [];
+      for (var x = 0; x <= width; x += 4) {
+        var y = mid + Math.sin((x / width) * Math.PI * 10 + phase) * amp;
+        parts.push((x === 0 ? 'M' : 'L') + x + ',' + y.toFixed(1));
+      }
+      voiceWavePathEl.setAttribute('d', parts.join(' '));
+      voiceWaveRaf = requestAnimationFrame(tick);
+    }
+    tick();
+  }
+
+  function startVoiceAnalyser(stream) {
+    stopVoiceAnalyser();
+    if (!stream) {
+      startVoiceWaveformFallback();
+      return;
+    }
+    try {
+      voiceAudioCtx = new (window.AudioContext || window.webkitAudioContext)();
+      var begin = function () {
+        if (!voiceListening || !voiceAudioCtx) return;
+        var source = voiceAudioCtx.createMediaStreamSource(stream);
+        voiceAnalyser = voiceAudioCtx.createAnalyser();
+        voiceAnalyser.fftSize = 512;
+        voiceAnalyser.smoothingTimeConstant = 0.65;
+        source.connect(voiceAnalyser);
+        tickVoiceWaveform();
+      };
+      if (voiceAudioCtx.state === 'suspended') {
+        voiceAudioCtx.resume().then(begin).catch(function () {
+          startVoiceWaveformFallback();
+        });
+      } else {
+        begin();
+      }
+    } catch (e) {
+      startVoiceWaveformFallback();
+    }
+  }
+
+  function stopVoiceInput() {
+    voiceListening = false;
+    root.classList.remove('paxdesign-voice-active');
+    setVoiceRecordingUi(false);
+    stopVoiceAnalyser();
+    releaseVoiceMicStream();
+    if (voiceBtn) {
+      voiceBtn.setAttribute('aria-pressed', 'false');
+      voiceBtn.classList.remove('paxdesign-is-active', 'paxdesign-is-pending');
+    }
+    if (voiceRecognition) {
+      voiceRecognition.onend = null;
+      voiceRecognition.onerror = null;
+      voiceRecognition.onresult = null;
+      try { voiceRecognition.stop(); } catch (e) {}
+      voiceRecognition = null;
+    }
+    voiceBaseText = input ? input.value : '';
+    autoResizeInput();
+    updateSendButton();
+    maybeRestoreComposerFocus();
+  }
+
+  function syncVoiceMicPermission(state) {
+    if (state === 'granted') {
+      voiceMicPermission = 'granted';
+      return;
+    }
+    if (state === 'denied') {
+      voiceMicPermission = 'denied';
+      return;
+    }
+    if (voiceMicPermission !== 'granted') {
+      voiceMicPermission = 'prompt';
+    }
+  }
+
+  function initVoiceMicPermissionWatch() {
+    if (!navigator.permissions || typeof navigator.permissions.query !== 'function') return;
+    navigator.permissions.query({ name: 'microphone' }).then(function (status) {
+      syncVoiceMicPermission(status.state);
+      if (typeof status.onchange === 'function' || 'onchange' in status) {
+        status.onchange = function () {
+          syncVoiceMicPermission(status.state);
+        };
+      }
+    }).catch(function () {});
+  }
+
+  function bindVoiceMicTrackLifecycle(track) {
+    if (!track || track.__paxVoiceBound) return;
+    track.__paxVoiceBound = true;
+    track.addEventListener('ended', function () {
+      voiceMicPermission = 'prompt';
+      voiceMicStream = null;
+      initVoiceMicPermissionWatch();
+    });
+  }
+
+  function markVoiceMicPermissionGranted(stream) {
+    voiceMicPermission = 'granted';
+    voiceMicSessionReady = true;
+    if (stream && stream.getAudioTracks) {
+      stream.getAudioTracks().forEach(bindVoiceMicTrackLifecycle);
+    }
+  }
+
+  function primeVoiceAudioContext() {
+    try {
+      if (!voiceAudioCtx) {
+        voiceAudioCtx = new (window.AudioContext || window.webkitAudioContext)();
+      }
+      if (voiceAudioCtx && voiceAudioCtx.state === 'suspended') {
+        voiceAudioCtx.resume().catch(function () {});
+      }
+    } catch (e) {}
+  }
+
+  function hasLiveVoiceMicStream() {
+    if (!voiceMicStream) return false;
+    var tracks = voiceMicStream.getAudioTracks();
+    return tracks.length > 0 && tracks[0].readyState === 'live';
+  }
+
+  function acquireMicrophoneStream(options) {
+    options = options || {};
+    if (!navigator.mediaDevices || typeof navigator.mediaDevices.getUserMedia !== 'function') {
+      return Promise.reject({ code: 'unsupported' });
+    }
+    if (!options.forceNew && hasLiveVoiceMicStream()) {
+      return Promise.resolve(voiceMicStream);
+    }
+    releaseVoiceMicStream();
+    return navigator.mediaDevices.getUserMedia({ audio: true }).then(function (stream) {
+      voiceMicStream = stream;
+      markVoiceMicPermissionGranted(stream);
+      return stream;
+    }).catch(function (err) {
+      var name = err && (err.name || err.code || '');
+      if (name === 'NotAllowedError' || name === 'PermissionDeniedError' || name === 'not-allowed') {
+        voiceMicPermission = 'denied';
+      }
+      throw err;
+    });
+  }
+
+  function ensureMicrophonePermission() {
+    if (voiceMicPermission === 'granted' && voiceMicSessionReady && hasLiveVoiceMicStream()) {
+      return Promise.resolve(voiceMicStream);
+    }
+    if (voiceMicPermission === 'denied') {
+      return Promise.reject({ name: 'NotAllowedError' });
+    }
+    return acquireMicrophoneStream({ forceNew: true }).then(function (stream) {
+      markVoiceMicPermissionGranted(stream);
+      return stream;
+    });
+  }
+
+  function microphoneAccessErrorMessage(err) {
+    if (!err) return 'Mikrofon-Zugriff nicht verfügbar.';
+    if (err.code === 'unsupported') return 'Mikrofon wird in diesem Browser nicht unterstützt.';
+    var name = err.name || err.code || '';
+    if (name === 'NotAllowedError' || name === 'PermissionDeniedError' || name === 'not-allowed') {
+      return 'Mikrofon-Zugriff verweigert.';
+    }
+    if (name === 'NotFoundError' || name === 'DevicesNotFoundError') {
+      return 'Kein Mikrofon gefunden.';
+    }
+    return 'Mikrofon-Zugriff nicht verfügbar.';
+  }
+
+  function beginSpeechRecognition(options) {
+    options = options || {};
+    if (voiceRecognition) {
+      voiceRecognition.onend = null;
+      voiceRecognition.onerror = null;
+      voiceRecognition.onresult = null;
+      voiceRecognition.onstart = null;
+      try { voiceRecognition.stop(); } catch (e) {}
+      voiceRecognition = null;
+    }
+    var SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
+    voiceRecognition = new SpeechRecognition();
+    voiceRecognition.continuous = true;
+    voiceRecognition.interimResults = true;
+    voiceRecognition.lang = speechLangForChat();
+    voiceBaseText = input.value || '';
+    if (voiceBaseText && !/\s$/.test(voiceBaseText)) {
+      voiceBaseText += ' ';
+    }
+    voiceRecognition.onresult = function (event) {
+      var finalText = '';
+      var interimText = '';
+      for (var i = event.resultIndex; i < event.results.length; i++) {
+        var piece = event.results[i][0].transcript;
+        if (event.results[i].isFinal) finalText += piece;
+        else interimText += piece;
+      }
+      input.value = voiceBaseText + finalText + interimText;
+      autoResizeInput();
+      updateSendButton();
+    };
+    voiceRecognition.onstart = function () {
+      voiceListening = true;
+      voiceMicSessionReady = true;
+      root.classList.add('paxdesign-voice-active');
+      setVoiceRecordingUi(true);
+      if (voiceBtn) {
+        voiceBtn.setAttribute('aria-pressed', 'true');
+        voiceBtn.classList.remove('paxdesign-is-pending');
+        voiceBtn.classList.add('paxdesign-is-active');
+      }
+      var streamPromise = options.stream
+        ? Promise.resolve(options.stream)
+        : acquireMicrophoneStream();
+      streamPromise.then(function (stream) {
+        startVoiceAnalyser(stream);
+      }).catch(function () {
+        startVoiceWaveformFallback();
+      });
+    };
+    voiceRecognition.onend = function () {
+      if (!voiceListening) return;
+      try {
+        voiceRecognition.start();
+      } catch (e) {
+        stopVoiceInput();
+      }
+    };
+    voiceRecognition.onerror = function (event) {
+      if (!options.permissionRetried && (event.error === 'not-allowed' || event.error === 'audio-capture')) {
+        options.permissionRetried = true;
+        voiceMicPermission = 'prompt';
+        voiceMicSessionReady = false;
+        releaseVoiceMicStream();
+        stopVoiceAnalyser();
+        if (voiceRecognition) {
+          try { voiceRecognition.stop(); } catch (e2) {}
+          voiceRecognition = null;
+        }
+        ensureMicrophonePermission().then(function () {
+          beginSpeechRecognition({ permissionRetried: true, retried: options.retried });
+        }).catch(function (err) {
+          if (voiceBtn) voiceBtn.classList.remove('paxdesign-is-pending');
+          showError(microphoneAccessErrorMessage(err));
+          stopVoiceInput();
+        });
+        return;
+      }
+      if (!options.retried && event.error === 'audio-capture') {
+        releaseVoiceMicStream();
+        stopVoiceAnalyser();
+        options.retried = true;
+        window.setTimeout(function () {
+          beginSpeechRecognition(options);
+        }, 60);
+        return;
+      }
+      if (event.error === 'not-allowed') {
+        showError('Mikrofon-Zugriff verweigert.');
+      } else if (event.error !== 'aborted' && event.error !== 'no-speech') {
+        showError('Spracheingabe fehlgeschlagen.');
+      }
+      stopVoiceInput();
+    };
+    try {
+      voiceRecognition.start();
+      composerWantsKeyboard = true;
+      keepComposerFocus();
+    } catch (err) {
+      if (!options.retried) {
+        options.retried = true;
+        releaseVoiceMicStream();
+        window.setTimeout(function () {
+          beginSpeechRecognition(options);
+        }, 60);
+        return;
+      }
+      stopVoiceInput();
+      showError('Spracheingabe konnte nicht gestartet werden.');
+    }
+  }
+
+  function startVoiceInput() {
+    if (!input || input.disabled || chatHandler === 'closed' || isStreaming) return;
+    if (voiceListening) {
+      stopVoiceInput();
+      return;
+    }
+    composerWantsKeyboard = true;
+    keepComposerFocus();
+    if (voiceBtn) voiceBtn.classList.add('paxdesign-is-pending');
+
+    if (!speechRecognitionSupported()) {
+      ensureMicrophonePermission().then(function () {
+        if (voiceBtn) voiceBtn.classList.remove('paxdesign-is-pending');
+        showError('Spracheingabe wird in diesem Browser nicht unterstützt.');
+      }).catch(function (err) {
+        if (voiceBtn) voiceBtn.classList.remove('paxdesign-is-pending');
+        showError(microphoneAccessErrorMessage(err));
+      });
+      return;
+    }
+
+    var needsFreshPermission = voiceMicPermission !== 'granted' || !voiceMicSessionReady || !hasLiveVoiceMicStream();
+    ensureMicrophonePermission().then(function (stream) {
+      beginSpeechRecognition({ stream: stream, permissionPrimed: !needsFreshPermission });
+    }).catch(function (err) {
+      if (voiceBtn) voiceBtn.classList.remove('paxdesign-is-pending');
+      showError(microphoneAccessErrorMessage(err));
+      maybeRestoreComposerFocus();
+    });
+  }
+
+  function toggleVoiceInput(e) {
+    if (e) {
+      e.preventDefault();
+      e.stopPropagation();
+    }
+    primeVoiceAudioContext();
+    if (voiceListening) stopVoiceInput();
+    else startVoiceInput();
+  }
+
+  function initVoiceInput() {
+    refreshVoiceInputMaxHeight();
+    initVoiceMicPermissionWatch();
+    window.addEventListener('resize', refreshVoiceInputMaxHeight);
+    voiceBtn = root.querySelector('.paxdesign-booking-chat-voice');
+    if (!voiceBtn) return;
+    voiceBtn.hidden = false;
+    var voicePointerHandled = false;
+    voiceBtn.addEventListener('pointerdown', function (e) {
+      if (e.pointerType === 'mouse' && e.button !== 0) return;
+      voicePointerHandled = true;
+      window.setTimeout(function () { voicePointerHandled = false; }, 450);
+      toggleVoiceInput(e);
+    });
+    voiceBtn.addEventListener('click', function (e) {
+      if (voicePointerHandled) {
+        e.preventDefault();
+        return;
+      }
+      toggleVoiceInput(e);
+    });
+  }
+
+  function openComposerAttachmentPicker(kind) {
+    closeComposerAttachMenu();
+    if (!isHumanMode()) {
+      showError(attachMenuLabel('humanOnly'));
+      maybeRestoreComposerFocus();
+      return;
+    }
+    if (!canUseChat()) {
+      showAuthGate();
+      maybeRestoreComposerFocus();
+      return;
+    }
+    composerWantsKeyboard = true;
+    ensureHumanAttachInputs();
+    var inputEl = document.getElementById(kind === 'image' ? 'paxdesignChatHumanImageAttach' : 'paxdesignChatHumanFileAttach');
+    window.setTimeout(function () {
+      triggerHiddenFileInput(inputEl);
+    }, 0);
+  }
+
+  function initComposerAttachments() {
+    if (root.dataset.composerAttachBound === '1') return;
+    root.dataset.composerAttachBound = '1';
+    ensureHumanAttachInputs();
+    var mediaBtn = root.querySelector('.paxdesign-booking-chat-media');
+    var fileBtn = root.querySelector('.paxdesign-booking-chat-file');
+    function bindPickerButton(btn, kind) {
+      if (!btn) return;
+      btn.hidden = false;
+      btn.addEventListener('pointerdown', function (e) {
+        if (e.pointerType === 'mouse' && e.button !== 0) return;
+        e.preventDefault();
+        e.stopPropagation();
+        openComposerAttachmentPicker(kind);
+      });
+    }
+    bindPickerButton(mediaBtn, 'image');
+    bindPickerButton(fileBtn, 'file');
   }
 
   function loadConsultationLogged(sessionId) {
@@ -3059,10 +3836,6 @@
     var closed = chatHandler === 'closed' && !isPersistentAccountChat();
     var showForm = !closed;
     input.disabled = closed;
-    if (sendBtn) {
-      sendBtn.classList.toggle('paxdesign-is-disabled', closed || (!input.value.trim() && !isStreaming));
-      sendBtn.setAttribute('aria-disabled', closed ? 'true' : sendBtn.getAttribute('aria-disabled'));
-    }
     if (closedBar) {
       closedBar.hidden = !closed;
     }
@@ -3070,6 +3843,7 @@
       form.hidden = !showForm;
     }
     updateEndButtonUi();
+    updateSendButton();
     if (closed) {
       input.placeholder = 'Chat geschlossen';
     } else if (isHumanMode()) {
@@ -3093,6 +3867,7 @@
     domMsgIds = {};
     domClientMsgIds = {};
     pollSeq = 0;
+    appliedMessageSeq = 0;
     oldestLoadedSeq = 0;
     hasOlderMessages = false;
     loadingOlderHistory = false;
@@ -3188,7 +3963,10 @@
       return false;
     }
     if (data.session_id && data.session_id !== getSessionId()) {
-      adoptSessionId(data.session_id, { fromServer: true, preserveUi: false });
+      adoptSessionId(data.session_id, {
+        fromServer: true,
+        preserveUi: widgetOpen && shouldPreserveHistoryDom(),
+      });
     }
     applyHandlerState(data.handler || 'ai', data.admin_name || '');
     syncSessionMetaFromPoll(data);
@@ -3228,10 +4006,18 @@
     if (data.reactions && typeof data.reactions === 'object') {
       applyReactionStates(data.reactions);
     }
+    if (data.sync && data.sync.resync_required && !loadingOlderHistory) {
+      fetchSessionFromServer(true, false).then(function () {
+        refreshAppliedSeq();
+        if (stickToBottom) scrollToBottom(true);
+      });
+    }
+    refreshAppliedSeq();
     if (typeof data.seq === 'number') {
-      pollSeq = Math.max(pollSeq, data.seq);
+      pollSeq = Math.max(pollSeq, appliedMessageSeq);
     }
     lastReadinessPollAt = Date.now();
+    maybeRestoreComposerFocus();
     return true;
   }
 
@@ -3253,7 +4039,7 @@
     formData.append('nonce', config.nonce);
     stampChatRequest(formData);
     formData.append('session_id', getSessionId());
-    formData.append('since', String(pollSeq));
+    formData.append('since', String(getIncrementalSince()));
 
     var request = fetch(config.ajaxUrl, { method: 'POST', body: formData, credentials: 'same-origin' })
       .then(function (res) {
@@ -3302,9 +4088,7 @@
   function pollUpdates() {
     if (!config.ajaxUrl) return;
     if (!canUseChat()) return;
-    if (pollInFlight) return;
-    if (sessionFetchInFlight) return;
-    pollUpdatesOnce(false).catch(function () {});
+    scheduleUnifiedSync('poll-timer');
   }
 
   function morphAdminTypingToMessage(msg) {
@@ -3529,8 +4313,8 @@
       if (!msg || !msg.id) return;
       msg = maskCustomerLinkScanMessage(msg);
       if (isMessagePermanentlyDeleted(msg.id)) return;
+      if (msg.role === 'user' && reconcileSyncedUserMessage(msg)) return;
       if (isDuplicateMessage(msg)) return;
-      if (msg.role === 'user') return;
       if (msg.role === 'assistant' && isStreaming) return;
       if (msg.role === 'assistant' && streamingMsgId && msg.id === streamingMsgId) return;
 
@@ -3563,18 +4347,27 @@
         renderMessageDom(msg.role, messageText(msg.content), msg.id, messageRenderOpts(msg, { skipScroll: true }));
       }
 
-      if (msg.role === 'assistant' || msg.role === 'admin') {
-        messages.push({ role: msg.role, content: messageText(msg.content), id: msg.id });
+      if (msg.role === 'user' || msg.role === 'assistant' || msg.role === 'admin') {
+        messages.push({
+          role: msg.role,
+          content: messageText(msg.content),
+          id: msg.id,
+          client_msg_id: msg.client_msg_id || ''
+        });
       } else if (msg.role === 'system') {
         messages.push({ role: 'system', content: messageText(msg.content), id: msg.id });
       }
     });
     if (played) syncChatLog();
+    refreshAppliedSeq();
     if (stickToBottom) scrollToBottom();
   }
 
   function seenMsgId(id) {
-    pollSeq = Math.max(pollSeq, id);
+    if (id > appliedMessageSeq) {
+      appliedMessageSeq = id;
+    }
+    pollSeq = Math.max(pollSeq, appliedMessageSeq);
   }
 
   function copyPlainText(text) {
@@ -4416,6 +5209,16 @@
 
   function attachMenuLabel(key) {
     var lang = attachUiLang();
+    if (key === 'liveChat') {
+      if (lang === 'ar') return 'دردشة مباشرة';
+      if (lang === 'en') return 'Live Chat';
+      return 'Live Chat';
+    }
+    if (key === 'bookAppointment') {
+      if (lang === 'ar') return 'حجز موعد';
+      if (lang === 'en') return 'Book appointment';
+      return 'Termin buchen';
+    }
     if (key === 'image') {
       if (lang === 'ar') return 'إرفاق صورة';
       if (lang === 'en') return 'Attach image';
@@ -4492,7 +5295,7 @@
     imageInput.type = 'file';
     imageInput.id = 'paxdesignChatHumanImageAttach';
     imageInput.className = 'paxdesign-chat-human-attach-input';
-    imageInput.accept = 'image/jpeg,image/png,image/webp,image/gif';
+    imageInput.accept = 'image/jpeg,image/png,image/webp,image/gif,image/*';
     imageInput.setAttribute('aria-hidden', 'true');
     imageInput.tabIndex = -1;
     var fileInput = document.createElement('input');
@@ -4508,11 +5311,13 @@
       var file = imageInput.files && imageInput.files[0];
       imageInput.value = '';
       if (file) uploadHumanAttachFile(file, 'image');
+      maybeRestoreComposerFocus();
     });
     fileInput.addEventListener('change', function () {
       var file = fileInput.files && fileInput.files[0];
       fileInput.value = '';
       if (file) uploadHumanAttachFile(file, 'file');
+      maybeRestoreComposerFocus();
     });
   }
 
@@ -4523,13 +5328,34 @@
     menu.hidden = true;
     menu.setAttribute('role', 'menu');
     menu.innerHTML =
-      '<button type="button" class="paxdesign-booking-chat-attach-item" data-attach-kind="image" role="menuitem">' +
+      '<button type="button" class="paxdesign-booking-chat-attach-item" data-widget-mode="chat" role="menuitem">' +
+        '<span class="paxdesign-booking-chat-attach-item-label">' + escapeHtml(attachMenuLabel('liveChat')) + '</span>' +
+      '</button>' +
+      '<button type="button" class="paxdesign-booking-chat-attach-item" data-widget-mode="booking" role="menuitem">' +
+        '<span class="paxdesign-booking-chat-attach-item-label">' + escapeHtml(attachMenuLabel('bookAppointment')) + '</span>' +
+      '</button>' +
+      '<button type="button" class="paxdesign-booking-chat-attach-item paxdesign-booking-chat-attach-item--file" data-attach-kind="image" role="menuitem" hidden>' +
         '<span class="paxdesign-booking-chat-attach-item-label">' + escapeHtml(attachMenuLabel('image')) + '</span>' +
       '</button>' +
-      '<button type="button" class="paxdesign-booking-chat-attach-item" data-attach-kind="file" role="menuitem">' +
+      '<button type="button" class="paxdesign-booking-chat-attach-item paxdesign-booking-chat-attach-item--file" data-attach-kind="file" role="menuitem" hidden>' +
         '<span class="paxdesign-booking-chat-attach-item-label">' + escapeHtml(attachMenuLabel('file')) + '</span>' +
       '</button>';
     menu.addEventListener('pointerdown', function (e) {
+      var modeBtn = e.target.closest('[data-widget-mode]');
+      if (modeBtn) {
+        e.preventDefault();
+        e.stopPropagation();
+        var mode = modeBtn.getAttribute('data-widget-mode') || 'chat';
+        closeComposerAttachMenu();
+        if (window.PAXdesignBooking && typeof window.PAXdesignBooking.switchMode === 'function') {
+          window.PAXdesignBooking.switchMode(mode);
+        }
+        if (mode === 'chat' && !canUseChat()) {
+          showAuthGate();
+        }
+        notifyLayout();
+        return;
+      }
       var btn = e.target.closest('[data-attach-kind]');
       if (!btn) return;
       e.preventDefault();
@@ -4540,13 +5366,25 @@
         showError(attachMenuLabel('humanOnly'));
         return;
       }
+      if (!canUseChat()) {
+        showAuthGate();
+        return;
+      }
       var inputEl = document.getElementById(kind === 'image' ? 'paxdesignChatHumanImageAttach' : 'paxdesignChatHumanFileAttach');
       window.setTimeout(function () {
         triggerHiddenFileInput(inputEl);
       }, 0);
     });
-    var host = root.querySelector('.paxdesign-booking-chat-input-area') || root;
+    var host = root.querySelector('.paxdesign-booking-frame-inner') || root.querySelector('.paxdesign-booking-chat-input-area') || root;
     host.appendChild(menu);
+  }
+
+  function syncPlusButtons(open) {
+    var nodes = root.querySelectorAll('.paxdesign-booking-chat-plus');
+    for (var i = 0; i < nodes.length; i++) {
+      nodes[i].setAttribute('aria-expanded', open ? 'true' : 'false');
+      nodes[i].classList.toggle('paxdesign-is-active', !!open);
+    }
   }
 
   function toggleComposerAttachMenu(forceOpen) {
@@ -4555,10 +5393,8 @@
     var shouldOpen = forceOpen === true ? true : (forceOpen === false ? false : menu.hidden);
     menu.hidden = !shouldOpen;
     root.classList.toggle('paxdesign-chat-attach-open', shouldOpen);
-    if (plusBtn) {
-      plusBtn.setAttribute('aria-expanded', shouldOpen ? 'true' : 'false');
-      plusBtn.classList.toggle('paxdesign-is-active', shouldOpen);
-    }
+    syncPlusButtons(shouldOpen);
+    if (shouldOpen) maybeRestoreComposerFocus();
     if (shouldOpen && quickActions) {
       root.classList.remove('paxdesign-chat-quick-open');
       quickActions.classList.remove('paxdesign-is-open');
@@ -4570,25 +5406,58 @@
     if (!menu) return;
     menu.hidden = true;
     root.classList.remove('paxdesign-chat-attach-open');
-    if (plusBtn) {
-      plusBtn.setAttribute('aria-expanded', 'false');
-      plusBtn.classList.remove('paxdesign-is-active');
-    }
+    syncPlusButtons(false);
+    maybeRestoreComposerFocus();
   }
 
   function updateComposerPlusUi() {
-    if (!plusBtn) return;
-    var plusWrap = root.querySelector('.paxdesign-booking-chat-plus-wrap');
-    if (plusWrap) plusWrap.hidden = false;
+    var plusWraps = root.querySelectorAll('.paxdesign-booking-chat-plus-wrap, .paxdesign-booking-mode-plus-bar');
+    for (var w = 0; w < plusWraps.length; w++) plusWraps[w].hidden = false;
     var humanConnected = chatHandler === 'admin';
     var humanQueue = isHumanMode();
-    plusBtn.classList.toggle('paxdesign-booking-chat-plus--human', humanQueue);
-    plusBtn.classList.toggle('paxdesign-booking-chat-plus--connected', humanConnected);
-    var label = humanQueue ? attachMenuLabel('attach') : 'Schnellaktionen';
-    plusBtn.setAttribute('aria-label', label);
-    var tip = plusBtn.querySelector('.paxdesign-booking-chat-plus-tooltip');
-    if (tip) tip.textContent = label;
-    if (!humanQueue) closeComposerAttachMenu();
+    var nodes = root.querySelectorAll('.paxdesign-booking-chat-plus');
+    var label = 'Menü';
+    for (var i = 0; i < nodes.length; i++) {
+      nodes[i].classList.toggle('paxdesign-booking-chat-plus--human', humanQueue);
+      nodes[i].classList.toggle('paxdesign-booking-chat-plus--connected', humanConnected);
+      nodes[i].setAttribute('aria-label', label);
+      var tip = nodes[i].querySelector('.paxdesign-booking-chat-plus-tooltip');
+      if (tip) tip.textContent = label;
+    }
+    var menu = root.querySelector('.paxdesign-booking-chat-attach-menu');
+    if (!menu) return;
+    var attachItems = menu.querySelectorAll('[data-attach-kind]');
+    for (var a = 0; a < attachItems.length; a++) {
+      attachItems[a].hidden = !humanQueue;
+    }
+    var extras = menu.querySelectorAll('[data-quick-message]');
+    for (var x = 0; x < extras.length; x++) {
+      if (extras[x].parentNode) extras[x].parentNode.removeChild(extras[x]);
+    }
+    if (!humanQueue && config.quickActions && config.quickActions.length) {
+      config.quickActions.forEach(function (action) {
+        var extra = document.createElement('button');
+        extra.type = 'button';
+        extra.className = 'paxdesign-booking-chat-attach-item';
+        extra.setAttribute('role', 'menuitem');
+        extra.setAttribute('data-quick-message', action.message || '');
+        if (action.intent) extra.setAttribute('data-quick-intent', action.intent);
+        extra.innerHTML = '<span class="paxdesign-booking-chat-attach-item-label">' + escapeHtml(action.label || '') + '</span>';
+        extra.addEventListener('pointerdown', function (ev) {
+          ev.preventDefault();
+          ev.stopPropagation();
+          closeComposerAttachMenu();
+          if (!canUseChat()) {
+            showAuthGate();
+            return;
+          }
+          sendMessage(extra.getAttribute('data-quick-message') || '', {
+            intent: extra.getAttribute('data-quick-intent') || ''
+          });
+        });
+        menu.appendChild(extra);
+      });
+    }
   }
 
   function validateAttachFile(file, kind) {
@@ -4702,42 +5571,27 @@
   }
 
   function initPlusToggle() {
-    if (!plusBtn || plusBtn.dataset.composerPlusBound === '1') return;
-    plusBtn.dataset.composerPlusBound = '1';
+    if (root.dataset.composerPlusBound === '1') return;
+    root.dataset.composerPlusBound = '1';
     var plusWrap = root.querySelector('.paxdesign-booking-chat-plus-wrap');
     if (plusWrap) plusWrap.hidden = false;
     ensureHumanAttachInputs();
     ensureComposerAttachMenu();
 
-    plusBtn.addEventListener('click', function (e) {
+    root.addEventListener('click', function (e) {
+      var btn = e.target.closest('.paxdesign-booking-chat-plus');
+      if (!btn || !root.contains(btn)) return;
       e.preventDefault();
       e.stopPropagation();
       unlockAudio();
-      if (!canUseChat()) {
-        showAuthGate();
-        return;
-      }
-      if (isHumanMode()) {
-        toggleComposerAttachMenu();
-        return;
-      }
-      if (quickActions && config.quickActions && config.quickActions.length) {
-        closeComposerAttachMenu();
-        var open = root.classList.toggle('paxdesign-chat-quick-open');
-        quickActions.classList.toggle('paxdesign-is-open', open);
-        plusBtn.setAttribute('aria-expanded', open ? 'true' : 'false');
-        plusBtn.classList.toggle('paxdesign-is-active', open);
-        notifyLayout();
-        return;
-      }
-      showError(attachMenuLabel('humanOnly'));
+      toggleComposerAttachMenu();
     });
 
     document.addEventListener('pointerdown', function (e) {
       if (!root.classList.contains('paxdesign-chat-attach-open')) return;
       var menu = root.querySelector('.paxdesign-booking-chat-attach-menu');
       if (!menu || menu.hidden) return;
-      if (menu.contains(e.target) || plusBtn.contains(e.target)) return;
+      if (menu.contains(e.target) || (e.target.closest && e.target.closest('.paxdesign-booking-chat-plus'))) return;
       closeComposerAttachMenu();
     }, true);
 
@@ -4746,9 +5600,7 @@
 
   function notifyLayout() {
     if (window.PAXdesignBookingMobile && typeof window.PAXdesignBookingMobile.adjustLayout === 'function') {
-      var active = document.activeElement;
-      var keyboardLikely = active && active.classList && active.classList.contains('paxdesign-booking-chat-input');
-      window.PAXdesignBookingMobile.adjustLayout(keyboardLikely);
+      window.PAXdesignBookingMobile.adjustLayout();
     }
   }
 
@@ -4806,12 +5658,15 @@
     sendBtn.classList.toggle('paxdesign-is-disabled', inactive);
     sendBtn.setAttribute('aria-disabled', inactive ? 'true' : 'false');
     var composer = root.querySelector('.paxdesign-booking-chat-composer');
+    var composerRow = root.querySelector('.paxdesign-booking-chat-composer-row');
     if (composer) composer.classList.toggle('paxdesign-has-text', hasText);
+    if (composerRow) composerRow.classList.toggle('paxdesign-has-text', hasText);
   }
 
   function autoResizeInput() {
+    refreshVoiceInputMaxHeight();
     input.style.height = 'auto';
-    input.style.height = Math.min(input.scrollHeight, 56) + 'px';
+    input.style.height = Math.min(input.scrollHeight, voiceInputMaxHeight) + 'px';
   }
 
   function scrollToBottom(force) {
@@ -5024,6 +5879,7 @@
     stickToBottom = true;
     renderMessageDom('user', text, userId, renderOpts);
     messages.push({ role: 'user', content: text, id: userId, client_msg_id: clientMsgId });
+    rememberMessageIdentity({ id: userId, role: 'user', content: text, client_msg_id: clientMsgId });
     if (!opts.skipSync) {
       lastUserSyncPromise = syncChatLog();
     }
@@ -5165,6 +6021,7 @@
     }
     syncChatLog();
     saveSessionSnapshot();
+    maybeRestoreComposerFocus();
   }
 
   function sendHumanModeMessage(text, clientMsgId) {
@@ -5287,6 +6144,7 @@
 
     clearUserTypingState();
     unlockAudio();
+    stopVoiceInput();
     var userBookingIntent = opts.intent === 'booking' || isUserBookingIntent(text);
 
     if (opts.intent === 'live') {
@@ -5297,6 +6155,8 @@
     input.value = '';
     autoResizeInput();
     updateSendButton();
+    composerWantsKeyboard = true;
+    keepComposerFocus();
 
     if (handleLiveAgentFlow(text)) return;
 
@@ -5327,14 +6187,17 @@
         .finally(function () {
           isStreaming = false;
           updateSendButton();
+          keepComposerFocus();
         });
       return;
     }
 
-    appendUserMessage(text);
+    var aiClientMsgId = newClientMessageId();
+    appendUserMessage(text, { clientMsgId: aiClientMsgId });
     lastUserSyncPromise.then(function () {
       isStreaming = true;
       updateSendButton();
+      keepComposerFocus();
       showTyping();
       var assistantClientMsgId = newClientMessageId();
 
@@ -5343,6 +6206,7 @@
       formData.append('nonce', config.nonce);
       stampChatRequest(formData);
       formData.append('session_id', getSessionId());
+      formData.append('client_msg_id', aiClientMsgId);
       formData.append('assistant_client_msg_id', assistantClientMsgId);
       formData.append('messages', JSON.stringify(messages.filter(function (m) {
         return m.role === 'user' || m.role === 'assistant';
@@ -5500,6 +6364,7 @@
               isStreaming = false;
               pendingMessageEl = null;
               updateSendButton();
+              maybeRestoreComposerFocus();
               return;
             }
             buffer += decoder.decode(result.value, { stream: true });
@@ -5520,14 +6385,27 @@
         streamingMsgId = 0;
         pendingMessageEl = null;
         updateSendButton();
+        maybeRestoreComposerFocus();
       });
     });
   }
 
   function handleSend(e) {
-    if (e) e.preventDefault();
+    if (e) {
+      e.preventDefault();
+      e.stopPropagation();
+    }
+    if (sendInFlight || isStreaming) return;
     if (sendBtn && sendBtn.classList.contains('paxdesign-is-disabled')) return;
-    sendMessage();
+    if (!input || !input.value.trim()) return;
+    sendInFlight = true;
+    try {
+      sendMessage();
+    } finally {
+      window.setTimeout(function () {
+        sendInFlight = false;
+      }, 350);
+    }
   }
 
   if (replyClearBtn) {
@@ -5538,7 +6416,12 @@
   }
 
   form.addEventListener('submit', handleSend);
-  if (sendBtn) sendBtn.addEventListener('click', handleSend);
+  if (sendBtn) {
+    sendBtn.addEventListener('pointerdown', function (e) {
+      if (e.pointerType === 'mouse' && e.button !== 0) return;
+      handleSend(e);
+    });
+  }
   if (newSessionBtn) {
     newSessionBtn.addEventListener('click', function (e) {
       e.preventDefault();
@@ -5555,6 +6438,7 @@
     scheduleUserTypingPing();
   });
   input.addEventListener('focus', function () {
+    composerWantsKeyboard = true;
     notifyLayout();
   });
   input.addEventListener('blur', function () {
@@ -5594,6 +6478,7 @@
     onOpen: onWidgetOpen,
     onClose: onWidgetClose,
     abort: abortStream,
+    pinToLatestMessage: pinToLatestMessage,
     sendMessage: sendMessage,
     canUseChat: canUseChat,
     beginReadiness: beginChatReadiness,
