@@ -2,12 +2,13 @@
 
 ## Production baseline
 
-The live WordPress site `https://paxdesign.at` is the official production baseline.
+GitHub `main` and the live WordPress site `https://paxdesign.at` are the same official production baseline.
 
 - Plugin version: **3.174.91**
+- Branch all WordPress plugin work from current `main`
 - Git tree: `paxdesign-booking/` matches the restored 2026-08-08 site plus `deploy-patches/restored-chat-human-ui/`
-- Future WordPress plugin changes must be built on this tree
 - Do not merge or re-deploy GitHub `3.176.x` chat / CCS AI rewrite code
+- Do not use closed chat PRs (#262, #269, #270, #271) or older `cursor/*` chat branches as a base
 
 ## Cursor Cloud specific instructions
 

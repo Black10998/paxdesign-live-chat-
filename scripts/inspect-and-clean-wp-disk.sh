@@ -72,7 +72,9 @@ emergency_free_disk() {
   done
 }
 
-emergency_free_disk
+if [[ "$MODE" != "inspect" ]]; then
+  emergency_free_disk
+fi
 : >"$REPORT" 2>/dev/null || REPORT="/tmp/pax-disk-audit-${STAMP}.log"
 
 wp_cmd() {

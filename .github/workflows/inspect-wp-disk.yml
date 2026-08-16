@@ -4,19 +4,13 @@ on:
   workflow_dispatch:
     inputs:
       mode:
-        description: "inspect (read-only) or full (backup + cleanup + optimize)"
+        description: "inspect (read-only). full is blocked to protect the live 3.174.91 baseline."
         required: false
-        default: full
+        default: inspect
         type: choice
         options:
           - inspect
-          - full
-  push:
-    branches: [main]
-    paths:
-      - '.github/workflows/inspect-wp-disk.yml'
-      - 'scripts/inspect-and-clean-wp-disk.sh'
-      - '.github/triggers/inspect-wp-disk'
+  # push auto-run disabled — a previous merge triggered MODE=full cleanup on production.
 
 permissions:
   contents: read
@@ -48,7 +42,7 @@ jobs:
           WP_SSH_USER: ${{ secrets.WP_SSH_USER }}
           WP_SSH_PRIVATE_KEY: ${{ secrets.WP_SSH_PRIVATE_KEY }}
           WP_PATH: ${{ secrets.WP_PATH }}
-          MODE: ${{ github.event.inputs.mode || 'full' }}
+          MODE: inspect
         run: |
           set -euo pipefail
           chmod +x scripts/inspect-and-clean-wp-disk.sh
@@ -87,7 +81,7 @@ jobs:
           grep -E '^=== |PASS:|WARN:|Removed |Truncated |total_mb|key_group|meta_key|OPTIMIZE|debug' remote-disk-audit.log 2>/dev/null | head -120 || true
 
       - name: Retrigger WordPress deploy after cleanup
-        if: github.event.inputs.mode != 'inspect'
+        if: false
         continue-on-error: true
         env:
           WP_SSH_HOST: ${{ secrets.WP_SSH_HOST }}
