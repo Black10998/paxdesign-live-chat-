@@ -433,20 +433,25 @@ $team_members = PAXdesign_Booking::get_instance()->get_team_members();
               </div>
             </div>
             <form class="paxdesign-booking-chat-form" autocomplete="off">
-              <div class="paxdesign-booking-chat-composer">
-                <div class="paxdesign-booking-chat-plus-wrap">
-                  <button type="button" class="paxdesign-booking-chat-plus" aria-label="Schnellaktionen" aria-expanded="false">
-                    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><circle cx="12" cy="12" r="10"/><path d="M12 8v8M8 12h8"/></svg>
-                    <span class="paxdesign-booking-chat-plus-tooltip">Schnellaktionen</span>
+              <div class="paxdesign-booking-chat-composer-row">
+                <div class="paxdesign-booking-chat-composer">
+                  <div class="paxdesign-booking-chat-plus-wrap">
+                    <button type="button" class="paxdesign-booking-chat-plus" aria-label="Schnellaktionen" aria-expanded="false">
+                      <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><circle cx="12" cy="12" r="10"/><path d="M12 8v8M8 12h8"/></svg>
+                      <span class="paxdesign-booking-chat-plus-tooltip">Schnellaktionen</span>
+                    </button>
+                  </div>
+                  <textarea
+                    class="paxdesign-booking-chat-input"
+                    placeholder="Message..."
+                    rows="1"
+                    maxlength="2000"
+                    aria-label="Nachricht eingeben"
+                  ></textarea>
+                  <button type="button" class="paxdesign-booking-chat-voice" aria-label="Spracheingabe" aria-pressed="false" title="Spracheingabe">
+                    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 2a3 3 0 0 0-3 3v7a3 3 0 0 0 6 0V5a3 3 0 0 0-3-3Z"/><path d="M19 10v2a7 7 0 0 1-14 0v-2"/><line x1="12" x2="12" y1="19" y2="22"/></svg>
                   </button>
                 </div>
-                <textarea
-                  class="paxdesign-booking-chat-input"
-                  placeholder="Message..."
-                  rows="1"
-                  maxlength="2000"
-                  aria-label="Nachricht eingeben"
-                ></textarea>
                 <button type="button" class="paxdesign-booking-chat-send paxdesign-is-disabled" aria-label="Senden" aria-disabled="true">
                   <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M22 2L11 13"/><path d="M22 2L15 22L11 13L2 9L22 2Z"/></svg>
                 </button>

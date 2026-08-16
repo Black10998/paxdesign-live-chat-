@@ -29,9 +29,9 @@ curl -fsSL "${SITE}/wp-content/plugins/paxdesign-booking/assets/js/cybercrime-ad
 curl -fsSL "${SITE}/wp-content/plugins/paxdesign-booking/paxdesign-booking.php?v=${STAMP}" \
   -o "${tmpdir}/paxdesign-booking.php" || true
 
-grep -q "Version: 3.174.108" "${tmpdir}/chat-script.js" \
-  && ok "chat-script.js cache-bust version 3.174.108" \
-  || fail "chat-script.js is not the patched 3.174.108 file"
+grep -q "Version: 3.174.109" "${tmpdir}/chat-script.js" \
+  && ok "chat-script.js cache-bust version 3.174.109" \
+  || fail "chat-script.js is not the patched 3.174.109 file"
 
 grep -q "var appliedMessageSeq" "${tmpdir}/chat-script.js" \
   && grep -q "function getIncrementalSince" "${tmpdir}/chat-script.js" \
@@ -40,13 +40,27 @@ grep -q "var appliedMessageSeq" "${tmpdir}/chat-script.js" \
   && ok "website unified sync merge cursors present" \
   || fail "unified sync client markers missing from chat-script.js"
 
+grep -q "paxdesign-booking-chat-voice" "${tmpdir}/chat-script.js" \
+  && grep -q "function initVoiceInput" "${tmpdir}/chat-script.js" \
+  && ok "composer voice input present" \
+  || fail "voice input missing from chat-script.js"
+
+grep -q "paxdesign-booking-chat-composer-row" "${tmpdir}/booking-styles.css" \
+  && ok "separate send button composer row present" \
+  || fail "composer row layout missing from booking-styles.css"
+
 grep -q "function keepComposerFocus" "${tmpdir}/chat-script.js" \
   && ok "composer focus retention present" \
   || fail "keepComposerFocus missing from chat-script.js"
 
-grep -q "function reconcileSyncedUserMessage" "${tmpdir}/chat-script.js" \
-  && ok "user message dedup reconciliation present" \
-  || fail "reconcileSyncedUserMessage missing from chat-script.js"
+grep -q "function scheduleUnifiedSync" "${tmpdir}/chat-script.js" \
+  && ok "website unified sync coordinator present" \
+  || fail "scheduleUnifiedSync missing"
+
+grep -q "openWidget();" "${tmpdir}/booking-script.js" \
+  && grep -q "ensureChatReady(runChatInit)" "${tmpdir}/booking-script.js" \
+  && ok "non-blocking widget open before chat init" \
+  || fail "instant open path missing from booking-script.js"
 
 grep -q "function getSiteHeaderBottom" "${tmpdir}/booking-script.js" \
   && ok "mobile keyboard header clamp present" \
