@@ -71,6 +71,10 @@ grep -q "syncGesture: true" "${tmpdir}/chat-script.js" \
   && ok "speech recognition starts synchronously in user gesture" \
   || fail "syncGesture mic flow missing"
 
+grep -q "shouldUseSpeechFirstDesktopFlow" "${tmpdir}/chat-script.js" \
+  && ok "desktop speech-first mic flow present" \
+  || fail "desktop speech-first mic flow missing"
+
 if grep -q "shouldUseDesktopSpeechFlow" "${tmpdir}/chat-script.js"; then
   fail "live chat still uses obsolete Windows mic release workaround"
 else

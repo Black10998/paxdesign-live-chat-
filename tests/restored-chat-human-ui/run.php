@@ -71,6 +71,8 @@ assert_true(strpos($js, 'startVoiceWaveformFromHeldStream') !== false, 'JS uses 
 assert_true(strpos($js, 'startVoiceWaveformForListening') === false, 'JS does not re-acquire mic while SpeechRecognition runs');
 assert_true(strpos($js, 'releaseChatShellLoader') !== false, 'JS releases shell loader when chat UI is ready');
 assert_true(strpos($js, 'syncGesture: true') !== false, 'JS starts speech recognition synchronously in user gesture');
+assert_true(strpos($js, 'shouldUseSpeechFirstDesktopFlow') !== false, 'JS uses desktop speech-first mic flow');
+assert_true(strpos($js, 'speechFirstDesktop') !== false, 'JS avoids getUserMedia lock on desktop speech recognition');
 assert_true(strpos($js, 'shouldUseDesktopSpeechFlow') === false, 'JS does not use Windows-only mic release workaround');
 assert_true(strpos($chat, "self::asset_version('assets/js/chat-script.js')") !== false, 'chat script enqueue uses filemtime-aware version');
 assert_true(strpos($widgetPerf, "self::asset_version('assets/js/chat-script.js')") !== false, 'widget loader chatSrc uses filemtime-aware version');
