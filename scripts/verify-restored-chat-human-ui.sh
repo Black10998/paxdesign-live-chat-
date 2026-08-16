@@ -22,6 +22,8 @@ curl -fsSL "${SITE}/wp-content/plugins/paxdesign-booking/assets/js/chat-script.j
   -o "${tmpdir}/chat-script.js"
 curl -fsSL "${SITE}/wp-content/plugins/paxdesign-booking/assets/js/booking-script.js?v=${STAMP}" \
   -o "${tmpdir}/booking-script.js"
+curl -fsSL "${SITE}/wp-content/plugins/paxdesign-booking/assets/js/widget-loader.js?v=${STAMP}" \
+  -o "${tmpdir}/widget-loader.js"
 curl -fsSL "${SITE}/wp-content/plugins/paxdesign-booking/assets/css/booking-styles.css?v=${STAMP}" \
   -o "${tmpdir}/booking-styles.css"
 curl -fsSL "${SITE}/wp-content/plugins/paxdesign-booking/assets/js/cybercrime-admin.js?v=${STAMP}" \
@@ -55,6 +57,11 @@ grep -q "function showLauncherLoading" "${tmpdir}/booking-script.js" \
   && grep -q "paxdesign-chat-open-loader" "${tmpdir}/booking-styles.css" \
   && ok "instant launcher and viewport open loading indicator present" \
   || fail "launcher / open loading indicator missing"
+
+grep -q "pointerdown" "${tmpdir}/widget-loader.js" \
+  && grep -q "mousedown" "${tmpdir}/widget-loader.js" \
+  && ok "desktop pointerdown chat preload present" \
+  || fail "widget-loader.js missing desktop preload handlers"
 
 grep -q "function initComposerAttachments" "${tmpdir}/chat-script.js" \
   && grep -q "paxdesign-booking-chat-media" "${tmpdir}/chat-script.js" \
