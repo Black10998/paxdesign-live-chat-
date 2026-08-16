@@ -596,12 +596,71 @@
     if (resubmitSubmitEl) {
       resubmitSubmitEl.hidden = !waiting;
     }
+    if (activeReplyWrap) {
+      activeReplyWrap.classList.toggle('pax-ccs-portal__reply-wrap--evidence-needed', waiting);
+    }
     if (!waiting) {
       clearResubmitInputs();
       if (evidenceSuccessEl) {
         evidenceSuccessEl.hidden = true;
       }
     }
+  }
+
+  function scrollToEvidenceUpload() {
+    if (activeReport) {
+      updateEvidenceUi(activeReport);
+    }
+    if (activeReplyWrap) {
+      activeReplyWrap.classList.add('pax-ccs-portal__reply-wrap--evidence-focus');
+      try {
+        activeReplyWrap.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+      } catch (e) {
+        activeReplyWrap.scrollIntoView();
+      }
+    }
+    window.setTimeout(function () {
+      if (resubmitEvidenceEl) {
+        try {
+          resubmitEvidenceEl.focus({ preventScroll: true });
+        } catch (err) {
+          resubmitEvidenceEl.focus();
+        }
+      }
+      if (activeReplyWrap) {
+        activeReplyWrap.classList.remove('pax-ccs-portal__reply-wrap--evidence-focus');
+      }
+    }, 1600);
+  }
+
+  function timelineEvidenceInlineHtml(entry) {
+    if (!entry || !entry.request_evidence || !isReportActive(activeReport) || !needsEvidenceUpload(activeReport)) {
+      return '';
+    }
+    var title = activeReportText('evidence_request_inline', 'Upload Evidence / رفع الأدلة');
+    var hint = activeReportText('evidence_request_hint', 'Please upload the requested files using the section below.');
+    var action = activeReportText('evidence_request_action', 'Upload files now');
+    return '<div class="pax-ccs-portal__evidence-request">'
+      + '<p class="pax-ccs-portal__evidence-request-kicker">📎 ' + escapeHtml(title) + '</p>'
+      + '<p class="pax-ccs-portal__evidence-request-hint">' + escapeHtml(hint) + '</p>'
+      + '<button type="button" class="pax-ccs-portal__btn pax-ccs-portal__btn--primary pax-ccs-portal__btn--compact" data-ccs-upload-evidence>'
+      + escapeHtml(action) + '</button></div>';
+  }
+
+  function bindTimelineEvidenceActions() {
+    if (!activeTimelineEl) {
+      return;
+    }
+    activeTimelineEl.querySelectorAll('[data-ccs-upload-evidence]').forEach(function (btn) {
+      if (btn.getAttribute('data-bound') === '1') {
+        return;
+      }
+      btn.setAttribute('data-bound', '1');
+      btn.addEventListener('click', function (event) {
+        event.preventDefault();
+        scrollToEvidenceUpload();
+      });
+    });
   }
 
   function applyReportLifecycle(report) {
@@ -1286,12 +1345,14 @@
         + '<div class="pax-ccs-portal__accordion-panel" id="' + escapeHtml(panelId) + '" role="region" aria-labelledby="' + escapeHtml(triggerId) + '">'
         + '<div class="pax-ccs-portal__accordion-panel-inner">'
         + '<div class="pax-ccs-portal__accordion-message">' + body + '</div>'
+        + timelineEvidenceInlineHtml(entry)
         + '</div>'
         + '</div>'
         + '</article>';
     }).join('');
 
     bindTimelineAccordion();
+    bindTimelineEvidenceActions();
   }
 
   function renderAttachments(files) {

@@ -2395,3 +2395,36 @@ html body.page-cybercrime-support .pax-ccs-portal__accordion-item.is-open .pax-c
   font-size: 14px;
   font-weight: 500;
 }
+
+.pax-ccs-portal__evidence-request {
+  margin-top: 14px;
+  padding: 14px;
+  border: 1px solid rgba(0, 113, 227, 0.28);
+  border-radius: 12px;
+  background: linear-gradient(180deg, rgba(0, 113, 227, 0.07), rgba(0, 113, 227, 0.03));
+}
+
+.pax-ccs-portal__evidence-request-kicker {
+  margin: 0 0 6px;
+  font-size: 15px;
+  font-weight: 600;
+  color: #0071e3;
+}
+
+.pax-ccs-portal__evidence-request-hint {
+  margin: 0 0 12px;
+  font-size: 13px;
+  line-height: 1.45;
+  color: var(--ccs-muted, #6e6e73);
+}
+
+.pax-ccs-portal__reply-wrap--evidence-needed {
+  border: 1px solid rgba(0, 113, 227, 0.22);
+  border-radius: 14px;
+  padding: 14px;
+  background: rgba(0, 113, 227, 0.03);
+}
+
+.pax-ccs-portal__reply-wrap--evidence-focus {
+  box-shadow: 0 0 0 3px rgba(0, 113, 227, 0.18);
+}

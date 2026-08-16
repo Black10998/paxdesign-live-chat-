@@ -160,10 +160,13 @@ grep -q "renderAttachments" "${tmpdir}/cybercrime-admin.js" \
 
 curl -fsSL "${SITE}/wp-content/themes/navein/assets/js/apple-cybercrime-support.js?v=${STAMP}" \
   -o "${tmpdir}/apple-cybercrime-support.js" || true
-grep -q "updateEvidenceUi" "${tmpdir}/apple-cybercrime-support.js" \
-  && grep -q "paxdesign_cybercrime_customer_resubmit" "${tmpdir}/apple-cybercrime-support.js" \
-  && ok "portal JS includes Upload Evidence resubmit flow" \
-  || fail "portal evidence upload flow missing from live apple-cybercrime-support.js"
+grep -q "pax-cc-request-evidence-submit" "${tmpdir}/cybercrime-admin.js" \
+  && ok "admin JS includes Request Evidence button" \
+  || fail "Request Evidence control missing from live cybercrime-admin.js"
+
+grep -q "timelineEvidenceInlineHtml" "${tmpdir}/apple-cybercrime-support.js" \
+  && ok "portal JS includes inline evidence request CTA" \
+  || fail "inline evidence request CTA missing from live portal JS"
 
 curl -fsSL "${SITE}/cybercrime-support/?n=${STAMP}" -o "${tmpdir}/ccs-page.html" || true
 grep -q "pax-ccs-resubmit-preview" "${tmpdir}/ccs-page.html" \
