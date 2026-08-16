@@ -825,7 +825,20 @@
     cancelChatReadiness();
     var generation = readinessGeneration;
     var attempt = typeof options.attempt === 'number' ? options.attempt : 0;
-    showReadinessOverlay();
+    // Fast path: when a session is already restored the conversation is already
+    // rendered locally, so open the chat instantly and run the session/history/
+    // poll sync in the background instead of blocking behind the readiness
+    // overlay. Every CCS/messaging sync still runs — it just no longer freezes
+    // the UI on open. The blocking overlay is reserved for a genuine cold start
+    // (no session yet) or when a refresh is explicitly forced.
+    var openInstant = !options.force && !!options.reuseSession && !!getSessionId() && sessionRestored;
+    if (openInstant) {
+      hideReadinessOverlay();
+      updateEntryUi();
+      updateInputState();
+    } else {
+      showReadinessOverlay();
+    }
     readinessPromise = runChatReadinessChecks(options)
       .then(function () {
         if (generation !== readinessGeneration) return false;
@@ -836,13 +849,23 @@
       .catch(function (err) {
         if (err && err.silent) return false;
         if (generation !== readinessGeneration) return false;
-        showReadinessError(readinessErrorMessage(err));
         readinessPromise = null;
+        // In instant mode the chat is already usable, so keep a background sync
+        // failure quiet (retry silently) rather than covering a working chat
+        // with a blocking error overlay.
+        if (!openInstant) {
+          showReadinessError(readinessErrorMessage(err));
+        }
         if (attempt < READINESS_AUTO_RETRY_MAX && shouldAutoRetryReadiness(err)) {
           scheduleReadinessAutoRetry(attempt + 1);
         }
         return false;
       });
+    if (openInstant) {
+      // Resolve now so the UI is interactive immediately; the readiness chain
+      // above keeps syncing in the background and finalizes when it completes.
+      return Promise.resolve(true);
+    }
     return readinessPromise;
   }
 
