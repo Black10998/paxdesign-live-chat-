@@ -29,9 +29,20 @@ curl -fsSL "${SITE}/wp-content/plugins/paxdesign-booking/assets/js/cybercrime-ad
 curl -fsSL "${SITE}/wp-content/plugins/paxdesign-booking/paxdesign-booking.php?v=${STAMP}" \
   -o "${tmpdir}/paxdesign-booking.php" || true
 
-grep -q "Version: 3.174.105" "${tmpdir}/chat-script.js" \
-  && ok "chat-script.js cache-bust version 3.174.105" \
-  || fail "chat-script.js is not the patched 3.174.105 file"
+grep -q "Version: 3.174.106" "${tmpdir}/chat-script.js" \
+  && ok "chat-script.js cache-bust version 3.174.106" \
+  || fail "chat-script.js is not the patched 3.174.106 file"
+
+curl -fsSL "${SITE}/wp-content/plugins/paxdesign-booking/includes/class-paxdesign-conversation-sync.php?v=${STAMP}" \
+  -o "${tmpdir}/conversation-sync.php" || true
+
+grep -q "class PAXdesign_Conversation_Sync" "${tmpdir}/conversation-sync.php" \
+  && ok "unified conversation sync class deployed" \
+  || fail "PAXdesign_Conversation_Sync missing from production"
+
+grep -q "function scheduleUnifiedSync" "${tmpdir}/chat-script.js" \
+  && ok "website unified sync coordinator present" \
+  || fail "scheduleUnifiedSync missing"
 
 grep -q "function getSiteHeaderBottom" "${tmpdir}/booking-script.js" \
   && ok "mobile keyboard header clamp present" \

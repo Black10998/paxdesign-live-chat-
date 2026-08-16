@@ -53,6 +53,15 @@ jobs:
           SRC="deploy-patches/restored-chat-human-ui"
           REMOTE="${WP_SSH_USER}@${WP_SSH_HOST}"
           rsync -az -e "ssh ${SSH_OPTS[*]}" \
+            "$SRC/includes/class-paxdesign-conversation-sync.php" \
+            "${REMOTE}:${TARGET}/includes/class-paxdesign-conversation-sync.php"
+          rsync -az -e "ssh ${SSH_OPTS[*]}" \
+            "$SRC/includes/customer/class-paxdesign-customer-rest.php" \
+            "${REMOTE}:${TARGET}/includes/customer/class-paxdesign-customer-rest.php"
+          rsync -az -e "ssh ${SSH_OPTS[*]}" \
+            "$SRC/includes/customer/class-paxdesign-customer-chat-bridge.php" \
+            "${REMOTE}:${TARGET}/includes/customer/class-paxdesign-customer-chat-bridge.php"
+          rsync -az -e "ssh ${SSH_OPTS[*]}" \
             "$SRC/paxdesign-booking.php" \
             "${REMOTE}:${TARGET}/paxdesign-booking.php"
           rsync -az -e "ssh ${SSH_OPTS[*]}" \

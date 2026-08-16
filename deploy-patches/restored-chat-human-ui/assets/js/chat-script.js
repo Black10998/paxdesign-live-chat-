@@ -1,6 +1,6 @@
 /**
  * PAXdesign AI Chat — Sales & Booking Assistant
- * Version: 3.174.105
+ * Version: 3.174.106
  */
 (function () {
   'use strict';
@@ -60,6 +60,10 @@
   var adminName          = '';
   var assignedAgent      = null;
   var pollSeq            = 0;
+  var appliedMessageSeq  = 0;
+  var unifiedSyncInFlight = null;
+  var unifiedSyncQueued  = false;
+  var unifiedSyncTimer   = 0;
   var pollTimer          = null;
   var HISTORY_INITIAL    = 10;
   var HISTORY_BATCH      = 10;
@@ -290,8 +294,7 @@
     }
     var payload = data.payload || {};
     if (data.type === 'message' && Array.isArray(payload.message ? [payload.message] : payload.messages)) {
-      var msgs = payload.message ? [payload.message] : payload.messages;
-      applyIncomingMessages(msgs);
+      scheduleUnifiedSync('sse-message');
     }
     if (data.type === 'link_scan_updated' && payload.message) {
       if (!isMessagePermanentlyDeleted(payload.message.id)) {
@@ -319,7 +322,7 @@
     }
     if (data.type === 'handler' && payload.handler) {
       if (payload.message) {
-        applyIncomingMessages([payload.message]);
+        scheduleUnifiedSync('sse-handler-message');
       }
       onRealtimeHandlerChange(payload.handler, payload.admin_name || '');
     }
@@ -761,6 +764,14 @@
   function updateStickToBottomFromScroll() {
     if (loadingOlderHistory) return;
     stickToBottom = isNearBottom(96);
+  }
+
+  function shouldPreserveHistoryDom() {
+    if (loadingOlderHistory) return true;
+    if (!stickToBottom) return true;
+    if (threadEl && threadEl.children.length > 0) return true;
+    if (messages.length > 0) return true;
+    return false;
   }
 
   function shouldSkipHistoryFetch(options) {
@@ -2494,9 +2505,74 @@
     saveLiveAgentPhase();
   }
 
-  function syncLocalMessageCursor(messages, serverSeq) {
+  function highestAppliedSeq() {
     var maxId = 0;
     (messages || []).forEach(function (msg) {
+      if (msg && typeof msg.id === 'number' && msg.id > maxId) {
+        maxId = msg.id;
+      }
+    });
+    if (threadEl) {
+      threadEl.querySelectorAll('[data-msg-id]').forEach(function (el) {
+        var id = parseInt(el.getAttribute('data-msg-id'), 10);
+        if (!isNaN(id) && id > maxId) {
+          maxId = id;
+        }
+      });
+    }
+    return maxId;
+  }
+
+  function refreshAppliedSeq() {
+    appliedMessageSeq = Math.max(appliedMessageSeq, highestAppliedSeq(), localMsgId);
+    pollSeq = Math.max(pollSeq, appliedMessageSeq);
+  }
+
+  function getIncrementalSince() {
+    return Math.max(0, appliedMessageSeq);
+  }
+
+  function scheduleUnifiedSync(reason) {
+    if (!canUseChat() || !getSessionId()) return;
+    if (unifiedSyncInFlight) {
+      unifiedSyncQueued = true;
+      return;
+    }
+    if (unifiedSyncTimer) {
+      clearTimeout(unifiedSyncTimer);
+      unifiedSyncTimer = 0;
+    }
+    var delay = reason && reason.indexOf('sse') === 0 ? 0 : 16;
+    unifiedSyncTimer = window.setTimeout(function () {
+      unifiedSyncTimer = 0;
+      runUnifiedSync(false);
+    }, delay);
+  }
+
+  function runUnifiedSync(strict) {
+    if (unifiedSyncInFlight) {
+      unifiedSyncQueued = true;
+      return unifiedSyncInFlight;
+    }
+    if (sessionFetchInFlight && !strict) {
+      unifiedSyncQueued = true;
+      return Promise.resolve(null);
+    }
+    unifiedSyncInFlight = pollUpdatesOnce(!!strict).then(function (data) {
+      if (unifiedSyncQueued) {
+        unifiedSyncQueued = false;
+        window.setTimeout(function () { runUnifiedSync(false); }, 0);
+      }
+      return data;
+    }).finally(function () {
+      unifiedSyncInFlight = null;
+    });
+    return unifiedSyncInFlight;
+  }
+
+  function syncLocalMessageCursor(msgs, serverSeq) {
+    var maxId = 0;
+    (msgs || []).forEach(function (msg) {
       if (msg && typeof msg.id === 'number' && msg.id > maxId) {
         maxId = msg.id;
       }
@@ -2507,14 +2583,18 @@
     if (maxId > localMsgId) {
       localMsgId = maxId;
     }
+    if (maxId > appliedMessageSeq) {
+      appliedMessageSeq = maxId;
+    }
     if (typeof serverSeq === 'number') {
-      pollSeq = Math.max(pollSeq, serverSeq, localMsgId);
+      pollSeq = Math.max(pollSeq, appliedMessageSeq);
     }
   }
 
   function nextLocalId() {
     localMsgId += 1;
-    pollSeq = Math.max(pollSeq, localMsgId);
+    appliedMessageSeq = Math.max(appliedMessageSeq, localMsgId);
+    pollSeq = Math.max(pollSeq, appliedMessageSeq);
     return localMsgId;
   }
 
@@ -3194,6 +3274,7 @@
     domMsgIds = {};
     domClientMsgIds = {};
     pollSeq = 0;
+    appliedMessageSeq = 0;
     oldestLoadedSeq = 0;
     hasOlderMessages = false;
     loadingOlderHistory = false;
@@ -3289,7 +3370,10 @@
       return false;
     }
     if (data.session_id && data.session_id !== getSessionId()) {
-      adoptSessionId(data.session_id, { fromServer: true, preserveUi: false });
+      adoptSessionId(data.session_id, {
+        fromServer: true,
+        preserveUi: widgetOpen && shouldPreserveHistoryDom(),
+      });
     }
     applyHandlerState(data.handler || 'ai', data.admin_name || '');
     syncSessionMetaFromPoll(data);
@@ -3329,8 +3413,15 @@
     if (data.reactions && typeof data.reactions === 'object') {
       applyReactionStates(data.reactions);
     }
+    if (data.sync && data.sync.resync_required && !loadingOlderHistory) {
+      fetchSessionFromServer(true, false).then(function () {
+        refreshAppliedSeq();
+        if (stickToBottom) scrollToBottom(true);
+      });
+    }
+    refreshAppliedSeq();
     if (typeof data.seq === 'number') {
-      pollSeq = Math.max(pollSeq, data.seq);
+      pollSeq = Math.max(pollSeq, appliedMessageSeq);
     }
     lastReadinessPollAt = Date.now();
     return true;
@@ -3354,7 +3445,7 @@
     formData.append('nonce', config.nonce);
     stampChatRequest(formData);
     formData.append('session_id', getSessionId());
-    formData.append('since', String(pollSeq));
+    formData.append('since', String(getIncrementalSince()));
 
     var request = fetch(config.ajaxUrl, { method: 'POST', body: formData, credentials: 'same-origin' })
       .then(function (res) {
@@ -3403,9 +3494,7 @@
   function pollUpdates() {
     if (!config.ajaxUrl) return;
     if (!canUseChat()) return;
-    if (pollInFlight) return;
-    if (sessionFetchInFlight) return;
-    pollUpdatesOnce(false).catch(function () {});
+    scheduleUnifiedSync('poll-timer');
   }
 
   function morphAdminTypingToMessage(msg) {
@@ -3631,7 +3720,6 @@
       msg = maskCustomerLinkScanMessage(msg);
       if (isMessagePermanentlyDeleted(msg.id)) return;
       if (isDuplicateMessage(msg)) return;
-      if (msg.role === 'user') return;
       if (msg.role === 'assistant' && isStreaming) return;
       if (msg.role === 'assistant' && streamingMsgId && msg.id === streamingMsgId) return;
 
@@ -3664,18 +3752,27 @@
         renderMessageDom(msg.role, messageText(msg.content), msg.id, messageRenderOpts(msg, { skipScroll: true }));
       }
 
-      if (msg.role === 'assistant' || msg.role === 'admin') {
-        messages.push({ role: msg.role, content: messageText(msg.content), id: msg.id });
+      if (msg.role === 'user' || msg.role === 'assistant' || msg.role === 'admin') {
+        messages.push({
+          role: msg.role,
+          content: messageText(msg.content),
+          id: msg.id,
+          client_msg_id: msg.client_msg_id || ''
+        });
       } else if (msg.role === 'system') {
         messages.push({ role: 'system', content: messageText(msg.content), id: msg.id });
       }
     });
     if (played) syncChatLog();
+    refreshAppliedSeq();
     if (stickToBottom) scrollToBottom();
   }
 
   function seenMsgId(id) {
-    pollSeq = Math.max(pollSeq, id);
+    if (id > appliedMessageSeq) {
+      appliedMessageSeq = id;
+    }
+    pollSeq = Math.max(pollSeq, appliedMessageSeq);
   }
 
   function copyPlainText(text) {
