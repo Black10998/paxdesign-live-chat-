@@ -49,9 +49,13 @@ grep -q "var stickToBottom" "${tmpdir}/chat-script.js" \
   && ok "WhatsApp stick-to-bottom present" \
   || fail "stickToBottom missing"
 
-grep -q "background: true, blockUi: false" "${tmpdir}/chat-script.js" \
-  && ok "open does not block on history/sync" \
-  || fail "background open path missing"
+grep -q "forceOpen: true" "${tmpdir}/chat-script.js" \
+  && ok "open fetches server history on widget open" \
+  || fail "forceOpen history path missing"
+
+grep -q "startVoiceWaveformFromHeldStream" "${tmpdir}/chat-script.js" \
+  && ok "mic waveform uses held stream (no second getUserMedia during speech)" \
+  || fail "held-stream waveform missing"
 
 curl -fsSL "${SITE}/wp-content/plugins/paxdesign-booking/assets/js/booking-script.js?v=${STAMP}" \
   -o "${tmpdir}/booking-script.js" || true
