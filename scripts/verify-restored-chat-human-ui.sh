@@ -102,15 +102,21 @@ grep -q "paxdesign-booking-chat-attach-menu" "${tmpdir}/booking-styles.css" \
   && ok "attach menu styles present" \
   || fail "attach menu styles missing"
 
-grep -q "paxdesign-booking-chat-auth-gate-inner" "${tmpdir}/booking-styles.css" \
-  && grep -A18 "paxdesign-booking-chat-auth-gate-inner" "${tmpdir}/booking-styles.css" | grep -q "overflow: auto" \
-  && ok "chat login gate uses scroll-safe overflow" \
-  || fail "chat login gate overflow fix missing"
+grep -q "paxdesign-booking-chat-auth-login-btn" "${tmpdir}/booking-styles.css" \
+  && ok "chat login gate uses header-style Sign In button" \
+  || fail "chat login Sign In button styles missing"
 
-grep -q "paxdesign-booking-chat-auth-inline" "${tmpdir}/booking-styles.css" \
-  && grep -A18 "paxdesign-booking-chat-auth-inline" "${tmpdir}/booking-styles.css" | grep -q "overflow: auto" \
-  && ok "chat login form uses scroll-safe overflow" \
-  || fail "chat login form overflow fix missing"
+grep -q "paxdesign-booking-chat-auth-gate-card" "${tmpdir}/booking-styles.css" \
+  && ok "chat login gate uses centered card layout" \
+  || fail "chat login gate card layout missing"
+
+grep -q "rememberChatReturnTarget" "${tmpdir}/chat-script.js" \
+  && ok "chat login stores return target before redirect" \
+  || fail "chat return target storage missing"
+
+grep -q "maybeOpenChatFromReturnUrl" "${tmpdir}/booking-script.js" 2>/dev/null \
+  && ok "booking-script reopens chat after login return" \
+  || fail "booking-script chat return reopen missing"
 
 grep -q "paxdesign-booking-chat-end-wrap" "${tmpdir}/booking-styles.css" \
   && grep -q "display: none !important" "${tmpdir}/booking-styles.css" \
