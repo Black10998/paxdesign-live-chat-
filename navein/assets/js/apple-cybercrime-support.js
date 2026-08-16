@@ -94,6 +94,7 @@
   var resubmitPreviewEl = document.getElementById('pax-ccs-resubmit-preview');
   var evidenceSuccessEl = document.getElementById('pax-ccs-evidence-success');
   var resubmitPreviewUrls = [];
+  var evidenceSuccessUntil = 0;
   var countries = Array.isArray(config.countries) ? config.countries.slice() : [];
   var countriesByCode = {};
   var selectedCountryCode = '';
@@ -578,13 +579,9 @@
     if (!evidenceSuccessEl) {
       return;
     }
-    evidenceSuccessEl.textContent = message || activeReportText('evidence_success', 'Evidence uploaded successfully.');
+    evidenceSuccessUntil = Date.now() + 8000;
+    evidenceSuccessEl.textContent = message || activeReportText('evidence_success', 'Evidence submitted successfully.');
     evidenceSuccessEl.hidden = false;
-    window.setTimeout(function () {
-      if (evidenceSuccessEl) {
-        evidenceSuccessEl.hidden = true;
-      }
-    }, 6000);
   }
 
   function updateEvidenceUi(report) {
@@ -601,7 +598,7 @@
     }
     if (!waiting) {
       clearResubmitInputs();
-      if (evidenceSuccessEl) {
+      if (evidenceSuccessEl && Date.now() > evidenceSuccessUntil) {
         evidenceSuccessEl.hidden = true;
       }
     }
@@ -1708,11 +1705,24 @@
     if (!entry) {
       return false;
     }
-    if (entry.request_evidence === 1 || entry.request_evidence === '1' || entry.request_evidence === true) {
+    if (entry.evidence_request_active === 0 || entry.evidence_request_active === '0' || entry.evidence_request_active === false) {
+      return false;
+    }
+    if (entry.evidence_request_active === 1 || entry.evidence_request_active === '1' || entry.evidence_request_active === true) {
       return true;
     }
     var meta = entryMeta(entry);
+    if (emptyEvidenceMeta(meta)) {
+      return false;
+    }
+    if (entry.request_evidence === 1 || entry.request_evidence === '1' || entry.request_evidence === true) {
+      return true;
+    }
     return meta.request_evidence === 1 || meta.request_evidence === '1' || meta.request_evidence === true;
+  }
+
+  function emptyEvidenceMeta(meta) {
+    return !!(meta && (meta.evidence_fulfilled === 1 || meta.evidence_fulfilled === '1' || meta.evidence_fulfilled === true));
   }
 
   function syncFromReport(report) {
@@ -1757,7 +1767,10 @@
       return incoming.updatedAt > current.updatedAt ? 1 : -1;
     }
     if (incoming.status !== current.status) {
-      return incoming.updatedAt >= current.updatedAt ? 1 : -1;
+      if (incoming.updatedAt >= current.updatedAt) {
+        return 1;
+      }
+      return incoming.updatedAt > current.updatedAt ? 1 : -1;
     }
     return 0;
   }
@@ -2559,6 +2572,9 @@
             }
             throw new Error(msg);
           }
+          if (hasFiles && json.data && parseInt(json.data.uploaded_count, 10) === 0) {
+            throw new Error(i18nText('errors.upload_failed', 'Your files could not be stored. Please try again.'));
+          }
           if (activeReplyInput) {
             activeReplyInput.value = '';
           }
@@ -2571,7 +2587,7 @@
           renderResubmitPreview();
           showEvidenceSuccess((json.data && json.data.message) ? json.data.message : '');
           if (json.data && json.data.report) {
-            showActiveReport(json.data.report, true);
+            applyIncomingReport(json.data.report, { force: true, source: 'mutation' });
           }
         })
         .catch(function (err) {

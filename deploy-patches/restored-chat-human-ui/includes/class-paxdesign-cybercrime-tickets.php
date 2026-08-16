@@ -539,7 +539,8 @@ class PAXdesign_Cybercrime_Tickets {
                 continue;
             }
             $meta = is_array($entry['meta'] ?? null) ? $entry['meta'] : array();
-            $flag = (!empty($meta['request_evidence']) || !empty($entry['request_evidence'])) ? '1' : '0';
+            $active = self::is_active_evidence_request($entry, $meta);
+            $flag = $active ? '1' : '0';
             $parts[] = (int) ($entry['id'] ?? 0) . ':' . $flag;
         }
         return implode(',', $parts);
@@ -791,6 +792,10 @@ class PAXdesign_Cybercrime_Tickets {
         }
         if (!is_array($row)) {
             $row = static::get_report_row($reference_id);
+        }
+        $fresh_row = static::get_report_row($reference_id);
+        if (is_array($fresh_row)) {
+            $row = $fresh_row;
         }
 
         $lists = array();
@@ -1278,7 +1283,8 @@ class PAXdesign_Cybercrime_Tickets {
         $entry['customer_visible'] = self::is_customer_visible_timeline_entry($entry);
         $entry['subject_key'] = $subject_key;
         $entry['subject'] = $audience === 'customer' ? '' : $subject;
-        $entry['request_evidence'] = !empty($meta['request_evidence']) ? 1 : 0;
+        $entry['request_evidence'] = self::is_active_evidence_request($entry, $meta) ? 1 : 0;
+        $entry['evidence_request_active'] = (int) $entry['request_evidence'];
         $entry['id'] = (int) ($entry['id'] ?? 0);
         $deletable = self::is_deletable_staff_message($entry);
         $entry['allow_delete'] = $deletable ? 1 : 0;
@@ -1799,7 +1805,7 @@ class PAXdesign_Cybercrime_Tickets {
      * @param string $reference_id
      * @param string $body
      * @param int    $user_id
-     * @return int|WP_Error
+     * @return int|array{message_id:int,uploaded_count:int,uploads:array<int,array<string,string>>}|WP_Error
      */
     public static function add_customer_evidence($reference_id, $body, $user_id) {
         $row = self::get_report_row($reference_id);
@@ -1854,9 +1860,85 @@ class PAXdesign_Cybercrime_Tickets {
         }
 
         self::update_status($reference_id, 'in_review', $user_id, '', false, false);
+        self::mark_evidence_requests_fulfilled($reference_id, (int) $message_id);
         self::notify_staff_reply($row, $reference_id, $body);
 
-        return $message_id;
+        return array(
+            'message_id'      => (int) $message_id,
+            'uploaded_count'  => $has_files ? count($uploads) : 0,
+            'uploads'         => $has_files ? $uploads : array(),
+        );
+    }
+
+    /**
+     * Mark staff evidence requests fulfilled after the customer uploads files.
+     *
+     * @param string $reference_id
+     * @param int    $fulfilling_message_id
+     */
+    public static function mark_evidence_requests_fulfilled($reference_id, $fulfilling_message_id = 0) {
+        global $wpdb;
+        $reference_id = sanitize_text_field((string) $reference_id);
+        if ($reference_id === '') {
+            return;
+        }
+
+        $like = '%' . $wpdb->esc_like('"request_evidence"') . '%';
+        $rows = $wpdb->get_results($wpdb->prepare(
+            'SELECT id, meta_json FROM ' . self::messages_table() . '
+             WHERE reference_id = %s AND author_type = %s AND meta_json LIKE %s
+             ORDER BY id DESC',
+            $reference_id,
+            'staff',
+            $like
+        ), ARRAY_A);
+        if (!is_array($rows)) {
+            return;
+        }
+
+        $now = current_time('mysql', true);
+        foreach ($rows as $row) {
+            if (!is_array($row)) {
+                continue;
+            }
+            $meta = json_decode((string) ($row['meta_json'] ?? ''), true);
+            if (!is_array($meta) || empty($meta['request_evidence']) || !empty($meta['evidence_fulfilled'])) {
+                continue;
+            }
+            $meta['evidence_fulfilled'] = 1;
+            $meta['evidence_fulfilled_at'] = $now;
+            if ($fulfilling_message_id > 0) {
+                $meta['evidence_fulfilled_message_id'] = $fulfilling_message_id;
+            }
+            $wpdb->update(
+                self::messages_table(),
+                array('meta_json' => wp_json_encode($meta)),
+                array('id' => (int) ($row['id'] ?? 0)),
+                array('%s'),
+                array('%d')
+            );
+        }
+    }
+
+    /**
+     * @param array<string, mixed> $entry
+     * @param array<string, mixed> $meta
+     * @return bool
+     */
+    public static function is_active_evidence_request($entry, $meta = null) {
+        if (!is_array($entry)) {
+            return false;
+        }
+        if (!is_array($meta)) {
+            $meta = is_array($entry['meta'] ?? null) ? $entry['meta'] : array();
+        }
+        if (empty($meta['request_evidence'])) {
+            return false;
+        }
+        if (!empty($meta['evidence_fulfilled'])) {
+            return false;
+        }
+        return true;
     }
 
     /**
@@ -2572,18 +2654,23 @@ class PAXdesign_Cybercrime_Tickets {
             wp_send_json_error($data, 400);
         }
 
+        $message_id = is_array($result) ? (int) ($result['message_id'] ?? 0) : (int) $result;
+        $uploaded_count = is_array($result) ? (int) ($result['uploaded_count'] ?? 0) : 0;
+
         $report = self::get_report_for_user($reference, get_current_user_id());
         $lang = is_array($report) && class_exists('PAXdesign_Cybercrime_I18n')
             ? PAXdesign_Cybercrime_I18n::from_report($report)
             : 'de';
         $success = class_exists('PAXdesign_Cybercrime_I18n')
             ? PAXdesign_Cybercrime_I18n::t('evidence.success', $lang)
-            : __('Your evidence was uploaded successfully.', 'paxdesign-booking');
+            : __('Evidence submitted successfully.', 'paxdesign-booking');
 
         wp_send_json_success(array(
-            'message_id' => $result,
-            'message'    => $success,
-            'report'     => $report,
+            'message_id'      => $message_id,
+            'uploaded_count'  => $uploaded_count,
+            'attachments_count' => is_array($report) ? count((array) ($report['attachments'] ?? array())) : 0,
+            'message'         => $success,
+            'report'          => $report,
         ));
     }
 

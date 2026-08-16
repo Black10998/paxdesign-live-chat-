@@ -187,9 +187,9 @@ class PAXdesign_Cybercrime_I18n {
                 'ar' => 'قام العميل برفع الأدلة.',
             ),
             'evidence.success' => array(
-                'de' => 'Ihre Nachweise wurden erfolgreich hochgeladen.',
-                'en' => 'Your evidence was uploaded successfully.',
-                'ar' => 'تم رفع الأدلة بنجاح.',
+                'de' => 'Nachweise erfolgreich übermittelt.',
+                'en' => 'Evidence submitted successfully.',
+                'ar' => 'تم إرسال الأدلة بنجاح.',
             ),
             'action.reject' => array(
                 'de' => 'مرفوض',

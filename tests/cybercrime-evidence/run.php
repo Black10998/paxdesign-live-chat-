@@ -45,7 +45,8 @@ ccs_evidence_assert(strpos($portalJs, 'updateEvidenceUi') !== false, 'portal JS 
 ccs_evidence_assert(strpos($portalJs, 'renderResubmitPreview') !== false, 'portal JS previews selected files');
 ccs_evidence_assert(strpos($portalJs, 'paxdesign_cybercrime_customer_resubmit') !== false, 'portal JS calls resubmit action');
 ccs_evidence_assert(strpos($portalJs, 'timelineEvidenceInlineHtml') !== false, 'portal JS renders inline evidence request CTA');
-ccs_evidence_assert(strpos($portalJs, 'entryHasEvidenceRequest') !== false, 'portal JS detects evidence request from entry + meta');
+ccs_evidence_assert(strpos($portalJs, 'evidence_request_active') !== false, 'portal JS respects server evidence_request_active flag');
+ccs_evidence_assert(strpos($portalJs, 'evidenceSuccessUntil') !== false, 'portal JS keeps evidence success confirmation visible after submit');
 ccs_evidence_assert(strpos($portalJs, 'timeline_evidence_signature') !== false, 'portal JS tracks timeline evidence signature for sync');
 ccs_evidence_assert(strpos($portalJs, 'pax-ccs-portal__evidence-request-btn') !== false, 'portal JS renders prominent evidence upload button');
 ccs_evidence_assert(strpos($portalCss, 'pax-ccs-portal__evidence-request-btn') !== false, 'portal CSS styles evidence upload button');
@@ -58,7 +59,10 @@ ccs_evidence_assert(strpos($tickets, 'collect_message_attachments') !== false, '
 ccs_evidence_assert(strpos($tickets, 'sync_report_attachments_column') !== false, 'tickets syncs report attachments after customer evidence upload');
 ccs_evidence_assert(strpos($tickets, 'attachments_signature') !== false, 'tickets builds attachments signature for sync');
 ccs_evidence_assert(strpos($tickets, 'find_stored_attachment') !== false, 'tickets resolves attachments from report and timeline messages');
-ccs_evidence_assert(strpos($intake, 'recover_attachment_record') !== false, 'intake recovers legacy attachment paths from stored URLs');
+ccs_evidence_assert(strpos($tickets, 'mark_evidence_requests_fulfilled') !== false, 'tickets clears fulfilled evidence requests after customer upload');
+ccs_evidence_assert(strpos($tickets, 'is_active_evidence_request') !== false, 'tickets computes active evidence request state');
+ccs_evidence_assert(strpos($tickets, 'evidence_request_active') !== false, 'tickets exposes evidence_request_active on timeline entries');
+ccs_evidence_assert(strpos($intake, 'normalized_upload_files') !== false, 'intake normalizes mobile and desktop multipart uploads');
 ccs_evidence_assert(strpos($intake, 'verify_image_file') !== false, 'intake verifies image content before preview');
 ccs_evidence_assert(strpos($intake, 'find_stored_attachment') !== false, 'intake download checks timeline message attachments');
 ccs_evidence_assert(strpos($adminJs, 'pax-cc-request-evidence') !== false, 'admin JS handles request evidence checkbox');

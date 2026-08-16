@@ -440,10 +440,87 @@ class PAXdesign_Cybercrime_Intake {
     }
 
     /**
+     * Flatten and normalize $_FILES for mobile/desktop multipart uploads.
+     *
+     * @return array<string, array<int, array<string, mixed>>>
+     */
+    private static function normalized_upload_files() {
+        if (empty($_FILES) || !is_array($_FILES)) {
+            return array();
+        }
+
+        $normalized = array();
+        foreach ($_FILES as $field => $file) {
+            if (!is_array($file)) {
+                continue;
+            }
+            $field = sanitize_key(preg_replace('/\[\]$/', '', (string) $field));
+            if ($field === '') {
+                continue;
+            }
+
+            $names = $file['name'] ?? null;
+            if ($names === null || $names === '') {
+                continue;
+            }
+
+            if (!is_array($names)) {
+                $normalized[$field][] = array(
+                    'name'     => (string) $names,
+                    'type'     => (string) ($file['type'] ?? ''),
+                    'tmp_name' => (string) ($file['tmp_name'] ?? ''),
+                    'error'    => (int) ($file['error'] ?? UPLOAD_ERR_NO_FILE),
+                    'size'     => (int) ($file['size'] ?? 0),
+                );
+                continue;
+            }
+
+            foreach ($names as $i => $name) {
+                if ($name === '') {
+                    continue;
+                }
+                $normalized[$field][] = array(
+                    'name'     => (string) $name,
+                    'type'     => (string) ($file['type'][$i] ?? ''),
+                    'tmp_name' => (string) ($file['tmp_name'][$i] ?? ''),
+                    'error'    => (int) ($file['error'][$i] ?? UPLOAD_ERR_NO_FILE),
+                    'size'     => (int) ($file['size'][$i] ?? 0),
+                );
+            }
+        }
+
+        return $normalized;
+    }
+
+    /**
+     * @param string $field
+     * @return bool
+     */
+    private static function is_evidence_upload_field($field) {
+        $field = sanitize_key((string) $field);
+        if ($field === '') {
+            return false;
+        }
+        if ($field === 'identity_document') {
+            return true;
+        }
+        return strpos($field, 'evidence_') === 0;
+    }
+
+    /**
      * @return array<int, array<string, string>>|WP_Error
      */
     private static function handle_uploads() {
-        if (empty($_FILES) || !is_array($_FILES)) {
+        $files = self::normalized_upload_files();
+        if (empty($files)) {
+            $content_type = (string) ($_SERVER['CONTENT_TYPE'] ?? '');
+            $content_length = (int) ($_SERVER['CONTENT_LENGTH'] ?? 0);
+            if ($content_length > 1024 && stripos($content_type, 'multipart/form-data') !== false) {
+                return new WP_Error(
+                    'upload_failed',
+                    __('The uploaded files could not be received. Try fewer or smaller files, then submit again.', 'paxdesign-booking')
+                );
+            }
             return array();
         }
 
@@ -470,28 +547,12 @@ class PAXdesign_Cybercrime_Intake {
         add_filter('upload_dir', array(__CLASS__, 'filter_upload_dir'));
 
         try {
-            foreach ($_FILES as $field => $file) {
-                if (!is_array($file) || empty($file['name'])) {
+            foreach ($files as $field => $batch) {
+                if (!self::is_evidence_upload_field($field)) {
                     continue;
                 }
-
-                $names = $file['name'];
-                if (!is_array($names)) {
-                    $batch = array($file);
-                } else {
-                    $batch = array();
-                    foreach ($names as $i => $name) {
-                        if ($name === '') {
-                            continue;
-                        }
-                        $batch[] = array(
-                            'name'     => $name,
-                            'type'     => $file['type'][$i] ?? '',
-                            'tmp_name' => $file['tmp_name'][$i] ?? '',
-                            'error'    => $file['error'][$i] ?? UPLOAD_ERR_NO_FILE,
-                            'size'     => $file['size'][$i] ?? 0,
-                        );
-                    }
+                if (!is_array($batch)) {
+                    continue;
                 }
 
                 foreach ($batch as $single) {
@@ -530,7 +591,7 @@ class PAXdesign_Cybercrime_Intake {
                     $rel_path = ltrim(str_replace('\\', '/', $rel_path), '/');
 
                     $saved[] = array(
-                        'field' => sanitize_key((string) $field),
+                        'field' => $field,
                         'name'  => basename($upload['file']),
                         'path'  => $rel_path,
                         'type'  => $upload['type'] ?? '',
@@ -541,6 +602,27 @@ class PAXdesign_Cybercrime_Intake {
             }
         } finally {
             remove_filter('upload_dir', array(__CLASS__, 'filter_upload_dir'));
+        }
+
+        if (empty($saved) && !empty($files)) {
+            $had_candidate = false;
+            foreach ($files as $field => $batch) {
+                if (!self::is_evidence_upload_field($field) || !is_array($batch)) {
+                    continue;
+                }
+                foreach ($batch as $single) {
+                    if ((int) ($single['error'] ?? UPLOAD_ERR_NO_FILE) !== UPLOAD_ERR_NO_FILE) {
+                        $had_candidate = true;
+                        break 2;
+                    }
+                }
+            }
+            if ($had_candidate) {
+                return new WP_Error(
+                    'upload_failed',
+                    __('None of the selected files could be stored. Check file type and size, then try again.', 'paxdesign-booking')
+                );
+            }
         }
 
         return $saved;
@@ -1113,6 +1195,9 @@ class PAXdesign_Cybercrime_Intake {
         }
         if (!self::is_image_mime($mime)) {
             return false;
+        }
+        if (in_array($mime, array('image/heic', 'image/heif'), true)) {
+            return true;
         }
         if (function_exists('getimagesize')) {
             $info = @getimagesize($path);
