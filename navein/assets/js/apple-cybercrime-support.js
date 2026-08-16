@@ -90,6 +90,10 @@
   var resubmitIdentityEl = document.getElementById('pax-ccs-resubmit-identity');
   var resubmitEvidenceEl = document.getElementById('pax-ccs-resubmit-evidence');
   var resubmitSubmitEl = document.getElementById('pax-ccs-resubmit-submit');
+  var resubmitBlockEl = document.getElementById('pax-ccs-resubmit');
+  var resubmitPreviewEl = document.getElementById('pax-ccs-resubmit-preview');
+  var evidenceSuccessEl = document.getElementById('pax-ccs-evidence-success');
+  var resubmitPreviewUrls = [];
   var countries = Array.isArray(config.countries) ? config.countries.slice() : [];
   var countriesByCode = {};
   var selectedCountryCode = '';
@@ -504,6 +508,102 @@
     } catch (e) {}
   }
 
+  function needsEvidenceUpload(report) {
+    if (!report) {
+      return false;
+    }
+    var status = String(report.status || report.customer_status || '');
+    return status === 'waiting_for_customer';
+  }
+
+  function revokeResubmitPreviewUrls() {
+    resubmitPreviewUrls.forEach(function (url) {
+      try {
+        URL.revokeObjectURL(url);
+      } catch (e) {}
+    });
+    resubmitPreviewUrls = [];
+  }
+
+  function renderResubmitPreview() {
+    if (!resubmitPreviewEl) {
+      return;
+    }
+    revokeResubmitPreviewUrls();
+    var items = [];
+    function appendFiles(input) {
+      if (!input || !input.files) {
+        return;
+      }
+      Array.prototype.forEach.call(input.files, function (file) {
+        items.push({ file: file, source: input.id });
+      });
+    }
+    appendFiles(resubmitEvidenceEl);
+    appendFiles(resubmitIdentityEl);
+    if (!items.length) {
+      resubmitPreviewEl.hidden = true;
+      resubmitPreviewEl.innerHTML = '';
+      return;
+    }
+    resubmitPreviewEl.hidden = false;
+    resubmitPreviewEl.innerHTML = items.map(function (item, index) {
+      var name = escapeHtml(item.file.name || 'file');
+      var thumb = '';
+      if (item.file.type && item.file.type.indexOf('image/') === 0) {
+        var objectUrl = URL.createObjectURL(item.file);
+        resubmitPreviewUrls.push(objectUrl);
+        thumb = '<img src="' + objectUrl + '" alt="">';
+      } else {
+        thumb = '<span aria-hidden="true">📄</span>';
+      }
+      return '<li class="pax-ccs-portal__resubmit-preview-item">'
+        + thumb
+        + '<span class="pax-ccs-portal__resubmit-preview-name">' + name + '</span>'
+        + '</li>';
+    }).join('');
+  }
+
+  function clearResubmitInputs() {
+    if (resubmitIdentityEl) {
+      resubmitIdentityEl.value = '';
+    }
+    if (resubmitEvidenceEl) {
+      resubmitEvidenceEl.value = '';
+    }
+    renderResubmitPreview();
+  }
+
+  function showEvidenceSuccess(message) {
+    if (!evidenceSuccessEl) {
+      return;
+    }
+    evidenceSuccessEl.textContent = message || activeReportText('evidence_success', 'Evidence uploaded successfully.');
+    evidenceSuccessEl.hidden = false;
+    window.setTimeout(function () {
+      if (evidenceSuccessEl) {
+        evidenceSuccessEl.hidden = true;
+      }
+    }, 6000);
+  }
+
+  function updateEvidenceUi(report) {
+    var waiting = needsEvidenceUpload(report);
+    if (resubmitBlockEl) {
+      resubmitBlockEl.hidden = !waiting;
+      resubmitBlockEl.classList.toggle('pax-ccs-portal__resubmit--active', waiting);
+    }
+    if (resubmitSubmitEl) {
+      resubmitSubmitEl.hidden = !waiting;
+    }
+    if (!waiting) {
+      clearResubmitInputs();
+      if (evidenceSuccessEl) {
+        evidenceSuccessEl.hidden = true;
+      }
+    }
+  }
+
   function applyReportLifecycle(report) {
     if (!report) {
       return;
@@ -519,6 +619,7 @@
     if (backHistoryBtn) {
       backHistoryBtn.hidden = isActive;
     }
+    updateEvidenceUi(report);
     updateStartButtonLabel();
     if (phase === 'active-report') {
       startReportPolling();
@@ -1208,7 +1309,12 @@
     activeAttachmentsEl.innerHTML = files.map(function (file) {
       var name = escapeHtml(file.name || 'file');
       if (file.url) {
-        return '<li><a href="' + escapeHtml(file.url) + '" target="_blank" rel="noopener">' + name + '</a></li>';
+        var url = escapeHtml(file.url);
+        if (file.is_image) {
+          return '<li class="pax-ccs-portal__attachment-item"><a href="' + url + '" target="_blank" rel="noopener">'
+            + '<img src="' + url + '" alt="' + name + '" loading="lazy"><span>' + name + '</span></a></li>';
+        }
+        return '<li><a href="' + url + '" target="_blank" rel="noopener">' + name + '</a></li>';
       }
       return '<li>' + name + '</li>';
     }).join('');
@@ -1459,6 +1565,7 @@
     renderTimeline(report.timeline || [], { forceNewest: forceNewest !== false });
     renderAttachments(report.attachments || []);
     renderCaseDossier(report);
+    updateEvidenceUi(report);
     if (activeReplyError) {
       activeReplyError.hidden = true;
     }
@@ -2262,6 +2369,8 @@
           if (resubmitEvidenceEl) {
             resubmitEvidenceEl.value = '';
           }
+          renderResubmitPreview();
+          showEvidenceSuccess((json.data && json.data.message) ? json.data.message : '');
           if (json.data && json.data.report) {
             showActiveReport(json.data.report, true);
           }
@@ -2276,6 +2385,13 @@
           resubmitSubmitEl.disabled = false;
         });
     });
+  }
+
+  if (resubmitEvidenceEl) {
+    resubmitEvidenceEl.addEventListener('change', renderResubmitPreview);
+  }
+  if (resubmitIdentityEl) {
+    resubmitIdentityEl.addEventListener('change', renderResubmitPreview);
   }
 
   if (continueFormBtn) {

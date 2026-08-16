@@ -296,6 +296,7 @@ if ( ! function_exists( 'pax_ccs_portal_i18n' ) ) {
 				'check_rejected'     => $pick( $copy['active_report']['check_rejected'] ?? array() ),
 				'check_review'       => $pick( $copy['active_report']['check_review'] ?? array() ),
 				'resubmit_heading'   => $pick( $copy['active_report']['resubmit_heading'] ?? array() ),
+				'evidence_success'   => $pick( $copy['active_report']['evidence_success'] ?? array() ),
 				'rejection_heading'  => $pick( $copy['active_report']['rejection_heading'] ?? array() ),
 				'rejected_next_heading' => $pick( $copy['active_report']['rejected_next_heading'] ?? array() ),
 				'rejected_next'      => $pick( $copy['active_report']['rejected_next'] ?? array() ),

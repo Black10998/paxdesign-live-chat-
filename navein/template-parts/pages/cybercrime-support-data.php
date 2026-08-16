@@ -338,21 +338,39 @@ return array(
 			'ar' => 'تصحيح أو إرفاق ملفات على نفس البلاغ',
 			'de' => 'Dateien auf derselben Meldung nachreichen',
 		),
+		'upload_evidence' => array(
+			'ar' => 'رفع الأدلة / Upload Evidence',
+			'de' => 'Nachweise hochladen / Upload Evidence',
+			'en' => 'Upload Evidence / رفع الأدلة',
+		),
 		'resubmit_hint' => array(
-			'ar' => 'رقم المرجع لا يتغيّر. أرفق الملفات المطلوبة فقط.',
-			'de' => 'Die Referenznummer bleibt gleich. Laden Sie nur die angeforderten Dateien hoch.',
+			'ar' => 'أرفق الصور أو المستندات المطلوبة مع رسالتك. يمكنك معاينة الملفات قبل الإرسال.',
+			'de' => 'Fügen Sie angeforderte Fotos oder Dokumente mit Ihrer Nachricht hinzu. Sie können die Dateien vor dem Senden prüfen.',
+			'en' => 'Attach the requested photos or documents with your message. You can preview files before sending.',
 		),
 		'resubmit_identity' => array(
 			'ar' => 'استبدال وثيقة الهوية',
 			'de' => 'Ausweis ersetzen',
 		),
 		'resubmit_evidence' => array(
-			'ar' => 'أدلة إضافية',
-			'de' => 'Weitere Nachweise',
+			'ar' => 'صور / مستندات',
+			'de' => 'Fotos / Dokumente',
+			'en' => 'Photos / documents',
 		),
 		'resubmit_submit' => array(
-			'ar' => 'إرسال التصحيح',
-			'de' => 'Korrektur senden',
+			'ar' => 'رفع الأدلة وإرسال',
+			'de' => 'Nachweise senden',
+			'en' => 'Upload evidence & send',
+		),
+		'evidence_success' => array(
+			'ar' => 'تم رفع الأدلة بنجاح.',
+			'de' => 'Nachweise erfolgreich hochgeladen.',
+			'en' => 'Evidence uploaded successfully.',
+		),
+		'preview_remove' => array(
+			'ar' => 'إزالة',
+			'de' => 'Entfernen',
+			'en' => 'Remove',
 		),
 		'check_accepted' => array(
 			'ar' => 'مقبول للمراجعة',
@@ -827,8 +845,9 @@ return array(
 				'de' => 'Sie haben bereits eine offene Meldung. Zeigen Sie Ihre aktuelle Meldung an.',
 			),
 			'message_required' => array(
-				'ar' => 'الرسالة مطلوبة.',
-				'de' => 'Nachricht ist erforderlich.',
+				'ar' => 'يرجى إرفاق ملف أو كتابة رسالة.',
+				'de' => 'Bitte Datei anhängen oder Nachricht schreiben.',
+				'en' => 'Please attach a file or add a message.',
 			),
 			'report_not_found' => array(
 				'ar' => 'لم يتم العثور على البلاغ.',
