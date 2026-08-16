@@ -100,7 +100,8 @@ class PAXdesign_Chat {
                 : home_url('/account/'),
             'authGate'         => array(
                 'title'       => __('Continue to Live Chat', 'paxdesign-booking'),
-                'logIn'       => __('Log In', 'paxdesign-booking'),
+                'subtitle'    => __('Sign in to message our team.', 'paxdesign-booking'),
+                'logIn'       => __('Sign In', 'paxdesign-booking'),
             ),
             'quickActions'     => array(),
             'contactUrl'       => get_option('paxdesign_booking_contact_url', home_url('/')),

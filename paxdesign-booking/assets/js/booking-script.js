@@ -51,22 +51,54 @@
         });
     }
 
-    function maybeOpenChatFromReturnUrl() {
+    function shouldOpenChatFromReturn() {
         try {
             var params = new URLSearchParams(window.location.search);
-            if (params.get('pax_chat_open') !== '1') {
+            if (params.get('pax_chat_open') === '1') {
+                return true;
+            }
+            return sessionStorage.getItem('pax_chat_pending_open') === '1';
+        } catch (e) {
+            return false;
+        }
+    }
+
+    function clearChatReturnMarkers() {
+        try {
+            sessionStorage.removeItem('pax_chat_pending_open');
+            sessionStorage.removeItem('pax_chat_return_to');
+        } catch (e) {}
+    }
+
+    function maybeOpenChatFromReturnUrl() {
+        if (!shouldOpenChatFromReturn()) {
+            return;
+        }
+        try {
+            var params = new URLSearchParams(window.location.search);
+            if (params.get('pax_chat_open') === '1') {
+                params.delete('pax_chat_open');
+                var cleanSearch = params.toString();
+                var cleanUrl = window.location.pathname + (cleanSearch ? '?' + cleanSearch : '') + window.location.hash;
+                if (window.history && window.history.replaceState) {
+                    window.history.replaceState(null, '', cleanUrl);
+                }
+            }
+        } catch (e) {}
+
+        var attempts = 0;
+        function attemptOpen() {
+            attempts += 1;
+            if (!root().length) {
+                if (attempts < 30) {
+                    setTimeout(attemptOpen, 200);
+                }
                 return;
             }
-            params.delete('pax_chat_open');
-            var cleanSearch = params.toString();
-            var cleanUrl = window.location.pathname + (cleanSearch ? '?' + cleanSearch : '') + window.location.hash;
-            if (window.history && window.history.replaceState) {
-                window.history.replaceState(null, '', cleanUrl);
-            }
-            setTimeout(function () {
-                openChatFromLauncher();
-            }, 150);
-        } catch (e) {}
+            clearChatReturnMarkers();
+            openChatFromLauncher();
+        }
+        setTimeout(attemptOpen, 150);
     }
 
     function beginLauncherOpen() {

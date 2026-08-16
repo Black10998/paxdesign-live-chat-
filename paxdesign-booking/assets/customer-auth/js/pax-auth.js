@@ -930,10 +930,28 @@
     }
   }
 
+  function getStoredChatReturnTo() {
+    try {
+      return sessionStorage.getItem('pax_chat_return_to') || '';
+    } catch (e) {
+      return '';
+    }
+  }
+
+  function clearStoredChatReturnTo() {
+    try {
+      sessionStorage.removeItem('pax_chat_return_to');
+      sessionStorage.removeItem('pax_chat_pending_open');
+    } catch (e) {}
+  }
+
   function getReturnToParam() {
     try {
       var params = new URLSearchParams(window.location.search);
       var returnTo = params.get('return_to') || '';
+      if (!returnTo) {
+        returnTo = getStoredChatReturnTo();
+      }
       if (!returnTo) return '';
       if (returnTo.charAt(0) === '/') {
         return returnTo;
@@ -949,6 +967,7 @@
   function redirectAfterAuthSuccess() {
     var returnTo = getReturnToParam();
     if (!returnTo) return false;
+    clearStoredChatReturnTo();
     window.location.href = returnTo;
     return true;
   }
