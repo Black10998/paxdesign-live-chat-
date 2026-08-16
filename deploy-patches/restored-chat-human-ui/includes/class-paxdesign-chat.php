@@ -23,6 +23,12 @@ class PAXdesign_Chat {
 
     private static $instance = null;
 
+    private static function asset_version($relative_path) {
+        $path = PAXDESIGN_BOOKING_PLUGIN_DIR . ltrim($relative_path, '/');
+        $mtime = is_readable($path) ? (string) filemtime($path) : '';
+        return PAXDESIGN_BOOKING_VERSION . ('' !== $mtime ? '.' . $mtime : '');
+    }
+
     public static function get_instance() {
         if (null === self::$instance) {
             self::$instance = new self();
@@ -50,7 +56,7 @@ class PAXdesign_Chat {
             'paxdesign-chat-script',
             PAXDESIGN_BOOKING_PLUGIN_URL . 'assets/js/chat-script.js',
             array('paxdesign-booking-script'),
-            PAXDESIGN_BOOKING_VERSION,
+            self::asset_version('assets/js/chat-script.js'),
             array('strategy' => 'defer', 'in_footer' => true)
         );
 

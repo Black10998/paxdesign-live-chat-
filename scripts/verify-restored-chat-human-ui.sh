@@ -27,9 +27,9 @@ curl -fsSL "${SITE}/wp-content/plugins/paxdesign-booking/assets/js/cybercrime-ad
 curl -fsSL "${SITE}/wp-content/plugins/paxdesign-booking/paxdesign-booking.php?v=${STAMP}" \
   -o "${tmpdir}/paxdesign-booking.php" || true
 
-grep -q "Version: 3.174.126" "${tmpdir}/chat-script.js" \
-  && ok "chat-script.js cache-bust version 3.174.126" \
-  || fail "chat-script.js is not the patched 3.174.126 file"
+grep -q "Version: 3.174.127" "${tmpdir}/chat-script.js" \
+  && ok "chat-script.js cache-bust version 3.174.127" \
+  || fail "chat-script.js is not the patched 3.174.127 file"
 
 grep -q "function pinToLatestMessage" "${tmpdir}/chat-script.js" \
   && ok "instant pin-to-latest is present" \
@@ -91,6 +91,16 @@ grep -q "#063226" "${tmpdir}/booking-styles.css" \
 grep -q "paxdesign-booking-chat-attach-menu" "${tmpdir}/booking-styles.css" \
   && ok "attach menu styles present" \
   || fail "attach menu styles missing"
+
+grep -q "paxdesign-booking-chat-auth-gate-inner" "${tmpdir}/booking-styles.css" \
+  && grep -A18 "paxdesign-booking-chat-auth-gate-inner" "${tmpdir}/booking-styles.css" | grep -q "overflow: auto" \
+  && ok "chat login gate uses scroll-safe overflow" \
+  || fail "chat login gate overflow fix missing"
+
+grep -q "paxdesign-booking-chat-auth-inline" "${tmpdir}/booking-styles.css" \
+  && grep -A18 "paxdesign-booking-chat-auth-inline" "${tmpdir}/booking-styles.css" | grep -q "overflow: auto" \
+  && ok "chat login form uses scroll-safe overflow" \
+  || fail "chat login form overflow fix missing"
 
 grep -q "paxdesign-booking-chat-end-wrap" "${tmpdir}/booking-styles.css" \
   && grep -q "display: none !important" "${tmpdir}/booking-styles.css" \

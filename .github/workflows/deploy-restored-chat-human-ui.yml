@@ -67,6 +67,21 @@ jobs:
             "$SRC/assets/customer-auth/js/pax-auth.js" \
             "${REMOTE}:${TARGET}/assets/customer-auth/js/pax-auth.js"
           rsync -az -e "ssh ${SSH_OPTS[*]}" \
+            "$SRC/assets/customer-auth/css/pdx-auth.css" \
+            "${REMOTE}:${TARGET}/assets/customer-auth/css/pdx-auth.css"
+          rsync -az -e "ssh ${SSH_OPTS[*]}" \
+            "$SRC/assets/customer-auth/css/pdx-unified-ui.css" \
+            "${REMOTE}:${TARGET}/assets/customer-auth/css/pdx-unified-ui.css"
+          rsync -az -e "ssh ${SSH_OPTS[*]}" \
+            "$SRC/assets/customer-auth/css/pdx-customer-ui.css" \
+            "${REMOTE}:${TARGET}/assets/customer-auth/css/pdx-customer-ui.css"
+          rsync -az -e "ssh ${SSH_OPTS[*]}" \
+            "$SRC/assets/customer-auth/css/pdx-tokens.css" \
+            "${REMOTE}:${TARGET}/assets/customer-auth/css/pdx-tokens.css"
+          rsync -az -e "ssh ${SSH_OPTS[*]}" \
+            "$SRC/assets/customer-auth/css/pdx-verified-badge.css" \
+            "${REMOTE}:${TARGET}/assets/customer-auth/css/pdx-verified-badge.css"
+          rsync -az -e "ssh ${SSH_OPTS[*]}" \
             "$SRC/assets/css/booking-styles.css" \
             "${REMOTE}:${TARGET}/assets/css/booking-styles.css"
           rsync -az -e "ssh ${SSH_OPTS[*]}" \
@@ -84,6 +99,9 @@ jobs:
           rsync -az -e "ssh ${SSH_OPTS[*]}" \
             "$SRC/includes/class-paxdesign-chat.php" \
             "${REMOTE}:${TARGET}/includes/class-paxdesign-chat.php"
+          rsync -az -e "ssh ${SSH_OPTS[*]}" \
+            "$SRC/includes/class-paxdesign-widget-performance.php" \
+            "${REMOTE}:${TARGET}/includes/class-paxdesign-widget-performance.php"
           rsync -az -e "ssh ${SSH_OPTS[*]}" \
             "$SRC/includes/class-paxdesign-chat-knowledge.php" \
             "${REMOTE}:${TARGET}/includes/class-paxdesign-chat-knowledge.php"

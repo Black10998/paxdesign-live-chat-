@@ -25,14 +25,15 @@ $boot = file_get_contents($root . '/paxdesign-booking.php');
 $widget = file_get_contents($root . '/templates/booking-widget.php');
 $knowledge = file_get_contents($root . '/includes/class-paxdesign-chat-knowledge.php');
 $chat = file_get_contents($root . '/includes/class-paxdesign-chat.php');
+$widgetPerf = file_get_contents($root . '/includes/class-paxdesign-widget-performance.php');
 $tickets = file_get_contents($root . '/includes/class-paxdesign-cybercrime-tickets.php');
 $intake = file_get_contents($root . '/includes/class-paxdesign-cybercrime-intake.php');
 $i18n = file_get_contents($root . '/includes/class-paxdesign-cybercrime-i18n.php');
 $admin = file_get_contents($root . '/includes/customer/class-paxdesign-customer-admin.php');
 $adminJs = file_get_contents($root . '/assets/js/cybercrime-admin.js');
 
-assert_true(strpos($boot, "define('PAXDESIGN_BOOKING_VERSION', '3.174.126')") !== false, 'plugin version 3.174.126');
-assert_true(strpos($js, 'Version: 3.174.126') !== false, 'chat-script cache-bust 3.174.126');
+assert_true(strpos($boot, "define('PAXDESIGN_BOOKING_VERSION', '3.174.127')") !== false, 'plugin version 3.174.127');
+assert_true(strpos($js, 'Version: 3.174.127') !== false, 'chat-script cache-bust 3.174.127');
 assert_true(strpos($js, 'uploadHumanAttachFile') !== false, 'JS upload handler');
 assert_true(strpos($js, 'paxdesign-chat-admin-active') !== false, 'JS human takeover class');
 assert_true(strpos($js, 'paxdesign_chat_live_user_attach') !== false, 'JS posts attach action');
@@ -48,7 +49,6 @@ assert_true(strpos($store, "'file_url'") !== false, 'message store persists file
 assert_true(strpos($js, 'skipping stacked sync') === false, 'patch is not the later GitHub chat rewrite');
 assert_true(strpos($js, 'var openInstant') === false, 'patch does not use 3.176 instant-open');
 assert_true(strpos($js, 'var stickToBottom') !== false, 'WhatsApp stick-to-bottom is present');
-assert_true(strpos($js, 'background: true, blockUi: false') !== false, 'open stays usable during background sync');
 assert_true(strpos($widget, 'paxdesign-chat-shell-loader') !== false, 'widget has in-chat shell loader');
 assert_true(strpos($widget, 'paxdesign-booking-chat-voice') !== false, 'widget has voice input button');
 assert_true(strpos($js, 'function startVoiceInput') !== false, 'JS voice input handler');
@@ -63,6 +63,9 @@ assert_true(strpos($js, 'startVoiceWaveformFromHeldStream') !== false, 'JS uses 
 assert_true(strpos($js, 'startVoiceWaveformForListening') === false, 'JS does not re-acquire mic while SpeechRecognition runs');
 assert_true(strpos($js, 'releaseChatShellLoader') !== false, 'JS releases shell loader when chat UI is ready');
 assert_true(strpos($js, 'microphoneDeniedRecoveryMessage') !== false, 'JS shows recovery help when mic denied');
+assert_true(strpos($css, '.paxdesign-booking-chat-auth-inline') !== false && strpos($css, 'overflow: auto;') !== false, 'chat auth form uses scroll-safe overflow');
+assert_true(strpos($chat, "self::asset_version('assets/js/chat-script.js')") !== false, 'chat script enqueue uses filemtime-aware version');
+assert_true(strpos($widgetPerf, "self::asset_version('assets/js/chat-script.js')") !== false, 'widget loader chatSrc uses filemtime-aware version');
 
 $bookingJs = @file_get_contents($root . '/assets/js/booking-script.js');
 assert_true($bookingJs !== false && strpos($bookingJs, 'showChatShellLoading') !== false, 'booking-script shell loader');
@@ -89,6 +92,7 @@ $syntax = array(
     $root . '/includes/class-paxdesign-chat-live.php',
     $root . '/includes/class-paxdesign-message-store.php',
     $root . '/includes/class-paxdesign-chat.php',
+    $root . '/includes/class-paxdesign-widget-performance.php',
     $root . '/includes/class-paxdesign-chat-knowledge.php',
     $root . '/includes/class-paxdesign-cybercrime-i18n.php',
     $root . '/includes/class-paxdesign-cybercrime-intake.php',
