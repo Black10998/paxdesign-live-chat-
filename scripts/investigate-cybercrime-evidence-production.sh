@@ -54,9 +54,9 @@ if command -v wp >/dev/null 2>&1; then
   cd "$WP_PATH"
   wp eval '
 global $wpdb;
-$table = $wpdb->prefix . "paxdesign_cybercrime_intake";
+$table = $wpdb->prefix . "paxdesign_cybercrime_reports";
 $msg_table = $wpdb->prefix . "paxdesign_cybercrime_messages";
-if ($wpdb->get_var("SHOW TABLES LIKE \"$table\"") !== $table) {
+if ($wpdb->get_var($wpdb->prepare("SHOW TABLES LIKE %s", $table)) !== $table) {
   echo "MISSING table: $table\n";
   return;
 }
@@ -93,12 +93,46 @@ else
   echo "wp-cli not available"
 fi
 
+section "WP-CLI: message meta rows containing recent upload filenames"
+if command -v wp >/dev/null 2>&1; then
+  cd "$WP_PATH"
+  wp eval '
+global $wpdb;
+$msg_table = $wpdb->prefix . "paxdesign_cybercrime_messages";
+$rows = $wpdb->get_results("SELECT id, reference_id, author_type, created_at, meta_json FROM $msg_table WHERE meta_json LIKE \"%attachments%\" ORDER BY id DESC LIMIT 20", ARRAY_A);
+if (!is_array($rows)) { echo "No message attachment rows\n"; return; }
+foreach ($rows as $row) {
+  $meta = json_decode((string)($row["meta_json"] ?? ""), true);
+  $names = array();
+  if (is_array($meta) && !empty($meta["attachments"]) && is_array($meta["attachments"])) {
+    foreach ($meta["attachments"] as $att) {
+      if (is_array($att) && !empty($att["name"])) {
+        $names[] = (string)$att["name"];
+      }
+    }
+  }
+  echo "msg#" . ($row["id"] ?? "") . " ref=" . ($row["reference_id"] ?? "") . " author=" . ($row["author_type"] ?? "") . " at=" . ($row["created_at"] ?? "") . " files=" . implode(",", $names) . "\n";
+}
+if (class_exists("PAXdesign_Cybercrime_Tickets")) {
+  $ref = $wpdb->get_var("SELECT reference_id FROM {$wpdb->prefix}paxdesign_cybercrime_reports ORDER BY updated_at DESC LIMIT 1");
+  if ($ref) {
+    echo "Latest report collect_report_attachments for $ref:\n";
+    $enriched = PAXdesign_Cybercrime_Tickets::collect_report_attachments($ref);
+    echo "count=" . count($enriched) . "\n";
+    foreach ($enriched as $att) {
+      echo "  - " . ($att["name"] ?? "?") . " url=" . (empty($att["url"]) ? "EMPTY" : "set") . "\n";
+    }
+  }
+}
+' 2>&1 || echo "wp eval failed"
+fi
+
 section "WP-CLI: collect_report_attachments for latest waiting_for_customer report"
 if command -v wp >/dev/null 2>&1; then
   cd "$WP_PATH"
   wp eval '
 global $wpdb;
-$table = $wpdb->prefix . "paxdesign_cybercrime_intake";
+$table = $wpdb->prefix . "paxdesign_cybercrime_reports";
 $row = $wpdb->get_row("SELECT * FROM $table WHERE status = \"waiting_for_customer\" ORDER BY updated_at DESC LIMIT 1", ARRAY_A);
 if (!$row) {
   echo "No waiting_for_customer reports\n";
