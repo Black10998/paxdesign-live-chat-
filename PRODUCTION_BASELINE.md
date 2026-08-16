@@ -9,7 +9,7 @@
 | Source | Restored WordPress site (2026-08-08 16:26), then surgical chat/CCS patches |
 | Restored git ancestor | `2f06a39e` (`3.174.85`) |
 | Live overlay copy | `deploy-patches/restored-chat-human-ui/` (must stay identical to `paxdesign-booking/` files listed below) |
-| Baseline merge | PR #282 (`5f37d88d`) |
+| Baseline merge | PR #283 (`c0176c77`) — desktop mic user-gesture fix + composer alignment |
 
 This version is the only development baseline for future WordPress plugin work. Branch from current `main`. Do not base work on older `3.176.x` chat branches or closed PRs.
 
@@ -17,7 +17,7 @@ This version is the only development baseline for future WordPress plugin work. 
 
 - GitHub `3.176.x` chat rewrites (`skipping stacked sync`, instant-open freeze work)
 - Closed / superseded PRs: #262, #269, #270, #271, and any PR that restores CCS AI form-fill from chat
-- Superseded chat branches: `cursor/chat-ui-compact-9e84`, `cursor/chat-whatsapp-speed-9e84`, `cursor/desktop-chat-regression-fix-7c3f` (merged; delete after sync)
+- Superseded chat branches: `cursor/chat-ui-compact-9e84`, `cursor/chat-whatsapp-speed-9e84`, `cursor/desktop-chat-regression-fix-7c3f`, `cursor/desktop-mic-final-fix-7c3f`, `cursor/desktop-mic-recognition-fix-7c3f` (merged/superseded by #283)
 - CCS AI classes that submit the website form from chat:
   - `class-paxdesign-cybercrime-ai-workflow.php`
   - `class-paxdesign-cybercrime-ai-operations.php`
