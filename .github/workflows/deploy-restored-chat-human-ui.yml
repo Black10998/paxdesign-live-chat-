@@ -9,6 +9,7 @@ on:
     paths:
       - 'deploy-patches/restored-chat-human-ui/**'
       - '.github/workflows/deploy-restored-chat-human-ui.yml'
+      - 'scripts/verify-restored-chat-human-ui.sh'
   workflow_dispatch:
 
 permissions:

@@ -27,13 +27,21 @@ curl -fsSL "${SITE}/wp-content/plugins/paxdesign-booking/assets/js/cybercrime-ad
 curl -fsSL "${SITE}/wp-content/plugins/paxdesign-booking/paxdesign-booking.php?v=${STAMP}" \
   -o "${tmpdir}/paxdesign-booking.php" || true
 
-grep -q "Version: 3.174.91" "${tmpdir}/chat-script.js" \
-  && ok "chat-script.js cache-bust version 3.174.91" \
-  || fail "chat-script.js is not the patched 3.174.91 file"
+grep -q "Version: 3.174.92" "${tmpdir}/chat-script.js" \
+  && ok "chat-script.js cache-bust version 3.174.92" \
+  || fail "chat-script.js is not the patched 3.174.92 file"
 
 grep -q "uploadHumanAttachFile" "${tmpdir}/chat-script.js" \
   && ok "plus-button upload handler present" \
   || fail "uploadHumanAttachFile missing"
+
+grep -q "var stickToBottom" "${tmpdir}/chat-script.js" \
+  && ok "WhatsApp stick-to-bottom present" \
+  || fail "stickToBottom missing"
+
+grep -q "background: true, blockUi: false" "${tmpdir}/chat-script.js" \
+  && ok "open does not block on history/sync" \
+  || fail "background open path missing"
 
 grep -q "paxdesign-chat-admin-active" "${tmpdir}/chat-script.js" \
   && ok "human takeover class toggle present" \
