@@ -1010,26 +1010,115 @@ class PAXdesign_Cybercrime_Intake {
         }
 
         $upload_dir = wp_upload_dir();
+        $basedir = trailingslashit((string) ($upload_dir['basedir'] ?? ''));
+        if ($basedir === '') {
+            return '';
+        }
+
+        $candidates = array();
         if (!empty($attachment['path'])) {
-            $path = trailingslashit($upload_dir['basedir']) . ltrim(str_replace('\\', '/', (string) $attachment['path']), '/');
-            if (is_file($path)) {
-                return $path;
-            }
+            $rel = ltrim(str_replace('\\', '/', (string) $attachment['path']), '/');
+            $candidates[] = $basedir . $rel;
         }
 
         if (!empty($attachment['url'])) {
-            $baseurl = trailingslashit($upload_dir['baseurl']);
+            $baseurl = rtrim((string) ($upload_dir['baseurl'] ?? ''), '/');
             $url = (string) $attachment['url'];
-            if (strpos($url, $baseurl) === 0) {
-                $rel = ltrim(substr($url, strlen(rtrim($upload_dir['baseurl'], '/'))), '/');
-                $path = trailingslashit($upload_dir['basedir']) . $rel;
-                if (is_file($path)) {
-                    return $path;
+            if ($baseurl !== '' && strpos($url, $baseurl) === 0) {
+                $rel = ltrim(substr($url, strlen($baseurl)), '/');
+                if ($rel !== '') {
+                    $candidates[] = $basedir . $rel;
                 }
             }
         }
 
+        $name = sanitize_file_name((string) ($attachment['name'] ?? ''));
+        if ($name !== '') {
+            $candidates[] = $basedir . self::UPLOAD_SUBDIR . '/' . $name;
+            foreach (glob($basedir . self::UPLOAD_SUBDIR . '/*/' . $name) ?: array() as $match) {
+                $candidates[] = $match;
+            }
+            foreach (glob($basedir . self::UPLOAD_SUBDIR . '/*/*/' . $name) ?: array() as $match) {
+                $candidates[] = $match;
+            }
+        }
+
+        foreach ($candidates as $path) {
+            $path = str_replace('\\', '/', (string) $path);
+            if ($path !== '' && is_file($path)) {
+                return $path;
+            }
+        }
+
         return '';
+    }
+
+    /**
+     * Fill in a relative path when legacy records only stored a public URL.
+     *
+     * @param array<string, string> $attachment
+     * @return array<string, string>
+     */
+    public static function recover_attachment_record(array $attachment) {
+        $path = self::resolve_attachment_path($attachment);
+        if ($path === '') {
+            return $attachment;
+        }
+        $upload_dir = wp_upload_dir();
+        $basedir = trailingslashit((string) ($upload_dir['basedir'] ?? ''));
+        if ($basedir === '') {
+            return $attachment;
+        }
+        $rel = ltrim(str_replace('\\', '/', str_replace($basedir, '', $path)), '/');
+        if ($rel !== '') {
+            $attachment['path'] = $rel;
+        }
+        return $attachment;
+    }
+
+    /**
+     * @param string $path
+     * @return string
+     */
+    public static function detect_attachment_mime($path) {
+        $path = (string) $path;
+        if ($path === '' || !is_readable($path)) {
+            return '';
+        }
+        if (function_exists('mime_content_type')) {
+            $mime = mime_content_type($path);
+            if (is_string($mime) && $mime !== '') {
+                return sanitize_mime_type($mime);
+            }
+        }
+        $checked = wp_check_filetype(basename($path));
+        if (is_array($checked) && !empty($checked['type'])) {
+            return sanitize_mime_type((string) $checked['type']);
+        }
+        return '';
+    }
+
+    /**
+     * @param string $path
+     * @param string $mime
+     * @return bool
+     */
+    public static function verify_image_file($path, $mime = '') {
+        $path = (string) $path;
+        if ($path === '' || !is_readable($path)) {
+            return false;
+        }
+        if ($mime === '') {
+            $mime = self::detect_attachment_mime($path);
+        }
+        if (!self::is_image_mime($mime)) {
+            return false;
+        }
+        if (function_exists('getimagesize')) {
+            $info = @getimagesize($path);
+            return is_array($info) && !empty($info[0]) && !empty($info[1]);
+        }
+        return true;
     }
 
     /**
@@ -1097,21 +1186,28 @@ class PAXdesign_Cybercrime_Intake {
             if (!is_array($attachment)) {
                 continue;
             }
-            $name = sanitize_file_name((string) ($attachment['name'] ?? ''));
+            $resolved = self::recover_attachment_record($attachment);
+            $name = sanitize_file_name((string) ($resolved['name'] ?? ''));
             if ($name === '') {
                 continue;
             }
-            $type = (string) ($attachment['type'] ?? '');
+            $path = self::resolve_attachment_path($resolved);
+            $available = ($path !== '' && is_readable($path));
+            $type = (string) ($resolved['type'] ?? '');
+            if ($available && $type === '') {
+                $type = self::detect_attachment_mime($path);
+            }
+            $is_image = $available && self::verify_image_file($path, $type);
             $item = array(
-                'field'     => sanitize_key((string) ($attachment['field'] ?? '')),
+                'field'     => sanitize_key((string) ($resolved['field'] ?? '')),
                 'name'      => $name,
                 'type'      => $type,
-                'size'      => (string) ($attachment['size'] ?? ''),
-                'is_image'  => self::is_image_mime($type),
-                'url'       => self::attachment_download_url($reference_id, $attachment),
+                'size'      => (string) ($resolved['size'] ?? ''),
+                'is_image'  => $is_image,
+                'url'       => $available ? self::attachment_download_url($reference_id, $resolved) : '',
             );
-            if (!empty($attachment['path'])) {
-                $item['path'] = (string) $attachment['path'];
+            if (!empty($resolved['path'])) {
+                $item['path'] = (string) $resolved['path'];
             }
             $out[] = $item;
         }
@@ -1178,6 +1274,7 @@ class PAXdesign_Cybercrime_Intake {
             wp_die(esc_html__('Attachment not found.', 'paxdesign-booking'), '', array('response' => 404));
         }
 
+        $match = self::recover_attachment_record(is_array($match) ? $match : array());
         $path = self::resolve_attachment_path($match);
         if ($path === '' || !is_readable($path)) {
             wp_die(esc_html__('File is unavailable.', 'paxdesign-booking'), '', array('response' => 404));

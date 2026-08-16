@@ -52,9 +52,13 @@ ccs_evidence_assert(strpos($portalCss, 'pax-ccs-portal__evidence-request-btn') !
 ccs_evidence_assert(strpos($portalCss, '-webkit-text-fill-color: #fff !important') !== false, 'portal CSS locks evidence button text contrast');
 ccs_evidence_assert(strpos($tickets, 'timeline_evidence_signature') !== false, 'tickets builds timeline evidence signature');
 ccs_evidence_assert(strpos($tickets, 'collect_report_attachments') !== false, 'tickets merges report and message attachments for admin');
+ccs_evidence_assert(strpos($tickets, 'canonicalize_attachment_record') !== false, 'tickets canonicalizes legacy and new attachment records');
+ccs_evidence_assert(strpos($tickets, 'merge_attachment_lists') !== false, 'tickets merges attachment lists without dropping legacy rows');
 ccs_evidence_assert(strpos($tickets, 'sync_report_attachments_column') !== false, 'tickets syncs report attachments after customer evidence upload');
 ccs_evidence_assert(strpos($tickets, 'attachments_signature') !== false, 'tickets builds attachments signature for sync');
 ccs_evidence_assert(strpos($tickets, 'find_stored_attachment') !== false, 'tickets resolves attachments from report and timeline messages');
+ccs_evidence_assert(strpos($intake, 'recover_attachment_record') !== false, 'intake recovers legacy attachment paths from stored URLs');
+ccs_evidence_assert(strpos($intake, 'verify_image_file') !== false, 'intake verifies image content before preview');
 ccs_evidence_assert(strpos($intake, 'find_stored_attachment') !== false, 'intake download checks timeline message attachments');
 ccs_evidence_assert(strpos($adminJs, 'pax-cc-request-evidence') !== false, 'admin JS handles request evidence checkbox');
 ccs_evidence_assert(strpos($adminJs, 'request_evidence') !== false, 'admin JS sends request_evidence flag');
@@ -75,5 +79,11 @@ ccs_evidence_assert($adminJsCode === 0, 'node --check cybercrime-admin.js');
 
 exec('node --check ' . escapeshellarg($theme . '/assets/js/apple-cybercrime-support.js') . ' 2>&1', $portalJsCheck, $portalJsCode);
 ccs_evidence_assert($portalJsCode === 0, 'node --check apple-cybercrime-support.js');
+
+exec('php ' . escapeshellarg(dirname(__FILE__) . '/attachment-pipeline.php') . ' 2>&1', $pipelineOut, $pipelineCode);
+if ($pipelineCode !== 0) {
+    fwrite(STDERR, implode("\n", $pipelineOut) . "\n");
+}
+ccs_evidence_assert($pipelineCode === 0, 'attachment pipeline regression (legacy + new survive sync)');
 
 fwrite(STDOUT, "All cybercrime evidence checks passed.\n");

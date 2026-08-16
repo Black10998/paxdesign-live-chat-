@@ -567,19 +567,35 @@ class PAXdesign_Cybercrime_Tickets {
     }
 
     /**
-     * Normalize one stored attachment record for persistence/API output.
+     * Canonicalize one stored attachment record without dropping legacy fields.
      *
      * @param array<string, mixed> $attachment
      * @return array<string, string>|null
      */
-    public static function normalize_stored_attachment($attachment) {
+    public static function canonicalize_attachment_record($attachment) {
         if (!is_array($attachment)) {
             return null;
         }
+
         $name = sanitize_file_name((string) ($attachment['name'] ?? ''));
+        if ($name === '') {
+            foreach (array('path', 'url', 'file') as $source_key) {
+                if (empty($attachment[$source_key])) {
+                    continue;
+                }
+                $raw = (string) $attachment[$source_key];
+                $path_part = parse_url($raw, PHP_URL_PATH);
+                $candidate = sanitize_file_name(basename($path_part !== null && $path_part !== '' ? $path_part : $raw));
+                if ($candidate !== '') {
+                    $name = $candidate;
+                    break;
+                }
+            }
+        }
         if ($name === '') {
             return null;
         }
+
         $out = array(
             'field' => sanitize_key((string) ($attachment['field'] ?? '')),
             'name'  => $name,
@@ -589,7 +605,95 @@ class PAXdesign_Cybercrime_Tickets {
         if (!empty($attachment['path'])) {
             $out['path'] = ltrim(str_replace('\\', '/', (string) $attachment['path']), '/');
         }
+        if (!empty($attachment['url'])) {
+            $out['url'] = (string) $attachment['url'];
+        }
         return $out;
+    }
+
+    /**
+     * @param array<string, mixed> $attachment
+     * @return array<string, string>|null
+     */
+    public static function normalize_stored_attachment($attachment) {
+        return self::canonicalize_attachment_record($attachment);
+    }
+
+    /**
+     * @param array<string, string>      $existing
+     * @param array<string, string>      $incoming
+     * @return array<string, string>
+     */
+    public static function merge_attachment_records(array $existing, array $incoming) {
+        $out = $existing;
+        foreach (array('field', 'name', 'path', 'url', 'type', 'size') as $key) {
+            $current = (string) ($out[$key] ?? '');
+            $next = (string) ($incoming[$key] ?? '');
+            if ($current === '' && $next !== '') {
+                $out[$key] = $next;
+            }
+        }
+        if (!empty($incoming['path'])) {
+            $out['path'] = (string) $incoming['path'];
+        }
+        if (!empty($incoming['url'])) {
+            $out['url'] = (string) $incoming['url'];
+        }
+        return $out;
+    }
+
+    /**
+     * @param array<string, string> $attachment
+     * @return string
+     */
+    public static function attachment_record_key(array $attachment) {
+        $name = sanitize_file_name((string) ($attachment['name'] ?? ''));
+        if ($name !== '') {
+            return 'name:' . $name;
+        }
+        $path = ltrim(str_replace('\\', '/', (string) ($attachment['path'] ?? '')), '/');
+        if ($path !== '') {
+            return 'path:' . $path;
+        }
+        $url = (string) ($attachment['url'] ?? '');
+        if ($url !== '') {
+            return 'url:' . $url;
+        }
+        return '';
+    }
+
+    /**
+     * @param array<int, array<string, mixed>> ...$lists
+     * @return array<int, array<string, string>>
+     */
+    public static function merge_attachment_lists(array ...$lists) {
+        $merged = array();
+        $index = array();
+
+        foreach ($lists as $list) {
+            if (!is_array($list)) {
+                continue;
+            }
+            foreach ($list as $attachment) {
+                $canonical = self::canonicalize_attachment_record($attachment);
+                if (!$canonical) {
+                    continue;
+                }
+                $key = self::attachment_record_key($canonical);
+                if ($key === '') {
+                    $merged[] = $canonical;
+                    continue;
+                }
+                if (isset($index[$key])) {
+                    $merged[$index[$key]] = self::merge_attachment_records($merged[$index[$key]], $canonical);
+                    continue;
+                }
+                $index[$key] = count($merged);
+                $merged[] = $canonical;
+            }
+        }
+
+        return array_values($merged);
     }
 
     /**
@@ -605,34 +709,19 @@ class PAXdesign_Cybercrime_Tickets {
             return array();
         }
         if (!is_array($row)) {
-            $row = self::get_report_row($reference_id);
+            $row = static::get_report_row($reference_id);
         }
-        $merged = array();
-        $seen = array();
 
-        $add = static function ($attachment) use (&$merged, &$seen) {
-            $normalized = self::normalize_stored_attachment($attachment);
-            if (!$normalized) {
-                return;
-            }
-            $key = $normalized['name'] . '|' . ($normalized['path'] ?? '');
-            if (isset($seen[$key])) {
-                return;
-            }
-            $seen[$key] = true;
-            $merged[] = $normalized;
-        };
-
+        $lists = array();
         if (is_array($row)) {
             $stored = json_decode((string) ($row['attachments'] ?? ''), true);
             if (is_array($stored)) {
-                foreach ($stored as $attachment) {
-                    $add($attachment);
-                }
+                $lists[] = $stored;
             }
         }
 
-        foreach (self::list_messages($reference_id, 500) as $entry) {
+        $message_attachments = array();
+        foreach (static::list_messages($reference_id, 500) as $entry) {
             if (!is_array($entry)) {
                 continue;
             }
@@ -641,10 +730,21 @@ class PAXdesign_Cybercrime_Tickets {
                 continue;
             }
             foreach ($meta['attachments'] as $attachment) {
-                $add($attachment);
+                $message_attachments[] = $attachment;
             }
         }
+        if (!empty($message_attachments)) {
+            $lists[] = $message_attachments;
+        }
 
+        $merged = self::merge_attachment_lists(...$lists);
+        if (!class_exists('PAXdesign_Cybercrime_Intake')) {
+            return $merged;
+        }
+
+        foreach ($merged as $i => $attachment) {
+            $merged[$i] = PAXdesign_Cybercrime_Intake::recover_attachment_record($attachment);
+        }
         return $merged;
     }
 
@@ -713,12 +813,30 @@ class PAXdesign_Cybercrime_Tickets {
         if ($reference_id === '') {
             return false;
         }
-        $stored = self::collect_stored_attachments($reference_id);
+
+        $row = static::get_report_row($reference_id);
+        if (!is_array($row)) {
+            return false;
+        }
+
+        $existing_raw = json_decode((string) ($row['attachments'] ?? ''), true);
+        if (!is_array($existing_raw)) {
+            $existing_raw = array();
+        }
+        $existing_canonical = self::merge_attachment_lists($existing_raw);
+        $collected = self::collect_stored_attachments($reference_id, $row);
+        $final = self::merge_attachment_lists($existing_raw, $collected);
+
+        if (count($final) < count($existing_canonical)) {
+            error_log('[PAXdesign Cybercrime] Refusing to shrink attachments for ' . $reference_id);
+            $final = self::merge_attachment_lists($existing_canonical, $collected);
+        }
+
         global $wpdb;
         $updated = $wpdb->update(
             PAXdesign_Cybercrime_Intake::table_name(),
             array(
-                'attachments' => wp_json_encode($stored),
+                'attachments' => wp_json_encode($final),
                 'updated_at'  => current_time('mysql', true),
             ),
             array('reference_id' => $reference_id),
