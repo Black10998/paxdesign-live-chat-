@@ -2852,6 +2852,13 @@
     return !!(window.SpeechRecognition || window.webkitSpeechRecognition);
   }
 
+  function shouldUseSpeechFirstDesktopFlow() {
+    if (!speechRecognitionSupported()) return false;
+    var ua = navigator.userAgent || '';
+    if (/Android|iPhone|iPad|iPod|Mobile/i.test(ua)) return false;
+    return true;
+  }
+
   function speechLangForChat() {
     var lang = detectChatLanguage();
     if (lang === 'ar') return 'ar-SA';
@@ -3203,7 +3210,9 @@
         voiceBtn.classList.remove('paxdesign-is-pending');
         voiceBtn.classList.add('paxdesign-is-active');
       }
-      startVoiceWaveformFromHeldStream();
+      if (!options.speechFirstDesktop) {
+        startVoiceWaveformFromHeldStream();
+      }
     };
     voiceRecognition.onend = function () {
       if (!voiceListening) return;
@@ -3215,11 +3224,23 @@
     };
     voiceRecognition.onerror = function (event) {
       if (event.error === 'not-allowed') {
-        if (options.syncGesture && !options.afterMicGrant && !hasLiveVoiceMicStream()) {
+        if (options.speechFirstDesktop && !options.retriedNotAllowed) {
+          options.retriedNotAllowed = true;
+          stopVoiceAnalyser();
+          window.setTimeout(function () {
+            if (voiceListening) return;
+            beginSpeechRecognition({
+              speechFirstDesktop: true,
+              retriedNotAllowed: true,
+            });
+          }, 180);
+          return;
+        }
+        if (!options.speechFirstDesktop && options.syncGesture && !options.afterMicGrant && !hasLiveVoiceMicStream()) {
           voicePendingMicRetry = true;
           return;
         }
-        if (hasLiveVoiceMicStream() && !options.retriedNotAllowed) {
+        if (!options.speechFirstDesktop && hasLiveVoiceMicStream() && !options.retriedNotAllowed) {
           options.retriedNotAllowed = true;
           stopVoiceAnalyser();
           window.setTimeout(function () {
@@ -3228,12 +3249,12 @@
           }, 140);
           return;
         }
-        if (hasLiveVoiceMicStream() || options.afterMicGrant) {
+        if (!options.speechFirstDesktop && (hasLiveVoiceMicStream() || options.afterMicGrant)) {
           showError(speechRecognitionBlockedMessage());
         } else {
           showError(microphoneDeniedRecoveryMessage());
         }
-        stopVoiceInput(false);
+        stopVoiceInput(true);
         return;
       }
       if (!options.retried && event.error === 'audio-capture') {
@@ -3277,32 +3298,23 @@
     if (voiceBtn) voiceBtn.classList.add('paxdesign-is-pending');
     refreshVoiceMicPermissionHint();
 
-    var micPromise = requestMicrophoneFromUserGesture({
-      forceNew: !hasLiveVoiceMicStream()
-    });
-
-    beginSpeechRecognition({ syncGesture: true });
-
-    micPromise.then(function () {
+    if (shouldUseSpeechFirstDesktopFlow()) {
+      beginSpeechRecognition({ syncGesture: true, speechFirstDesktop: true });
       voiceStartInFlight = false;
-      if (voiceListening) {
-        startVoiceWaveformFromHeldStream();
-        return;
-      }
-      if (voicePendingMicRetry) {
-        voicePendingMicRetry = false;
-        beginSpeechRecognition({ afterMicGrant: true });
-        return;
-      }
-      if (voiceBtn) voiceBtn.classList.remove('paxdesign-is-pending');
+      return;
+    }
+
+    requestMicrophoneFromUserGesture({
+      forceNew: !hasLiveVoiceMicStream(),
+    }).then(function () {
+      voiceStartInFlight = false;
+      beginSpeechRecognition({ afterMicGrant: true });
     }).catch(function (err) {
       voiceStartInFlight = false;
       voicePendingMicRetry = false;
       if (voiceBtn) voiceBtn.classList.remove('paxdesign-is-pending');
-      if (!voiceListening) {
-        showError(microphoneAccessErrorMessage(err));
-        maybeRestoreComposerFocus();
-      }
+      showError(microphoneAccessErrorMessage(err));
+      maybeRestoreComposerFocus();
     });
   }
 
