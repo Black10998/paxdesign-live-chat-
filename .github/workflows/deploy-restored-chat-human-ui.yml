@@ -170,7 +170,11 @@ jobs:
             "$SRC/includes/auth/class-paxdesign-auth-frontend.php" \
             "${REMOTE}:${TARGET}/includes/auth/class-paxdesign-auth-frontend.php"
           ssh_with_retry "$REMOTE" \
-            "cd '$(printf '%q' "$WP_PATH")' && (command -v wp >/dev/null && wp cache flush || true) && (command -v wp >/dev/null && wp litespeed-purge all || true)"
+            "cd '$(printf '%q' "$WP_PATH")' && \
+             rm -f .maintenance && \
+             (command -v wp >/dev/null && wp maintenance-mode deactivate 2>/dev/null || true) && \
+             (command -v wp >/dev/null && wp cache flush || true) && \
+             (command -v wp >/dev/null && wp litespeed-purge all || true)"
 
       - name: Verify live chat assets
         run: |
