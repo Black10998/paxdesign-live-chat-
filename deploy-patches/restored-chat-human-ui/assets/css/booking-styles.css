@@ -2,6 +2,7 @@
  * PAXdesign Booking System — Scoped Frontend UI
  * Version: 3.3.2
  * All rules scoped to #paxdesign-booking-root — no global leakage.
+ * Mobile chat sheet: full-phone Apple layout (3.174.95).
  */
 
 /* ─── Root Isolation Shell ──────────────────────────────────────────────── */
