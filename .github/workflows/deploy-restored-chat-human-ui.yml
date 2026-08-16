@@ -64,6 +64,9 @@ jobs:
             "$SRC/assets/js/widget-loader.js" \
             "${REMOTE}:${TARGET}/assets/js/widget-loader.js"
           rsync -az -e "ssh ${SSH_OPTS[*]}" \
+            "$SRC/assets/customer-auth/js/pax-auth.js" \
+            "${REMOTE}:${TARGET}/assets/customer-auth/js/pax-auth.js"
+          rsync -az -e "ssh ${SSH_OPTS[*]}" \
             "$SRC/assets/css/booking-styles.css" \
             "${REMOTE}:${TARGET}/assets/css/booking-styles.css"
           rsync -az -e "ssh ${SSH_OPTS[*]}" \

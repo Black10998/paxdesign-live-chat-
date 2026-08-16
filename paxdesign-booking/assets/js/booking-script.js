@@ -63,6 +63,14 @@
         ensureChatReady(function () {});
     }
 
+    function showChatShellError(message) {
+        var $panel = $in('#paxdesignChatPanel');
+        var $loader = $panel.find('.paxdesign-chat-shell-loader');
+        if ($loader.length) {
+            $loader.find('.paxdesign-chat-shell-loader-label').text(message || 'Chat konnte nicht geladen werden.');
+        }
+    }
+
     function ensureChatReady(callback) {
         if (window.PAXdesignWidgetLoader && typeof window.PAXdesignWidgetLoader.ensureChat === 'function') {
             window.PAXdesignWidgetLoader.ensureChat().then(function () {
@@ -70,9 +78,8 @@
                     callback();
                 }
             }).catch(function () {
-                if (typeof callback === 'function') {
-                    callback();
-                }
+                showChatShellLoading(false);
+                showChatShellError('Chat konnte nicht geladen werden. Bitte Seite neu laden.');
             });
             return;
         }

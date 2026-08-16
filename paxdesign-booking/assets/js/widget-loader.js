@@ -1,5 +1,5 @@
 /**
- * Lazy-load chat script after idle or first widget interaction (keeps initial load light).
+ * Load chat script on first explicit widget interaction (no idle preload).
  */
 (function () {
   'use strict';
@@ -35,50 +35,8 @@
     return chatPromise;
   }
 
-  function preloadChat() {
-    loadChatScript().catch(function () {});
-  }
-
   window.PAXdesignWidgetLoader = {
     ensureChat: loadChatScript,
-    preload: preloadChat,
+    preload: loadChatScript,
   };
-
-  if ('requestIdleCallback' in window) {
-    requestIdleCallback(preloadChat, { timeout: 1200 });
-  } else {
-    setTimeout(preloadChat, 800);
-  }
-
-  document.addEventListener(
-    'click',
-    function (event) {
-      var target = event.target;
-      if (!target || !target.closest) {
-        return;
-      }
-      if (
-        target.closest(
-          '.paxdesign-booking-button, #paxdesign-booking-root, [data-paxdesign-open-chat]'
-        )
-      ) {
-        preloadChat();
-      }
-    },
-    true
-  );
-
-  document.addEventListener(
-    'mouseover',
-    function (event) {
-      var target = event.target;
-      if (!target || !target.closest) {
-        return;
-      }
-      if (target.closest('.paxdesign-booking-button')) {
-        preloadChat();
-      }
-    },
-    { passive: true, once: true }
-  );
 })();

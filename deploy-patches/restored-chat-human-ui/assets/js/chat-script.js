@@ -1,6 +1,6 @@
 /**
  * PAXdesign AI Chat — Sales & Booking Assistant
- * Version: 3.174.122
+ * Version: 3.174.123
  */
 (function () {
   'use strict';
@@ -136,6 +136,7 @@
 
   var entryChoice      = '';
   var sessionRestored  = false;
+  var bootPromise      = null;
   var sessionLoading   = false;
 
   var PAX_FEEDBACK_KEYS = {
@@ -764,17 +765,16 @@
     if (messagesEl) messagesEl.classList.remove('paxdesign-chat-unpinned');
   }
 
+  function whenBootstrapped() {
+    return bootPromise || Promise.resolve();
+  }
+
   function paintCachedThreadIfNeeded() {
     if (threadEl && threadEl.children.length > 0) return;
     if (messages.length > 0) {
       stickToBottom = true;
       scrollToBottom(true);
       return;
-    }
-    if (isPersistentAccountChat()) return;
-    var snap = loadSessionSnapshot(getSessionId());
-    if (snap && Array.isArray(snap.messages) && snap.messages.length) {
-      applyRestoredSnapshot(snap);
     }
   }
 
@@ -798,7 +798,7 @@
 
   function shouldSkipHistoryFetch(options) {
     options = options || {};
-    if (options.forceHistory) {
+    if (options.forceHistory || options.forceOpen) {
       return false;
     }
     if (options.skipHistory) {
@@ -807,7 +807,7 @@
     if (sessionFetchInFlight) {
       return true;
     }
-    if (threadEl && threadEl.children.length > 0 && pollIsFresh(HISTORY_REUSE_MS)) {
+    if (threadEl && threadEl.children.length > 0 && pollIsFresh(HISTORY_REUSE_MS) && options.background) {
       return true;
     }
     if (!options.reuseSession && !options.background) {
@@ -1265,6 +1265,12 @@
         return reopenAuthenticatedSessionIfNeeded();
       }).then(function () {
         if (generation !== silentRefreshGeneration) return false;
+        return fetchSessionFromServer(true, false);
+      }).then(function () {
+        if (generation !== silentRefreshGeneration) return false;
+        return pollUpdatesOnce(false);
+      }).then(function () {
+        if (generation !== silentRefreshGeneration) return false;
         hideReadinessOverlay();
         inferEntryChoiceFromHandler();
         updateEntryUi();
@@ -1278,16 +1284,7 @@
         if (widgetOpen && input && !input.disabled) {
           try { input.focus({ preventScroll: true }); } catch (focusErr) {}
         }
-        logReadiness('login_transition', 'OK', { sessionId: getSessionId(), background: true });
-        fetchSessionFromServer(true, false).then(function () {
-          if (generation !== silentRefreshGeneration) return;
-          return pollUpdatesOnce(false);
-        }).then(function () {
-          if (generation !== silentRefreshGeneration) return;
-          stickToBottom = true;
-          scrollToBottom(true);
-          notifyLayout();
-        }).catch(function () {});
+        logReadiness('login_transition', 'OK', { sessionId: getSessionId() });
         return true;
       });
     }).catch(function (err) {
@@ -1478,7 +1475,7 @@
       showAuthGate();
       window.PDXAuth.mountInlineAuth(inlineEl, view === 'register' ? 'register' : 'login', {
         compact: true,
-        context: 'page',
+        context: 'chat',
       });
       return;
     }
@@ -1496,7 +1493,7 @@
     clearInlineAuthForm();
     window.PDXAuth.mountInlineAuth(inlineEl, view || 'login', {
       compact: true,
-      context: 'page',
+      context: 'chat',
     });
     inlineEl.dataset.mounted = '1';
     inlineEl.dataset.authView = view || 'login';
@@ -1586,6 +1583,8 @@
       domMsgIds = {};
       domClientMsgIds = {};
       pollSeq = 0;
+      appliedMessageSeq = 0;
+      localMsgId = 0;
       entryChoice = '';
       sessionRestored = false;
       sessionLoading = false;
@@ -1679,7 +1678,7 @@
         new_conversation: false,
       }).then(function (data) {
         if (data && data.session_id) {
-          adoptSessionId(data.session_id, { fromServer: true, preserveUi: true });
+          adoptSessionId(data.session_id, { fromServer: true, preserveUi: false });
           if (data.handler) applyHandlerState(data.handler, adminName);
         }
       }).catch(function () {
@@ -1721,14 +1720,15 @@
     bindVisibilityResume();
     bindChatLifecycle();
     if (isPersistentAccountChat()) {
+      bootPromise = Promise.resolve();
       if (config && config.chatSessionId) {
         adoptSessionId(config.chatSessionId, { fromServer: true, preserveUi: true });
       }
       updateEntryUi();
       updateInputState();
     } else {
-      var boot = restoreCustomerSession();
-      boot.then(function () {
+      bootPromise = restoreCustomerSession();
+      bootPromise.then(function () {
         if (!sessionRestored) updateEntryUi();
         updateInputState();
       });
@@ -1833,29 +1833,32 @@
   function onWidgetOpen() {
     widgetOpen = true;
     initAuthGate();
-    if (!canUseChat()) {
-      releaseChatShellLoader();
-      showAuthGate();
+    whenBootstrapped().then(function () {
+      if (!canUseChat()) {
+        releaseChatShellLoader();
+        showAuthGate();
+        notifyLayout();
+        return;
+      }
+      hideAuthGate();
+      hideReadinessOverlay();
+      stickToBottom = true;
+      updateInputState();
+      updateEntryUi();
       notifyLayout();
-      return;
-    }
-    hideAuthGate();
-    hideReadinessOverlay();
-    paintCachedThreadIfNeeded();
-    stickToBottom = true;
-    updateInputState();
-    updateEntryUi();
-    pinToLatestMessage();
-    notifyLayout();
-    scheduleLivePolling();
-    releaseChatShellLoader();
-    if (getSessionId()) startCustomerStream();
-    window.setTimeout(function () {
-      beginChatReadiness({ reuseSession: true, background: true, blockUi: false }).then(function (ready) {
+      beginChatReadiness({
+        reuseSession: false,
+        forceHistory: true,
+        forceOpen: true,
+        background: false,
+        blockUi: false,
+      }).then(function (ready) {
         if (!ready) {
+          releaseChatShellLoader();
           return;
         }
         pinToLatestMessage();
+        revealPinnedThread();
         if (chatHandler === 'closed' && isSessionArchived(getSessionId()) && !isPersistentAccountChat()) {
           fetchSessionFromServer(true).then(function () {
             var hasHistory = messages.length > 0 || (config && config.chatMessageCount > 0);
@@ -1867,7 +1870,7 @@
           });
         }
       });
-    }, 0);
+    });
   }
 
   function onWidgetClose() {
@@ -2225,6 +2228,8 @@
     domMsgIds = {};
     domClientMsgIds = {};
     pollSeq = 0;
+    appliedMessageSeq = 0;
+    localMsgId = 0;
     oldestLoadedSeq = 0;
     hasOlderMessages = false;
     loadingOlderHistory = false;
@@ -3970,7 +3975,7 @@
     if (data.session_id && data.session_id !== getSessionId()) {
       adoptSessionId(data.session_id, {
         fromServer: true,
-        preserveUi: widgetOpen && shouldPreserveHistoryDom(),
+        preserveUi: false,
       });
     }
     applyHandlerState(data.handler || 'ai', data.admin_name || '');
@@ -6003,7 +6008,7 @@
     isStreaming = false;
     updateSendButton();
     if (data && data.session_id) {
-      adoptSessionId(data.session_id, { fromServer: true, preserveUi: true });
+      adoptSessionId(data.session_id, { fromServer: true, preserveUi: false });
     }
     if (data && data.handler) {
       applyHandlerState(data.handler, data.admin_name || '');

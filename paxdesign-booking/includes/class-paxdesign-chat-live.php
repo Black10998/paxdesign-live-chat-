@@ -3655,6 +3655,9 @@ class PAXdesign_Chat_Live {
             $payload['has_older'] = $has_older;
             $payload['oldest_seq'] = $oldest_seq;
         }
+        if (!$full && $since > 0 && empty($new) && $message_count > $since) {
+            $payload['sync'] = array('resync_required' => true);
+        }
         return $payload;
     }
 

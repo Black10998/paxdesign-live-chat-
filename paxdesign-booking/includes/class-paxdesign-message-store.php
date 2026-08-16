@@ -385,10 +385,11 @@ class PAXdesign_Message_Store {
         $rows = $wpdb->get_results($wpdb->prepare(
             "SELECT msg_seq, client_msg_id, role, content, meta_json, created_at
              FROM $table
-             WHERE session_id = %s AND msg_seq > %d
+             WHERE session_id = %s AND channel = %s AND msg_seq > %d
              ORDER BY msg_seq ASC
              LIMIT %d",
             sanitize_text_field($session_id),
+            sanitize_key($channel),
             absint($since),
             $limit
         ));
