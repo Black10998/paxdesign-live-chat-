@@ -63,6 +63,16 @@ grep -q "showChatShellLoading" "${tmpdir}/booking-script.js" 2>/dev/null \
   && ok "booking-script shell loader present" \
   || fail "booking-script shell loader missing"
 
+grep -q "syncGesture: true" "${tmpdir}/chat-script.js" \
+  && ok "speech recognition starts synchronously in user gesture" \
+  || fail "syncGesture mic flow missing"
+
+if grep -q "shouldUseDesktopSpeechFlow" "${tmpdir}/chat-script.js"; then
+  fail "live chat still uses obsolete Windows mic release workaround"
+else
+  ok "obsolete Windows mic release workaround removed"
+fi
+
 grep -q "requestMicrophoneFromUserGesture" "${tmpdir}/chat-script.js" \
   && ok "mic is requested from user gesture via getUserMedia" \
   || fail "requestMicrophoneFromUserGesture missing"
