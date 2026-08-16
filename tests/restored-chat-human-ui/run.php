@@ -55,7 +55,12 @@ assert_true(strpos($js, 'function startVoiceInput') !== false, 'JS voice input h
 assert_true(strpos($js, 'hideShellLoader') !== false, 'JS hides shell loader when chat is ready');
 assert_true(strpos($js, 'function requestMicrophoneFromUserGesture') !== false, 'JS requests mic from user gesture');
 assert_true(strpos($js, 'getUserMedia({ audio: true })') !== false, 'JS uses native audio getUserMedia');
-assert_true(strpos($js, "context: 'chat'") !== false, 'inline auth uses chat context with website styling');
+assert_true(strpos($js, 'function redirectToLoginPage') !== false, 'chat auth redirects to account login page');
+assert_true(strpos($js, 'pax_chat_open') !== false, 'chat return URL reopens widget after login');
+assert_true(strpos($js, 'loginPageUrl') !== false || strpos($chat, 'loginPageUrl') !== false, 'login page URL is configured server-side');
+assert_true(strpos($widget, 'paxdesignChatAuthLogin') !== false, 'widget has single Log In button');
+assert_true(strpos($widget, 'paxdesignChatAuthRegister') === false, 'widget has no register button');
+assert_true(strpos($widget, 'paxdesign-booking-chat-auth-inline') === false, 'widget has no inline auth form');
 assert_true(strpos($js, 'forceOpen: true') !== false, 'JS forces server history on widget open');
 assert_true(strpos($js, 'whenBootstrapped') !== false, 'JS waits for session bootstrap before open UI');
 assert_true(strpos($live, 'resync_required') !== false, 'PHP can request poll resync on cursor gap');
@@ -64,12 +69,12 @@ assert_true(strpos($js, 'startVoiceWaveformForListening') === false, 'JS does no
 assert_true(strpos($js, 'releaseChatShellLoader') !== false, 'JS releases shell loader when chat UI is ready');
 assert_true(strpos($js, 'syncGesture: true') !== false, 'JS starts speech recognition synchronously in user gesture');
 assert_true(strpos($js, 'shouldUseDesktopSpeechFlow') === false, 'JS does not use Windows-only mic release workaround');
-assert_true(strpos($css, '.paxdesign-booking-chat-auth-inline') !== false && strpos($css, 'overflow: auto;') !== false, 'chat auth form uses scroll-safe overflow');
 assert_true(strpos($chat, "self::asset_version('assets/js/chat-script.js')") !== false, 'chat script enqueue uses filemtime-aware version');
 assert_true(strpos($widgetPerf, "self::asset_version('assets/js/chat-script.js')") !== false, 'widget loader chatSrc uses filemtime-aware version');
 
 $bookingJs = @file_get_contents($root . '/assets/js/booking-script.js');
 assert_true($bookingJs !== false && strpos($bookingJs, 'showChatShellLoading') !== false, 'booking-script shell loader');
+assert_true($bookingJs !== false && strpos($bookingJs, 'maybeOpenChatFromReturnUrl') !== false, 'booking-script reopens chat after login return');
 assert_true(strpos($widget, 'KI-generierte Antworten') === false, 'widget has no KI disclaimer');
 assert_true(strpos($js, 'function pinToLatestMessage') !== false, 'open pins to latest message');
 assert_true(strpos($widget, 'paxdesignChatEndWrap') === false, 'widget has no end-chat wrap');
