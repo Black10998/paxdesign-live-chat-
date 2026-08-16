@@ -63,6 +63,8 @@ ccs_evidence_assert(strpos($tickets, 'mark_evidence_requests_fulfilled') !== fal
 ccs_evidence_assert(strpos($tickets, 'is_active_evidence_request') !== false, 'tickets computes active evidence request state');
 ccs_evidence_assert(strpos($tickets, 'evidence_request_active') !== false, 'tickets exposes evidence_request_active on timeline entries');
 ccs_evidence_assert(strpos($intake, 'normalized_upload_files') !== false, 'intake normalizes mobile and desktop multipart uploads');
+ccs_evidence_assert(strpos($intake, 'recover_attachment_record') !== false, 'intake recovers legacy attachment paths from stored URLs');
+ccs_evidence_assert(strpos($portalJs, 'entryHasEvidenceRequest') !== false, 'portal JS detects evidence request from entry + meta');
 ccs_evidence_assert(strpos($intake, 'verify_image_file') !== false, 'intake verifies image content before preview');
 ccs_evidence_assert(strpos($intake, 'find_stored_attachment') !== false, 'intake download checks timeline message attachments');
 ccs_evidence_assert(strpos($adminJs, 'pax-cc-request-evidence') !== false, 'admin JS handles request evidence checkbox');
