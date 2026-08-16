@@ -737,6 +737,7 @@ class PAXdesign_Cybercrime_Tickets {
         $entry['customer_visible'] = self::is_customer_visible_timeline_entry($entry);
         $entry['subject_key'] = $subject_key;
         $entry['subject'] = $audience === 'customer' ? '' : $subject;
+        $entry['request_evidence'] = !empty($meta['request_evidence']);
 
         if (!empty($meta['attachments']) && is_array($meta['attachments']) && class_exists('PAXdesign_Cybercrime_Intake')) {
             $reference_id = sanitize_text_field((string) ($entry['reference_id'] ?? ''));
@@ -1338,7 +1339,7 @@ class PAXdesign_Cybercrime_Tickets {
      * @param int    $staff_user_id
      * @return int|false|WP_Error
      */
-    public static function add_staff_reply($reference_id, $body, $staff_user_id, $new_status = '') {
+    public static function add_staff_reply($reference_id, $body, $staff_user_id, $new_status = '', $request_evidence = false) {
         if (!current_user_can('manage_options')) {
             return new WP_Error('forbidden', __('Insufficient permissions.', 'paxdesign-booking'));
         }
@@ -1347,13 +1348,20 @@ class PAXdesign_Cybercrime_Tickets {
             return new WP_Error('not_found', __('Report not found.', 'paxdesign-booking'));
         }
 
-        $message_id = self::add_message($reference_id, 'staff', $body, 'admin', $staff_user_id, array('event' => 'staff_reply'));
+        $meta = array('event' => 'staff_reply');
+        if ($request_evidence) {
+            $meta['request_evidence'] = true;
+        }
+
+        $message_id = self::add_message($reference_id, 'staff', $body, 'admin', $staff_user_id, $meta);
         if (!$message_id) {
             return new WP_Error('save_failed', __('Could not save staff reply.', 'paxdesign-booking'));
         }
 
         $status = sanitize_key((string) $new_status);
-        if ($status === '') {
+        if ($request_evidence) {
+            $status = 'waiting_for_customer';
+        } elseif ($status === '') {
             $status = self::is_active_status((string) ($row['status'] ?? '')) ? 'waiting_for_customer' : (string) ($row['status'] ?? '');
         }
         self::update_status($reference_id, $status, $staff_user_id, '', false, false);
@@ -2003,8 +2011,9 @@ class PAXdesign_Cybercrime_Tickets {
         $reference = sanitize_text_field(wp_unslash($_POST['reference_id'] ?? ''));
         $body = sanitize_textarea_field(wp_unslash($_POST['message'] ?? ''));
         $status = sanitize_key(wp_unslash($_POST['status'] ?? ''));
+        $request_evidence = !empty($_POST['request_evidence']) && wp_unslash($_POST['request_evidence']) !== '0';
 
-        $result = self::add_staff_reply($reference, $body, get_current_user_id(), $status);
+        $result = self::add_staff_reply($reference, $body, get_current_user_id(), $status, $request_evidence);
         if (is_wp_error($result)) {
             wp_die(esc_html($result->get_error_message()));
         }
@@ -2052,12 +2061,13 @@ class PAXdesign_Cybercrime_Tickets {
         $reference = sanitize_text_field(wp_unslash($_POST['reference_id'] ?? ''));
         $body = sanitize_textarea_field(wp_unslash($_POST['message'] ?? ''));
         $status = sanitize_key(wp_unslash($_POST['status'] ?? ''));
+        $request_evidence = !empty($_POST['request_evidence']) && wp_unslash($_POST['request_evidence']) !== '0';
 
         if ($body === '') {
             wp_send_json_error(array('message' => __('Message is required.', 'paxdesign-booking')), 400);
         }
 
-        $result = self::add_staff_reply($reference, $body, get_current_user_id(), $status);
+        $result = self::add_staff_reply($reference, $body, get_current_user_id(), $status, $request_evidence);
         if (is_wp_error($result)) {
             wp_send_json_error(array('message' => $result->get_error_message()), 400);
         }
@@ -2067,10 +2077,14 @@ class PAXdesign_Cybercrime_Tickets {
             wp_send_json_error(array('message' => __('Report not found.', 'paxdesign-booking')), 404);
         }
 
+        $success = $request_evidence
+            ? __('Evidence request sent to customer.', 'paxdesign-booking')
+            : __('Reply sent to customer.', 'paxdesign-booking');
+
         wp_send_json_success(array(
             'report'     => $report,
             'message_id' => $result,
-            'message'    => __('Reply sent to customer.', 'paxdesign-booking'),
+            'message'    => $success,
         ));
     }
 

@@ -404,9 +404,12 @@
     var internalTag = isInternal
       ? ' <span class="pax-cc-timeline__internal-tag">' + escapeHtml(text('internal', 'internal')) + '</span>'
       : '';
+    var evidenceTag = meta.request_evidence
+      ? ' <span class="pax-cc-timeline__evidence-tag">' + escapeHtml(text('requestEvidenceTag', 'Evidence requested')) + '</span>'
+      : '';
 
     return '<li class="' + itemClass + '">'
-      + '<p class="pax-cc-timeline__meta"><strong>' + author + '</strong> · ' + channel + ' · ' + createdAt + internalTag + '</p>'
+      + '<p class="pax-cc-timeline__meta"><strong>' + author + '</strong> · ' + channel + ' · ' + createdAt + internalTag + evidenceTag + '</p>'
       + '<div class="pax-cc-timeline__body">' + body + '</div>'
       + renderTimelineAttachments(entry.attachments || [])
       + '</li>';
@@ -549,37 +552,65 @@
     });
   }
 
+  function sendStaffReply(requestEvidence) {
+    var messageEl = document.getElementById('pax-cc-staff-message');
+    var statusEl = document.getElementById('pax-cc-reply-status');
+    var submitBtn = document.getElementById('pax-cc-reply-submit');
+    var evidenceBtn = document.getElementById('pax-cc-request-evidence-submit');
+    var message = messageEl ? messageEl.value.trim() : '';
+    if (!message) {
+      if (messageEl) {
+        messageEl.focus();
+      }
+      return;
+    }
+
+    setSubmitEnabled(submitBtn, false);
+    setSubmitEnabled(evidenceBtn, false);
+    setFeedback(replyFeedback, text('sending', 'Sending…'), 'saving');
+
+    var payload = {
+      message: message,
+      status: requestEvidence ? 'waiting_for_customer' : (statusEl ? statusEl.value : 'waiting_for_customer')
+    };
+    if (requestEvidence) {
+      payload.request_evidence = '1';
+      if (statusEl) {
+        statusEl.value = 'waiting_for_customer';
+      }
+    }
+
+    return postAction('paxdesign_cybercrime_admin_reply', payload)
+      .then(function (data) {
+        applyReport(data.report);
+        if (messageEl) {
+          messageEl.value = '';
+        }
+        var successMsg = requestEvidence
+          ? text('requestEvidenceSent', 'Evidence request sent to customer.')
+          : (data.message || text('replySent', 'Reply sent to customer.'));
+        setFeedback(replyFeedback, successMsg, 'success');
+      })
+      .catch(function (error) {
+        setFeedback(replyFeedback, error.message || text('error', 'Something went wrong.'), 'error');
+      })
+      .then(function () {
+        setSubmitEnabled(submitBtn, true);
+        setSubmitEnabled(evidenceBtn, true);
+      });
+  }
+
   if (replyForm) {
     replyForm.addEventListener('submit', function (event) {
       event.preventDefault();
-      var messageEl = document.getElementById('pax-cc-staff-message');
-      var statusEl = document.getElementById('pax-cc-reply-status');
-      var submitBtn = document.getElementById('pax-cc-reply-submit');
-      var message = messageEl ? messageEl.value.trim() : '';
-      if (!message) {
-        return;
-      }
+      sendStaffReply(false);
+    });
+  }
 
-      setSubmitEnabled(submitBtn, false);
-      setFeedback(replyFeedback, text('sending', 'Sending…'), 'saving');
-
-      postAction('paxdesign_cybercrime_admin_reply', {
-        message: message,
-        status: statusEl ? statusEl.value : 'waiting_for_customer'
-      })
-        .then(function (data) {
-          applyReport(data.report);
-          if (messageEl) {
-            messageEl.value = '';
-          }
-          setFeedback(replyFeedback, data.message || text('replySent', 'Reply sent to customer.'), 'success');
-        })
-        .catch(function (error) {
-          setFeedback(replyFeedback, error.message || text('error', 'Something went wrong.'), 'error');
-        })
-        .then(function () {
-          setSubmitEnabled(submitBtn, true);
-        });
+  var requestEvidenceBtn = document.getElementById('pax-cc-request-evidence-submit');
+  if (requestEvidenceBtn) {
+    requestEvidenceBtn.addEventListener('click', function () {
+      sendStaffReply(true);
     });
   }
 
