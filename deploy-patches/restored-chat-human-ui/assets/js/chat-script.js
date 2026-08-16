@@ -1,6 +1,6 @@
 /**
  * PAXdesign AI Chat — Sales & Booking Assistant
- * Version: 3.174.117
+ * Version: 3.174.118
  */
 (function () {
   'use strict';
@@ -3164,8 +3164,8 @@
           try { voiceRecognition.stop(); } catch (e2) {}
           voiceRecognition = null;
         }
-        ensureMicrophonePermission().then(function () {
-          beginSpeechRecognition({ permissionRetried: true, retried: options.retried });
+        ensureMicrophonePermission().then(function (stream) {
+          beginSpeechRecognition({ permissionRetried: true, retried: options.retried, stream: stream });
         }).catch(function (err) {
           if (voiceBtn) voiceBtn.classList.remove('paxdesign-is-pending');
           showError(microphoneAccessErrorMessage(err));
