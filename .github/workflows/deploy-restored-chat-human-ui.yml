@@ -17,6 +17,7 @@ on:
       - 'scripts/verify-restored-chat-human-ui.sh'
       - 'scripts/verify-attachment-download-production.sh'
       - 'scripts/verify-evidence-resubmit-production.sh'
+      - 'scripts/verify-closed-readonly-production.sh'
   workflow_dispatch:
 
 permissions:
@@ -259,6 +260,26 @@ jobs:
           ssh-keyscan -p "$PORT" -H "$WP_SSH_HOST" >> ~/.ssh/known_hosts 2>/dev/null || true
           ssh "${SSH_OPTS[@]}" "$REMOTE" "WP_PATH=${WP_PATH_QUOTED} bash -s" \
             < scripts/verify-attachment-download-production.sh
+
+      - name: Verify closed read-only tickets on production
+        env:
+          WP_SSH_HOST: ${{ secrets.WP_SSH_HOST }}
+          WP_SSH_PORT: ${{ secrets.WP_SSH_PORT }}
+          WP_SSH_USER: ${{ secrets.WP_SSH_USER }}
+          WP_SSH_PRIVATE_KEY: ${{ secrets.WP_SSH_PRIVATE_KEY }}
+          WP_PATH: ${{ secrets.WP_PATH }}
+        run: |
+          set -euo pipefail
+          chmod +x scripts/verify-closed-readonly-production.sh
+          PORT="${WP_SSH_PORT:-22}"
+          SSH_OPTS=(-i ~/.ssh/id_deploy -p "$PORT" -o StrictHostKeyChecking=yes -o BatchMode=yes)
+          REMOTE="${WP_SSH_USER}@${WP_SSH_HOST}"
+          WP_PATH_QUOTED=$(printf '%q' "$WP_PATH")
+          install -m 600 -D /dev/null ~/.ssh/id_deploy
+          printf '%s\n' "$WP_SSH_PRIVATE_KEY" > ~/.ssh/id_deploy
+          ssh-keyscan -p "$PORT" -H "$WP_SSH_HOST" >> ~/.ssh/known_hosts 2>/dev/null || true
+          ssh "${SSH_OPTS[@]}" "$REMOTE" "WP_PATH=${WP_PATH_QUOTED} bash -s" \
+            < scripts/verify-closed-readonly-production.sh
 
       - name: Verify live chat assets
         run: |
