@@ -29,9 +29,9 @@ curl -fsSL "${SITE}/wp-content/plugins/paxdesign-booking/assets/js/cybercrime-ad
 curl -fsSL "${SITE}/wp-content/plugins/paxdesign-booking/paxdesign-booking.php?v=${STAMP}" \
   -o "${tmpdir}/paxdesign-booking.php" || true
 
-grep -q "Version: 3.174.110" "${tmpdir}/chat-script.js" \
-  && ok "chat-script.js cache-bust version 3.174.110" \
-  || fail "chat-script.js is not the patched 3.174.110 file"
+grep -q "Version: 3.174.111" "${tmpdir}/chat-script.js" \
+  && ok "chat-script.js cache-bust version 3.174.111" \
+  || fail "chat-script.js is not the patched 3.174.111 file"
 
 grep -q "var appliedMessageSeq" "${tmpdir}/chat-script.js" \
   && grep -q "function getIncrementalSince" "${tmpdir}/chat-script.js" \
@@ -40,24 +40,28 @@ grep -q "var appliedMessageSeq" "${tmpdir}/chat-script.js" \
   && ok "website unified sync merge cursors present" \
   || fail "unified sync client markers missing from chat-script.js"
 
-grep -q "paxdesign-booking-chat-voice" "${tmpdir}/chat-script.js" \
-  && grep -q "function initVoiceInput" "${tmpdir}/chat-script.js" \
-  && grep -q "function requestMicrophoneAccess" "${tmpdir}/chat-script.js" \
-  && ok "composer voice input with mic permission present" \
-  || fail "voice input / mic permission missing from chat-script.js"
+grep -q "function acquireMicrophoneStream" "${tmpdir}/chat-script.js" \
+  && grep -q "paxdesign-voice-recording" "${tmpdir}/chat-script.js" \
+  && ok "composer voice recording UI present" \
+  || fail "voice recording UI missing from chat-script.js"
 
 grep -q "function initComposerAttachments" "${tmpdir}/chat-script.js" \
   && grep -q "paxdesign-booking-chat-media" "${tmpdir}/chat-script.js" \
   && ok "dedicated composer media/file buttons present" \
   || fail "composer attachment buttons missing from chat-script.js"
 
+grep -q "var sendInFlight" "${tmpdir}/chat-script.js" \
+  && ok "send debounce guard present" \
+  || fail "sendInFlight guard missing from chat-script.js"
+
 grep -q "paxdesign-booking-chat-composer-row" "${tmpdir}/booking-styles.css" \
   && ok "separate send button composer row present" \
   || fail "composer row layout missing from booking-styles.css"
 
 grep -q "paxdesign-chat-focus-backdrop" "${tmpdir}/booking-styles.css" \
-  && ok "focus mode backdrop present" \
-  || fail "focus mode backdrop missing from booking-styles.css"
+  && grep -q "pax-z-stack" "${tmpdir}/booking-styles.css" \
+  && ok "focus mode backdrop and z-index stack present" \
+  || fail "focus mode / z-index stack missing from booking-styles.css"
 
 grep -q "function keepComposerFocus" "${tmpdir}/chat-script.js" \
   && ok "composer focus retention present" \
@@ -75,6 +79,10 @@ grep -q "openWidget();" "${tmpdir}/booking-script.js" \
   && grep -q "ensureChatReady(runChatInit)" "${tmpdir}/booking-script.js" \
   && ok "non-blocking widget open before chat init" \
   || fail "instant open path missing from booking-script.js"
+
+grep -q "function resetBookingPanelState" "${tmpdir}/booking-script.js" \
+  && ok "instant chat close without booking reset present" \
+  || fail "resetBookingPanelState / chat close path missing from booking-script.js"
 
 grep -q "function getSiteHeaderBottom" "${tmpdir}/booking-script.js" \
   && ok "mobile keyboard header clamp present" \

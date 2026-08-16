@@ -1,6 +1,6 @@
 /**
  * PAXdesign Booking System JavaScript
- * Version: 3.174.110 — scoped to #paxdesign-booking-root
+ * Version: 3.174.111 — scoped to #paxdesign-booking-root
  */
 
 (function($) {
@@ -1101,40 +1101,50 @@
         ensureChatReady(runChatInit);
     }
 
+    function resetBookingPanelState() {
+        bookingData = {
+            member: null,
+            service: null,
+            serviceDetails: null,
+            date: null,
+            time: null,
+            currentStep: 1
+        };
+        selectedDate = null;
+        preselectedServiceKey = null;
+
+        $in('.paxdesign-booking-content').removeClass('paxdesign-is-active');
+        $in('.paxdesign-booking-content[data-step="1"]').addClass('paxdesign-is-active');
+        $in('.paxdesign-booking-success').removeClass('paxdesign-is-active');
+        $in('.paxdesign-booking-team-card').removeClass('paxdesign-is-selected');
+        $in('.paxdesign-booking-service-card').removeClass('paxdesign-is-selected');
+        updateSelectedServiceBanner();
+        updateStepIndicator();
+    }
+
     function closeDialog() {
-        if (root().hasClass('paxdesign-chat-mode-active') && window.PAXdesignChat && typeof window.PAXdesignChat.onClose === 'function') {
+        var hasChat = $in('.paxdesign-booking-mode-switch').length > 0;
+        var closingChat = hasChat && currentWidgetMode === 'chat';
+
+        if (closingChat && window.PAXdesignChat && typeof window.PAXdesignChat.onClose === 'function') {
             window.PAXdesignChat.onClose();
+        } else if (window.PAXdesignChat && typeof window.PAXdesignChat.abort === 'function') {
+            window.PAXdesignChat.abort();
         }
+
         $in('.paxdesign-booking-widget')
             .removeClass('paxdesign-is-active paxdesign-is-preparing')
             .attr('aria-hidden', 'true');
-        applyCompactWidgetFrame();
         root().removeClass('paxdesign-widget-open paxdesign-mobile-chat-mode paxdesign-keyboard-open paxdesign-frame-managed');
         mobileKeyboardWasOpen = false;
         unlockPageScroll();
+
+        if (closingChat) {
+            return;
+        }
+
         resetWidgetMode();
-        
-        setTimeout(function() {
-            bookingData = {
-                member: null,
-                service: null,
-                serviceDetails: null,
-                date: null,
-                time: null,
-                currentStep: 1
-            };
-            selectedDate = null;
-            preselectedServiceKey = null;
-            
-            $in('.paxdesign-booking-content').removeClass('paxdesign-is-active');
-            $in('.paxdesign-booking-content[data-step="1"]').addClass('paxdesign-is-active');
-            $in('.paxdesign-booking-success').removeClass('paxdesign-is-active');
-            $in('.paxdesign-booking-team-card').removeClass('paxdesign-is-selected');
-            $in('.paxdesign-booking-service-card').removeClass('paxdesign-is-selected');
-            updateSelectedServiceBanner();
-            
-            updateStepIndicator();
-        }, 100);
+        resetBookingPanelState();
     }
     
     function selectTeamMember(member, hasServices) {
