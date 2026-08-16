@@ -53,6 +53,20 @@ grep -q "background: true, blockUi: false" "${tmpdir}/chat-script.js" \
   && ok "open does not block on history/sync" \
   || fail "background open path missing"
 
+curl -fsSL "${SITE}/wp-content/plugins/paxdesign-booking/assets/js/booking-script.js?v=${STAMP}" \
+  -o "${tmpdir}/booking-script.js" || true
+grep -q "showChatShellLoading" "${tmpdir}/booking-script.js" 2>/dev/null \
+  && ok "booking-script shell loader present" \
+  || fail "booking-script shell loader missing"
+
+grep -q "function startVoiceInput" "${tmpdir}/chat-script.js" \
+  && ok "voice input handler present" \
+  || fail "startVoiceInput missing"
+
+grep -q "hideShellLoader" "${tmpdir}/chat-script.js" \
+  && ok "chat hides shell loader when ready" \
+  || fail "hideShellLoader integration missing"
+
 grep -q "paxdesign-chat-admin-active" "${tmpdir}/chat-script.js" \
   && ok "human takeover class toggle present" \
   || fail "admin-active class toggle missing"
