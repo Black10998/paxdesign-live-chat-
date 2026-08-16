@@ -67,6 +67,14 @@ grep -q "showGuestAuthGateEarly" "${tmpdir}/booking-script.js" 2>/dev/null \
   && ok "booking-script shows guest auth gate before chat bootstrap" \
   || fail "booking-script instant guest auth gate missing"
 
+grep -q "resetGuestAuthGateUi" "${tmpdir}/booking-script.js" 2>/dev/null \
+  && ok "booking-script resets guest auth gate on close" \
+  || fail "booking-script guest auth gate reset missing"
+
+grep -q "paxdesign-chat-auth-locked .paxdesign-booking-header-content" "${tmpdir}/booking-styles.css" \
+  && ok "auth gate keeps close visible while hiding header content" \
+  || fail "auth gate close button regression guard missing"
+
 grep -q "syncGesture: true" "${tmpdir}/chat-script.js" \
   && ok "speech recognition starts synchronously in user gesture" \
   || fail "syncGesture mic flow missing"

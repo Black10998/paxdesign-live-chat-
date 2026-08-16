@@ -1336,9 +1336,19 @@
         updateStepIndicator();
     }
 
+    function resetGuestAuthGateUi() {
+        root().removeClass('paxdesign-chat-auth-locked');
+        var $gate = $in('#paxdesignChatAuthGate');
+        if ($gate.length) {
+            $gate.prop('hidden', true);
+        }
+    }
+
     function closeDialog() {
         var hasChat = $in('.paxdesign-booking-mode-switch').length > 0;
         var closingChat = hasChat && currentWidgetMode === 'chat';
+
+        resetGuestAuthGateUi();
 
         if (closingChat && window.PAXdesignChat && typeof window.PAXdesignChat.onClose === 'function') {
             window.PAXdesignChat.onClose();

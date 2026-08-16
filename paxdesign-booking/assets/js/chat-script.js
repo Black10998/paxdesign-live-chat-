@@ -1467,10 +1467,6 @@
     socialEl.innerHTML = html;
     socialEl.hidden = !html;
     if (dividerEl) dividerEl.hidden = !html;
-    var actionsEl = root.querySelector('#paxdesignChatAuthActions');
-    if (actionsEl) {
-      actionsEl.classList.toggle('paxdesign-booking-chat-auth-actions--with-social', !!html);
-    }
     socialEl.querySelectorAll('[data-pax-chat-github]').forEach(function (btn) {
       btn.addEventListener('click', function (e) {
         e.preventDefault();
@@ -1889,6 +1885,9 @@
     composerWantsKeyboard = false;
     stopVoiceInput(true);
     hideReadinessOverlay();
+    if (!canUseChat()) {
+      hideAuthGate();
+    }
     notifyLayout();
     window.setTimeout(function () {
       cancelChatReadiness();
