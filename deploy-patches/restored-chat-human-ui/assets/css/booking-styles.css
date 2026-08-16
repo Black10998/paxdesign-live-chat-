@@ -331,9 +331,9 @@
 #paxdesign-booking-root.paxdesign-chat-opening .paxdesign-chat-open-loader {
   inset: 0;
   display: flex;
-  align-items: flex-end;
-  justify-content: flex-end;
-  padding: 0 max(20px, env(safe-area-inset-right, 0px)) max(84px, calc(20px + env(safe-area-inset-bottom, 0px))) 0;
+  align-items: center;
+  justify-content: center;
+  padding: 0 16px max(96px, calc(16px + env(safe-area-inset-bottom, 0px)));
 }
 
 #paxdesign-booking-root.paxdesign-chat-opening .paxdesign-chat-focus-backdrop {
@@ -375,8 +375,6 @@
 
 @media (max-width: 768px) {
   #paxdesign-booking-root.paxdesign-chat-opening .paxdesign-chat-open-loader {
-    align-items: center;
-    justify-content: center;
     padding: 0 16px max(96px, calc(16px + env(safe-area-inset-bottom, 0px)));
   }
 }

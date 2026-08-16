@@ -1,6 +1,6 @@
 /**
  * PAXdesign Booking System JavaScript
- * Version: 3.174.114 — scoped to #paxdesign-booking-root
+ * Version: 3.174.115 — scoped to #paxdesign-booking-root
  */
 
 (function($) {
@@ -31,6 +31,21 @@
         }
     }
 
+    var chatOpenLoaderSince = 0;
+    var CHAT_OPEN_LOADER_MIN_MS = 180;
+
+    function forcePaint(el) {
+        if (el && el.offsetHeight !== undefined) {
+            void el.offsetHeight;
+        }
+    }
+
+    function afterNextPaint(callback) {
+        window.requestAnimationFrame(function () {
+            window.requestAnimationFrame(callback);
+        });
+    }
+
     function showChatOpenLoading(active) {
         var $loader = $in('.paxdesign-chat-open-loader');
         if (!$loader.length) return;
@@ -38,8 +53,21 @@
         $loader.prop('hidden', !active);
         $loader.attr('aria-busy', active ? 'true' : 'false');
         if (active) {
+            chatOpenLoaderSince = Date.now();
             root().addClass('paxdesign-widget-open');
+            forcePaint($loader[0]);
         }
+    }
+
+    function hideChatOpenLoading(done) {
+        var elapsed = Date.now() - (chatOpenLoaderSince || 0);
+        var wait = Math.max(0, CHAT_OPEN_LOADER_MIN_MS - elapsed);
+        window.setTimeout(function () {
+            showChatOpenLoading(false);
+            if (typeof done === 'function') {
+                done();
+            }
+        }, wait);
     }
 
     function openChatFromLauncher() {
@@ -47,10 +75,13 @@
         showChatOpenLoading(true);
         preloadChatAssets();
         ensureChatReady(function () {
-            openWidget();
-            runChatInit();
-            showChatOpenLoading(false);
-            showLauncherLoading(false);
+            afterNextPaint(function () {
+                openWidget();
+                runChatInit();
+                hideChatOpenLoading(function () {
+                    showLauncherLoading(false);
+                });
+            });
         });
     }
 
