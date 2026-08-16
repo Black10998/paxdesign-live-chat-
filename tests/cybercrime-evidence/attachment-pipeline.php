@@ -108,6 +108,20 @@ class Test_WPDB
         return self::$report_row;
     }
 
+    /** @var array<int, string> */
+    public static $message_meta_json = array();
+
+    public function esc_like($text)
+    {
+        return addcslashes((string) $text, '_%\\');
+    }
+
+    public function get_col($query, $column = 0)
+    {
+        unset($query, $column);
+        return self::$message_meta_json;
+    }
+
     public function update($table, $data, $where, $formats = array(), $whereFormats = array())
     {
         $this->last_update = array(
@@ -115,6 +129,10 @@ class Test_WPDB
             'data' => $data,
             'where' => $where,
         );
+        if (isset($data['attachments']) && is_array(self::$report_row)) {
+            self::$report_row['attachments'] = $data['attachments'];
+            Test_Cybercrime_Tickets::$test_row = self::$report_row;
+        }
         return 1;
     }
 }
@@ -164,6 +182,11 @@ class Test_Cybercrime_Tickets extends PAXdesign_Cybercrime_Tickets
         return self::$test_messages;
     }
 
+    public static function messages_table()
+    {
+        return 'wp_paxdesign_cybercrime_messages';
+    }
+
     public static function table_name()
     {
         return 'wp_paxdesign_cybercrime_reports';
@@ -198,9 +221,36 @@ Test_Cybercrime_Tickets::$test_messages = array(
         ),
     ),
 );
+Test_WPDB::$message_meta_json = array(
+    wp_json_encode(Test_Cybercrime_Tickets::$test_messages[0]['meta']),
+);
+
+$pdfName = 'ccs-new-evidence.pdf';
+file_put_contents($uploadSubdir . '/' . $pdfName, '%PDF-1.4 test');
+$pdfAttachment = array(
+    'field' => 'evidence_other',
+    'name' => $pdfName,
+    'path' => 'pax-cybercrime-intake/' . $pdfName,
+    'type' => 'application/pdf',
+    'size' => (string) filesize($uploadSubdir . '/' . $pdfName),
+);
+
+$appendOk = Test_Cybercrime_Tickets::append_report_attachments($reference, array($pdfAttachment));
+ap_assert($appendOk, 'append_report_attachments merges a new PDF into the report row');
+$appended = json_decode((string) ($GLOBALS['wpdb']->last_update['data']['attachments'] ?? ''), true);
+ap_assert(is_array($appended) && count($appended) === 2, 'append keeps legacy file and adds new PDF');
+
+Test_Cybercrime_Tickets::$test_row['attachments'] = wp_json_encode($appended);
+Test_WPDB::$report_row = Test_Cybercrime_Tickets::$test_row;
+Test_Cybercrime_Tickets::$test_messages[] = array(
+    'meta' => array(
+        'attachments' => array($newAttachment, $pdfAttachment),
+    ),
+);
+Test_WPDB::$message_meta_json[] = wp_json_encode(end(Test_Cybercrime_Tickets::$test_messages)['meta']);
 
 $stored = Test_Cybercrime_Tickets::collect_stored_attachments($reference, Test_Cybercrime_Tickets::$test_row);
-ap_assert(count($stored) === 2, 'collect_stored_attachments keeps legacy and new records');
+ap_assert(count($stored) === 3, 'collect_stored_attachments keeps legacy, image, and PDF uploads');
 ap_assert(
     PAXdesign_Cybercrime_Intake::resolve_attachment_path($stored[0]) !== ''
     || PAXdesign_Cybercrime_Intake::resolve_attachment_path($stored[1]) !== '',
@@ -210,22 +260,31 @@ ap_assert(
 $syncOk = Test_Cybercrime_Tickets::sync_report_attachments_column($reference);
 ap_assert($syncOk, 'sync_report_attachments_column succeeds');
 $synced = json_decode((string) ($GLOBALS['wpdb']->last_update['data']['attachments'] ?? ''), true);
-ap_assert(is_array($synced) && count($synced) === 2, 'sync persists both attachments without shrinking');
+ap_assert(is_array($synced) && count($synced) === 3, 'sync persists all attachments without shrinking');
 
 Test_Cybercrime_Tickets::$test_row['attachments'] = wp_json_encode($synced);
 $afterSync = Test_Cybercrime_Tickets::collect_stored_attachments($reference, Test_Cybercrime_Tickets::$test_row);
-ap_assert(count($afterSync) === 2, 'refresh after sync still exposes both attachments');
+ap_assert(count($afterSync) === 3, 'refresh after sync still exposes all attachments');
 
 $enriched = PAXdesign_Cybercrime_Intake::enrich_attachments($reference, $afterSync);
-ap_assert(count($enriched) === 2, 'enrich keeps both attachments');
+ap_assert(count($enriched) === 3, 'enrich keeps all attachments');
+$imageCount = 0;
+$pdfCount = 0;
 foreach ($enriched as $item) {
     ap_assert(!empty($item['url']), 'enriched attachment has secure download URL: ' . ($item['name'] ?? ''));
-    ap_assert(!empty($item['is_image']), 'enriched attachment is marked as image: ' . ($item['name'] ?? ''));
+    if (!empty($item['is_image'])) {
+        $imageCount++;
+    }
+    if (($item['type'] ?? '') === 'application/pdf') {
+        $pdfCount++;
+    }
     ap_assert(
         PAXdesign_Cybercrime_Intake::resolve_attachment_path($item) !== '',
         'enriched attachment resolves to readable file: ' . ($item['name'] ?? '')
     );
 }
+ap_assert($imageCount >= 2, 'image uploads remain marked as images');
+ap_assert($pdfCount === 1, 'pdf upload remains available as document');
 
 $foundLegacy = Test_Cybercrime_Tickets::find_stored_attachment($reference, $legacyName, Test_Cybercrime_Tickets::$test_row);
 $foundNew = Test_Cybercrime_Tickets::find_stored_attachment($reference, $newName, Test_Cybercrime_Tickets::$test_row);
@@ -233,6 +292,7 @@ ap_assert(is_array($foundLegacy) && is_array($foundNew), 'find_stored_attachment
 
 @unlink($uploadSubdir . '/' . $legacyName);
 @unlink($uploadSubdir . '/' . $newName);
+@unlink($uploadSubdir . '/' . $pdfName);
 @rmdir($uploadSubdir);
 @rmdir($uploadRoot);
 

@@ -53,7 +53,8 @@ ccs_evidence_assert(strpos($portalCss, '-webkit-text-fill-color: #fff !important
 ccs_evidence_assert(strpos($tickets, 'timeline_evidence_signature') !== false, 'tickets builds timeline evidence signature');
 ccs_evidence_assert(strpos($tickets, 'collect_report_attachments') !== false, 'tickets merges report and message attachments for admin');
 ccs_evidence_assert(strpos($tickets, 'canonicalize_attachment_record') !== false, 'tickets canonicalizes legacy and new attachment records');
-ccs_evidence_assert(strpos($tickets, 'merge_attachment_lists') !== false, 'tickets merges attachment lists without dropping legacy rows');
+ccs_evidence_assert(strpos($tickets, 'append_report_attachments') !== false, 'tickets appends new customer uploads to report attachments');
+ccs_evidence_assert(strpos($tickets, 'collect_message_attachments') !== false, 'tickets collects attachments from all message meta rows');
 ccs_evidence_assert(strpos($tickets, 'sync_report_attachments_column') !== false, 'tickets syncs report attachments after customer evidence upload');
 ccs_evidence_assert(strpos($tickets, 'attachments_signature') !== false, 'tickets builds attachments signature for sync');
 ccs_evidence_assert(strpos($tickets, 'find_stored_attachment') !== false, 'tickets resolves attachments from report and timeline messages');

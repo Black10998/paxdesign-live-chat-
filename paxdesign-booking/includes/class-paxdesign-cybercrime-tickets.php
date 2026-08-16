@@ -697,6 +697,87 @@ class PAXdesign_Cybercrime_Tickets {
     }
 
     /**
+     * Collect attachment records stored on timeline messages (all rows, not capped by chat noise).
+     *
+     * @param string $reference_id
+     * @return array<int, array<string, mixed>>
+     */
+    public static function collect_message_attachments($reference_id) {
+        global $wpdb;
+        $reference_id = sanitize_text_field((string) $reference_id);
+        if ($reference_id === '') {
+            return array();
+        }
+
+        $like = '%' . $wpdb->esc_like('"attachments"') . '%';
+        $rows = $wpdb->get_col($wpdb->prepare(
+            'SELECT meta_json FROM ' . self::messages_table() . '
+             WHERE reference_id = %s AND meta_json LIKE %s
+             ORDER BY id ASC',
+            $reference_id,
+            $like
+        ));
+        if (!is_array($rows)) {
+            return array();
+        }
+
+        $attachments = array();
+        foreach ($rows as $meta_json) {
+            $meta = json_decode((string) $meta_json, true);
+            if (!is_array($meta) || empty($meta['attachments']) || !is_array($meta['attachments'])) {
+                continue;
+            }
+            foreach ($meta['attachments'] as $attachment) {
+                $attachments[] = $attachment;
+            }
+        }
+        return $attachments;
+    }
+
+    /**
+     * Merge new uploads into the report attachments column without removing existing files.
+     *
+     * @param string                              $reference_id
+     * @param array<int, array<string, mixed>>    $new_attachments
+     * @return bool
+     */
+    public static function append_report_attachments($reference_id, array $new_attachments) {
+        $reference_id = sanitize_text_field((string) $reference_id);
+        if ($reference_id === '' || empty($new_attachments)) {
+            return false;
+        }
+
+        $row = static::get_report_row($reference_id);
+        if (!is_array($row)) {
+            return false;
+        }
+
+        $existing_raw = json_decode((string) ($row['attachments'] ?? ''), true);
+        if (!is_array($existing_raw)) {
+            $existing_raw = array();
+        }
+        $existing_canonical = self::merge_attachment_lists($existing_raw);
+        $final = self::merge_attachment_lists($existing_raw, $new_attachments);
+        if (count($final) < count($existing_canonical)) {
+            error_log('[PAXdesign Cybercrime] Refusing to shrink attachments while appending for ' . $reference_id);
+            $final = self::merge_attachment_lists($existing_canonical, $new_attachments);
+        }
+
+        global $wpdb;
+        $updated = $wpdb->update(
+            PAXdesign_Cybercrime_Intake::table_name(),
+            array(
+                'attachments' => wp_json_encode($final),
+                'updated_at'  => current_time('mysql', true),
+            ),
+            array('reference_id' => $reference_id),
+            array('%s', '%s'),
+            array('%s')
+        );
+        return $updated !== false;
+    }
+
+    /**
      * Merge report-level and timeline message attachment records.
      *
      * @param string                    $reference_id
@@ -720,19 +801,7 @@ class PAXdesign_Cybercrime_Tickets {
             }
         }
 
-        $message_attachments = array();
-        foreach (static::list_messages($reference_id, 500) as $entry) {
-            if (!is_array($entry)) {
-                continue;
-            }
-            $meta = is_array($entry['meta'] ?? null) ? $entry['meta'] : array();
-            if (empty($meta['attachments']) || !is_array($meta['attachments'])) {
-                continue;
-            }
-            foreach ($meta['attachments'] as $attachment) {
-                $message_attachments[] = $attachment;
-            }
-        }
+        $message_attachments = static::collect_message_attachments($reference_id);
         if (!empty($message_attachments)) {
             $lists[] = $message_attachments;
         }
@@ -780,7 +849,7 @@ class PAXdesign_Cybercrime_Tickets {
             $parts[] = $name . ':' . (string) ($attachment['size'] ?? '') . ':' . (string) ($attachment['path'] ?? '');
         }
         sort($parts, SORT_STRING);
-        return implode(',', $parts);
+        return count($parts) . ':' . implode(',', $parts);
     }
 
     /**
@@ -824,8 +893,8 @@ class PAXdesign_Cybercrime_Tickets {
             $existing_raw = array();
         }
         $existing_canonical = self::merge_attachment_lists($existing_raw);
-        $collected = self::collect_stored_attachments($reference_id, $row);
-        $final = self::merge_attachment_lists($existing_raw, $collected);
+        $collected = self::collect_stored_attachments($reference_id);
+        $final = self::merge_attachment_lists($existing_raw, $collected, static::collect_message_attachments($reference_id));
 
         if (count($final) < count($existing_canonical)) {
             error_log('[PAXdesign Cybercrime] Refusing to shrink attachments for ' . $reference_id);
@@ -1775,8 +1844,13 @@ class PAXdesign_Cybercrime_Tickets {
             return new WP_Error('save_failed', __('Could not save your update.', 'paxdesign-booking'));
         }
 
-        if ($has_files && !self::sync_report_attachments_column($reference_id)) {
-            error_log('[PAXdesign Cybercrime] Could not sync report attachments for ' . $reference_id);
+        if ($has_files) {
+            if (!self::append_report_attachments($reference_id, $uploads)) {
+                error_log('[PAXdesign Cybercrime] Could not append report attachments for ' . $reference_id);
+            }
+            if (!self::sync_report_attachments_column($reference_id)) {
+                error_log('[PAXdesign Cybercrime] Could not sync report attachments for ' . $reference_id);
+            }
         }
 
         self::update_status($reference_id, 'in_review', $user_id, '', false, false);

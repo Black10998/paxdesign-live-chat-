@@ -93,6 +93,9 @@
       return incoming.attachmentsCount > current.attachmentsCount ? 1 : -1;
     }
     if (incoming.attachmentsSignature !== current.attachmentsSignature) {
+      if (incoming.attachmentsCount >= current.attachmentsCount) {
+        return 1;
+      }
       return incoming.attachmentsSignature > current.attachmentsSignature ? 1 : -1;
     }
     if (incoming.updatedAt !== current.updatedAt) {
