@@ -126,9 +126,13 @@ grep -q "paxdesign-booking-chat-auth-gate-card" "${tmpdir}/booking-styles.css" \
   && ok "chat login gate uses centered card layout" \
   || fail "chat login gate card layout missing"
 
-grep -q "renderChatAuthSocialButtons" "${tmpdir}/chat-script.js" \
-  && ok "chat auth gate renders social login buttons" \
-  || fail "chat social login rendering missing"
+grep -q "paxdesign-booking-chat-auth-social-icon" "${tmpdir}/booking-styles.css" \
+  && ok "chat social login buttons include SVG icon styling" \
+  || fail "chat social login SVG icon styling missing"
+
+grep -q "chatAuthGithubIconHtml" "${tmpdir}/chat-script.js" \
+  && ok "chat auth gate renders GitHub SVG icon" \
+  || fail "chat GitHub SVG icon missing"
 
 curl -fsSL "${SITE}/wp-content/plugins/paxdesign-booking/assets/customer-auth/js/pax-auth.js?v=${STAMP}" \
   -o "${tmpdir}/pax-auth.js" || true

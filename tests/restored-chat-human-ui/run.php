@@ -56,7 +56,9 @@ assert_true(strpos($js, 'hideShellLoader') !== false, 'JS hides shell loader whe
 assert_true(strpos($js, 'function requestMicrophoneFromUserGesture') !== false, 'JS requests mic from user gesture');
 assert_true(strpos($js, 'getUserMedia({ audio: true })') !== false, 'JS uses native audio getUserMedia');
 assert_true(strpos($js, 'renderChatAuthSocialButtons') !== false, 'chat auth gate renders GitHub/Apple buttons');
-assert_true(strpos($widget, 'paxdesignChatAuthSocial') !== false, 'widget has social login slot');
+assert_true(strpos($widget, 'paxdesign-booking-chat-auth-social-icon') !== false, 'widget social login buttons include SVG icons');
+assert_true(strpos($js, 'chatAuthGithubIconHtml') !== false, 'chat auth gate renders GitHub SVG icon');
+assert_true(strpos($js, 'chatAuthAppleIconHtml') !== false, 'chat auth gate renders Apple SVG icon');
 assert_true(strpos($chat, 'authSocial') !== false, 'chat config exposes social login URLs');
 assert_true(is_file($root . '/includes/auth/class-paxdesign-auth-github.php'), 'GitHub auth PHP class is in deploy patch');
 assert_true(strpos($js, 'pax_chat_return_to') !== false, 'chat return URL uses sessionStorage backup');
