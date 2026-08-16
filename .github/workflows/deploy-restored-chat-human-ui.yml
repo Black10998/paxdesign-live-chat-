@@ -215,6 +215,8 @@ jobs:
           printf '%s\n' "$WP_SSH_PRIVATE_KEY" > ~/.ssh/id_deploy
           ssh-keyscan -p "$PORT" -H "$WP_SSH_HOST" >> ~/.ssh/known_hosts 2>/dev/null || true
           ssh "${SSH_OPTS[@]}" "$REMOTE" "grep -q append_report_attachments '$(printf '%q' "$TARGET")' && grep -q collect_message_attachments '$(printf '%q' "$TARGET")' && grep -q mark_evidence_requests_fulfilled '$(printf '%q' "$TARGET")' && grep -q has_active_evidence_request '$(printf '%q' "$TARGET")' && echo 'OK: live tickets.php includes evidence attachment handlers'"
+          INTAKE="${WP_PATH%/}/wp-content/plugins/paxdesign-booking/includes/class-paxdesign-cybercrime-intake.php"
+          ssh "${SSH_OPTS[@]}" "$REMOTE" "grep -q attachment_access_token '$(printf '%q' "$INTAKE")' && grep -q can_browser_preview_image '$(printf '%q' "$INTAKE")' && echo 'OK: live intake.php includes attachment download fixes'"
 
       - name: Verify evidence resubmit pipeline on production
         env:
@@ -235,6 +237,26 @@ jobs:
           ssh-keyscan -p "$PORT" -H "$WP_SSH_HOST" >> ~/.ssh/known_hosts 2>/dev/null || true
           ssh "${SSH_OPTS[@]}" "$REMOTE" "WP_PATH=${WP_PATH_QUOTED} bash -s" \
             < scripts/verify-evidence-resubmit-production.sh
+
+      - name: Verify attachment download pipeline on production
+        env:
+          WP_SSH_HOST: ${{ secrets.WP_SSH_HOST }}
+          WP_SSH_PORT: ${{ secrets.WP_SSH_PORT }}
+          WP_SSH_USER: ${{ secrets.WP_SSH_USER }}
+          WP_SSH_PRIVATE_KEY: ${{ secrets.WP_SSH_PRIVATE_KEY }}
+          WP_PATH: ${{ secrets.WP_PATH }}
+        run: |
+          set -euo pipefail
+          chmod +x scripts/verify-attachment-download-production.sh
+          PORT="${WP_SSH_PORT:-22}"
+          SSH_OPTS=(-i ~/.ssh/id_deploy -p "$PORT" -o StrictHostKeyChecking=yes -o BatchMode=yes)
+          REMOTE="${WP_SSH_USER}@${WP_SSH_HOST}"
+          WP_PATH_QUOTED=$(printf '%q' "$WP_PATH")
+          install -m 600 -D /dev/null ~/.ssh/id_deploy
+          printf '%s\n' "$WP_SSH_PRIVATE_KEY" > ~/.ssh/id_deploy
+          ssh-keyscan -p "$PORT" -H "$WP_SSH_HOST" >> ~/.ssh/known_hosts 2>/dev/null || true
+          ssh "${SSH_OPTS[@]}" "$REMOTE" "WP_PATH=${WP_PATH_QUOTED} bash -s" \
+            < scripts/verify-attachment-download-production.sh
 
       - name: Verify live chat assets
         run: |
