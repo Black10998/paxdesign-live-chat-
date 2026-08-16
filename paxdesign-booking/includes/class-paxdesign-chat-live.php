@@ -363,6 +363,8 @@ class PAXdesign_Chat_Live {
         add_action('wp_ajax_paxdesign_chat_live_stream', array($this, 'handle_admin_stream'));
         add_action('wp_ajax_paxdesign_chat_live_user_send', array($this, 'handle_user_send'));
         add_action('wp_ajax_nopriv_paxdesign_chat_live_user_send', array($this, 'handle_user_send'));
+        add_action('wp_ajax_paxdesign_chat_live_user_attach', array($this, 'handle_user_attach'));
+        add_action('wp_ajax_nopriv_paxdesign_chat_live_user_attach', array($this, 'handle_user_attach'));
         add_action('wp_ajax_paxdesign_chat_live_request', array($this, 'handle_live_request'));
         add_action('wp_ajax_nopriv_paxdesign_chat_live_request', array($this, 'handle_live_request'));
         add_action('wp_ajax_paxdesign_chat_live_list', array($this, 'handle_live_list'));
@@ -1884,6 +1886,95 @@ class PAXdesign_Chat_Live {
 
         if (empty($entry['_deduplicated']) && class_exists('PAXdesign_Live_Chat_PWA')) {
             PAXdesign_Live_Chat_PWA::notify_new_customer_message($session_id, $content);
+        }
+
+        wp_send_json_success(array('message' => $entry));
+    }
+
+    public function handle_user_attach() {
+        if (!$this->verify_chat_nonce()) {
+            wp_send_json_error(array('message' => 'Invalid nonce'), 403);
+        }
+
+        $session_id = $this->sanitize_session_id(
+            isset($_POST['session_id']) ? wp_unslash($_POST['session_id']) : ''
+        );
+        $session_id = $this->resolve_customer_ajax_session($session_id);
+        $kind       = isset($_POST['kind']) ? sanitize_key(wp_unslash($_POST['kind'])) : 'file';
+        $client_id  = isset($_POST['client_msg_id']) ? sanitize_text_field(wp_unslash($_POST['client_msg_id'])) : '';
+
+        if ($session_id === '' || empty($_FILES['file'])) {
+            wp_send_json_error(array('message' => __('Please choose a file to upload.', 'paxdesign-booking')), 400);
+        }
+
+        $user_id = get_current_user_id();
+        if ($user_id > 0 && class_exists('PAXdesign_Customer_Chat_Bridge')) {
+            $bridge_kind = $kind === 'image' ? 'image' : ($kind === 'voice' ? 'voice' : 'file');
+            $result = PAXdesign_Customer_Chat_Bridge::send_user_attachment(
+                $user_id,
+                $session_id,
+                $bridge_kind,
+                $_FILES['file'],
+                '',
+                array('client_msg_id' => $client_id)
+            );
+            if (is_wp_error($result)) {
+                $status = 500;
+                $error_data = $result->get_error_data();
+                if (is_array($error_data) && !empty($error_data['status'])) {
+                    $status = (int) $error_data['status'];
+                }
+                wp_send_json_error(array('message' => $result->get_error_message()), $status);
+            }
+            wp_send_json_success($result);
+        }
+
+        $handler = $this->get_handler($session_id);
+        if ($handler === self::HANDLER_CLOSED) {
+            wp_send_json_error(array('message' => 'Chat geschlossen.'), 409);
+        }
+        if (!$this->is_human_queue($session_id)) {
+            wp_send_json_error(array('message' => __('Attachments are available during human support.', 'paxdesign-booking')), 409);
+        }
+
+        $this->ensure_session($session_id);
+
+        if (!class_exists('PAXdesign_Customer_Media')) {
+            wp_send_json_error(array('message' => __('Uploads are unavailable.', 'paxdesign-booking')), 500);
+        }
+
+        $upload_kind = $kind === 'image' ? 'image' : 'file';
+        $upload = PAXdesign_Customer_Media::handle_upload($_FILES['file'], $upload_kind);
+        if (is_wp_error($upload)) {
+            wp_send_json_error(array('message' => $upload->get_error_message()), 400);
+        }
+
+        $caption = sanitize_file_name((string) ($upload['name'] ?? ($_FILES['file']['name'] ?? 'file')));
+        $extra = array(
+            'client_msg_id' => $client_id,
+        );
+        if ($upload_kind === 'image') {
+            $extra['image_url'] = $upload['url'];
+            $extra['attachment_type'] = 'image';
+        } else {
+            $extra['file_url'] = $upload['url'];
+            $extra['file_name'] = $caption;
+            $extra['attachment_type'] = 'file';
+        }
+
+        $entry = $this->append_message($session_id, 'user', $caption, $extra);
+        if (is_wp_error($entry)) {
+            $data = $entry->get_error_data();
+            wp_send_json_error(array('message' => $entry->get_error_message()), is_array($data) && !empty($data['status']) ? (int) $data['status'] : 500);
+        }
+        if (!$entry) {
+            wp_send_json_error(array('message' => 'Could not save'), 500);
+        }
+
+        $this->clear_typing($session_id, 'user');
+
+        if (empty($entry['_deduplicated']) && class_exists('PAXdesign_Live_Chat_PWA')) {
+            PAXdesign_Live_Chat_PWA::notify_new_customer_message($session_id, $caption);
         }
 
         wp_send_json_success(array('message' => $entry));

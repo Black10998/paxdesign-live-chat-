@@ -435,6 +435,7 @@ $team_members = PAXdesign_Booking::get_instance()->get_team_members();
                 <button type="button" class="paxdesign-booking-chat-reply-clear" aria-label="Antwort abbrechen">×</button>
               </div>
             </div>
+            <p class="paxdesign-booking-chat-support-status" id="paxdesignChatSupportStatus" hidden></p>
             <form class="paxdesign-booking-chat-form" autocomplete="off">
               <div class="paxdesign-booking-chat-composer">
                 <div class="paxdesign-booking-chat-plus-wrap">
