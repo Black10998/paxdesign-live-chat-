@@ -1,6 +1,6 @@
 /**
  * PAXdesign AI Chat — Sales & Booking Assistant
- * Version: 3.174.91
+ * Version: 3.174.92
  */
 (function () {
   'use strict';
@@ -175,6 +175,10 @@
   var customerStreamReconnectDelay = STREAM_RECONNECT_BASE_MS;
   var edgeBlockUntil = 0;
   var widgetOpen          = false;
+  var stickToBottom       = true;
+  var scrollRaf           = 0;
+  var pollInFlight        = null;
+  var sessionFetchInFlight = null;
   var pageVisible         = !document.hidden;
   var streamSource        = null;
   var streamEventSince    = 0;
@@ -463,7 +467,7 @@
           clearTimeout(readinessAutoRetryTimer);
           readinessAutoRetryTimer = null;
         }
-        beginChatReadiness({ reuseSession: true, attempt: 0 });
+        beginChatReadiness({ reuseSession: true, attempt: 0, blockUi: true });
       });
     }
     if (readinessCloseBtn) {
@@ -572,7 +576,7 @@
     readinessAutoRetryTimer = window.setTimeout(function () {
       readinessAutoRetryTimer = null;
       if (readinessState !== 'error' || !widgetOpen) return;
-      beginChatReadiness({ reuseSession: true, attempt: attempt });
+      beginChatReadiness({ reuseSession: true, attempt: attempt, blockUi: true });
     }, READINESS_AUTO_RETRY_DELAY_MS);
   }
 
@@ -661,11 +665,8 @@
       startCustomerStream();
     }
     notifyLayout();
-    if (entryEl && !entryEl.hidden) {
-      try {
-        entryEl.scrollIntoView({ block: 'nearest', behavior: 'smooth' });
-      } catch (e) {}
-    }
+    stickToBottom = true;
+    scrollToBottom(true);
   }
 
   function queueBackgroundRealtimeSync(generation) {
@@ -699,6 +700,34 @@
     }, 0);
   }
 
+  function pollIsFresh(ms) {
+    return lastReadinessPollAt > 0 && (Date.now() - lastReadinessPollAt) < (ms || 800);
+  }
+
+  function paintCachedThreadIfNeeded() {
+    if (threadEl && threadEl.children.length > 0) return;
+    if (messages.length > 0) {
+      stickToBottom = true;
+      scrollToBottom(true);
+      return;
+    }
+    if (isPersistentAccountChat()) return;
+    var snap = loadSessionSnapshot(getSessionId());
+    if (snap && Array.isArray(snap.messages) && snap.messages.length) {
+      applyRestoredSnapshot(snap);
+    }
+  }
+
+  function isNearBottom(threshold) {
+    if (!messagesEl) return true;
+    return (messagesEl.scrollHeight - messagesEl.scrollTop - messagesEl.clientHeight) <= (threshold || 96);
+  }
+
+  function updateStickToBottomFromScroll() {
+    if (loadingOlderHistory) return;
+    stickToBottom = isNearBottom(96);
+  }
+
   function shouldSkipHistoryFetch(options) {
     options = options || {};
     if (options.forceHistory) {
@@ -707,7 +736,13 @@
     if (options.skipHistory) {
       return true;
     }
-    if (!options.reuseSession) {
+    if (sessionFetchInFlight) {
+      return true;
+    }
+    if (threadEl && threadEl.children.length > 0 && pollIsFresh(HISTORY_REUSE_MS)) {
+      return true;
+    }
+    if (!options.reuseSession && !options.background) {
       return false;
     }
     if (!historyLoadedAt || oldestLoadedSeq <= 0) {
@@ -774,7 +809,7 @@
           logReadiness(READINESS_STEPS.history, 'OK', { reused: true, skipped: true });
           return true;
         }
-        return fetchSessionFromServer(true, true);
+        return fetchSessionFromServer(true, !options.background);
       })
       .then(function () {
         abortIfReadinessStale(generation);
@@ -782,7 +817,7 @@
         if (chatHandler === 'closed' && isPersistentAccountChat()) {
           return reopenAuthenticatedSessionIfNeeded().then(function () {
             abortIfReadinessStale(generation);
-            return fetchSessionFromServer(true, true);
+            return fetchSessionFromServer(true, !options.background);
           });
         }
         return true;
@@ -790,15 +825,26 @@
       .then(function () {
         abortIfReadinessStale(generation);
         if (chatHandler === 'live_request' || chatHandler === 'admin') {
-          return verifyLiveAgentStateFromServer(['live_request', 'admin']);
+          return verifyLiveAgentStateFromServer(['live_request', 'admin']).catch(function (err) {
+            if (options.background) {
+              logReadiness(READINESS_STEPS.liveAgent, 'DEFERRED', err);
+              return true;
+            }
+            return Promise.reject(err);
+          });
         }
         logReadiness(READINESS_STEPS.liveAgent, 'OK', { skipped: true, handler: chatHandler });
         return true;
       })
       .then(function () {
         abortIfReadinessStale(generation);
+        if (pollIsFresh(1200)) {
+          logReadiness(READINESS_STEPS.sync, 'OK', { skipped: true, reused: true });
+          queueBackgroundRealtimeSync(generation);
+          return true;
+        }
         setReadinessPhase('readinessSyncing', 'Synchronizing chat status…');
-        return pollUpdatesOnce(true);
+        return pollUpdatesOnce(!!options.blockUi);
       })
       .then(function () {
         abortIfReadinessStale(generation);
@@ -818,7 +864,11 @@
     cancelChatReadiness();
     var generation = readinessGeneration;
     var attempt = typeof options.attempt === 'number' ? options.attempt : 0;
-    showReadinessOverlay();
+    if (options.blockUi) {
+      showReadinessOverlay();
+    } else {
+      hideReadinessOverlay();
+    }
     readinessPromise = runChatReadinessChecks(options)
       .then(function () {
         if (generation !== readinessGeneration) return false;
@@ -829,6 +879,18 @@
       .catch(function (err) {
         if (err && err.silent) return false;
         if (generation !== readinessGeneration) return false;
+        if (options.background && err && err.code !== 'auth') {
+          hideReadinessOverlay();
+          readinessPromise = null;
+          scheduleLivePolling();
+          return false;
+        }
+        if (err && err.code === 'auth') {
+          showAuthGate();
+          hideReadinessOverlay();
+          readinessPromise = null;
+          return false;
+        }
         showReadinessError(readinessErrorMessage(err));
         readinessPromise = null;
         if (attempt < READINESS_AUTO_RETRY_MAX && shouldAutoRetryReadiness(err)) {
@@ -1623,8 +1685,19 @@
       return;
     }
     hideAuthGate();
-    beginChatReadiness({ reuseSession: true }).then(function (ready) {
+    hideReadinessOverlay();
+    paintCachedThreadIfNeeded();
+    stickToBottom = true;
+    updateInputState();
+    updateEntryUi();
+    scrollToBottom(true);
+    notifyLayout();
+    scheduleLivePolling();
+    if (getSessionId()) startCustomerStream();
+    beginChatReadiness({ reuseSession: true, background: true, blockUi: false }).then(function (ready) {
       if (!ready) return;
+      stickToBottom = true;
+      scrollToBottom(true);
       if (chatHandler === 'closed' && isSessionArchived(getSessionId()) && !isPersistentAccountChat()) {
         fetchSessionFromServer(true).then(function () {
           var hasHistory = messages.length > 0 || (config && config.chatMessageCount > 0);
@@ -1941,7 +2014,7 @@
     snapMessages.forEach(function (msg) {
       if (isDuplicateMessage(msg)) return;
       rememberMessageIdentity(msg);
-      renderMessageDom(msg.role, messageOriginalContent(msg) || messageText(msg.content), msg.id, messageRenderOpts(msg, { skipPush: true }));
+      renderMessageDom(msg.role, messageOriginalContent(msg) || messageText(msg.content), msg.id, messageRenderOpts(msg, { skipPush: true, skipScroll: true }));
       if (msg.role === 'user' || msg.role === 'assistant' || msg.role === 'admin' || msg.role === 'system') {
         messages.push({
           role: msg.role,
@@ -1952,6 +2025,8 @@
       }
     });
     updateEntryUi();
+    stickToBottom = true;
+    scrollToBottom(true);
   }
 
   function syncSessionMetaFromPoll(data) {
@@ -2014,6 +2089,7 @@
     if (historyScrollBound || !messagesEl) return;
     historyScrollBound = true;
     messagesEl.addEventListener('scroll', function () {
+      updateStickToBottomFromScroll();
       if (!hasOlderMessages || loadingOlderHistory) return;
       if (messagesEl.scrollTop <= 80) {
         fetchOlderMessages();
@@ -2093,7 +2169,11 @@
       if (strict) return readinessReject(step, 'network', 'readinessNetworkFailed', { reason: 'missing_ajax_url' });
       return Promise.resolve(false);
     }
-    if (full) {
+    if (full && sessionFetchInFlight) {
+      return sessionFetchInFlight;
+    }
+    var hasPaintedThread = (threadEl && threadEl.children.length > 0) || messages.length > 0;
+    if (full && !hasPaintedThread) {
       clearHistoryDomState();
     }
     var formData = new FormData();
@@ -2106,7 +2186,7 @@
       formData.append('full', '1');
       formData.append('history_limit', String(HISTORY_INITIAL));
     }
-    return fetch(config.ajaxUrl, { method: 'POST', body: formData, credentials: 'same-origin' })
+    var request = fetch(config.ajaxUrl, { method: 'POST', body: formData, credentials: 'same-origin' })
       .then(function (res) { return safeJson(res).then(function (json) { return { res: res, json: json }; }); })
       .then(function (result) {
         var json = result.json;
@@ -2155,6 +2235,10 @@
         if (full) {
           historyLoadedAt = Date.now();
         }
+        if (widgetOpen || stickToBottom) {
+          stickToBottom = true;
+          scrollToBottom(true);
+        }
         return true;
       })
       .catch(function (err) {
@@ -2167,6 +2251,13 @@
         }
         return false;
       });
+    if (full) {
+      sessionFetchInFlight = request.finally(function () {
+        if (sessionFetchInFlight === request) sessionFetchInFlight = null;
+      });
+      return sessionFetchInFlight;
+    }
+    return request;
   }
 
   function applyRestoredMessages(incoming) {
@@ -2176,7 +2267,7 @@
       rememberMessageIdentity(msg);
       if (msg.reaction) messageReactions[msg.id] = msg.reaction;
       indexChatMessage(msg);
-      renderMessageDom(msg.role, messageOriginalContent(msg) || messageText(msg.content), msg.id, messageRenderOpts(msg, { skipPush: true }));
+      renderMessageDom(msg.role, messageOriginalContent(msg) || messageText(msg.content), msg.id, messageRenderOpts(msg, { skipPush: true, skipScroll: true }));
       if (msg.role === 'user' || msg.role === 'assistant' || msg.role === 'admin') {
         if (!messages.some(function (m) { return m.id === msg.id; })) {
           messages.push({
@@ -2197,6 +2288,10 @@
     });
     syncLocalMessageCursor(messages);
     updateEntryUi();
+    if (widgetOpen || stickToBottom) {
+      stickToBottom = true;
+      scrollToBottom(true);
+    }
   }
 
   function getLiveAgent() {
@@ -2832,7 +2927,6 @@
 
   function startLivePolling() {
     if (pollTimer) return;
-    pollUpdates();
     scheduleLivePolling();
   }
 
@@ -2853,7 +2947,9 @@
       pollTimer = null;
       return;
     }
-    pollUpdates();
+    if (!pollInFlight && !sessionFetchInFlight && !pollIsFresh(400)) {
+      pollUpdates();
+    }
     pollTimer = window.setInterval(pollUpdates, effectivePollIntervalMs());
   }
 
@@ -3128,6 +3224,9 @@
       if (strict) return readinessReject(step, 'network', 'readinessNetworkFailed', { reason: 'edge_blocked' });
       return Promise.resolve(null);
     }
+    if (pollInFlight && !strict) {
+      return pollInFlight;
+    }
     var formData = new FormData();
     formData.append('action', 'paxdesign_chat_poll');
     formData.append('nonce', config.nonce);
@@ -3135,7 +3234,7 @@
     formData.append('session_id', getSessionId());
     formData.append('since', String(pollSeq));
 
-    return fetch(config.ajaxUrl, { method: 'POST', body: formData, credentials: 'same-origin' })
+    var request = fetch(config.ajaxUrl, { method: 'POST', body: formData, credentials: 'same-origin' })
       .then(function (res) {
         return res.text().then(function (text) {
           if (isEdgeForbiddenResponse(res, text)) {
@@ -3171,12 +3270,19 @@
           }));
         }
         return null;
+      })
+      .finally(function () {
+        if (pollInFlight === request) pollInFlight = null;
       });
+    pollInFlight = request;
+    return request;
   }
 
   function pollUpdates() {
     if (!config.ajaxUrl) return;
     if (!canUseChat()) return;
+    if (pollInFlight) return;
+    if (sessionFetchInFlight) return;
     pollUpdatesOnce(false).catch(function () {});
   }
 
@@ -3418,7 +3524,8 @@
           renderMessageDom(msg.role, msg.content, msg.id, messageRenderOpts(msg, {
             sender_name: msg.sender_name || '',
             sender_avatar: msg.sender_avatar || '',
-            sender_role: msg.sender_role || ''
+            sender_role: msg.sender_role || '',
+            skipScroll: true
           }));
         }
         if (!played) {
@@ -3432,7 +3539,7 @@
           played = true;
         }
       } else {
-        renderMessageDom(msg.role, messageText(msg.content), msg.id, messageRenderOpts(msg));
+        renderMessageDom(msg.role, messageText(msg.content), msg.id, messageRenderOpts(msg, { skipScroll: true }));
       }
 
       if (msg.role === 'assistant' || msg.role === 'admin') {
@@ -3442,6 +3549,7 @@
       }
     });
     if (played) syncChatLog();
+    if (stickToBottom) scrollToBottom();
   }
 
   function seenMsgId(id) {
@@ -4685,21 +4793,16 @@
     input.style.height = Math.min(input.scrollHeight, 120) + 'px';
   }
 
-  function scrollToBottom() {
+  function scrollToBottom(force) {
     if (!messagesEl) return;
-    var run = function () {
-      var anchor = threadEl && threadEl.lastElementChild;
-      if (anchor && typeof anchor.scrollIntoView === 'function') {
-        anchor.scrollIntoView({ block: 'end', inline: 'nearest', behavior: 'auto' });
-      }
+    if (!force && !stickToBottom) return;
+    stickToBottom = true;
+    if (scrollRaf) cancelAnimationFrame(scrollRaf);
+    scrollRaf = requestAnimationFrame(function () {
+      scrollRaf = 0;
+      if (!messagesEl) return;
       messagesEl.scrollTop = messagesEl.scrollHeight;
-    };
-    requestAnimationFrame(function () {
-      run();
-      requestAnimationFrame(run);
     });
-    window.setTimeout(run, 80);
-    window.setTimeout(run, 220);
   }
 
   function escapeHtml(str) {
@@ -4901,6 +5004,7 @@
     if (urls.length) {
       renderOpts.link_scan_status = 'checking';
     }
+    stickToBottom = true;
     renderMessageDom('user', text, userId, renderOpts);
     messages.push({ role: 'user', content: text, id: userId, client_msg_id: clientMsgId });
     if (!opts.skipSync) {
