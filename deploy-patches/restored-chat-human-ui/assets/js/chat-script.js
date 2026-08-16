@@ -1444,6 +1444,45 @@
     } catch (e) {}
   }
 
+  function buildSocialStartUrl(base) {
+    if (!base) return '';
+    var returnTo = buildChatReturnUrl();
+    rememberChatReturnTarget(returnTo);
+    var sep = base.indexOf('?') >= 0 ? '&' : '?';
+    return base + sep + 'return_to=' + encodeURIComponent(returnTo);
+  }
+
+  function renderChatAuthSocialButtons() {
+    var socialEl = root.querySelector('#paxdesignChatAuthSocial');
+    var dividerEl = root.querySelector('#paxdesignChatAuthDivider');
+    if (!socialEl) return;
+    var social = config && config.authSocial ? config.authSocial : {};
+    var html = '';
+    if (social.githubEnabled) {
+      html += '<button type="button" class="paxdesign-booking-chat-auth-github-btn" data-pax-chat-github="1">Sign in with GitHub</button>';
+    }
+    if (social.appleEnabled) {
+      html += '<button type="button" class="paxdesign-booking-chat-auth-apple-btn" data-pax-chat-apple="1">Sign in with Apple</button>';
+    }
+    socialEl.innerHTML = html;
+    socialEl.hidden = !html;
+    if (dividerEl) dividerEl.hidden = !html;
+    socialEl.querySelectorAll('[data-pax-chat-github]').forEach(function (btn) {
+      btn.addEventListener('click', function (e) {
+        e.preventDefault();
+        var url = buildSocialStartUrl(social.githubStartUrl);
+        if (url) window.location.href = url;
+      });
+    });
+    socialEl.querySelectorAll('[data-pax-chat-apple]').forEach(function (btn) {
+      btn.addEventListener('click', function (e) {
+        e.preventDefault();
+        var url = buildSocialStartUrl(social.appleStartUrl);
+        if (url) window.location.href = url;
+      });
+    });
+  }
+
   function redirectToLoginPage() {
     var loginBase = (config && config.loginPageUrl) ? config.loginPageUrl : '/account/';
     var returnTo = buildChatReturnUrl();
@@ -1526,6 +1565,7 @@
     }
     if (authGateEl) authGateEl.hidden = false;
     root.classList.add('paxdesign-chat-auth-locked');
+    renderChatAuthSocialButtons();
     stopCustomerStream();
     abortStream();
     if (window.PAXdesignBookingMobile && typeof window.PAXdesignBookingMobile.adjustLayout === 'function') {
@@ -1800,14 +1840,14 @@
   function onWidgetOpen() {
     widgetOpen = true;
     initAuthGate();
+    if (!canUseChat()) {
+      releaseChatShellLoader();
+      showAuthGate();
+      notifyLayout();
+      return;
+    }
+    hideAuthGate();
     whenBootstrapped().then(function () {
-      if (!canUseChat()) {
-        releaseChatShellLoader();
-        showAuthGate();
-        notifyLayout();
-        return;
-      }
-      hideAuthGate();
       hideReadinessOverlay();
       stickToBottom = true;
       updateInputState();

@@ -70,6 +70,9 @@ jobs:
             "$SRC/assets/customer-auth/css/pdx-auth.css" \
             "${REMOTE}:${TARGET}/assets/customer-auth/css/pdx-auth.css"
           rsync -az -e "ssh ${SSH_OPTS[*]}" \
+            "$SRC/assets/customer-auth/css/pdx-auth-page.css" \
+            "${REMOTE}:${TARGET}/assets/customer-auth/css/pdx-auth-page.css"
+          rsync -az -e "ssh ${SSH_OPTS[*]}" \
             "$SRC/assets/customer-auth/css/pdx-unified-ui.css" \
             "${REMOTE}:${TARGET}/assets/customer-auth/css/pdx-unified-ui.css"
           rsync -az -e "ssh ${SSH_OPTS[*]}" \
@@ -117,6 +120,18 @@ jobs:
           rsync -az -e "ssh ${SSH_OPTS[*]}" \
             "$SRC/includes/customer/class-paxdesign-customer-admin.php" \
             "${REMOTE}:${TARGET}/includes/customer/class-paxdesign-customer-admin.php"
+          rsync -az -e "ssh ${SSH_OPTS[*]}" \
+            "$SRC/includes/auth/class-paxdesign-auth-github.php" \
+            "${REMOTE}:${TARGET}/includes/auth/class-paxdesign-auth-github.php"
+          rsync -az -e "ssh ${SSH_OPTS[*]}" \
+            "$SRC/includes/auth/class-paxdesign-auth-module.php" \
+            "${REMOTE}:${TARGET}/includes/auth/class-paxdesign-auth-module.php"
+          rsync -az -e "ssh ${SSH_OPTS[*]}" \
+            "$SRC/includes/auth/class-paxdesign-auth-rest.php" \
+            "${REMOTE}:${TARGET}/includes/auth/class-paxdesign-auth-rest.php"
+          rsync -az -e "ssh ${SSH_OPTS[*]}" \
+            "$SRC/includes/auth/class-paxdesign-auth-frontend.php" \
+            "${REMOTE}:${TARGET}/includes/auth/class-paxdesign-auth-frontend.php"
           ssh "${SSH_OPTS[@]}" "$REMOTE" \
             "cd '$(printf '%q' "$WP_PATH")' && (command -v wp >/dev/null && wp cache flush || true) && (command -v wp >/dev/null && wp litespeed-purge all || true)"
 

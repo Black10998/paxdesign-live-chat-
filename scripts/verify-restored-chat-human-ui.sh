@@ -110,9 +110,15 @@ grep -q "paxdesign-booking-chat-auth-gate-card" "${tmpdir}/booking-styles.css" \
   && ok "chat login gate uses centered card layout" \
   || fail "chat login gate card layout missing"
 
-grep -q "rememberChatReturnTarget" "${tmpdir}/chat-script.js" \
-  && ok "chat login stores return target before redirect" \
-  || fail "chat return target storage missing"
+grep -q "renderChatAuthSocialButtons" "${tmpdir}/chat-script.js" \
+  && ok "chat auth gate renders social login buttons" \
+  || fail "chat social login rendering missing"
+
+curl -fsSL "${SITE}/wp-content/plugins/paxdesign-booking/assets/customer-auth/js/pax-auth.js?v=${STAMP}" \
+  -o "${tmpdir}/pax-auth.js" || true
+grep -q "githubWebStartUrl" "${tmpdir}/pax-auth.js" \
+  && ok "GitHub login support present in live pax-auth.js" \
+  || fail "GitHub login support missing from live pax-auth.js"
 
 grep -q "maybeOpenChatFromReturnUrl" "${tmpdir}/booking-script.js" 2>/dev/null \
   && ok "booking-script reopens chat after login return" \
