@@ -275,13 +275,16 @@ if ( ! function_exists( 'pax_ccs_bilingual' ) ) {
 							data-placeholder-ar="<?php echo esc_attr( pax_ccs_text( $copy['active_report']['reply_placeholder'], 'ar' ) ); ?>"
 							data-placeholder-de="<?php echo esc_attr( pax_ccs_text( $copy['active_report']['reply_placeholder'], 'de' ) ); ?>"
 							data-placeholder-en="<?php echo esc_attr( pax_ccs_text( $copy['active_report']['reply_placeholder'], 'en' ) ); ?>"></textarea>
-						<div id="pax-ccs-resubmit" class="pax-ccs-portal__resubmit">
-							<p class="pax-ccs-portal__hint"><?php pax_ccs_bilingual( $copy['active_report']['resubmit_hint'] ); ?></p>
-							<label class="pax-ccs-portal__resubmit-label" for="pax-ccs-resubmit-identity"><?php pax_ccs_bilingual( $copy['active_report']['resubmit_identity'] ); ?></label>
-							<input type="file" id="pax-ccs-resubmit-identity" name="identity_document" accept=".pdf,.jpg,.jpeg,.png,.heic,.heif">
+						<div id="pax-ccs-resubmit" class="pax-ccs-portal__resubmit" hidden>
+							<h4 class="pax-ccs-portal__resubmit-title" id="pax-ccs-resubmit-title"><?php pax_ccs_bilingual( $copy['active_report']['upload_evidence'] ); ?></h4>
+							<p class="pax-ccs-portal__hint" id="pax-ccs-resubmit-hint"><?php pax_ccs_bilingual( $copy['active_report']['resubmit_hint'] ); ?></p>
 							<label class="pax-ccs-portal__resubmit-label" for="pax-ccs-resubmit-evidence"><?php pax_ccs_bilingual( $copy['active_report']['resubmit_evidence'] ); ?></label>
-							<input type="file" id="pax-ccs-resubmit-evidence" name="evidence_other[]" accept="image/*,.pdf,.txt,.csv,.zip,.doc,.docx" multiple>
+							<input type="file" id="pax-ccs-resubmit-evidence" name="evidence_other[]" accept="image/*,.pdf,.txt,.csv,.zip,.doc,.docx,.heic,.heif" multiple>
+							<label class="pax-ccs-portal__resubmit-label pax-ccs-portal__resubmit-label--optional" for="pax-ccs-resubmit-identity"><?php pax_ccs_bilingual( $copy['active_report']['resubmit_identity'] ); ?></label>
+							<input type="file" id="pax-ccs-resubmit-identity" name="identity_document" accept=".pdf,.jpg,.jpeg,.png,.heic,.heif">
+							<ul id="pax-ccs-resubmit-preview" class="pax-ccs-portal__resubmit-preview" hidden aria-live="polite"></ul>
 						</div>
+						<p id="pax-ccs-evidence-success" class="pax-ccs-portal__success" hidden role="status"></p>
 						<p id="pax-ccs-active-reply-error" class="pax-ccs-portal__error" hidden role="alert"></p>
 						<div class="pax-ccs-portal__actions pax-ccs-portal__actions--compact">
 							<button type="button" class="pax-ccs-portal__btn pax-ccs-portal__btn--primary pax-ccs-portal__btn--compact" id="pax-ccs-active-reply-submit">

@@ -181,6 +181,16 @@ class PAXdesign_Cybercrime_I18n {
                 'en' => 'Reference %1$s — %2$s. Your report is recorded and awaiting review.',
                 'ar' => 'المرجع %1$s — %2$s. تم تسجيل بلاغكم وهو بانتظار المراجعة.',
             ),
+            'evidence.uploaded' => array(
+                'de' => 'Kunde hat Nachweise hochgeladen.',
+                'en' => 'Customer uploaded evidence.',
+                'ar' => 'قام العميل برفع الأدلة.',
+            ),
+            'evidence.success' => array(
+                'de' => 'Ihre Nachweise wurden erfolgreich hochgeladen.',
+                'en' => 'Your evidence was uploaded successfully.',
+                'ar' => 'تم رفع الأدلة بنجاح.',
+            ),
             'action.reject' => array(
                 'de' => 'مرفوض',
                 'en' => 'مرفوض',

@@ -28,6 +28,11 @@
   var internalNoteForm = document.getElementById('pax-cc-internal-note-form');
   var internalNoteFeedback = document.getElementById('pax-cc-internal-note-feedback');
   var timelineEl = document.getElementById('pax-cc-admin-timeline');
+  var attachmentsEl = document.getElementById('pax-cc-admin-attachments');
+  var attachmentsCardEl = document.getElementById('pax-cc-admin-attachments-card');
+  var lightboxEl = document.getElementById('pax-cc-lightbox');
+  var lightboxImgEl = document.getElementById('pax-cc-lightbox-img');
+  var lightboxCloseEl = document.getElementById('pax-cc-lightbox-close');
   var statusBadge = document.getElementById('pax-cc-admin-status-badge');
   var workflowEl = document.getElementById('pax-cc-admin-workflow');
   var tabUnreadBadge = document.getElementById('pax-cc-tab-unread-badge');
@@ -250,6 +255,117 @@
     }, POLL_INTERVAL_MS);
   }
 
+  function renderAttachmentItem(file) {
+    if (!file || !file.name) {
+      return '';
+    }
+    var name = escapeHtml(file.name);
+    var url = file.url ? escapeHtml(file.url) : '';
+    var isImage = !!file.is_image;
+    if (!url) {
+      return '<div class="pax-cc-attachment"><span class="pax-cc-attachment__name">' + name + '</span></div>';
+    }
+    if (isImage) {
+      return '<a class="pax-cc-attachment pax-cc-attachment--image" href="' + url + '" data-pax-cc-lightbox target="_blank" rel="noopener">'
+        + '<img class="pax-cc-attachment__thumb" src="' + url + '" alt="' + name + '" loading="lazy">'
+        + '<span class="pax-cc-attachment__name">' + name + '</span></a>';
+    }
+    return '<a class="pax-cc-attachment pax-cc-attachment--file" href="' + url + '" target="_blank" rel="noopener">'
+      + '<span class="pax-cc-attachment__file"><span class="pax-cc-attachment__icon" aria-hidden="true">📄</span></span>'
+      + '<span class="pax-cc-attachment__name">' + name + '</span></a>';
+  }
+
+  function renderAttachments(attachments) {
+    if (!attachmentsEl) {
+      return;
+    }
+    var files = Array.isArray(attachments) ? attachments : [];
+    if (attachmentsCardEl) {
+      attachmentsCardEl.hidden = files.length === 0;
+    }
+    if (!files.length) {
+      attachmentsEl.innerHTML = '';
+      return;
+    }
+    attachmentsEl.innerHTML = files.map(renderAttachmentItem).join('');
+    bindLightboxTriggers(attachmentsEl);
+  }
+
+  function renderTimelineAttachments(files) {
+    if (!Array.isArray(files) || !files.length) {
+      return '';
+    }
+    var items = files.map(function (file) {
+      if (!file || !file.url) {
+        return '';
+      }
+      var name = escapeHtml(file.name || 'file');
+      var url = escapeHtml(file.url);
+      var thumb = file.is_image
+        ? '<img src="' + url + '" alt="' + name + '" loading="lazy">'
+        : '';
+      return '<a class="pax-cc-timeline__attachment" href="' + url + '"' + (file.is_image ? ' data-pax-cc-lightbox' : '') + ' target="_blank" rel="noopener">'
+        + thumb + '<span>' + name + '</span></a>';
+    }).join('');
+    return items ? '<div class="pax-cc-timeline__attachments">' + items + '</div>' : '';
+  }
+
+  function openLightbox(url, alt) {
+    if (!lightboxEl || !lightboxImgEl || !url) {
+      return;
+    }
+    lightboxImgEl.src = url;
+    lightboxImgEl.alt = alt || '';
+    lightboxEl.hidden = false;
+    lightboxEl.setAttribute('aria-hidden', 'false');
+    lightboxEl.classList.add('is-open');
+  }
+
+  function closeLightbox() {
+    if (!lightboxEl || !lightboxImgEl) {
+      return;
+    }
+    lightboxEl.hidden = true;
+    lightboxEl.setAttribute('aria-hidden', 'true');
+    lightboxEl.classList.remove('is-open');
+    lightboxImgEl.removeAttribute('src');
+    lightboxImgEl.alt = '';
+  }
+
+  function bindLightboxTriggers(root) {
+    if (!root) {
+      return;
+    }
+    root.querySelectorAll('[data-pax-cc-lightbox]').forEach(function (link) {
+      if (link.dataset.paxCcLightboxBound === '1') {
+        return;
+      }
+      link.dataset.paxCcLightboxBound = '1';
+      link.addEventListener('click', function (event) {
+        event.preventDefault();
+        openLightbox(link.getAttribute('href'), link.querySelector('img') ? link.querySelector('img').alt : link.textContent);
+      });
+    });
+  }
+
+  if (lightboxCloseEl) {
+    lightboxCloseEl.addEventListener('click', closeLightbox);
+  }
+  if (lightboxEl) {
+    lightboxEl.addEventListener('click', function (event) {
+      if (event.target === lightboxEl) {
+        closeLightbox();
+      }
+    });
+    document.addEventListener('keydown', function (event) {
+      if (event.key === 'Escape') {
+        closeLightbox();
+      }
+    });
+  }
+
+  bindLightboxTriggers(document);
+
   function updateWorkflow(currentStatus) {
     if (!workflowEl) {
       return;
@@ -292,6 +408,7 @@
     return '<li class="' + itemClass + '">'
       + '<p class="pax-cc-timeline__meta"><strong>' + author + '</strong> · ' + channel + ' · ' + createdAt + internalTag + '</p>'
       + '<div class="pax-cc-timeline__body">' + body + '</div>'
+      + renderTimelineAttachments(entry.attachments || [])
       + '</li>';
   }
 
@@ -305,6 +422,7 @@
       return;
     }
     timelineEl.innerHTML = entries.map(renderTimelineItem).join('');
+    bindLightboxTriggers(timelineEl);
   }
 
   function updateListRowStatus(report) {
@@ -350,6 +468,7 @@
     updateStatusBadge(report);
     updateWorkflow(report.status || '');
     renderTimeline(report.timeline || []);
+    renderAttachments(report.attachments || []);
     updateListRowStatus(report);
     updateClosedUi(report);
     if (statusSelect && report.status) {

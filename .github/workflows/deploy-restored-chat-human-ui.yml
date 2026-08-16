@@ -8,6 +8,11 @@ on:
       - main
     paths:
       - 'deploy-patches/restored-chat-human-ui/**'
+      - 'navein/assets/js/apple-cybercrime-support.js'
+      - 'navein/assets/css/apple-cybercrime-support.css'
+      - 'navein/template-parts/pages/cybercrime-support.php'
+      - 'navein/template-parts/pages/cybercrime-support-data.php'
+      - 'navein/inc/cybercrime-support-locale.php'
       - '.github/workflows/deploy-restored-chat-human-ui.yml'
       - 'scripts/verify-restored-chat-human-ui.sh'
   workflow_dispatch:
@@ -169,6 +174,22 @@ jobs:
           rsync_with_retry \
             "$SRC/includes/auth/class-paxdesign-auth-frontend.php" \
             "${REMOTE}:${TARGET}/includes/auth/class-paxdesign-auth-frontend.php"
+
+          THEME="${WP_PATH%/}/wp-content/themes/navein"
+          rsync_with_retry \
+            navein/assets/js/apple-cybercrime-support.js \
+            "${REMOTE}:${THEME}/assets/js/apple-cybercrime-support.js"
+          rsync_with_retry \
+            navein/assets/css/apple-cybercrime-support.css \
+            "${REMOTE}:${THEME}/assets/css/apple-cybercrime-support.css"
+          rsync_with_retry \
+            navein/template-parts/pages/cybercrime-support.php \
+            navein/template-parts/pages/cybercrime-support-data.php \
+            "${REMOTE}:${THEME}/template-parts/pages/"
+          rsync_with_retry \
+            navein/inc/cybercrime-support-locale.php \
+            "${REMOTE}:${THEME}/inc/cybercrime-support-locale.php"
+
           ssh_with_retry "$REMOTE" \
             "cd '$(printf '%q' "$WP_PATH")' && \
              rm -f .maintenance && \
