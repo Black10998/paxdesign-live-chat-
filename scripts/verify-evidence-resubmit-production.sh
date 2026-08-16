@@ -37,7 +37,7 @@ PAXdesign_Cybercrime_Tickets::update_status($ref, "waiting_for_customer", 1, "",
 
 add_filter("upload_dir", array("PAXdesign_Cybercrime_Intake", "filter_upload_dir"));
 $test_name = "ccs-resubmit-verify-" . gmdate("YmdHis") . ".pdf";
-$pdf = "%PDF-1.4\n% PAX resubmit production verify\n";
+$pdf = "%PDF-1.1\n1 0 obj<</Type/Catalog/Pages 2 0 R>>endobj\n2 0 obj<</Type/Pages/Kids[3 0 R]/Count 1>>endobj\n3 0 obj<</Type/Page/MediaBox[0 0 3 3]>>endobj\nxref\n0 4\n0000000000 65535 f \n0000000009 00000 n \n0000000052 00000 n \n0000000101 00000 n \ntrailer<</Size 4/Root 1 0 R>>\nstartxref\n149\n%%EOF\n";
 $bits = wp_upload_bits($test_name, null, $pdf);
 remove_filter("upload_dir", array("PAXdesign_Cybercrime_Intake", "filter_upload_dir"));
 if (!empty($bits["error"])) {

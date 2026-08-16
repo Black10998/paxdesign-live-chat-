@@ -33,10 +33,28 @@ class PAXdesign_Cybercrime_Intake {
     /** @var list<string> */
     private static $urgency_levels = array('low', 'medium', 'high', 'critical');
 
+    /** @var bool Test hook: stream body without terminating the request. */
+    public static $attachment_stream_dry_run = false;
+
     public static function init() {
+        add_action('init', array(__CLASS__, 'maybe_serve_attachment_early'), 0);
         add_action('init', array(__CLASS__, 'maybe_create_table'));
         add_action('wp_ajax_paxdesign_cybercrime_report', array(__CLASS__, 'handle_submit'));
         add_action('wp_ajax_paxdesign_cybercrime_attachment', array(__CLASS__, 'ajax_download_attachment'));
+    }
+
+    /**
+     * Serve protected attachments on the front controller before theme output.
+     */
+    public static function maybe_serve_attachment_early() {
+        if (empty($_GET['action']) || empty($_GET['reference']) || empty($_GET['file'])) {
+            return;
+        }
+        $action = sanitize_text_field(wp_unslash((string) $_GET['action']));
+        if ($action !== self::ATTACHMENT_ACTION) {
+            return;
+        }
+        self::serve_attachment_download();
     }
 
     /**
@@ -1231,6 +1249,133 @@ class PAXdesign_Cybercrime_Intake {
 
     /**
      * @param string $mime
+     * @param string $path
+     * @return string
+     */
+    public static function normalize_attachment_mime($mime, $path = '') {
+        $mime = strtolower(sanitize_mime_type((string) $mime));
+        if ($mime === 'application/x-pdf') {
+            $mime = 'application/pdf';
+        }
+        if ($mime === '' && $path !== '') {
+            $mime = self::detect_attachment_mime($path);
+        }
+        if ($path !== '' && is_readable($path)) {
+            $ext = strtolower(pathinfo($path, PATHINFO_EXTENSION));
+            if ($ext === 'pdf' && self::verify_pdf_file($path)) {
+                return 'application/pdf';
+            }
+        }
+        return $mime !== '' ? $mime : 'application/octet-stream';
+    }
+
+    /**
+     * @param string $path
+     * @return bool
+     */
+    public static function verify_pdf_file($path) {
+        $path = (string) $path;
+        if ($path === '' || !is_readable($path)) {
+            return false;
+        }
+        $head = @file_get_contents($path, false, null, 0, 5);
+        return is_string($head) && $head === '%PDF-';
+    }
+
+    /**
+     * Stream a local attachment with clean binary headers (no HTML/admin-ajax noise).
+     *
+     * @param string $path
+     * @param string $mime
+     * @param string $filename
+     * @param bool   $inline
+     * @return int Bytes streamed, or 0 on failure.
+     */
+    public static function stream_attachment_file($path, $mime, $filename, $inline = true) {
+        $path = (string) $path;
+        $filename = sanitize_file_name((string) $filename);
+        if ($path === '' || $filename === '' || !is_readable($path)) {
+            return 0;
+        }
+
+        $size = filesize($path);
+        if ($size === false) {
+            return 0;
+        }
+
+        $mime = self::normalize_attachment_mime($mime, $path);
+        if ($mime === 'application/pdf' && !self::verify_pdf_file($path)) {
+            return 0;
+        }
+
+        if (!defined('DONOTCACHEPAGE')) {
+            define('DONOTCACHEPAGE', true);
+        }
+        if (function_exists('apache_setenv')) {
+            @apache_setenv('no-gzip', '1');
+        }
+        @ini_set('zlib.output_compression', '0');
+
+        while (ob_get_level() > 0) {
+            ob_end_clean();
+        }
+
+        $safe_name = str_replace(array('"', "\r", "\n"), '', $filename);
+        $disposition = $inline ? 'inline' : 'attachment';
+
+        if (!self::$attachment_stream_dry_run) {
+            if (function_exists('status_header')) {
+                status_header(200);
+            }
+            header('Content-Type: ' . $mime);
+            header('Content-Length: ' . (string) $size);
+            header('Content-Disposition: ' . $disposition . '; filename="' . $safe_name . '"');
+            header('Content-Transfer-Encoding: binary');
+            header('X-Content-Type-Options: nosniff');
+            header('Accept-Ranges: none');
+            header('Cache-Control: private, no-store, no-cache, must-revalidate, max-age=0');
+            header('Pragma: no-cache');
+        }
+
+        $handle = fopen($path, 'rb');
+        if ($handle === false) {
+            return 0;
+        }
+
+        $sent = 0;
+        while (!feof($handle)) {
+            $chunk = fread($handle, 8192);
+            if ($chunk === false) {
+                fclose($handle);
+                return 0;
+            }
+            if ($chunk === '') {
+                continue;
+            }
+            echo $chunk;
+            $sent += strlen($chunk);
+            if (self::$attachment_stream_dry_run) {
+                continue;
+            }
+            if (function_exists('flush')) {
+                flush();
+            }
+        }
+        fclose($handle);
+
+        if ($sent !== $size) {
+            return 0;
+        }
+
+        if (!self::$attachment_stream_dry_run) {
+            exit;
+        }
+
+        return $sent;
+    }
+
+    /**
+     * @param string $mime
      * @return bool
      */
     public static function is_image_mime($mime) {
@@ -1350,7 +1495,7 @@ class PAXdesign_Cybercrime_Intake {
                 'file'      => $name,
                 '_wpnonce'  => $nonce,
             ),
-            admin_url('admin-ajax.php')
+            home_url('/')
         );
     }
 
@@ -1400,29 +1545,36 @@ class PAXdesign_Cybercrime_Intake {
      * Stream a protected attachment after auth checks.
      */
     public static function ajax_download_attachment() {
+        self::serve_attachment_download();
+    }
+
+    /**
+     * Resolve auth + file path, then emit a clean binary response.
+     */
+    public static function serve_attachment_download() {
         $reference = sanitize_text_field(wp_unslash($_GET['reference'] ?? ''));
         $file = sanitize_file_name(wp_unslash($_GET['file'] ?? ''));
         $nonce = sanitize_text_field(wp_unslash($_GET['_wpnonce'] ?? ''));
 
         if ($reference === '' || $file === '' || $nonce === '') {
-            wp_die(esc_html__('Invalid attachment request.', 'paxdesign-booking'), '', array('response' => 400));
+            self::attachment_download_error(400, esc_html__('Invalid attachment request.', 'paxdesign-booking'));
         }
 
         if (!is_user_logged_in()) {
-            wp_die(esc_html__('Please sign in.', 'paxdesign-booking'), '', array('response' => 401));
+            self::attachment_download_error(401, esc_html__('Please sign in.', 'paxdesign-booking'));
         }
 
         $user_id = get_current_user_id();
         $token_ok = self::verify_attachment_access_token($reference, $file, $nonce, $user_id);
         if (!$token_ok && !wp_verify_nonce($nonce, 'pax_ccs_att_' . $reference . '_' . md5($file))) {
-            wp_die(esc_html__('Invalid or expired link.', 'paxdesign-booking'), '', array('response' => 403));
+            self::attachment_download_error(403, esc_html__('Invalid or expired link.', 'paxdesign-booking'));
         }
 
         $row = class_exists('PAXdesign_Cybercrime_Tickets')
             ? PAXdesign_Cybercrime_Tickets::get_report_row($reference)
             : null;
         if (!$row) {
-            wp_die(esc_html__('Report not found.', 'paxdesign-booking'), '', array('response' => 404));
+            self::attachment_download_error(404, esc_html__('Report not found.', 'paxdesign-booking'));
         }
 
         $allowed = current_user_can('manage_options');
@@ -1430,7 +1582,7 @@ class PAXdesign_Cybercrime_Intake {
             $allowed = PAXdesign_Cybercrime_Tickets::user_can_view_report($row, $user_id);
         }
         if (!$allowed) {
-            wp_die(esc_html__('You cannot access this file.', 'paxdesign-booking'), '', array('response' => 403));
+            self::attachment_download_error(403, esc_html__('You cannot access this file.', 'paxdesign-booking'));
         }
 
         $match = null;
@@ -1454,41 +1606,31 @@ class PAXdesign_Cybercrime_Intake {
         }
 
         if (!$match) {
-            wp_die(esc_html__('Attachment not found.', 'paxdesign-booking'), '', array('response' => 404));
+            self::attachment_download_error(404, esc_html__('Attachment not found.', 'paxdesign-booking'));
         }
 
         $match = self::recover_attachment_record(is_array($match) ? $match : array());
         $path = self::resolve_attachment_path($match);
         if ($path === '' || !is_readable($path)) {
-            wp_die(esc_html__('File is unavailable.', 'paxdesign-booking'), '', array('response' => 404));
+            self::attachment_download_error(404, esc_html__('File is unavailable.', 'paxdesign-booking'));
         }
 
-        $mime = !empty($match['type']) ? (string) $match['type'] : self::detect_attachment_mime($path);
-        $mime = sanitize_mime_type($mime);
-        if ($mime === '') {
-            $mime = 'application/octet-stream';
-        }
-
-        $safe_name = str_replace(array('"', "\r", "\n"), '', $file);
+        $mime = self::normalize_attachment_mime((string) ($match['type'] ?? ''), $path);
         $inline = self::can_browser_preview_image($mime, $path) || $mime === 'application/pdf';
-        $disposition = $inline ? 'inline' : 'attachment';
+        $streamed = self::stream_attachment_file($path, $mime, $file, $inline);
+        if ($streamed <= 0) {
+            self::attachment_download_error(500, esc_html__('Could not read file.', 'paxdesign-booking'));
+        }
+    }
 
-        if (function_exists('status_header')) {
-            status_header(200);
+    /**
+     * @param int    $status
+     * @param string $message
+     */
+    private static function attachment_download_error($status, $message) {
+        if (!self::$attachment_stream_dry_run) {
+            wp_die($message, '', array('response' => (int) $status));
         }
-        nocache_headers();
-        while (ob_get_level() > 0) {
-            ob_end_clean();
-        }
-        header('Content-Type: ' . $mime);
-        header('Content-Disposition: ' . $disposition . '; filename="' . $safe_name . '"');
-        header('Content-Length: ' . (string) filesize($path));
-        header('X-Content-Type-Options: nosniff');
-        header('Cache-Control: private, no-store');
-
-        if (@readfile($path) === false) {
-            wp_die(esc_html__('Could not read file.', 'paxdesign-booking'), '', array('response' => 500));
-        }
-        exit;
+        throw new RuntimeException($message, (int) $status);
     }
 }

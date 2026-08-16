@@ -74,7 +74,10 @@ ccs_evidence_assert(strpos($portalJs, 'entryHasEvidenceRequest') !== false, 'por
 ccs_evidence_assert(strpos($intake, 'can_browser_preview_image') !== false, 'intake distinguishes browser-previewable images');
 ccs_evidence_assert(strpos($intake, 'attachment_access_token') !== false, 'intake uses stable attachment access tokens');
 ccs_evidence_assert(strpos($intake, 'verify_attachment_access_token') !== false, 'intake verifies attachment access tokens');
-ccs_evidence_assert(strpos($intake, 'readfile') !== false, 'intake streams attachments with readfile');
+ccs_evidence_assert(strpos($intake, 'stream_attachment_file') !== false, 'intake streams attachments via dedicated binary handler');
+ccs_evidence_assert(strpos($intake, 'maybe_serve_attachment_early') !== false, 'intake serves attachments on init before theme output');
+ccs_evidence_assert(strpos($intake, 'verify_pdf_file') !== false, 'intake validates PDF magic bytes before streaming');
+ccs_evidence_assert(strpos($intake, "home_url('/')") !== false, 'attachment download URLs use front controller not admin-ajax');
 ccs_evidence_assert(strpos($intake, 'find_stored_attachment') !== false, 'intake download checks timeline message attachments');
 ccs_evidence_assert(strpos($adminJs, 'pax-cc-request-evidence') !== false, 'admin JS handles request evidence checkbox');
 ccs_evidence_assert(strpos($adminJs, 'request_evidence') !== false, 'admin JS sends request_evidence flag');

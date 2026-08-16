@@ -74,6 +74,11 @@ function wp_create_nonce($action)
     return hash('sha256', (string) $action);
 }
 
+function home_url($path = '')
+{
+    return 'https://example.test/' . ltrim((string) $path, '/');
+}
+
 function wp_salt($scheme = 'auth')
 {
     return 'test-salt-' . (string) $scheme;
@@ -248,7 +253,8 @@ Test_WPDB::$message_meta_json = array(
 );
 
 $pdfName = 'ccs-new-evidence.pdf';
-file_put_contents($uploadSubdir . '/' . $pdfName, '%PDF-1.4 test');
+$pdfBytes = "%PDF-1.1\n1 0 obj<</Type/Catalog/Pages 2 0 R>>endobj\n2 0 obj<</Type/Pages/Kids[3 0 R]/Count 1>>endobj\n3 0 obj<</Type/Page/MediaBox[0 0 3 3]>>endobj\nxref\n0 4\n0000000000 65535 f \n0000000009 00000 n \n0000000052 00000 n \n0000000101 00000 n \ntrailer<</Size 4/Root 1 0 R>>\nstartxref\n149\n%%EOF\n";
+file_put_contents($uploadSubdir . '/' . $pdfName, $pdfBytes);
 $pdfAttachment = array(
     'field' => 'evidence_other',
     'name' => $pdfName,
@@ -336,6 +342,14 @@ ap_assert(
     PAXdesign_Cybercrime_Intake::attachment_access_token($reference, array('name' => $legacyName), 1) === $token,
     'attachment access token is stable across calls'
 );
+
+$pdfPath = $uploadSubdir . '/' . $pdfName;
+$pdfDisk = file_get_contents($pdfPath);
+ap_assert(is_string($pdfDisk) && substr($pdfDisk, 0, 5) === '%PDF-', 'stored PDF has valid magic bytes');
+PAXdesign_Cybercrime_Intake::$attachment_stream_dry_run = true;
+$streamed = PAXdesign_Cybercrime_Intake::stream_attachment_file($pdfPath, 'application/pdf', $pdfName, true);
+PAXdesign_Cybercrime_Intake::$attachment_stream_dry_run = false;
+ap_assert($streamed === strlen($pdfDisk), 'stream_attachment_file dry-run returns full PDF byte count');
 
 $foundLegacy = Test_Cybercrime_Tickets::find_stored_attachment($reference, $legacyName, Test_Cybercrime_Tickets::$test_row);
 $foundNew = Test_Cybercrime_Tickets::find_stored_attachment($reference, $newName, Test_Cybercrime_Tickets::$test_row);
