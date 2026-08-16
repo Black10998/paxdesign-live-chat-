@@ -592,6 +592,11 @@
     }
     if (resubmitSubmitEl) {
       resubmitSubmitEl.hidden = !waiting;
+      resubmitSubmitEl.classList.toggle('pax-ccs-portal__btn--primary', waiting);
+      resubmitSubmitEl.classList.toggle('pax-ccs-portal__btn--ghost', !waiting);
+    }
+    if (activeReplySubmit) {
+      activeReplySubmit.hidden = waiting;
     }
     if (activeReplyWrap) {
       activeReplyWrap.classList.toggle('pax-ccs-portal__reply-wrap--evidence-needed', waiting);
@@ -601,6 +606,22 @@
       if (evidenceSuccessEl && Date.now() > evidenceSuccessUntil) {
         evidenceSuccessEl.hidden = true;
       }
+    }
+  }
+
+  function appendResubmitFiles(body) {
+    if (!body || typeof body.append !== 'function') {
+      return;
+    }
+    if (resubmitEvidenceEl && resubmitEvidenceEl.files && resubmitEvidenceEl.files.length) {
+      Array.prototype.forEach.call(resubmitEvidenceEl.files, function (file, index) {
+        var filename = file && file.name ? file.name : ('evidence-' + (index + 1));
+        body.append('evidence_other[]', file, filename);
+      });
+    }
+    if (resubmitIdentityEl && resubmitIdentityEl.files && resubmitIdentityEl.files[0]) {
+      var idFile = resubmitIdentityEl.files[0];
+      body.append('identity_document', idFile, idFile.name || 'identity-document');
     }
   }
 
@@ -2531,9 +2552,17 @@
       if (!activeReport || !activeReport.reference_id || !isReportActive(activeReport)) {
         return;
       }
+      var waiting = needsEvidenceUpload(activeReport);
       var hasFiles = (resubmitIdentityEl && resubmitIdentityEl.files && resubmitIdentityEl.files.length)
         || (resubmitEvidenceEl && resubmitEvidenceEl.files && resubmitEvidenceEl.files.length);
       var note = activeReplyInput ? (activeReplyInput.value || '').trim() : '';
+      if (waiting && !hasFiles) {
+        if (activeReplyError) {
+          activeReplyError.hidden = false;
+          activeReplyError.textContent = i18nText('errors.evidence_files_required', 'Please attach at least one evidence file before submitting.');
+        }
+        return;
+      }
       if (!hasFiles && !note) {
         if (activeReplyError) {
           activeReplyError.hidden = false;
@@ -2550,23 +2579,23 @@
       body.append('action', 'paxdesign_cybercrime_customer_resubmit');
       body.append('nonce', config.nonce);
       body.append('reference', activeReport.reference_id);
+      if (waiting) {
+        body.append('evidence_resubmit', '1');
+        body.append('pax_evidence_resubmit', '1');
+      }
       if (note) {
         body.append('message', note);
       }
-      if (resubmitIdentityEl && resubmitIdentityEl.files && resubmitIdentityEl.files[0]) {
-        body.append('identity_document', resubmitIdentityEl.files[0]);
-      }
-      if (resubmitEvidenceEl && resubmitEvidenceEl.files) {
-        Array.prototype.forEach.call(resubmitEvidenceEl.files, function (file) {
-          body.append('evidence_other[]', file);
-        });
-      }
+      appendResubmitFiles(body);
       appendLocale(body);
       fetch(config.ajaxUrl, { method: 'POST', body: body, credentials: 'same-origin' })
         .then(function (res) { return res.json(); })
         .then(function (json) {
           if (!json || !json.success) {
             var msg = mapServerError(json, 'reply');
+            if (json && json.data && json.data.code === 'evidence_files_required') {
+              msg = i18nText('errors.evidence_files_required', 'Please attach at least one evidence file before submitting.');
+            }
             if (json && json.data && Array.isArray(json.data.corrections) && json.data.corrections.length) {
               msg = json.data.corrections.join(' ');
             }
@@ -2585,7 +2614,9 @@
             resubmitEvidenceEl.value = '';
           }
           renderResubmitPreview();
-          showEvidenceSuccess((json.data && json.data.message) ? json.data.message : '');
+          if (json.data && json.data.message) {
+            showEvidenceSuccess(json.data.message);
+          }
           if (json.data && json.data.report) {
             applyIncomingReport(json.data.report, { force: true, source: 'mutation' });
           }

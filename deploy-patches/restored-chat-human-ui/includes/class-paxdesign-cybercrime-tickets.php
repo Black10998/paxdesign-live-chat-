@@ -1829,6 +1829,7 @@ class PAXdesign_Cybercrime_Tickets {
             return new WP_Error('config', __('Uploads are unavailable.', 'paxdesign-booking'));
         }
 
+        $evidence_required = self::has_active_evidence_request($reference_id);
         $uploads = PAXdesign_Cybercrime_Intake::handle_request_uploads();
         if (is_wp_error($uploads)) {
             return $uploads;
@@ -1836,6 +1837,13 @@ class PAXdesign_Cybercrime_Tickets {
 
         $body = trim((string) $body);
         $has_files = !empty($uploads);
+        if ($evidence_required && !$has_files) {
+            return new WP_Error(
+                'evidence_files_required',
+                __('Please attach at least one evidence file before submitting.', 'paxdesign-booking'),
+                array('code' => 'evidence_files_required')
+            );
+        }
         if (!$has_files && $body === '') {
             return new WP_Error('message_required', __('Please attach a file or add a message.', 'paxdesign-booking'), array('code' => 'message_required'));
         }
@@ -1862,15 +1870,25 @@ class PAXdesign_Cybercrime_Tickets {
         if ($has_files) {
             if (!self::append_report_attachments($reference_id, $uploads)) {
                 error_log('[PAXdesign Cybercrime] Could not append report attachments for ' . $reference_id);
+                return new WP_Error(
+                    'attachment_save_failed',
+                    __('Your files were uploaded but could not be linked to this report. Please try again.', 'paxdesign-booking'),
+                    array('code' => 'attachment_save_failed')
+                );
             }
             if (!self::sync_report_attachments_column($reference_id)) {
                 error_log('[PAXdesign Cybercrime] Could not sync report attachments for ' . $reference_id);
             }
         }
 
-        self::update_status($reference_id, 'in_review', $user_id, '', false, false);
-        self::mark_evidence_requests_fulfilled($reference_id, (int) $message_id);
-        self::notify_staff_reply($row, $reference_id, $body);
+        if ($has_files) {
+            self::update_status($reference_id, 'in_review', $user_id, '', false, false);
+            self::mark_evidence_requests_fulfilled($reference_id, (int) $message_id);
+            self::notify_staff_reply($row, $reference_id, $body);
+        } elseif (!$evidence_required) {
+            self::update_status($reference_id, 'in_review', $user_id, '', false, false);
+            self::notify_staff_reply($row, $reference_id, $body);
+        }
 
         return array(
             'message_id'      => (int) $message_id,
@@ -1948,6 +1966,41 @@ class PAXdesign_Cybercrime_Tickets {
             return false;
         }
         return true;
+    }
+
+    /**
+     * Whether this report still has an unfulfilled staff evidence request.
+     *
+     * @param string $reference_id
+     * @return bool
+     */
+    public static function has_active_evidence_request($reference_id) {
+        global $wpdb;
+        $reference_id = sanitize_text_field((string) $reference_id);
+        if ($reference_id === '') {
+            return false;
+        }
+
+        $like = '%' . $wpdb->esc_like('"request_evidence"') . '%';
+        $rows = $wpdb->get_col($wpdb->prepare(
+            'SELECT meta_json FROM ' . self::messages_table() . '
+             WHERE reference_id = %s AND author_type = %s AND meta_json LIKE %s
+             ORDER BY id DESC',
+            $reference_id,
+            'staff',
+            $like
+        ));
+        if (!is_array($rows)) {
+            return false;
+        }
+
+        foreach ($rows as $meta_json) {
+            $meta = json_decode((string) $meta_json, true);
+            if (self::is_active_evidence_request(array('meta' => is_array($meta) ? $meta : array()), is_array($meta) ? $meta : array())) {
+                return true;
+            }
+        }
+        return false;
     }
 
     /**
@@ -2675,9 +2728,12 @@ class PAXdesign_Cybercrime_Tickets {
         $lang = is_array($report) && class_exists('PAXdesign_Cybercrime_I18n')
             ? PAXdesign_Cybercrime_I18n::from_report($report)
             : 'de';
-        $success = class_exists('PAXdesign_Cybercrime_I18n')
-            ? PAXdesign_Cybercrime_I18n::t('evidence.success', $lang)
-            : __('Evidence submitted successfully.', 'paxdesign-booking');
+        $success = '';
+        if ($uploaded_count > 0) {
+            $success = class_exists('PAXdesign_Cybercrime_I18n')
+                ? PAXdesign_Cybercrime_I18n::t('evidence.success', $lang)
+                : __('Evidence submitted successfully.', 'paxdesign-booking');
+        }
 
         wp_send_json_success(array(
             'message_id'      => $message_id,

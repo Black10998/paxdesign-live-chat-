@@ -501,10 +501,17 @@ class PAXdesign_Cybercrime_Intake {
         if ($field === '') {
             return false;
         }
-        if ($field === 'identity_document') {
+        if ($field === 'identity_document' || $field === 'evidence_other' || $field === 'evidence_resubmit') {
             return true;
         }
         return strpos($field, 'evidence_') === 0;
+    }
+
+    /**
+     * @return bool
+     */
+    private static function is_evidence_resubmit_request() {
+        return !empty($_POST['evidence_resubmit']) || !empty($_POST['pax_evidence_resubmit']);
     }
 
     /**
@@ -623,6 +630,21 @@ class PAXdesign_Cybercrime_Intake {
                     __('None of the selected files could be stored. Check file type and size, then try again.', 'paxdesign-booking')
                 );
             }
+        }
+
+        if (empty($saved) && self::is_evidence_resubmit_request()) {
+            $content_type = (string) ($_SERVER['CONTENT_TYPE'] ?? '');
+            $content_length = (int) ($_SERVER['CONTENT_LENGTH'] ?? 0);
+            if ($content_length > 1024 && stripos($content_type, 'multipart/form-data') !== false) {
+                return new WP_Error(
+                    'upload_failed',
+                    __('The uploaded files could not be received. Try fewer or smaller files, then submit again.', 'paxdesign-booking')
+                );
+            }
+            return new WP_Error(
+                'evidence_files_required',
+                __('Please attach at least one evidence file before submitting.', 'paxdesign-booking')
+            );
         }
 
         return $saved;

@@ -7,6 +7,8 @@ on:
       - main
     paths:
       - 'scripts/investigate-cybercrime-evidence-production.sh'
+      - 'scripts/investigate-evidence-resubmit-production.sh'
+      - 'scripts/verify-evidence-resubmit-production.sh'
       - '.github/workflows/investigate-cybercrime-evidence.yml'
 
 permissions:
@@ -53,8 +55,22 @@ jobs:
           ssh "${SSH_OPTS[@]}" "$REMOTE" "WP_PATH=${WP_PATH_QUOTED} bash -s" \
             < scripts/investigate-cybercrime-evidence-production.sh | tee evidence-audit.log
 
-      - name: Upload audit log
+      - name: Run resubmit timeline audit
+        run: |
+          set -euo pipefail
+          chmod +x scripts/investigate-evidence-resubmit-production.sh
+          PORT="${WP_SSH_PORT:-22}"
+          SSH_OPTS=(-i ~/.ssh/id_deploy -p "$PORT" -o StrictHostKeyChecking=yes -o BatchMode=yes)
+          REMOTE="${WP_SSH_USER}@${WP_SSH_HOST}"
+          WP_PATH_QUOTED=$(printf '%q' "$WP_PATH")
+          install -m 600 -D /dev/null ~/.ssh/id_deploy
+          printf '%s\n' "$WP_SSH_PRIVATE_KEY" > ~/.ssh/id_deploy
+          ssh-keyscan -p "$PORT" -H "$WP_SSH_HOST" >> ~/.ssh/known_hosts 2>/dev/null || true
+          ssh "${SSH_OPTS[@]}" "$REMOTE" "WP_PATH=${WP_PATH_QUOTED} bash -s" \
+            < scripts/investigate-evidence-resubmit-production.sh | tee evidence-resubmit-audit.log
+
+      - name: Upload resubmit audit log
         uses: actions/upload-artifact@v4
         with:
-          name: cybercrime-evidence-audit
-          path: evidence-audit.log
+          name: cybercrime-evidence-resubmit-audit
+          path: evidence-resubmit-audit.log

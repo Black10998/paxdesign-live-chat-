@@ -59,7 +59,12 @@ ccs_evidence_assert(strpos($tickets, 'collect_message_attachments') !== false, '
 ccs_evidence_assert(strpos($tickets, 'sync_report_attachments_column') !== false, 'tickets syncs report attachments after customer evidence upload');
 ccs_evidence_assert(strpos($tickets, 'attachments_signature') !== false, 'tickets builds attachments signature for sync');
 ccs_evidence_assert(strpos($tickets, 'find_stored_attachment') !== false, 'tickets resolves attachments from report and timeline messages');
-ccs_evidence_assert(strpos($tickets, 'mark_evidence_requests_fulfilled') !== false, 'tickets clears fulfilled evidence requests after customer upload');
+ccs_evidence_assert(strpos($tickets, 'has_active_evidence_request') !== false, 'tickets detects active staff evidence requests');
+ccs_evidence_assert(strpos($tickets, 'evidence_files_required') !== false, 'tickets rejects resubmit without files when evidence is required');
+ccs_evidence_assert(strpos($intake, 'is_evidence_resubmit_request') !== false, 'intake validates evidence resubmit uploads');
+ccs_evidence_assert(strpos($portalJs, 'appendResubmitFiles') !== false, 'portal JS sends resubmit files with explicit filenames');
+ccs_evidence_assert(strpos($portalJs, 'evidence_resubmit') !== false, 'portal JS flags evidence resubmit requests');
+ccs_evidence_assert(strpos($portalJs, 'activeReplySubmit.hidden = waiting') !== false, 'portal JS hides text-only reply while evidence is required');
 ccs_evidence_assert(strpos($tickets, 'is_active_evidence_request') !== false, 'tickets computes active evidence request state');
 ccs_evidence_assert(strpos($tickets, 'evidence_request_active') !== false, 'tickets exposes evidence_request_active on timeline entries');
 ccs_evidence_assert(strpos($intake, 'normalized_upload_files') !== false, 'intake normalizes mobile and desktop multipart uploads');
