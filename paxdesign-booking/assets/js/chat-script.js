@@ -1,6 +1,6 @@
 /**
  * PAXdesign AI Chat — Sales & Booking Assistant
- * Version: 3.174.121
+ * Version: 3.174.122
  */
 (function () {
   'use strict';
@@ -689,11 +689,15 @@
     return Promise.resolve(true);
   }
 
-  function finalizeChatReadinessUi() {
-    hideReadinessOverlay();
+  function releaseChatShellLoader() {
     if (window.PAXdesignBooking && typeof window.PAXdesignBooking.hideShellLoader === 'function') {
       window.PAXdesignBooking.hideShellLoader();
     }
+  }
+
+  function finalizeChatReadinessUi() {
+    hideReadinessOverlay();
+    releaseChatShellLoader();
     updateEntryUi();
     updateInputState();
     updateEndButtonUi();
@@ -902,6 +906,11 @@
       })
       .then(function () {
         abortIfReadinessStale(generation);
+        if (options.background) {
+          logReadiness(READINESS_STEPS.sync, 'OK', { skipped: true, background: true });
+          queueBackgroundRealtimeSync(generation);
+          return true;
+        }
         if (pollIsFresh(1200)) {
           logReadiness(READINESS_STEPS.sync, 'OK', { skipped: true, reused: true });
           queueBackgroundRealtimeSync(generation);
@@ -1256,12 +1265,6 @@
         return reopenAuthenticatedSessionIfNeeded();
       }).then(function () {
         if (generation !== silentRefreshGeneration) return false;
-        return fetchSessionFromServer(true, false);
-      }).then(function () {
-        if (generation !== silentRefreshGeneration) return false;
-        return pollUpdatesOnce(false);
-      }).then(function () {
-        if (generation !== silentRefreshGeneration) return false;
         hideReadinessOverlay();
         inferEntryChoiceFromHandler();
         updateEntryUi();
@@ -1275,7 +1278,16 @@
         if (widgetOpen && input && !input.disabled) {
           try { input.focus({ preventScroll: true }); } catch (focusErr) {}
         }
-        logReadiness('login_transition', 'OK', { sessionId: getSessionId() });
+        logReadiness('login_transition', 'OK', { sessionId: getSessionId(), background: true });
+        fetchSessionFromServer(true, false).then(function () {
+          if (generation !== silentRefreshGeneration) return;
+          return pollUpdatesOnce(false);
+        }).then(function () {
+          if (generation !== silentRefreshGeneration) return;
+          stickToBottom = true;
+          scrollToBottom(true);
+          notifyLayout();
+        }).catch(function () {});
         return true;
       });
     }).catch(function (err) {
@@ -1466,7 +1478,7 @@
       showAuthGate();
       window.PDXAuth.mountInlineAuth(inlineEl, view === 'register' ? 'register' : 'login', {
         compact: true,
-        context: 'chat',
+        context: 'page',
       });
       return;
     }
@@ -1484,7 +1496,7 @@
     clearInlineAuthForm();
     window.PDXAuth.mountInlineAuth(inlineEl, view || 'login', {
       compact: true,
-      context: 'chat',
+      context: 'page',
     });
     inlineEl.dataset.mounted = '1';
     inlineEl.dataset.authView = view || 'login';
@@ -1822,9 +1834,7 @@
     widgetOpen = true;
     initAuthGate();
     if (!canUseChat()) {
-      if (window.PAXdesignBooking && typeof window.PAXdesignBooking.hideShellLoader === 'function') {
-        window.PAXdesignBooking.hideShellLoader();
-      }
+      releaseChatShellLoader();
       showAuthGate();
       notifyLayout();
       return;
@@ -1838,13 +1848,11 @@
     pinToLatestMessage();
     notifyLayout();
     scheduleLivePolling();
+    releaseChatShellLoader();
     if (getSessionId()) startCustomerStream();
     window.setTimeout(function () {
       beginChatReadiness({ reuseSession: true, background: true, blockUi: false }).then(function (ready) {
         if (!ready) {
-          if (window.PAXdesignBooking && typeof window.PAXdesignBooking.hideShellLoader === 'function') {
-            window.PAXdesignBooking.hideShellLoader();
-          }
           return;
         }
         pinToLatestMessage();
