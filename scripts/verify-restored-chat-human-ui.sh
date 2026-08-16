@@ -29,9 +29,9 @@ curl -fsSL "${SITE}/wp-content/plugins/paxdesign-booking/assets/js/cybercrime-ad
 curl -fsSL "${SITE}/wp-content/plugins/paxdesign-booking/paxdesign-booking.php?v=${STAMP}" \
   -o "${tmpdir}/paxdesign-booking.php" || true
 
-grep -q "Version: 3.174.103" "${tmpdir}/chat-script.js" \
-  && ok "chat-script.js cache-bust version 3.174.103" \
-  || fail "chat-script.js is not the patched 3.174.103 file"
+grep -q "Version: 3.174.104" "${tmpdir}/chat-script.js" \
+  && ok "chat-script.js cache-bust version 3.174.104" \
+  || fail "chat-script.js is not the patched 3.174.104 file"
 
 grep -q "paxdesign-chat-auth-locked .paxdesign-booking-container" "${tmpdir}/booking-styles.css" \
   && grep -q "flex-direction: column" "${tmpdir}/booking-styles.css" \
@@ -45,6 +45,16 @@ grep -qF ".paxdesign-booking-chat-auth-gate-inner:has(.paxdesign-booking-chat-au
 grep -q "overflow-wrap: anywhere" "${tmpdir}/booking-styles.css" \
   && ok "login labels and links wrap instead of overlapping" \
   || fail "login text wrapping rule missing"
+
+grep -qF ".paxdesign-booking-chat-auth-gate-close" "${tmpdir}/booking-styles.css" \
+  && grep -q "display: none !important" "${tmpdir}/booking-styles.css" \
+  && ok "duplicate login Close button is hidden; header Close is the only one" \
+  || fail "duplicate login Close button is still visible"
+
+grep -q 'pdx-auth-link[data-view="forgot"]' "${tmpdir}/booking-styles.css" \
+  && grep -q "display: inline" "${tmpdir}/booking-styles.css" \
+  && ok "Forgot password link stays visible in compact login" \
+  || fail "Forgot password link is hidden in compact login"
 
 grep -q "function pinToLatestMessage" "${tmpdir}/chat-script.js" \
   && ok "instant pin-to-latest is present" \

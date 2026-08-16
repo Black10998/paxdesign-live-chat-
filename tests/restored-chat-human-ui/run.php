@@ -32,8 +32,8 @@ $i18n = file_get_contents($root . '/includes/class-paxdesign-cybercrime-i18n.php
 $admin = file_get_contents($root . '/includes/customer/class-paxdesign-customer-admin.php');
 $adminJs = file_get_contents($root . '/assets/js/cybercrime-admin.js');
 
-assert_true(strpos($boot, "define('PAXDESIGN_BOOKING_VERSION', '3.174.103')") !== false, 'plugin version 3.174.103');
-assert_true(strpos($js, 'Version: 3.174.103') !== false, 'chat-script cache-bust 3.174.103');
+assert_true(strpos($boot, "define('PAXDESIGN_BOOKING_VERSION', '3.174.104')") !== false, 'plugin version 3.174.104');
+assert_true(strpos($js, 'Version: 3.174.104') !== false, 'chat-script cache-bust 3.174.104');
 assert_true(strpos($js, 'uploadHumanAttachFile') !== false, 'JS upload handler');
 assert_true(strpos($js, 'paxdesign-chat-admin-active') !== false, 'JS human takeover class');
 assert_true(strpos($js, 'paxdesign_chat_live_user_attach') !== false, 'JS posts attach action');
@@ -60,6 +60,9 @@ assert_true(strpos($css, 'paxdesign-chat-mode-active.paxdesign-mobile-chat-mode'
 assert_true(strpos($css, 'font-size: 22px') !== false, 'in-chat login title matches /account/');
 assert_true(strpos($css, 'paxdesign-chat-auth-locked .paxdesign-booking-container') !== false && strpos($css, 'flex-direction: column') !== false, 'login panel stacks below the header instead of overlapping it');
 assert_true(strpos($css, '.paxdesign-booking-chat-auth-gate-inner:has(.paxdesign-booking-chat-auth-inline .pdx-auth-form) .paxdesign-booking-chat-auth-gate-intro') !== false, 'duplicate login headline is hidden once the inline form is mounted');
+assert_true(strpos($css, '.paxdesign-booking-chat-auth-gate-close') !== false && strpos($css, 'display: none !important') !== false, 'duplicate login Close button is hidden; header Close is the only one');
+assert_true(strpos($widget, 'paxdesignChatAuthClose') === false, 'widget template has no duplicate auth-gate Close button');
+assert_true(strpos($css, 'pdx-auth-link[data-view="forgot"]') !== false && strpos($css, 'display: inline') !== false, 'Forgot password link stays visible in compact login');
 assert_true(strpos($css, 'overflow-wrap: anywhere') !== false, 'login labels and links wrap instead of overlapping');
 assert_true(strpos($bookingJs, 'mobileKeyboardWasOpen') !== false, 'mobile keyboard resize does not force pin-to-latest on every viewport event');
 assert_true(strpos($bookingJs, "top: top + 'px'") !== false, 'mobile keyboard-open sheet anchors to the visual viewport top');

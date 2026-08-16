@@ -1,6 +1,6 @@
 /**
  * PAXdesign AI Chat — Sales & Booking Assistant
- * Version: 3.174.103
+ * Version: 3.174.104
  */
 (function () {
   'use strict';
@@ -91,7 +91,6 @@
   var chatMessageMap     = {};
   var replyToId          = 0;
   var authGateEl         = null;
-  var authGateCloseBtn   = null;
   var authGateVerifyEl   = null;
   var authGateBound      = false;
 
@@ -1294,7 +1293,6 @@
 
   function initAuthGate() {
     authGateEl = root.querySelector('#paxdesignChatAuthGate');
-    authGateCloseBtn = root.querySelector('#paxdesignChatAuthClose');
     authGateVerifyEl = root.querySelector('#paxdesignChatAuthGateVerify');
     if (config && config.authGate) {
       var titleEl = root.querySelector('#paxdesignChatAuthGateTitle');
@@ -1312,15 +1310,6 @@
         if (!btn) return;
         e.preventDefault();
         mountInlineAuthForm(btn.getAttribute('data-auth-view'));
-      });
-    }
-    if (authGateCloseBtn) {
-      authGateCloseBtn.addEventListener('click', function (e) {
-        e.preventDefault();
-        hideAuthGate();
-        if (window.PAXdesignBooking && typeof window.PAXdesignBooking.close === 'function') {
-          window.PAXdesignBooking.close();
-        }
       });
     }
     if (!window.__paxChatAuthSessionBound) {

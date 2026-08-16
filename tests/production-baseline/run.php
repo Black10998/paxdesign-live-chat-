@@ -1,6 +1,6 @@
 <?php
 /**
- * Guard: GitHub paxdesign-booking must match the live 3.174.103 baseline.
+ * Guard: GitHub paxdesign-booking must match the live 3.174.104 baseline.
  * Rejects the later 3.176.x chat rewrite and CCS AI form-fill classes.
  */
 $root = dirname(__DIR__, 2);
@@ -24,8 +24,8 @@ $knowledge = file_get_contents($plugin . '/includes/class-paxdesign-chat-knowled
 $css = file_get_contents($plugin . '/assets/css/booking-styles.css');
 $widget = file_get_contents($plugin . '/templates/booking-widget.php');
 
-pb_ok(strpos($boot, "define('PAXDESIGN_BOOKING_VERSION', '3.174.103')") !== false, 'plugin version 3.174.103');
-pb_ok(strpos($js, 'Version: 3.174.103') !== false, 'chat-script cache-bust 3.174.103');
+pb_ok(strpos($boot, "define('PAXDESIGN_BOOKING_VERSION', '3.174.104')") !== false, 'plugin version 3.174.104');
+pb_ok(strpos($js, 'Version: 3.174.104') !== false, 'chat-script cache-bust 3.174.104');
 pb_ok(strpos($js, 'skipping stacked sync') === false, 'chat-script is not the 3.176 freeze/unfreeze rewrite');
 pb_ok(strpos($js, 'var openInstant') === false, 'chat-script does not use the 3.176 instant-open rewrite');
 pb_ok(strpos($js, 'var stickToBottom') !== false, 'WhatsApp stick-to-bottom is present');
@@ -61,6 +61,9 @@ pb_ok(strpos($css, 'font-size: 22px') !== false, 'chat login title matches the A
 pb_ok(strpos($css, 'paxdesign-chat-auth-locked .paxdesign-booking-container') !== false && strpos($css, 'flex-direction: column') !== false, 'login panel stacks below the header instead of overlapping it');
 pb_ok(strpos($css, '.paxdesign-booking-chat-auth-gate-inner:has(.paxdesign-booking-chat-auth-inline .pdx-auth-form) .paxdesign-booking-chat-auth-gate-intro') !== false, 'duplicate login headline is hidden once the inline form is mounted');
 pb_ok(strpos($css, '.paxdesign-booking-chat-auth-gate-inner') !== false && strpos($css, 'overflow: hidden') !== false, 'login panel does not rely on internal scrolling');
+pb_ok(strpos($css, '.paxdesign-booking-chat-auth-gate-close') !== false && strpos($css, 'display: none !important') !== false, 'duplicate login Close button is hidden; header Close is the only one');
+pb_ok(strpos($widget, 'paxdesignChatAuthClose') === false, 'widget template has no duplicate auth-gate Close button');
+pb_ok(strpos($css, 'pdx-auth-link[data-view="forgot"]') !== false && strpos($css, 'display: inline') !== false, 'Forgot password link stays visible in compact login');
 pb_ok(strpos($css, 'overflow-wrap: anywhere') !== false, 'login labels and links wrap instead of overlapping');
 $booking_js = file_get_contents($plugin . '/assets/js/booking-script.js');
 pb_ok(strpos($booking_js, 'function applyCompactWidgetFrame') !== false, 'chat sizes to a compact card on desktop and mobile');
@@ -108,4 +111,4 @@ if ($fail > 0) {
     fwrite(STDERR, "$fail production-baseline assertion(s) failed\n");
     exit(1);
 }
-echo "Production baseline 3.174.103 guards passed.\n";
+echo "Production baseline 3.174.104 guards passed.\n";

@@ -98,9 +98,6 @@ $team_members = PAXdesign_Booking::get_instance()->get_team_members();
 
         <?php if (get_option('paxdesign_customer_require_login_for_chat', '1') === '1') : ?>
         <div class="paxdesign-booking-chat-auth-gate" id="paxdesignChatAuthGate" hidden>
-          <button type="button" class="paxdesign-booking-chat-auth-gate-close" id="paxdesignChatAuthClose" aria-label="<?php echo esc_attr__('Close', 'paxdesign-booking'); ?>">
-            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true"><path d="M18 6 6 18M6 6l12 12"/></svg>
-          </button>
           <div class="paxdesign-booking-chat-auth-gate-inner" role="region" aria-labelledby="paxdesignChatAuthGateTitle">
             <div class="paxdesign-booking-chat-auth-gate-intro">
               <h3 class="paxdesign-booking-chat-auth-gate-title" id="paxdesignChatAuthGateTitle"><?php echo esc_html__('Continue to Live Chat', 'paxdesign-booking'); ?></h3>
