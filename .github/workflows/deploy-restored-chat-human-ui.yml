@@ -71,6 +71,9 @@ jobs:
             "$SRC/assets/js/booking-script.js" \
             "${REMOTE}:${TARGET}/assets/js/booking-script.js"
           rsync -az -e "ssh ${SSH_OPTS[*]}" \
+            "$SRC/assets/js/widget-loader.js" \
+            "${REMOTE}:${TARGET}/assets/js/widget-loader.js"
+          rsync -az -e "ssh ${SSH_OPTS[*]}" \
             "$SRC/assets/css/booking-styles.css" \
             "${REMOTE}:${TARGET}/assets/css/booking-styles.css"
           rsync -az -e "ssh ${SSH_OPTS[*]}" \
@@ -123,7 +126,7 @@ jobs:
           TARGET="${WP_PATH%/}/wp-content/plugins/paxdesign-booking"
           REMOTE="${WP_SSH_USER}@${WP_SSH_HOST}"
           ssh "${SSH_OPTS[@]}" "$REMOTE" \
-            "grep -q 'class PAXdesign_Conversation_Sync' '${TARGET}/includes/class-paxdesign-conversation-sync.php' && grep -q '3.174.112' '${TARGET}/paxdesign-booking.php'"
+            "grep -q 'class PAXdesign_Conversation_Sync' '${TARGET}/includes/class-paxdesign-conversation-sync.php' && grep -q '3.174.114' '${TARGET}/paxdesign-booking.php'"
 
       - name: Verify live chat assets
         run: |

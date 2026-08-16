@@ -42,6 +42,13 @@ $team_members = PAXdesign_Booking::get_instance()->get_team_members();
 
   <div class="paxdesign-chat-focus-backdrop" aria-hidden="true"></div>
 
+  <div class="paxdesign-chat-open-loader" aria-live="polite" aria-busy="false" hidden>
+    <div class="paxdesign-chat-open-loader-card">
+      <span class="paxdesign-chat-open-loader-spinner" aria-hidden="true"></span>
+      <span class="paxdesign-chat-open-loader-label"><?php echo esc_html__('Chat wird geladen…', 'paxdesign-booking'); ?></span>
+    </div>
+  </div>
+
   <!-- Booking Panel -->
   <div class="paxdesign-booking-widget" aria-hidden="true">
     <div class="paxdesign-booking-frame">
