@@ -1,19 +1,22 @@
 # Production baseline (live WordPress)
 
-**Official production baseline:** the working WordPress plugin currently live on `https://paxdesign.at`.
+**Official production baseline:** GitHub `main` matches the working WordPress plugin live on `https://paxdesign.at`.
 
 | Field | Value |
 | --- | --- |
+| GitHub default branch | `main` |
 | Plugin version | `3.174.91` |
 | Source | Restored WordPress site (2026-08-08 16:26), then surgical chat/CCS patches |
 | Restored git ancestor | `2f06a39e` (`3.174.85`) |
-| Live overlay | `deploy-patches/restored-chat-human-ui/` |
+| Live overlay copy | `deploy-patches/restored-chat-human-ui/` (must stay identical to `paxdesign-booking/` files listed below) |
+| Baseline merge | PR #272 (`ebd85c3d`) |
 
-This version is the only development baseline for future WordPress plugin work.
+This version is the only development baseline for future WordPress plugin work. Branch from current `main`. Do not base work on older `3.176.x` chat branches or closed PRs.
 
 ## Do not use
 
 - GitHub `3.176.x` chat rewrites (`skipping stacked sync`, instant-open freeze work)
+- Closed / superseded PRs: #262, #269, #270, #271, and any PR that restores CCS AI form-fill from chat
 - CCS AI classes that submit the website form from chat:
   - `class-paxdesign-cybercrime-ai-workflow.php`
   - `class-paxdesign-cybercrime-ai-operations.php`

@@ -3,12 +3,8 @@ name: Deploy restored chat human UI
 # Surgical production patch on the restored 2026-08-08 WordPress baseline.
 # Copies only the listed plugin files. Does NOT rsync the current GitHub plugin.
 on:
-  push:
-    branches:
-      - cursor/chat-ccs-ai-workflow-9e84
-    paths:
-      - 'deploy-patches/restored-chat-human-ui/**'
-      - '.github/workflows/deploy-restored-chat-human-ui.yml'
+  # Auto-push disabled. GitHub main is the official 3.174.91 baseline matching live paxdesign.at.
+  # Use workflow_dispatch only for an intentional surgical overlay.
   workflow_dispatch:
 
 permissions:
