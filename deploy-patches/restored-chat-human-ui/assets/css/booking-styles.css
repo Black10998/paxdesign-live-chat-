@@ -318,45 +318,43 @@
   visibility: visible;
 }
 
-#paxdesign-booking-root .paxdesign-chat-open-loader {
-  position: fixed;
-  z-index: calc(var(--pax-z-stack) + 1);
-  pointer-events: none;
+/* In-chat shell loader — scoped to the chat panel only (never full-page) */
+#paxdesign-booking-root #paxdesignChatPanel {
+  position: relative;
 }
 
-#paxdesign-booking-root .paxdesign-chat-open-loader[hidden] {
-  display: none !important;
-}
-
-#paxdesign-booking-root.paxdesign-chat-opening .paxdesign-chat-open-loader {
+#paxdesign-booking-root .paxdesign-chat-shell-loader {
+  position: absolute;
   inset: 0;
+  z-index: 8;
   display: flex;
   align-items: center;
   justify-content: center;
-  padding: 0 16px max(96px, calc(16px + env(safe-area-inset-bottom, 0px)));
+  pointer-events: none;
+  background: var(--pax-gray-darker, #1a1a1a);
 }
 
-#paxdesign-booking-root.paxdesign-chat-opening .paxdesign-chat-focus-backdrop {
-  opacity: 1;
-  visibility: visible;
+#paxdesign-booking-root .paxdesign-chat-shell-loader[hidden] {
+  display: none !important;
 }
 
-#paxdesign-booking-root .paxdesign-chat-open-loader-card {
+#paxdesign-booking-root #paxdesignChatPanel.paxdesign-chat-shell-loading > :not(.paxdesign-chat-shell-loader) {
+  visibility: hidden;
+}
+
+#paxdesign-booking-root .paxdesign-chat-shell-loader-inner {
   display: inline-flex;
   align-items: center;
   gap: 10px;
   min-height: 44px;
   padding: 0 18px 0 14px;
   border-radius: 980px;
-  background: rgba(0, 0, 0, 0.88);
+  background: rgba(255, 255, 255, 0.08);
   color: #fff;
-  box-shadow:
-    0 10px 28px rgba(0, 0, 0, 0.22),
-    0 2px 8px rgba(0, 0, 0, 0.12);
-  pointer-events: none;
+  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.18);
 }
 
-#paxdesign-booking-root .paxdesign-chat-open-loader-spinner {
+#paxdesign-booking-root .paxdesign-chat-shell-loader-spinner {
   width: 18px;
   height: 18px;
   border: 2px solid rgba(255, 255, 255, 0.22);
@@ -366,17 +364,11 @@
   flex-shrink: 0;
 }
 
-#paxdesign-booking-root .paxdesign-chat-open-loader-label {
+#paxdesign-booking-root .paxdesign-chat-shell-loader-label {
   font-size: 13px;
   font-weight: 500;
   letter-spacing: -0.01em;
   white-space: nowrap;
-}
-
-@media (max-width: 768px) {
-  #paxdesign-booking-root.paxdesign-chat-opening .paxdesign-chat-open-loader {
-    padding: 0 16px max(96px, calc(16px + env(safe-area-inset-bottom, 0px)));
-  }
 }
 
 #paxdesign-booking-root .paxdesign-booking-button .paxdesign-booking-launcher-icon {

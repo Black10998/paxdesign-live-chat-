@@ -31,9 +31,9 @@ curl -fsSL "${SITE}/wp-content/plugins/paxdesign-booking/assets/js/cybercrime-ad
 curl -fsSL "${SITE}/wp-content/plugins/paxdesign-booking/paxdesign-booking.php?v=${STAMP}" \
   -o "${tmpdir}/paxdesign-booking.php" || true
 
-grep -q "Version: 3.174.116" "${tmpdir}/chat-script.js" \
-  && ok "chat-script.js cache-bust version 3.174.116" \
-  || fail "chat-script.js is not the patched 3.174.116 file"
+grep -q "Version: 3.174.117" "${tmpdir}/chat-script.js" \
+  && ok "chat-script.js cache-bust version 3.174.117" \
+  || fail "chat-script.js is not the patched 3.174.117 file"
 
 grep -q "var appliedMessageSeq" "${tmpdir}/chat-script.js" \
   && grep -q "function getIncrementalSince" "${tmpdir}/chat-script.js" \
@@ -51,14 +51,14 @@ grep -q "function ensureMicrophonePermission" "${tmpdir}/chat-script.js" \
   || fail "voice permission reuse flow missing from chat-script.js"
 
 grep -q "function showLauncherLoading" "${tmpdir}/booking-script.js" \
-  && grep -q "function showChatOpenLoading" "${tmpdir}/booking-script.js" \
+  && grep -q "function showChatShellLoading" "${tmpdir}/booking-script.js" \
   && grep -q "function beginLauncherOpen" "${tmpdir}/booking-script.js" \
   && grep -q "function visualViewportInsets" "${tmpdir}/booking-script.js" \
+  && grep -q "paxdesign-chat-shell-loader" "${tmpdir}/booking-styles.css" \
+  && ! grep -q "paxdesign-chat-open-loader" "${tmpdir}/booking-styles.css" \
   && ! grep -q "CHAT_OPEN_LOADER_MIN_MS" "${tmpdir}/booking-script.js" \
-  && grep -q "paxdesign-booking-launcher-spinner" "${tmpdir}/booking-styles.css" \
-  && grep -q "paxdesign-chat-open-loader" "${tmpdir}/booking-styles.css" \
-  && ok "instant launcher and viewport open loading indicator present" \
-  || fail "launcher / open loading indicator missing"
+  && ok "in-chat shell loader present without full-page overlay" \
+  || fail "in-chat shell loader missing or full-page overlay still present"
 
 grep -q "pointerdown" "${tmpdir}/widget-loader.js" \
   && grep -q "mousedown" "${tmpdir}/widget-loader.js" \

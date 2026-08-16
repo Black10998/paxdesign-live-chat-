@@ -1,6 +1,6 @@
 /**
  * PAXdesign Booking System JavaScript
- * Version: 3.174.116 — scoped to #paxdesign-booking-root
+ * Version: 3.174.117 — scoped to #paxdesign-booking-root
  */
 
 (function($) {
@@ -31,29 +31,24 @@
         }
     }
 
-    function showChatOpenLoading(active) {
-        var $loader = $in('.paxdesign-chat-open-loader');
+    function showChatShellLoading(active) {
+        var $panel = $in('#paxdesignChatPanel');
+        var $loader = $in('.paxdesign-chat-shell-loader');
         if (!$loader.length) return;
-        root().toggleClass('paxdesign-chat-opening', !!active);
         $loader.prop('hidden', !active);
         $loader.attr('aria-busy', active ? 'true' : 'false');
-        if (active) {
-            root().addClass('paxdesign-widget-open');
-            if ($loader[0]) {
-                void $loader[0].offsetHeight;
-            }
+        if ($panel.length) {
+            $panel.toggleClass('paxdesign-chat-shell-loading', !!active);
         }
     }
 
     function openChatFromLauncher() {
-        showLauncherLoading(true);
-        showChatOpenLoading(true);
+        openWidget();
+        showChatShellLoading(true);
         preloadChatAssets();
         ensureChatReady(function () {
-            openWidget();
             runChatInit();
-            showChatOpenLoading(false);
-            showLauncherLoading(false);
+            showChatShellLoading(false);
         });
     }
 
@@ -62,8 +57,6 @@
         if ($widget.hasClass('paxdesign-is-active')) {
             return;
         }
-        showLauncherLoading(true);
-        showChatOpenLoading(true);
         preloadChatAssets();
     }
 
@@ -576,8 +569,7 @@
             if (opening) {
                 openChatFromLauncher();
             } else {
-                showLauncherLoading(false);
-                showChatOpenLoading(false);
+                showChatShellLoading(false);
                 closeDialog();
             }
         });
@@ -587,8 +579,7 @@
             e.preventDefault();
             var $widget = $in('.paxdesign-booking-widget');
             if ($widget.hasClass('paxdesign-is-active')) {
-                showLauncherLoading(false);
-                showChatOpenLoading(false);
+                showChatShellLoading(false);
                 closeDialog();
             } else {
                 openChatFromLauncher();
@@ -1115,7 +1106,10 @@
             openChatFromLauncher();
         },
         switchMode: switchWidgetMode,
-        close: closeDialog
+        close: closeDialog,
+        hideShellLoader: function () {
+            showChatShellLoading(false);
+        }
     };
 
     function revealPreparedWidget($widget) {
@@ -1131,6 +1125,7 @@
         var $widget = $in('.paxdesign-booking-widget');
         var mobile = isMobileViewport();
         var hasChat = $in('.paxdesign-booking-mode-switch').length > 0;
+        var chatOpen = hasChat && currentWidgetMode === 'chat';
 
         if (!mobile) {
             lockPageScroll();
@@ -1144,14 +1139,24 @@
             root().toggleClass('paxdesign-frame-managed', mobile);
         }
 
-        $widget.addClass('paxdesign-is-preparing').attr('aria-hidden', 'true');
         if (mobile) {
             getSiteHeaderBottom();
         }
         applyCompactWidgetFrame();
+
+        if (chatOpen) {
+            $widget.removeClass('paxdesign-is-preparing')
+                .addClass('paxdesign-is-active')
+                .attr('aria-hidden', 'false');
+            root().addClass('paxdesign-widget-open');
+            applyCompactWidgetFrame();
+            pinChatToLatest();
+            return;
+        }
+
+        $widget.addClass('paxdesign-is-preparing').attr('aria-hidden', 'true');
         forceReflow($widget[0]);
         applyCompactWidgetFrame();
-        forceReflow($widget[0]);
         revealPreparedWidget($widget);
 
         if (!hasChat || currentWidgetMode !== 'chat') {
@@ -1213,8 +1218,7 @@
         unlockPageScroll();
 
         if (closingChat) {
-            showLauncherLoading(false);
-            showChatOpenLoading(false);
+            showChatShellLoading(false);
             return;
         }
 

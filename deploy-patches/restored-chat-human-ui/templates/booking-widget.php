@@ -42,13 +42,6 @@ $team_members = PAXdesign_Booking::get_instance()->get_team_members();
 
   <div class="paxdesign-chat-focus-backdrop" aria-hidden="true"></div>
 
-  <div class="paxdesign-chat-open-loader" aria-live="polite" aria-busy="false" hidden>
-    <div class="paxdesign-chat-open-loader-card">
-      <span class="paxdesign-chat-open-loader-spinner" aria-hidden="true"></span>
-      <span class="paxdesign-chat-open-loader-label"><?php echo esc_html__('Chat wird geladen…', 'paxdesign-booking'); ?></span>
-    </div>
-  </div>
-
   <!-- Booking Panel -->
   <div class="paxdesign-booking-widget" aria-hidden="true">
     <div class="paxdesign-booking-frame">
@@ -361,6 +354,13 @@ $team_members = PAXdesign_Booking::get_instance()->get_team_members();
         <?php if (PAXdesign_Chat::get_instance()->is_enabled()) : ?>
         <!-- AI Chat Mode -->
         <div class="paxdesign-booking-mode-panel paxdesign-is-active" id="paxdesignChatPanel" data-mode="chat" role="tabpanel" aria-hidden="false">
+
+          <div class="paxdesign-chat-shell-loader" aria-live="polite" aria-busy="false" hidden>
+            <div class="paxdesign-chat-shell-loader-inner">
+              <span class="paxdesign-chat-shell-loader-spinner" aria-hidden="true"></span>
+              <span class="paxdesign-chat-shell-loader-label"><?php echo esc_html__('Chat wird geladen…', 'paxdesign-booking'); ?></span>
+            </div>
+          </div>
 
           <div class="paxdesign-booking-chat-readiness" id="paxdesignChatReadiness" hidden aria-live="polite" aria-busy="true">
             <div class="paxdesign-booking-chat-readiness-panel">

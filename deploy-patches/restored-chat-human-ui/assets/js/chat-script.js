@@ -1,6 +1,6 @@
 /**
  * PAXdesign AI Chat — Sales & Booking Assistant
- * Version: 3.174.116
+ * Version: 3.174.117
  */
 (function () {
   'use strict';
@@ -1817,6 +1817,9 @@
 
   function onWidgetOpen() {
     widgetOpen = true;
+    if (window.PAXdesignBooking && typeof window.PAXdesignBooking.hideShellLoader === 'function') {
+      window.PAXdesignBooking.hideShellLoader();
+    }
     initAuthGate();
     if (!canUseChat()) {
       showAuthGate();

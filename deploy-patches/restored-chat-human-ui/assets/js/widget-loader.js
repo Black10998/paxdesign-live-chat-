@@ -1,5 +1,5 @@
 /**
- * Lazy-load chat script after idle or first widget interaction (keeps initial load light).
+ * Lazy-load chat script on page load and first widget interaction (keeps initial load light).
  */
 (function () {
   'use strict';
@@ -44,11 +44,7 @@
     preload: preloadChat,
   };
 
-  if ('requestIdleCallback' in window) {
-    requestIdleCallback(preloadChat, { timeout: 2000 });
-  } else {
-    setTimeout(preloadChat, 1500);
-  }
+  preloadChat();
 
   function shouldPreloadFromEvent(target) {
     if (!target || !target.closest) {
