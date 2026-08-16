@@ -419,6 +419,7 @@
         level_label: profile.level_label || '',
         level_title: profile.level_title || '',
         level_description: profile.level_description || '',
+        level_metal: profile.level_metal || '',
         has_customer_level: !!profile.has_customer_level,
       };
     }
@@ -427,6 +428,7 @@
       level_label: profile.level_label || user.level_label || (C.customerLevel && C.customerLevel.level_label) || '',
       level_title: profile.level_title || user.level_title || (C.customerLevel && C.customerLevel.level_title) || '',
       level_description: profile.level_description || user.level_description || (C.customerLevel && C.customerLevel.level_description) || '',
+      level_metal: profile.level_metal || user.level_metal || (C.customerLevel && C.customerLevel.level_metal) || '',
       has_customer_level: !!(profile.has_customer_level || user.has_customer_level || (C.customerLevel && C.customerLevel.has_customer_level)),
     };
   }
@@ -434,9 +436,18 @@
   function renderCustomerLevelBadge(profile, opts) {
     opts = opts || {};
     var level = accountLevelData(profile, opts);
-    if (!level.has_customer_level || !level.level_label) return '';
+    if (!level.has_customer_level) return '';
     var compact = opts.compact ? ' pdx-account-level-badge--compact' : '';
     var header = opts.header ? ' pdx-account-level-badge--header' : '';
+    // In the site header show ONLY the metal tier name (e.g. "Gold") next to the
+    // username — no "Level N", numbers, dashes, or extra text. This is a
+    // display-only choice; the Customer Levels backend is unchanged.
+    if (opts.header) {
+      var metal = level.level_metal || '';
+      if (!metal) return '';
+      return '<span class="pdx-account-level-badge' + compact + header + '">' + escHtml(metal) + '</span>';
+    }
+    if (!level.level_label) return '';
     var title = level.level_title ? ' title="' + escHtml(level.level_title + (level.level_description ? ' — ' + level.level_description : '')) + '"' : '';
     return '<span class="pdx-account-level-badge' + compact + header + '"' + title + '>' + escHtml(level.level_label) + '</span>';
   }
