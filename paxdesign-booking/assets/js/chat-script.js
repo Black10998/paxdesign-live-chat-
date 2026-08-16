@@ -1,6 +1,6 @@
 /**
  * PAXdesign AI Chat — Sales & Booking Assistant
- * Version: 3.174.123
+ * Version: 3.174.124
  */
 (function () {
   'use strict';
@@ -3107,19 +3107,16 @@
   }
 
   function requestMicrophoneFromUserGesture() {
-    return acquireMicrophoneStream({ forceNew: true }).then(function (stream) {
-      markVoiceMicPermissionGranted(stream);
-      releaseVoiceMicStream();
-    });
+    return acquireMicrophoneStream({ forceNew: !hasLiveVoiceMicStream() });
   }
 
-  function startVoiceWaveformForListening() {
+  function startVoiceWaveformFromHeldStream() {
     if (!voiceListening) return;
-    acquireMicrophoneStream({ forceNew: true }).then(function (stream) {
-      if (voiceListening) startVoiceAnalyser(stream);
-    }).catch(function () {
-      if (voiceListening) startVoiceWaveformFallback();
-    });
+    if (hasLiveVoiceMicStream()) {
+      startVoiceAnalyser(voiceMicStream);
+      return;
+    }
+    startVoiceWaveformFallback();
   }
 
   function microphoneDeniedRecoveryMessage() {
@@ -3186,7 +3183,7 @@
         voiceBtn.classList.remove('paxdesign-is-pending');
         voiceBtn.classList.add('paxdesign-is-active');
       }
-      startVoiceWaveformForListening();
+      startVoiceWaveformFromHeldStream();
     };
     voiceRecognition.onend = function () {
       if (!voiceListening) return;
@@ -3208,7 +3205,7 @@
         window.setTimeout(function () {
           if (!voiceListening) return;
           beginSpeechRecognition({ retried: true });
-        }, 80);
+        }, 120);
         return;
       }
       if (event.error !== 'aborted' && event.error !== 'no-speech') {
