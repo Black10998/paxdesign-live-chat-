@@ -344,7 +344,28 @@
   normalizeConfiguredAvatarPresets();
 
   function defaultAvatarUrl() {
-    return normalizeAvatarAssetUrl(C.defaultAvatarUrl || '');
+    var url = normalizeAvatarAssetUrl(C.defaultAvatarUrl || '');
+    if (url && /\.svg(\?|$)/i.test(url)) {
+      url = url.replace(/\.svg(\?.*)?$/i, '.gif');
+    }
+    if (!url || /\.svg(\?|$)/i.test(url)) {
+      url = accountAvatarPresetUrl('pax-01');
+    }
+    return url || '';
+  }
+
+  function refreshVisibleAvatarImages() {
+    var profile = accountProfileData();
+    var url = accountAvatarUrl(profile);
+    if (!url) return;
+    var fallbackUrl = accountAvatarFallbackUrl(profile);
+    document.querySelectorAll('.pdx-account-avatar__img').forEach(function (img) {
+      if (!img || !img.getAttribute) return;
+      img.removeAttribute('data-pdx-avatar-failed');
+      var nextUrl = normalizeAvatarAssetUrl(url);
+      if (img.src !== nextUrl) img.src = nextUrl;
+      if (fallbackUrl) img.setAttribute('data-avatar-fallback', normalizeAvatarAssetUrl(fallbackUrl));
+    });
   }
 
   function normalizeAvatarAssetUrl(url) {
@@ -541,7 +562,10 @@
 
   function handleAccountAvatarImgError(img) {
     if (!img || img.dataset.pdxAvatarFailed === '1') return;
-    var fallback = img.getAttribute('data-avatar-fallback') || defaultAvatarUrl();
+    var fallback = normalizeAvatarAssetUrl(img.getAttribute('data-avatar-fallback') || defaultAvatarUrl());
+    if (!fallback || /\.svg(\?|$)/i.test(fallback)) {
+      fallback = accountAvatarPresetUrl('pax-01') || defaultAvatarUrl();
+    }
     if (!fallback) {
       var wrap = img.closest('.pdx-account-avatar');
       if (wrap) wrap.remove();
@@ -592,8 +616,11 @@
     var sizeClass = opts.sizeClass || 'pdx-account-avatar--sidebar';
     var px = ACCOUNT_AVATAR_PX[sizeClass] || 40;
     var alt = opts.alt || user.display_name || t('account', 'Account');
+    var eager = sizeClass === 'pdx-account-avatar--header' || sizeClass === 'pdx-account-avatar--menu';
+    var loadingAttr = eager ? 'eager' : 'lazy';
+    var fetchPriority = eager ? ' fetchpriority="high"' : '';
     return '<span class="pdx-account-avatar ' + sizeClass + '" style="width:' + px + 'px;height:' + px + 'px;max-width:' + px + 'px;max-height:' + px + 'px;flex:0 0 ' + px + 'px">' +
-      '<img class="pdx-account-avatar__img" src="' + escHtml(url) + '" data-avatar-fallback="' + escHtml(fallbackUrl) + '" alt="' + escHtml(alt) + '" width="' + px + '" height="' + px + '" loading="lazy" decoding="async" onerror="window.__pdxAvatarFallback&&window.__pdxAvatarFallback(this)" />' +
+      '<img class="pdx-account-avatar__img" src="' + escHtml(url) + '" data-avatar-fallback="' + escHtml(fallbackUrl) + '" alt="' + escHtml(alt) + '" width="' + px + '" height="' + px + '" loading="' + loadingAttr + '" decoding="async"' + fetchPriority + ' onerror="window.__pdxAvatarFallback&&window.__pdxAvatarFallback(this)" />' +
     '</span>';
   }
 
@@ -835,6 +862,7 @@
     }
     updateAuthBar();
     updateAuthPagePanels();
+    refreshVisibleAvatarImages();
     if (meta.reason === 'logout') {
       dashboardData = null;
       accountState.loaded = false;
@@ -4894,6 +4922,13 @@
       }
       logEl.innerHTML = html;
       logEl.scrollTop = logEl.scrollHeight;
+      requestAnimationFrame(function () {
+        logEl.scrollTop = logEl.scrollHeight;
+        var last = logEl.lastElementChild;
+        if (last) {
+          try { last.scrollIntoView({ block: 'end', inline: 'nearest' }); } catch (e) {}
+        }
+      });
     }
 
     function loadMessages(full) {
@@ -5150,6 +5185,7 @@
       syncSessionFromServer('init', { cacheBust: true }).then(function () {
         if (user.logged_in) {
           return refreshAccountAvatarPresets().then(function () {
+            refreshVisibleAvatarImages();
             updateAuthBar();
           });
         }
