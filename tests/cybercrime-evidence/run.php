@@ -46,7 +46,11 @@ ccs_evidence_assert(strpos($portalJs, 'paxdesign_cybercrime_customer_resubmit') 
 ccs_evidence_assert(strpos($portalJs, 'timelineEvidenceInlineHtml') !== false, 'portal JS renders inline evidence request CTA');
 ccs_evidence_assert(strpos($adminJs, 'pax-cc-request-evidence') !== false, 'admin JS handles request evidence checkbox');
 ccs_evidence_assert(strpos($adminJs, 'request_evidence') !== false, 'admin JS sends request_evidence flag');
-ccs_evidence_assert(strpos($adminJs, 'paxdesign_cybercrime_admin_delete_message') !== false, 'admin JS deletes staff messages');
+ccs_evidence_assert(strpos($adminJs, 'isDeletableEntry') !== false, 'admin JS derives delete eligibility client-side');
+ccs_evidence_assert(strpos($adminJs, 'pax-cc-convo__delete') !== false, 'admin JS renders conversation delete buttons');
+ccs_evidence_assert(strpos($adminJs, 'allow_delete') !== false || strpos($adminJs, 'isDeletableEntry') !== false, 'admin JS keeps delete visible after poll refresh');
+ccs_evidence_assert(strpos($tickets, 'allow_delete') !== false, 'tickets exposes allow_delete on timeline entries');
+ccs_evidence_assert(strpos($tickets, 'admin_timeline_kind') !== false, 'tickets classifies admin conversation rows');
 ccs_evidence_assert(strpos($tickets, 'request_evidence') !== false, 'tickets stores request_evidence on staff reply');
 ccs_evidence_assert(strpos($tickets, 'delete_staff_message') !== false, 'tickets implements delete_staff_message');
 ccs_evidence_assert(strpos($tickets, 'ajax_admin_delete_message') !== false, 'tickets registers delete message ajax');

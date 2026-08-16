@@ -164,9 +164,13 @@ grep -q "pax-cc-request-evidence" "${tmpdir}/cybercrime-admin.js" \
   && ok "admin JS includes request evidence checkbox" \
   || fail "Request evidence checkbox missing from live cybercrime-admin.js"
 
-grep -q "paxdesign_cybercrime_admin_delete_message" "${tmpdir}/cybercrime-admin.js" \
-  && ok "admin JS includes delete staff message handler" \
-  || fail "Delete staff message handler missing from live cybercrime-admin.js"
+grep -q "isDeletableEntry" "${tmpdir}/cybercrime-admin.js" \
+  && ok "admin JS keeps delete eligibility after poll refresh" \
+  || fail "Delete eligibility helper missing from live cybercrime-admin.js"
+
+grep -q "pax-cc-convo__delete" "${tmpdir}/cybercrime-admin.js" \
+  && ok "admin JS uses conversation delete buttons" \
+  || fail "Conversation delete buttons missing from live cybercrime-admin.js"
 
 grep -q "timelineEvidenceInlineHtml" "${tmpdir}/apple-cybercrime-support.js" \
   && ok "portal JS includes inline evidence request CTA" \

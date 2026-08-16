@@ -182,6 +182,11 @@ class PAXdesign_Customer_Admin {
                 'deleteConfirm' => __('Permanently delete this message? This cannot be undone.', 'paxdesign-booking'),
                 'deleteSuccess' => __('Message deleted.', 'paxdesign-booking'),
                 'deleting' => __('Deleting…', 'paxdesign-booking'),
+                'labelCustomer' => __('Customer', 'paxdesign-booking'),
+                'labelStaff' => __('You / Staff', 'paxdesign-booking'),
+                'labelInternal' => __('Internal Note', 'paxdesign-booking'),
+                'labelSystem' => __('System', 'paxdesign-booking'),
+                'noConversation' => __('No messages yet.', 'paxdesign-booking'),
                 'noteAdded'   => __('Internal note added.', 'paxdesign-booking'),
                 'saving'      => __('Saving…', 'paxdesign-booking'),
                 'sending'     => __('Sending…', 'paxdesign-booking'),
@@ -824,15 +829,43 @@ class PAXdesign_Customer_Admin {
         .pax-cc-timeline__attachments{display:flex;flex-wrap:wrap;gap:8px;margin-top:10px}
         .pax-cc-timeline__attachment{display:inline-flex;align-items:center;gap:6px;padding:4px 8px;border:1px solid #dcdcde;border-radius:6px;background:#f6f7f7;font-size:12px;text-decoration:none;color:inherit}
         .pax-cc-timeline__attachment img{width:40px;height:40px;object-fit:cover;border-radius:4px}
+        .pax-cc-convo{display:flex;flex-direction:column;gap:14px;margin:0;padding:0;list-style:none}
+        .pax-cc-convo__item{display:flex;width:100%;margin:0;padding:0}
+        .pax-cc-convo__item--customer{justify-content:flex-start}
+        .pax-cc-convo__item--staff{justify-content:flex-end}
+        .pax-cc-convo__item--internal,.pax-cc-convo__item--system{justify-content:center}
+        .pax-cc-convo__bubble{max-width:min(100%,560px);border-radius:16px;padding:12px 14px;box-shadow:0 1px 2px rgba(0,0,0,.04)}
+        .pax-cc-convo__item--customer .pax-cc-convo__bubble{background:#f2f2f7;border:1px solid #e5e5ea;color:#1d1d1f}
+        .pax-cc-convo__item--staff .pax-cc-convo__bubble{background:#007aff;border:1px solid #007aff;color:#fff}
+        .pax-cc-convo__item--staff .pax-cc-convo__time{color:rgba(255,255,255,.78)}
+        .pax-cc-convo__item--staff .pax-cc-convo__body{color:#fff}
+        .pax-cc-convo__item--internal .pax-cc-convo__bubble{max-width:min(100%,640px);background:#fafafa;border:1px dashed #c7c7cc;color:#636366}
+        .pax-cc-convo__item--system .pax-cc-convo__bubble{max-width:min(100%,640px);background:#f5f5f7;border:1px solid #e5e5ea;color:#636366;padding:10px 14px}
+        .pax-cc-convo__head{display:flex;align-items:center;justify-content:space-between;gap:10px;margin:0 0 8px;flex-wrap:wrap}
+        .pax-cc-convo__badge{display:inline-flex;align-items:center;gap:6px;padding:3px 10px;border-radius:999px;font-size:11px;font-weight:700;letter-spacing:.02em;line-height:1.3}
+        .pax-cc-convo__badge--customer{background:#e8e8ed;color:#1d1d1f}
+        .pax-cc-convo__badge--staff{background:rgba(255,255,255,.18);color:#fff}
+        .pax-cc-convo__badge--internal{background:#ececf1;color:#636366}
+        .pax-cc-convo__badge--system{background:#ececf1;color:#636366}
+        .pax-cc-convo__time{font-size:11px;color:#86868b;white-space:nowrap}
+        .pax-cc-convo__body{font-size:14px;line-height:1.55;word-break:break-word}
+        .pax-cc-convo__foot{display:flex;align-items:center;justify-content:space-between;gap:10px;flex-wrap:wrap;margin-top:10px;padding-top:10px;border-top:1px solid rgba(0,0,0,.08)}
+        .pax-cc-convo__item--staff .pax-cc-convo__foot{border-top-color:rgba(255,255,255,.22)}
+        .pax-cc-convo__tag{display:inline-flex;align-items:center;gap:4px;padding:3px 9px;border-radius:999px;font-size:11px;font-weight:700;line-height:1.3}
+        .pax-cc-convo__tag--evidence{background:#fff3cd;color:#856404;border:1px solid #ffeeba}
+        .pax-cc-convo__item--staff .pax-cc-convo__tag--evidence{background:rgba(255,255,255,.95);color:#135e96;border-color:transparent}
+        .pax-cc-convo__delete{border:0;background:transparent;color:#ff3b30;font-size:12px;font-weight:600;cursor:pointer;padding:0;text-decoration:underline;margin-left:auto}
+        .pax-cc-convo__item--staff .pax-cc-convo__delete{color:#ffd6d3}
+        .pax-cc-convo__delete:hover{opacity:.85}
+        .pax-cc-convo__delete:disabled{opacity:.55;cursor:not-allowed}
+        .pax-cc-convo__item--customer .pax-cc-timeline__attachment{background:#fff;border-color:#e5e5ea}
+        .pax-cc-convo__item--staff .pax-cc-timeline__attachment{background:rgba(255,255,255,.14);border-color:rgba(255,255,255,.24);color:#fff}
+        .pax-cc-convo__item--internal .pax-cc-timeline__attachment,.pax-cc-convo__item--system .pax-cc-timeline__attachment{background:#fff}
         .pax-cc-lightbox{position:fixed;inset:0;z-index:100000;display:none;align-items:center;justify-content:center;background:rgba(0,0,0,.82);padding:24px}
         .pax-cc-lightbox.is-open{display:flex}
         .pax-cc-lightbox__img{max-width:min(96vw,1200px);max-height:90vh;object-fit:contain;border-radius:6px;box-shadow:0 8px 32px rgba(0,0,0,.35)}
         .pax-cc-lightbox__close{position:absolute;top:16px;right:16px;width:40px;height:40px;border:none;border-radius:999px;background:rgba(255,255,255,.15);color:#fff;font-size:24px;line-height:1;cursor:pointer}
         .pax-cc-lightbox__close:hover{background:rgba(255,255,255,.28)}
-        .pax-cc-timeline{border-left:3px solid #dcdcde;margin:0;padding:0 0 0 14px;list-style:none}
-        .pax-cc-timeline__item{margin:0 0 14px;padding:0}
-        .pax-cc-timeline__meta{font-size:12px;color:#646970;margin:0 0 4px}
-        .pax-cc-timeline__body{font-size:14px;line-height:1.5;color:#1d2327}
         .pax-cc-status{display:inline-block;padding:3px 10px;border-radius:999px;font-size:12px;font-weight:600;line-height:1.3}
         .pax-cc-status--submitted{background:#f0f0f1;color:#50575e}
         .pax-cc-status--in_review{background:#f0f6fc;color:#135e96}
@@ -862,13 +895,6 @@ class PAXdesign_Customer_Admin {
         .pax-cc-evidence-toggle__label{display:flex;align-items:flex-start;gap:10px;margin:0;font-weight:600;font-size:14px;line-height:1.45;color:#1d2327;cursor:pointer}
         .pax-cc-evidence-toggle__label input[type=checkbox]{margin:3px 0 0;flex:0 0 auto;width:18px;height:18px;cursor:pointer}
         .pax-cc-evidence-toggle__hint{display:block;margin-top:4px;font-weight:400;font-size:12px;color:#646970}
-        .pax-cc-timeline__evidence-tag{display:inline-block;margin-left:6px;padding:1px 7px;border-radius:999px;background:#f0f6fc;color:#135e96;font-size:11px;font-weight:600}
-        .pax-cc-timeline__actions{display:flex;justify-content:flex-end;margin-top:8px}
-        .pax-cc-timeline__delete{border:0;background:transparent;color:#b32d2e;font-size:12px;font-weight:600;cursor:pointer;padding:0;text-decoration:underline}
-        .pax-cc-timeline__delete:hover{color:#8a2424}
-        .pax-cc-timeline__delete:disabled{opacity:.55;cursor:not-allowed}
-        .pax-cc-timeline__item--internal .pax-cc-timeline__meta{color:#8c8f94}
-        .pax-cc-timeline__internal-tag{display:inline-block;margin-left:6px;padding:1px 6px;border-radius:4px;font-size:10px;font-weight:600;text-transform:uppercase;background:#f0f0f1;color:#646970}
         .pax-cc-unread-badge{display:inline-flex;align-items:center;justify-content:center;min-width:18px;height:18px;padding:0 6px;border-radius:999px;background:#d63638;color:#fff;font-size:11px;font-weight:700;line-height:1;box-shadow:0 0 0 2px #fff}
         .pax-cc-unread-badge--row{min-width:22px;height:22px;font-size:12px}
         #pax-cc-tab-unread-badge{margin-left:6px;vertical-align:middle}
@@ -992,11 +1018,11 @@ class PAXdesign_Customer_Admin {
         echo '<div class="pax-cc-admin__grid">';
 
         echo '<div class="pax-cc-admin__card">';
-        echo '<h3 class="pax-cc-admin__card-title">' . esc_html__('Internal timeline', 'paxdesign-booking') . '</h3>';
-        echo '<ul class="pax-cc-timeline" id="pax-cc-admin-timeline">';
+        echo '<h3 class="pax-cc-admin__card-title">' . esc_html__('Conversation', 'paxdesign-booking') . '</h3>';
+        echo '<ul class="pax-cc-convo" id="pax-cc-admin-timeline">';
         $timeline = (array) ($report['timeline'] ?? array());
         if (empty($timeline)) {
-            echo '<li class="pax-cc-timeline__item">' . esc_html__('No timeline entries yet.', 'paxdesign-booking') . '</li>';
+            echo '<li class="pax-cc-convo__item pax-cc-convo__item--system"><div class="pax-cc-convo__bubble"><div class="pax-cc-convo__body">' . esc_html__('No messages yet.', 'paxdesign-booking') . '</div></div></li>';
         }
         foreach ($timeline as $entry) {
             if (!is_array($entry)) {
@@ -1093,22 +1119,23 @@ class PAXdesign_Customer_Admin {
     }
 
     private static function render_cybercrime_timeline_item($entry) {
-        $author = (string) ($entry['author_type'] ?? '');
-        $channel = (string) ($entry['channel'] ?? '');
+        $kind = (string) ($entry['timeline_kind'] ?? PAXdesign_Cybercrime_Tickets::admin_timeline_kind($entry));
+        $label = (string) ($entry['timeline_label'] ?? PAXdesign_Cybercrime_Tickets::admin_timeline_label($kind));
         $meta = is_array($entry['meta'] ?? null) ? $entry['meta'] : array();
-        $is_internal = !empty($meta['internal_only']);
-        $item_class = 'pax-cc-timeline__item' . ($is_internal ? ' pax-cc-timeline__item--internal' : '');
+        $message_id = (int) ($entry['id'] ?? 0);
+        $allow_delete = !empty($entry['allow_delete']) || !empty($entry['can_delete']);
+        if (!$allow_delete) {
+            $allow_delete = PAXdesign_Cybercrime_Tickets::is_deletable_staff_message($entry);
+        }
+        $has_evidence = !empty($meta['request_evidence']) || !empty($entry['request_evidence']);
 
-        echo '<li class="' . esc_attr($item_class) . '">';
-        echo '<p class="pax-cc-timeline__meta"><strong>' . esc_html($author) . '</strong> · ' . esc_html($channel) . ' · ' . esc_html((string) ($entry['created_at'] ?? ''));
-        if ($is_internal) {
-            echo ' <span class="pax-cc-timeline__internal-tag">' . esc_html__('internal', 'paxdesign-booking') . '</span>';
-        }
-        if (!empty($meta['request_evidence'])) {
-            echo ' <span class="pax-cc-timeline__evidence-tag">' . esc_html__('Evidence requested', 'paxdesign-booking') . '</span>';
-        }
-        echo '</p>';
-        echo '<div class="pax-cc-timeline__body">' . nl2br(esc_html((string) ($entry['body'] ?? ''))) . '</div>';
+        echo '<li class="pax-cc-convo__item pax-cc-convo__item--' . esc_attr($kind) . '" data-message-id="' . esc_attr((string) $message_id) . '">';
+        echo '<div class="pax-cc-convo__bubble">';
+        echo '<div class="pax-cc-convo__head">';
+        echo '<span class="pax-cc-convo__badge pax-cc-convo__badge--' . esc_attr($kind) . '">' . esc_html($label) . '</span>';
+        echo '<time class="pax-cc-convo__time">' . esc_html((string) ($entry['created_at'] ?? '')) . '</time>';
+        echo '</div>';
+        echo '<div class="pax-cc-convo__body">' . nl2br(esc_html((string) ($entry['body'] ?? ''))) . '</div>';
         if (!empty($entry['attachments']) && is_array($entry['attachments'])) {
             echo '<div class="pax-cc-timeline__attachments">';
             foreach ($entry['attachments'] as $file) {
@@ -1129,12 +1156,17 @@ class PAXdesign_Customer_Admin {
             }
             echo '</div>';
         }
-        if (!empty($entry['can_delete']) && !empty($entry['id'])) {
-            echo '<div class="pax-cc-timeline__actions">';
-            echo '<button type="button" class="pax-cc-timeline__delete" data-message-id="' . esc_attr((string) (int) $entry['id']) . '">' . esc_html__('Delete message', 'paxdesign-booking') . '</button>';
+        if ($has_evidence || ($allow_delete && $message_id > 0)) {
+            echo '<div class="pax-cc-convo__foot">';
+            if ($has_evidence) {
+                echo '<span class="pax-cc-convo__tag pax-cc-convo__tag--evidence">' . esc_html__('Evidence Requested', 'paxdesign-booking') . '</span>';
+            }
+            if ($allow_delete && $message_id > 0) {
+                echo '<button type="button" class="pax-cc-convo__delete" data-message-id="' . esc_attr((string) $message_id) . '">' . esc_html__('Delete message', 'paxdesign-booking') . '</button>';
+            }
             echo '</div>';
         }
-        echo '</li>';
+        echo '</div></li>';
     }
 
     private static function verify_admin($action) {

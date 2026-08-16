@@ -393,30 +393,106 @@
     statusBadge.className = 'pax-cc-status ' + (statusClasses[status] || 'pax-cc-status--submitted');
   }
 
+  function entryMeta(entry) {
+    var meta = entry && entry.meta;
+    if (meta && typeof meta === 'object') {
+      return meta;
+    }
+    if (typeof meta === 'string' && meta.trim()) {
+      try {
+        var parsed = JSON.parse(meta);
+        if (parsed && typeof parsed === 'object') {
+          return parsed;
+        }
+      } catch (error) {
+        return {};
+      }
+    }
+    return {};
+  }
+
+  function timelineKind(entry) {
+    if (entry && entry.timeline_kind) {
+      return entry.timeline_kind;
+    }
+    var meta = entryMeta(entry);
+    if (meta.internal_only) {
+      return 'internal';
+    }
+    var author = String(entry.author_type || '');
+    if (author === 'customer') {
+      return 'customer';
+    }
+    if (author === 'staff') {
+      return 'staff';
+    }
+    return 'system';
+  }
+
+  function timelineLabel(entry) {
+    if (entry && entry.timeline_label) {
+      return entry.timeline_label;
+    }
+    var labels = {
+      customer: text('labelCustomer', 'Customer'),
+      staff: text('labelStaff', 'You / Staff'),
+      internal: text('labelInternal', 'Internal Note'),
+      system: text('labelSystem', 'System')
+    };
+    return labels[timelineKind(entry)] || labels.system;
+  }
+
+  function isDeletableEntry(entry) {
+    if (!entry) {
+      return false;
+    }
+    var id = parseInt(entry.id, 10);
+    if (!id) {
+      return false;
+    }
+    if (entry.allow_delete === 1 || entry.allow_delete === '1' || entry.allow_delete === true) {
+      return true;
+    }
+    if (entry.can_delete === 1 || entry.can_delete === '1' || entry.can_delete === true) {
+      return true;
+    }
+    var meta = entryMeta(entry);
+    if (String(entry.author_type || '') !== 'staff') {
+      return false;
+    }
+    if (meta.internal_only) {
+      return false;
+    }
+    return String(meta.event || '') === 'staff_reply';
+  }
+
   function renderTimelineItem(entry) {
-    var author = escapeHtml(entry.author_type || '');
-    var channel = escapeHtml(entry.channel || '');
+    var kind = timelineKind(entry);
+    var label = escapeHtml(timelineLabel(entry));
     var createdAt = escapeHtml(entry.created_at || '');
     var body = escapeHtml(entry.body || '').replace(/\n/g, '<br>');
-    var meta = entry.meta && typeof entry.meta === 'object' ? entry.meta : {};
-    var isInternal = !!meta.internal_only;
-    var itemClass = 'pax-cc-timeline__item' + (isInternal ? ' pax-cc-timeline__item--internal' : '');
-    var internalTag = isInternal
-      ? ' <span class="pax-cc-timeline__internal-tag">' + escapeHtml(text('internal', 'internal')) + '</span>'
+    var meta = entryMeta(entry);
+    var messageId = parseInt(entry.id, 10) || 0;
+    var evidenceTag = (meta.request_evidence || entry.request_evidence)
+      ? '<span class="pax-cc-convo__tag pax-cc-convo__tag--evidence">' + escapeHtml(text('requestEvidenceTag', 'Evidence Requested')) + '</span>'
       : '';
-    var evidenceTag = meta.request_evidence
-      ? ' <span class="pax-cc-timeline__evidence-tag">' + escapeHtml(text('requestEvidenceTag', 'Evidence requested')) + '</span>'
+    var deleteBtn = isDeletableEntry(entry)
+      ? '<button type="button" class="pax-cc-convo__delete" data-message-id="' + escapeHtml(String(messageId)) + '">' + escapeHtml(text('deleteMessage', 'Delete message')) + '</button>'
       : '';
-    var deleteBtn = entry.can_delete && entry.id
-      ? '<div class="pax-cc-timeline__actions"><button type="button" class="pax-cc-timeline__delete" data-message-id="' + escapeHtml(String(entry.id)) + '">' + escapeHtml(text('deleteMessage', 'Delete message')) + '</button></div>'
+    var foot = (evidenceTag || deleteBtn)
+      ? '<div class="pax-cc-convo__foot">' + evidenceTag + deleteBtn + '</div>'
       : '';
 
-    return '<li class="' + itemClass + '">'
-      + '<p class="pax-cc-timeline__meta"><strong>' + author + '</strong> · ' + channel + ' · ' + createdAt + internalTag + evidenceTag + '</p>'
-      + '<div class="pax-cc-timeline__body">' + body + '</div>'
+    return '<li class="pax-cc-convo__item pax-cc-convo__item--' + escapeHtml(kind) + '" data-message-id="' + escapeHtml(String(messageId)) + '">'
+      + '<div class="pax-cc-convo__bubble">'
+      + '<div class="pax-cc-convo__head">'
+      + '<span class="pax-cc-convo__badge pax-cc-convo__badge--' + escapeHtml(kind) + '">' + label + '</span>'
+      + '<time class="pax-cc-convo__time">' + createdAt + '</time>'
+      + '</div>'
+      + '<div class="pax-cc-convo__body">' + body + '</div>'
       + renderTimelineAttachments(entry.attachments || [])
-      + deleteBtn
-      + '</li>';
+      + foot
+      + '</div></li>';
   }
 
   function renderTimeline(timeline) {
@@ -425,7 +501,7 @@
     }
     var entries = Array.isArray(timeline) ? timeline : [];
     if (!entries.length) {
-      timelineEl.innerHTML = '<li class="pax-cc-timeline__item">' + escapeHtml(text('noTimeline', 'No timeline entries yet.')) + '</li>';
+      timelineEl.innerHTML = '<li class="pax-cc-convo__item pax-cc-convo__item--system"><div class="pax-cc-convo__bubble"><div class="pax-cc-convo__body">' + escapeHtml(text('noConversation', 'No messages yet.')) + '</div></div></li>';
       return;
     }
     timelineEl.innerHTML = entries.map(renderTimelineItem).join('');
@@ -437,7 +513,7 @@
     if (!root) {
       return;
     }
-    root.querySelectorAll('.pax-cc-timeline__delete[data-message-id]').forEach(function (btn) {
+    root.querySelectorAll('.pax-cc-convo__delete[data-message-id]').forEach(function (btn) {
       if (btn.getAttribute('data-bound') === '1') {
         return;
       }

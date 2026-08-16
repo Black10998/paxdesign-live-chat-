@@ -622,6 +622,47 @@ class PAXdesign_Cybercrime_Tickets {
     }
 
     /**
+     * Admin conversation row type for UI labelling.
+     *
+     * @param array<string, mixed> $entry
+     * @return string customer|staff|internal|system
+     */
+    public static function admin_timeline_kind($entry) {
+        if (!is_array($entry)) {
+            return 'system';
+        }
+        $meta = is_array($entry['meta'] ?? null) ? $entry['meta'] : array();
+        if (!empty($meta['internal_only'])) {
+            return 'internal';
+        }
+        $author = sanitize_key((string) ($entry['author_type'] ?? ''));
+        if ($author === 'customer') {
+            return 'customer';
+        }
+        if ($author === 'staff') {
+            return 'staff';
+        }
+        return 'system';
+    }
+
+    /**
+     * @param string $kind
+     * @return string
+     */
+    public static function admin_timeline_label($kind) {
+        switch (sanitize_key((string) $kind)) {
+            case 'customer':
+                return __('Customer', 'paxdesign-booking');
+            case 'staff':
+                return __('You / Staff', 'paxdesign-booking');
+            case 'internal':
+                return __('Internal Note', 'paxdesign-booking');
+            default:
+                return __('System', 'paxdesign-booking');
+        }
+    }
+
+    /**
      * Staff replies visible to the customer may be permanently removed by admins.
      *
      * @param array<string, mixed> $entry
@@ -774,7 +815,15 @@ class PAXdesign_Cybercrime_Tickets {
         $entry['subject_key'] = $subject_key;
         $entry['subject'] = $audience === 'customer' ? '' : $subject;
         $entry['request_evidence'] = !empty($meta['request_evidence']);
-        $entry['can_delete'] = self::is_deletable_staff_message($entry);
+        $entry['id'] = (int) ($entry['id'] ?? 0);
+        $deletable = self::is_deletable_staff_message($entry);
+        $entry['allow_delete'] = $deletable ? 1 : 0;
+        $entry['can_delete'] = $deletable;
+        if ($audience === 'admin') {
+            $kind = self::admin_timeline_kind($entry);
+            $entry['timeline_kind'] = $kind;
+            $entry['timeline_label'] = self::admin_timeline_label($kind);
+        }
 
         if (!empty($meta['attachments']) && is_array($meta['attachments']) && class_exists('PAXdesign_Cybercrime_Intake')) {
             $reference_id = sanitize_text_field((string) ($entry['reference_id'] ?? ''));
