@@ -29,9 +29,9 @@ curl -fsSL "${SITE}/wp-content/plugins/paxdesign-booking/assets/js/cybercrime-ad
 curl -fsSL "${SITE}/wp-content/plugins/paxdesign-booking/paxdesign-booking.php?v=${STAMP}" \
   -o "${tmpdir}/paxdesign-booking.php" || true
 
-grep -q "Version: 3.174.111" "${tmpdir}/chat-script.js" \
-  && ok "chat-script.js cache-bust version 3.174.111" \
-  || fail "chat-script.js is not the patched 3.174.111 file"
+grep -q "Version: 3.174.112" "${tmpdir}/chat-script.js" \
+  && ok "chat-script.js cache-bust version 3.174.112" \
+  || fail "chat-script.js is not the patched 3.174.112 file"
 
 grep -q "var appliedMessageSeq" "${tmpdir}/chat-script.js" \
   && grep -q "function getIncrementalSince" "${tmpdir}/chat-script.js" \
@@ -40,10 +40,15 @@ grep -q "var appliedMessageSeq" "${tmpdir}/chat-script.js" \
   && ok "website unified sync merge cursors present" \
   || fail "unified sync client markers missing from chat-script.js"
 
-grep -q "function acquireMicrophoneStream" "${tmpdir}/chat-script.js" \
-  && grep -q "paxdesign-voice-recording" "${tmpdir}/chat-script.js" \
-  && ok "composer voice recording UI present" \
-  || fail "voice recording UI missing from chat-script.js"
+grep -q "function startVoiceWaveformFallback" "${tmpdir}/chat-script.js" \
+  && grep -q "releaseVoiceMicStream();" "${tmpdir}/chat-script.js" \
+  && ok "desktop-safe voice input flow present" \
+  || fail "desktop voice input flow missing from chat-script.js"
+
+grep -q "function showLauncherLoading" "${tmpdir}/booking-script.js" \
+  && grep -q "paxdesign-booking-launcher-spinner" "${tmpdir}/booking-styles.css" \
+  && ok "instant launcher loading indicator present" \
+  || fail "launcher loading indicator missing"
 
 grep -q "function initComposerAttachments" "${tmpdir}/chat-script.js" \
   && grep -q "paxdesign-booking-chat-media" "${tmpdir}/chat-script.js" \

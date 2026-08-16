@@ -1,6 +1,6 @@
 /**
  * PAXdesign Booking System JavaScript
- * Version: 3.174.111 — scoped to #paxdesign-booking-root
+ * Version: 3.174.113 — scoped to #paxdesign-booking-root
  */
 
 (function($) {
@@ -14,6 +14,34 @@
             $root = $(ROOT);
         }
         return $root;
+    }
+
+    function showLauncherLoading(active) {
+        var $btn = $in('.paxdesign-booking-button');
+        var $spinner = $btn.find('.paxdesign-booking-launcher-spinner');
+        if (!$btn.length) return;
+        $btn.toggleClass('paxdesign-is-loading', !!active);
+        $btn.attr('aria-busy', active ? 'true' : 'false');
+        if (active) {
+            $btn.attr('aria-label', 'Chat wird geladen');
+            if ($spinner.length) $spinner.prop('hidden', false);
+        } else {
+            $btn.attr('aria-label', 'Support Message öffnen');
+            if ($spinner.length) $spinner.prop('hidden', true);
+        }
+    }
+
+    function openChatFromLauncher() {
+        showLauncherLoading(true);
+        ensureChatReady(function () {
+            openWidget();
+            runChatInit();
+            showLauncherLoading(false);
+        });
+    }
+
+    function preloadChatAssets() {
+        ensureChatReady(function () {});
     }
 
     function ensureChatReady(callback) {
@@ -507,16 +535,23 @@
         });
 
         // Toggle chat widget — refresh team data on every open for live availability
+        $container.on('pointerdown', '.paxdesign-booking-button', function(e) {
+            var $widget = $in('.paxdesign-booking-widget');
+            if (!$widget.hasClass('paxdesign-is-active')) {
+                showLauncherLoading(true);
+            }
+        });
+
         $container.on('click', '.paxdesign-booking-button', function(e) {
             e.preventDefault();
             e.stopPropagation();
             var $widget = $in('.paxdesign-booking-widget');
             var opening = !$widget.hasClass('paxdesign-is-active');
 
-        if (opening) {
-            openWidget();
-            ensureChatReady(runChatInit);
-        } else {
+            if (opening) {
+                openChatFromLauncher();
+            } else {
+                showLauncherLoading(false);
                 closeDialog();
             }
         });
@@ -612,13 +647,16 @@
 
         bindMobileViewportGuard();
         applyCompactWidgetFrame();
-        ensureChatReady(function () {});
+        preloadChatAssets();
         if (isMobileViewport()) {
             getSiteHeaderBottom();
             root().on('touchstart.paxMobilePreload', '.paxdesign-booking-button', function () {
-                ensureChatReady(function () {});
+                preloadChatAssets();
             });
         }
+        root().on('mouseenter.paxPreload pointerenter.paxPreload', '.paxdesign-booking-button', function () {
+            preloadChatAssets();
+        });
     }
 
     function switchWidgetMode(mode) {
@@ -1034,8 +1072,7 @@
     window.PAXdesignBooking = {
         openFromChat: openBookingFromChat,
         open: function () {
-            openWidget();
-            ensureChatReady(runChatInit);
+            openChatFromLauncher();
         },
         switchMode: switchWidgetMode,
         close: closeDialog
@@ -1140,6 +1177,7 @@
         unlockPageScroll();
 
         if (closingChat) {
+            showLauncherLoading(false);
             return;
         }
 

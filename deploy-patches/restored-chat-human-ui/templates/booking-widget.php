@@ -37,6 +37,7 @@ $team_members = PAXdesign_Booking::get_instance()->get_team_members();
       </svg>
     </span>
     <span class="paxdesign-booking-launcher-label">Support Message</span>
+    <span class="paxdesign-booking-launcher-spinner" aria-hidden="true" hidden></span>
   </div>
 
   <div class="paxdesign-chat-focus-backdrop" aria-hidden="true"></div>

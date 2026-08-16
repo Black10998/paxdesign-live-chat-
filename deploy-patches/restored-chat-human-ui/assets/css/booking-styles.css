@@ -352,6 +352,34 @@
   pointer-events: none;
   user-select: none;
   white-space: nowrap;
+  transition: opacity 0.12s ease;
+}
+
+#paxdesign-booking-root .paxdesign-booking-launcher-spinner {
+  position: absolute;
+  left: 50%;
+  top: 50%;
+  width: 18px;
+  height: 18px;
+  margin: -9px 0 0 -9px;
+  border: 2px solid rgba(255, 255, 255, 0.22);
+  border-top-color: #ffffff;
+  border-radius: 50%;
+  animation: paxdesign-launcher-spin 0.65s linear infinite;
+  pointer-events: none;
+}
+
+@keyframes paxdesign-launcher-spin {
+  to { transform: rotate(360deg); }
+}
+
+#paxdesign-booking-root .paxdesign-booking-button.paxdesign-is-loading {
+  cursor: progress;
+}
+
+#paxdesign-booking-root .paxdesign-booking-button.paxdesign-is-loading .paxdesign-booking-launcher-icon,
+#paxdesign-booking-root .paxdesign-booking-button.paxdesign-is-loading .paxdesign-booking-launcher-label {
+  opacity: 0;
 }
 
 /* ─── Widget Shell ──────────────────────────────────────────────────────── */
@@ -3006,6 +3034,7 @@ body.paxdesign-agent-profile-open {
   border: 1px solid rgb(63, 63, 63);
   box-sizing: border-box;
   transition: border-color 0.3s ease;
+  position: relative;
 }
 
 #paxdesign-booking-root .paxdesign-booking-chat-composer:focus-within {
