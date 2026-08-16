@@ -174,10 +174,14 @@ class PAXdesign_Customer_Admin {
             'i18n' => array(
                 'statusSaved' => __('Status saved.', 'paxdesign-booking'),
                 'replySent'   => __('Reply sent to customer.', 'paxdesign-booking'),
-                'requestEvidence' => __('Request Evidence from Customer', 'paxdesign-booking'),
+                'requestEvidence' => __('Request customer to upload evidence', 'paxdesign-booking'),
                 'requestEvidenceSent' => __('Evidence request sent to customer.', 'paxdesign-booking'),
-                'requestEvidenceHint' => __('Sets status to Waiting for Customer and shows Upload Evidence on the customer portal.', 'paxdesign-booking'),
+                'requestEvidenceHint' => __('The customer will see Upload Evidence / رفع الأدلة with your message.', 'paxdesign-booking'),
                 'requestEvidenceTag' => __('Evidence requested', 'paxdesign-booking'),
+                'deleteMessage' => __('Delete message', 'paxdesign-booking'),
+                'deleteConfirm' => __('Permanently delete this message? This cannot be undone.', 'paxdesign-booking'),
+                'deleteSuccess' => __('Message deleted.', 'paxdesign-booking'),
+                'deleting' => __('Deleting…', 'paxdesign-booking'),
                 'noteAdded'   => __('Internal note added.', 'paxdesign-booking'),
                 'saving'      => __('Saving…', 'paxdesign-booking'),
                 'sending'     => __('Sending…', 'paxdesign-booking'),
@@ -854,9 +858,15 @@ class PAXdesign_Customer_Admin {
         .pax-cc-actions__feedback.is-error{color:#b32d2e}
         .pax-cc-actions__feedback.is-saving{color:#135e96}
         .pax-cc-actions__reply-row{display:flex;flex-wrap:wrap;gap:8px;align-items:center;margin:0}
-        .pax-cc-request-evidence-btn{display:inline-flex;align-items:center;gap:6px;border-color:#2271b1!important;color:#135e96!important;background:#f0f6fc!important}
-        .pax-cc-request-evidence-btn:hover{background:#e5f0fa!important;color:#0a4b78!important}
+        .pax-cc-evidence-toggle{margin:0 0 12px;padding:12px 14px;border:1px solid #c3c4c7;border-radius:6px;background:#f6f7f7}
+        .pax-cc-evidence-toggle__label{display:flex;align-items:flex-start;gap:10px;margin:0;font-weight:600;font-size:14px;line-height:1.45;color:#1d2327;cursor:pointer}
+        .pax-cc-evidence-toggle__label input[type=checkbox]{margin:3px 0 0;flex:0 0 auto;width:18px;height:18px;cursor:pointer}
+        .pax-cc-evidence-toggle__hint{display:block;margin-top:4px;font-weight:400;font-size:12px;color:#646970}
         .pax-cc-timeline__evidence-tag{display:inline-block;margin-left:6px;padding:1px 7px;border-radius:999px;background:#f0f6fc;color:#135e96;font-size:11px;font-weight:600}
+        .pax-cc-timeline__actions{display:flex;justify-content:flex-end;margin-top:8px}
+        .pax-cc-timeline__delete{border:0;background:transparent;color:#b32d2e;font-size:12px;font-weight:600;cursor:pointer;padding:0;text-decoration:underline}
+        .pax-cc-timeline__delete:hover{color:#8a2424}
+        .pax-cc-timeline__delete:disabled{opacity:.55;cursor:not-allowed}
         .pax-cc-timeline__item--internal .pax-cc-timeline__meta{color:#8c8f94}
         .pax-cc-timeline__internal-tag{display:inline-block;margin-left:6px;padding:1px 6px;border-radius:4px;font-size:10px;font-weight:600;text-transform:uppercase;background:#f0f0f1;color:#646970}
         .pax-cc-unread-badge{display:inline-flex;align-items:center;justify-content:center;min-width:18px;height:18px;padding:0 6px;border-radius:999px;background:#d63638;color:#fff;font-size:11px;font-weight:700;line-height:1;box-shadow:0 0 0 2px #fff}
@@ -1029,11 +1039,15 @@ class PAXdesign_Customer_Admin {
         echo '<option value="rejected">' . esc_html(PAXdesign_Cybercrime_Tickets::status_label('rejected', $lang)) . '</option>';
         echo '</select>';
         echo '<span class="pax-cc-form__hint">' . esc_html__('The reply appears on the customer timeline immediately.', 'paxdesign-booking') . '</span></p>';
+        echo '<p class="pax-cc-evidence-toggle">';
+        echo '<label class="pax-cc-evidence-toggle__label" for="pax-cc-request-evidence">';
+        echo '<input type="checkbox" id="pax-cc-request-evidence" name="request_evidence" value="1">';
+        echo '<span>' . esc_html__('Request customer to upload evidence', 'paxdesign-booking');
+        echo '<span class="pax-cc-evidence-toggle__hint">' . esc_html__('Shows Upload Evidence / رفع الأدلة with your message and sets status to Waiting for Customer.', 'paxdesign-booking') . '</span>';
+        echo '</span></label></p>';
         echo '<p class="pax-cc-actions__reply-row">';
         echo '<button type="submit" class="button button-primary" id="pax-cc-reply-submit">' . esc_html__('Send reply', 'paxdesign-booking') . '</button>';
-        echo '<button type="button" class="button pax-cc-request-evidence-btn" id="pax-cc-request-evidence-submit" title="' . esc_attr__('Sets status to Waiting for Customer and shows Upload Evidence on the customer portal.', 'paxdesign-booking') . '">📎 ' . esc_html__('Request Evidence from Customer', 'paxdesign-booking') . '</button>';
         echo '</p>';
-        echo '<p class="pax-cc-form__hint">' . esc_html__('Use “Request Evidence” when you need the customer to upload files. They will see Upload Evidence / رفع الأدلة with your message.', 'paxdesign-booking') . '</p>';
         echo '<p class="pax-cc-actions__feedback" id="pax-cc-reply-feedback" aria-live="polite"></p>';
         echo '</form></div>';
 
@@ -1113,6 +1127,11 @@ class PAXdesign_Customer_Admin {
                 }
                 echo '<span>' . esc_html($name) . '</span></a>';
             }
+            echo '</div>';
+        }
+        if (!empty($entry['can_delete']) && !empty($entry['id'])) {
+            echo '<div class="pax-cc-timeline__actions">';
+            echo '<button type="button" class="pax-cc-timeline__delete" data-message-id="' . esc_attr((string) (int) $entry['id']) . '">' . esc_html__('Delete message', 'paxdesign-booking') . '</button>';
             echo '</div>';
         }
         echo '</li>';

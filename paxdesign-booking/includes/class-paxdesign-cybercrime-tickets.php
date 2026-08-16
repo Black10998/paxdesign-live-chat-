@@ -48,6 +48,7 @@ class PAXdesign_Cybercrime_Tickets {
         add_action('wp_ajax_paxdesign_cybercrime_admin_status', array(__CLASS__, 'ajax_admin_status'));
         add_action('wp_ajax_paxdesign_cybercrime_admin_reply', array(__CLASS__, 'ajax_admin_reply'));
         add_action('wp_ajax_paxdesign_cybercrime_admin_internal_note', array(__CLASS__, 'ajax_admin_internal_note'));
+        add_action('wp_ajax_paxdesign_cybercrime_admin_delete_message', array(__CLASS__, 'ajax_admin_delete_message'));
         add_action('wp_ajax_paxdesign_cybercrime_admin_unread', array(__CLASS__, 'ajax_admin_unread'));
         add_action('wp_ajax_paxdesign_cybercrime_admin_mark_read', array(__CLASS__, 'ajax_admin_mark_read'));
         add_action('wp_ajax_paxdesign_cybercrime_mark_read', array(__CLASS__, 'ajax_mark_read'));
@@ -597,12 +598,47 @@ class PAXdesign_Cybercrime_Tickets {
         if (!is_array($entry)) {
             return false;
         }
+        if (self::is_deleted_timeline_entry($entry)) {
+            return false;
+        }
         $author = sanitize_key((string) ($entry['author_type'] ?? ''));
         $channel = sanitize_key((string) ($entry['channel'] ?? ''));
         if ($author === 'ai' || $channel === 'chat') {
             return false;
         }
         return in_array($author, array('customer', 'staff', 'system'), true);
+    }
+
+    /**
+     * @param array<string, mixed> $entry
+     * @return bool
+     */
+    public static function is_deleted_timeline_entry($entry) {
+        if (!is_array($entry)) {
+            return false;
+        }
+        $meta = is_array($entry['meta'] ?? null) ? $entry['meta'] : array();
+        return !empty($meta['deleted']);
+    }
+
+    /**
+     * Staff replies visible to the customer may be permanently removed by admins.
+     *
+     * @param array<string, mixed> $entry
+     * @return bool
+     */
+    public static function is_deletable_staff_message($entry) {
+        if (!is_array($entry) || self::is_deleted_timeline_entry($entry)) {
+            return false;
+        }
+        if (sanitize_key((string) ($entry['author_type'] ?? '')) !== 'staff') {
+            return false;
+        }
+        $meta = is_array($entry['meta'] ?? null) ? $entry['meta'] : array();
+        if (!empty($meta['internal_only'])) {
+            return false;
+        }
+        return sanitize_key((string) ($meta['event'] ?? '')) === 'staff_reply';
     }
 
     /**
@@ -738,6 +774,7 @@ class PAXdesign_Cybercrime_Tickets {
         $entry['subject_key'] = $subject_key;
         $entry['subject'] = $audience === 'customer' ? '' : $subject;
         $entry['request_evidence'] = !empty($meta['request_evidence']);
+        $entry['can_delete'] = self::is_deletable_staff_message($entry);
 
         if (!empty($meta['attachments']) && is_array($meta['attachments']) && class_exists('PAXdesign_Cybercrime_Intake')) {
             $reference_id = sanitize_text_field((string) ($entry['reference_id'] ?? ''));
@@ -1378,6 +1415,75 @@ class PAXdesign_Cybercrime_Tickets {
         }
 
         return $message_id;
+    }
+
+    /**
+     * @param string $reference_id
+     * @param int    $message_id
+     * @param int    $staff_user_id
+     * @return bool|WP_Error
+     */
+    public static function delete_staff_message($reference_id, $message_id, $staff_user_id) {
+        if (!current_user_can('manage_options')) {
+            return new WP_Error('forbidden', __('Insufficient permissions.', 'paxdesign-booking'));
+        }
+
+        $reference_id = sanitize_text_field((string) $reference_id);
+        $message_id = absint($message_id);
+        if ($reference_id === '' || $message_id <= 0) {
+            return new WP_Error('invalid_request', __('Invalid message.', 'paxdesign-booking'));
+        }
+
+        $row = self::get_report_row($reference_id);
+        if (!$row) {
+            return new WP_Error('not_found', __('Report not found.', 'paxdesign-booking'));
+        }
+
+        global $wpdb;
+        $message_row = $wpdb->get_row($wpdb->prepare(
+            'SELECT * FROM ' . self::messages_table() . ' WHERE id = %d AND reference_id = %s LIMIT 1',
+            $message_id,
+            $reference_id
+        ), ARRAY_A);
+        if (!is_array($message_row)) {
+            return new WP_Error('not_found', __('Message not found.', 'paxdesign-booking'));
+        }
+
+        $meta = json_decode((string) ($message_row['meta_json'] ?? ''), true);
+        if (!is_array($meta)) {
+            $meta = array();
+        }
+        $entry = array(
+            'id'          => $message_id,
+            'author_type' => (string) ($message_row['author_type'] ?? ''),
+            'meta'        => $meta,
+        );
+        if (!self::is_deletable_staff_message($entry)) {
+            return new WP_Error('not_deletable', __('This message cannot be deleted.', 'paxdesign-booking'));
+        }
+
+        $deleted = $wpdb->delete(
+            self::messages_table(),
+            array(
+                'id'           => $message_id,
+                'reference_id' => $reference_id,
+            ),
+            array('%d', '%s')
+        );
+        if (!$deleted) {
+            return new WP_Error('delete_failed', __('Could not delete message.', 'paxdesign-booking'));
+        }
+
+        $now = current_time('mysql', true);
+        $wpdb->update(
+            PAXdesign_Cybercrime_Intake::table_name(),
+            array('updated_at' => $now),
+            array('reference_id' => $reference_id),
+            array('%s'),
+            array('%s')
+        );
+
+        return true;
     }
 
     /**
@@ -2111,6 +2217,31 @@ class PAXdesign_Cybercrime_Tickets {
             'report'     => $report,
             'message_id' => $result,
             'message'    => __('Internal note added.', 'paxdesign-booking'),
+        ));
+    }
+
+    public static function ajax_admin_delete_message() {
+        if (!current_user_can('manage_options')) {
+            wp_send_json_error(array('message' => __('Insufficient permissions.', 'paxdesign-booking')), 403);
+        }
+        check_ajax_referer(self::ADMIN_NONCE_ACTION, 'nonce');
+
+        $reference = sanitize_text_field(wp_unslash($_POST['reference_id'] ?? ''));
+        $message_id = absint($_POST['message_id'] ?? 0);
+
+        $result = self::delete_staff_message($reference, $message_id, get_current_user_id());
+        if (is_wp_error($result)) {
+            wp_send_json_error(array('message' => $result->get_error_message()), 400);
+        }
+
+        $report = self::get_report_for_admin($reference);
+        if (!$report) {
+            wp_send_json_error(array('message' => __('Report not found.', 'paxdesign-booking')), 404);
+        }
+
+        wp_send_json_success(array(
+            'report'  => $report,
+            'message' => __('Message deleted.', 'paxdesign-booking'),
         ));
     }
 

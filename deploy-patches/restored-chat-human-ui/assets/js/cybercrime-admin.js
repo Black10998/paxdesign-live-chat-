@@ -407,11 +407,15 @@
     var evidenceTag = meta.request_evidence
       ? ' <span class="pax-cc-timeline__evidence-tag">' + escapeHtml(text('requestEvidenceTag', 'Evidence requested')) + '</span>'
       : '';
+    var deleteBtn = entry.can_delete && entry.id
+      ? '<div class="pax-cc-timeline__actions"><button type="button" class="pax-cc-timeline__delete" data-message-id="' + escapeHtml(String(entry.id)) + '">' + escapeHtml(text('deleteMessage', 'Delete message')) + '</button></div>'
+      : '';
 
     return '<li class="' + itemClass + '">'
       + '<p class="pax-cc-timeline__meta"><strong>' + author + '</strong> · ' + channel + ' · ' + createdAt + internalTag + evidenceTag + '</p>'
       + '<div class="pax-cc-timeline__body">' + body + '</div>'
       + renderTimelineAttachments(entry.attachments || [])
+      + deleteBtn
       + '</li>';
   }
 
@@ -426,6 +430,53 @@
     }
     timelineEl.innerHTML = entries.map(renderTimelineItem).join('');
     bindLightboxTriggers(timelineEl);
+    bindTimelineDeleteActions(timelineEl);
+  }
+
+  function bindTimelineDeleteActions(root) {
+    if (!root) {
+      return;
+    }
+    root.querySelectorAll('.pax-cc-timeline__delete[data-message-id]').forEach(function (btn) {
+      if (btn.getAttribute('data-bound') === '1') {
+        return;
+      }
+      btn.setAttribute('data-bound', '1');
+      btn.addEventListener('click', function () {
+        deleteStaffMessage(btn);
+      });
+    });
+  }
+
+  function deleteStaffMessage(btn) {
+    if (!btn || btn.disabled) {
+      return;
+    }
+    var messageId = btn.getAttribute('data-message-id') || '';
+    if (!messageId || !referenceId) {
+      return;
+    }
+    if (!window.confirm(text('deleteConfirm', 'Permanently delete this message? This cannot be undone.'))) {
+      return;
+    }
+
+    btn.disabled = true;
+    setFeedback(replyFeedback, text('deleting', 'Deleting…'), 'saving');
+
+    postAction('paxdesign_cybercrime_admin_delete_message', { message_id: messageId })
+      .then(function (data) {
+        applyReport(data.report);
+        setFeedback(replyFeedback, data.message || text('deleteSuccess', 'Message deleted.'), 'success');
+        window.setTimeout(function () {
+          if (replyFeedback && replyFeedback.textContent === (data.message || text('deleteSuccess', 'Message deleted.'))) {
+            setFeedback(replyFeedback, '', '');
+          }
+        }, 2500);
+      })
+      .catch(function (error) {
+        btn.disabled = false;
+        setFeedback(replyFeedback, error.message || text('error', 'Something went wrong.'), 'error');
+      });
   }
 
   function updateListRowStatus(report) {
@@ -552,11 +603,12 @@
     });
   }
 
-  function sendStaffReply(requestEvidence) {
+  function sendStaffReply() {
     var messageEl = document.getElementById('pax-cc-staff-message');
     var statusEl = document.getElementById('pax-cc-reply-status');
     var submitBtn = document.getElementById('pax-cc-reply-submit');
-    var evidenceBtn = document.getElementById('pax-cc-request-evidence-submit');
+    var evidenceCheckbox = document.getElementById('pax-cc-request-evidence');
+    var requestEvidence = !!(evidenceCheckbox && evidenceCheckbox.checked);
     var message = messageEl ? messageEl.value.trim() : '';
     if (!message) {
       if (messageEl) {
@@ -566,7 +618,6 @@
     }
 
     setSubmitEnabled(submitBtn, false);
-    setSubmitEnabled(evidenceBtn, false);
     setFeedback(replyFeedback, text('sending', 'Sending…'), 'saving');
 
     var payload = {
@@ -586,6 +637,9 @@
         if (messageEl) {
           messageEl.value = '';
         }
+        if (evidenceCheckbox) {
+          evidenceCheckbox.checked = false;
+        }
         var successMsg = requestEvidence
           ? text('requestEvidenceSent', 'Evidence request sent to customer.')
           : (data.message || text('replySent', 'Reply sent to customer.'));
@@ -596,23 +650,27 @@
       })
       .then(function () {
         setSubmitEnabled(submitBtn, true);
-        setSubmitEnabled(evidenceBtn, true);
       });
   }
 
   if (replyForm) {
     replyForm.addEventListener('submit', function (event) {
       event.preventDefault();
-      sendStaffReply(false);
+      sendStaffReply();
     });
   }
 
-  var requestEvidenceBtn = document.getElementById('pax-cc-request-evidence-submit');
-  if (requestEvidenceBtn) {
-    requestEvidenceBtn.addEventListener('click', function () {
-      sendStaffReply(true);
+  var evidenceCheckboxEl = document.getElementById('pax-cc-request-evidence');
+  var replyStatusEl = document.getElementById('pax-cc-reply-status');
+  if (evidenceCheckboxEl && replyStatusEl) {
+    evidenceCheckboxEl.addEventListener('change', function () {
+      if (evidenceCheckboxEl.checked) {
+        replyStatusEl.value = 'waiting_for_customer';
+      }
     });
   }
+
+  bindTimelineDeleteActions(timelineEl);
 
   if (internalNoteForm) {
     internalNoteForm.addEventListener('submit', function (event) {

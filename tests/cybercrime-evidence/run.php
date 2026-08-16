@@ -44,9 +44,12 @@ ccs_evidence_assert(strpos($portalJs, 'updateEvidenceUi') !== false, 'portal JS 
 ccs_evidence_assert(strpos($portalJs, 'renderResubmitPreview') !== false, 'portal JS previews selected files');
 ccs_evidence_assert(strpos($portalJs, 'paxdesign_cybercrime_customer_resubmit') !== false, 'portal JS calls resubmit action');
 ccs_evidence_assert(strpos($portalJs, 'timelineEvidenceInlineHtml') !== false, 'portal JS renders inline evidence request CTA');
-ccs_evidence_assert(strpos($adminJs, 'pax-cc-request-evidence-submit') !== false, 'admin JS handles request evidence button');
+ccs_evidence_assert(strpos($adminJs, 'pax-cc-request-evidence') !== false, 'admin JS handles request evidence checkbox');
 ccs_evidence_assert(strpos($adminJs, 'request_evidence') !== false, 'admin JS sends request_evidence flag');
+ccs_evidence_assert(strpos($adminJs, 'paxdesign_cybercrime_admin_delete_message') !== false, 'admin JS deletes staff messages');
 ccs_evidence_assert(strpos($tickets, 'request_evidence') !== false, 'tickets stores request_evidence on staff reply');
+ccs_evidence_assert(strpos($tickets, 'delete_staff_message') !== false, 'tickets implements delete_staff_message');
+ccs_evidence_assert(strpos($tickets, 'ajax_admin_delete_message') !== false, 'tickets registers delete message ajax');
 
 exec('node --check ' . escapeshellarg($root . '/assets/js/cybercrime-admin.js') . ' 2>&1', $adminJsCheck, $adminJsCode);
 ccs_evidence_assert($adminJsCode === 0, 'node --check cybercrime-admin.js');

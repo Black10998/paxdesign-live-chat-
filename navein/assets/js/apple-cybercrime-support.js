@@ -634,7 +634,7 @@
   }
 
   function timelineEvidenceInlineHtml(entry) {
-    if (!entry || !entry.request_evidence || !isReportActive(activeReport) || !needsEvidenceUpload(activeReport)) {
+    if (!entry || !entry.request_evidence || !isReportActive(activeReport)) {
       return '';
     }
     var title = activeReportText('evidence_request_inline', 'Upload Evidence / رفع الأدلة');

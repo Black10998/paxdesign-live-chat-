@@ -160,9 +160,13 @@ grep -q "renderAttachments" "${tmpdir}/cybercrime-admin.js" \
 
 curl -fsSL "${SITE}/wp-content/themes/navein/assets/js/apple-cybercrime-support.js?v=${STAMP}" \
   -o "${tmpdir}/apple-cybercrime-support.js" || true
-grep -q "pax-cc-request-evidence-submit" "${tmpdir}/cybercrime-admin.js" \
-  && ok "admin JS includes Request Evidence button" \
-  || fail "Request Evidence control missing from live cybercrime-admin.js"
+grep -q "pax-cc-request-evidence" "${tmpdir}/cybercrime-admin.js" \
+  && ok "admin JS includes request evidence checkbox" \
+  || fail "Request evidence checkbox missing from live cybercrime-admin.js"
+
+grep -q "paxdesign_cybercrime_admin_delete_message" "${tmpdir}/cybercrime-admin.js" \
+  && ok "admin JS includes delete staff message handler" \
+  || fail "Delete staff message handler missing from live cybercrime-admin.js"
 
 grep -q "timelineEvidenceInlineHtml" "${tmpdir}/apple-cybercrime-support.js" \
   && ok "portal JS includes inline evidence request CTA" \
