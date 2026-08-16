@@ -1563,7 +1563,7 @@
     html += '<div class="pdx-auth-msg-slot"></div>';
 
     if (currentView === 'login' && isAuthPageFormMount()) {
-      html += appleSignInTopBlockHtml();
+      html += socialSignInTopBlockHtml();
     }
 
     html += '<div class="pdx-auth-fields">';
@@ -1615,8 +1615,8 @@
         renderAuthForm(mount);
       });
     });
-    bindAppleSignInButton(mount);
-    showPendingAppleError();
+    bindSocialSignInButtons(mount);
+    showPendingSocialError();
   }
 
   function mountInlineAuth(container, view, options) {
@@ -1755,6 +1755,30 @@
     return base + join + 'return_to=' + encodeURIComponent(returnTo);
   }
 
+  function githubWebStartUrl() {
+    var base = C.githubStartUrl || ((C.restUrl || '') + '/auth/github/start');
+    if (!base) return '';
+    var returnTo = getReturnToParam();
+    if (!returnTo && isChatInlineAuthMount()) {
+      returnTo = window.location.pathname + window.location.search + (window.location.hash || '');
+    }
+    if (!returnTo) {
+      returnTo = window.location.pathname + window.location.search + '#/overview';
+    }
+    var join = base.indexOf('?') >= 0 ? '&' : '?';
+    return base + join + 'return_to=' + encodeURIComponent(returnTo);
+  }
+
+  function githubSignInButtonInnerHtml() {
+    return '<button type="button" class="pdx-auth-github-btn" data-pdx-github-signin="1">' +
+      '<span class="pdx-auth-github-icon" aria-hidden="true">' +
+      '<svg width="16" height="16" viewBox="0 0 16 16" xmlns="http://www.w3.org/2000/svg" focusable="false">' +
+      '<path fill="currentColor" d="M8 0C3.58 0 0 3.58 0 8c0 3.54 2.29 6.53 5.47 7.59.4.07.55-.17.55-.38 0-.19-.01-.82-.01-1.49-2.01.37-2.53-.49-2.69-.94-.09-.23-.48-.94-.82-1.13-.28-.15-.68-.52-.01-.53.63-.01 1.08.58 1.23.82.72 1.21 1.87.87 2.33.66.07-.52.28-.87.51-1.07-1.78-.2-3.64-.89-3.64-3.95 0-.87.31-1.59.82-2.15-.08-.2-.36-1.02.08-2.12 0 0 .67-.21 2.2.82.64-.18 1.32-.27 2-.27s1.36.09 2 .27c1.53-1.04 2.2-.82 2.2-.82.44 1.1.16 1.92.08 2.12.51.56.82 1.27.82 2.15 0 3.07-1.87 3.75-3.65 3.95.29.25.54.73.54 1.48 0 1.07-.01 1.93-.01 2.2 0 .21.15.46.55.38A8.013 8.013 0 0016 8c0-4.42-3.58-8-8-8z"/>' +
+      '</svg></span>' +
+      'Sign in with GitHub' +
+      '</button>';
+  }
+
   function appleSignInButtonInnerHtml() {
     return '<button type="button" class="pdx-auth-apple-btn" data-pdx-apple-signin="1">' +
       '<span class="pdx-auth-apple-icon" aria-hidden="true">' +
@@ -1765,12 +1789,20 @@
       '</button>';
   }
 
-  function appleSignInTopBlockHtml() {
-    if (!C.appleWebEnabled || currentView !== 'login' || !isAuthPageFormMount()) return '';
-    return '<div class="pdx-auth-apple-wrap pdx-auth-apple-wrap--lead">' +
-      appleSignInButtonInnerHtml() +
+  function socialSignInTopBlockHtml() {
+    if (currentView !== 'login' || !isAuthPageFormMount()) return '';
+    var buttons = '';
+    if (C.githubWebEnabled) buttons += githubSignInButtonInnerHtml();
+    if (C.appleWebEnabled) buttons += appleSignInButtonInnerHtml();
+    if (!buttons) return '';
+    return '<div class="pdx-auth-social-wrap pdx-auth-social-wrap--lead">' +
+      buttons +
       '</div>' +
       '<div class="pdx-auth-apple-divider pdx-auth-apple-divider--after-apple" aria-hidden="true"><span>or</span></div>';
+  }
+
+  function appleSignInTopBlockHtml() {
+    return socialSignInTopBlockHtml();
   }
 
   function appleSignInButtonHtml() {
@@ -1781,19 +1813,36 @@
       '</div>';
   }
 
-  function bindAppleSignInButton(root) {
+  function bindSocialSignInButtons(root) {
     if (!root) return;
-    var btn = root.querySelector('[data-pdx-apple-signin]');
-    if (!btn) return;
-    btn.addEventListener('click', function () {
-      clearPendingAppleError();
-      var url = appleWebStartUrl();
-      if (!url) {
-        showFormMessage('Sign in with Apple is not available right now.', 'error');
-        return;
-      }
-      window.location.href = url;
-    });
+    var githubBtn = root.querySelector('[data-pdx-github-signin]');
+    if (githubBtn) {
+      githubBtn.addEventListener('click', function () {
+        clearPendingSocialError();
+        var url = githubWebStartUrl();
+        if (!url) {
+          showFormMessage('Sign in with GitHub is not available right now.', 'error');
+          return;
+        }
+        window.location.href = url;
+      });
+    }
+    var appleBtn = root.querySelector('[data-pdx-apple-signin]');
+    if (appleBtn) {
+      appleBtn.addEventListener('click', function () {
+        clearPendingSocialError();
+        var url = appleWebStartUrl();
+        if (!url) {
+          showFormMessage('Sign in with Apple is not available right now.', 'error');
+          return;
+        }
+        window.location.href = url;
+      });
+    }
+  }
+
+  function bindAppleSignInButton(root) {
+    bindSocialSignInButtons(root);
   }
 
   function submitBtn(label, iconName) {
@@ -1828,28 +1877,35 @@
     slot.innerHTML = safe ? '<div class="pdx-auth-message pdx-auth-message--' + type + '">' + safe + '</div>' : '';
   }
 
-  function clearPendingAppleError() {
+  function clearPendingSocialError() {
     pendingAppleError = '';
-    try { sessionStorage.removeItem('pdx_apple_error'); } catch (e) {}
+    try {
+      sessionStorage.removeItem('pdx_apple_error');
+      sessionStorage.removeItem('pdx_github_error');
+    } catch (e) {}
     removeAppleErrorBanner();
     showFormMessage('', '');
   }
 
-  function showPendingAppleError() {
+  function clearPendingAppleError() {
+    clearPendingSocialError();
+  }
+
+  function showPendingSocialError() {
     if (user.logged_in) {
-      clearPendingAppleError();
+      clearPendingSocialError();
       return;
     }
     var msg = pendingAppleError;
     if (!msg) {
-      try { msg = sessionStorage.getItem('pdx_apple_error') || ''; } catch (e) {}
+      try { msg = sessionStorage.getItem('pdx_github_error') || sessionStorage.getItem('pdx_apple_error') || ''; } catch (e) {}
     }
-    if (!msg) {
-      removeAppleErrorBanner();
-      return;
-    }
+    if (!msg) return;
     showFormMessage(msg, 'error');
-    showAppleErrorBanner(msg);
+  }
+
+  function showPendingAppleError() {
+    showPendingSocialError();
   }
 
   function showAppleErrorBanner(msg) {
@@ -1876,6 +1932,20 @@
     if (banner && banner.parentNode) {
       banner.parentNode.removeChild(banner);
     }
+  }
+
+  function captureSocialErrorFromUrl(params) {
+    if (!params) return;
+    if (params.get('pdx_github') === 'error') {
+      var githubMsg = params.get('pdx_msg') || 'GitHub sign-in failed. Please try again.';
+      try {
+        githubMsg = decodeURIComponent(githubMsg.replace(/\+/g, ' '));
+      } catch (e) {}
+      pendingAppleError = githubMsg;
+      try { sessionStorage.setItem('pdx_github_error', githubMsg); } catch (err) {}
+      return;
+    }
+    captureAppleErrorFromUrl(params);
   }
 
   function captureAppleErrorFromUrl(params) {
@@ -2283,8 +2353,8 @@
     var params = new URLSearchParams(window.location.search);
     if (user.logged_in) {
       clearPendingAppleError();
-    } else if (params.get('pdx_apple') === 'error') {
-      captureAppleErrorFromUrl(params);
+    } else if (params.get('pdx_apple') === 'error' || params.get('pdx_github') === 'error') {
+      captureSocialErrorFromUrl(params);
     } else {
       clearPendingAppleError();
     }

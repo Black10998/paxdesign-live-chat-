@@ -103,6 +103,12 @@ class PAXdesign_Chat {
                 'subtitle'    => __('Sign in to message our team.', 'paxdesign-booking'),
                 'logIn'       => __('Sign In', 'paxdesign-booking'),
             ),
+            'authSocial'       => array(
+                'githubEnabled'  => class_exists('PAXdesign_Auth_GitHub') && PAXdesign_Auth_GitHub::is_web_configured(),
+                'githubStartUrl' => class_exists('PAXdesign_Auth_GitHub') ? esc_url(PAXdesign_Auth_GitHub::web_start_url()) : '',
+                'appleEnabled'   => class_exists('PAXdesign_Auth_Apple') && PAXdesign_Auth_Apple::is_web_configured(),
+                'appleStartUrl'  => class_exists('PAXdesign_Auth_Apple') ? esc_url(PAXdesign_Auth_Apple::web_start_url()) : '',
+            ),
             'quickActions'     => array(),
             'contactUrl'       => get_option('paxdesign_booking_contact_url', home_url('/')),
             'phone'            => $this->get_contact_phone(),

@@ -104,8 +104,10 @@ $team_members = PAXdesign_Booking::get_instance()->get_team_members();
                 <h3 class="paxdesign-booking-chat-auth-gate-title" id="paxdesignChatAuthGateTitle"><?php echo esc_html__('Continue to Live Chat', 'paxdesign-booking'); ?></h3>
                 <p class="paxdesign-booking-chat-auth-gate-sub" id="paxdesignChatAuthGateSubtitle"><?php echo esc_html__('Sign in to message our team.', 'paxdesign-booking'); ?></p>
               </div>
+              <div class="paxdesign-booking-chat-auth-social" id="paxdesignChatAuthSocial" hidden></div>
+              <div class="paxdesign-booking-chat-auth-divider" id="paxdesignChatAuthDivider" hidden aria-hidden="true"><span>or</span></div>
               <div class="paxdesign-booking-chat-auth-actions" id="paxdesignChatAuthActions">
-                <button type="button" class="pdx-cx-btn pdx-auth-signup-btn paxdesign-booking-chat-auth-login-btn" id="paxdesignChatAuthLogin"><?php echo esc_html__('Sign In', 'paxdesign-booking'); ?></button>
+                <button type="button" class="paxdesign-booking-chat-auth-login-btn" id="paxdesignChatAuthLogin"><?php echo esc_html__('Sign In', 'paxdesign-booking'); ?></button>
               </div>
             </div>
           </div>
