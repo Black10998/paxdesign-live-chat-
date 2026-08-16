@@ -153,6 +153,33 @@ grep -q "saveStatus('rejected')" "${tmpdir}/cybercrime-admin.js" \
   && ok "admin JS includes rejected/مرفوض action" \
   || fail "rejected action missing from live cybercrime-admin.js"
 
+grep -q "renderAttachments" "${tmpdir}/cybercrime-admin.js" \
+  && grep -q "openLightbox" "${tmpdir}/cybercrime-admin.js" \
+  && ok "admin JS includes attachment gallery + lightbox" \
+  || fail "admin attachment gallery/lightbox missing from live cybercrime-admin.js"
+
+curl -fsSL "${SITE}/wp-content/themes/navein/assets/js/apple-cybercrime-support.js?v=${STAMP}" \
+  -o "${tmpdir}/apple-cybercrime-support.js" || true
+grep -q "updateEvidenceUi" "${tmpdir}/apple-cybercrime-support.js" \
+  && grep -q "paxdesign_cybercrime_customer_resubmit" "${tmpdir}/apple-cybercrime-support.js" \
+  && ok "portal JS includes Upload Evidence resubmit flow" \
+  || fail "portal evidence upload flow missing from live apple-cybercrime-support.js"
+
+curl -fsSL "${SITE}/cybercrime-support/?n=${STAMP}" -o "${tmpdir}/ccs-page.html" || true
+grep -q "pax-ccs-resubmit-preview" "${tmpdir}/ccs-page.html" \
+  && ok "cybercrime portal template includes evidence preview UI" \
+  || fail "evidence preview markup missing from live cybercrime-support page"
+
+curl -fsSL "${SITE}/wp-content/plugins/paxdesign-booking/includes/class-paxdesign-cybercrime-intake.php?v=${STAMP}" \
+  -o "${tmpdir}/cybercrime-intake.php" 2>/dev/null || true
+if [ -f "${tmpdir}/cybercrime-intake.php" ] && grep -q "ajax_download_attachment" "${tmpdir}/cybercrime-intake.php" 2>/dev/null; then
+  ok "live intake includes secure attachment download handler"
+elif grep -q "paxdesign_cybercrime_attachment" "${tmpdir}/cybercrime-admin.js"; then
+  ok "live admin wired for secure attachment downloads"
+else
+  fail "secure attachment download handler not detected on live site"
+fi
+
 # Must still be the restored baseline, not the later GitHub chat freeze/unfreeze work.
 if grep -q "skipping stacked sync" "${tmpdir}/chat-script.js"; then
   fail "live chat-script.js looks like a newer GitHub chat rewrite"
