@@ -1,6 +1,7 @@
 /**
  * Homepage typography — self-hosted Orbitron (OFL) + Voga Medium (Charles Daoud).
- * Scoped to apple-homepage.css via enqueue on front page only.
+ * Loaded only on is_front_page(); @font-face registers globally within that page load.
+ * Apply families via .pax-home in apple-homepage.css — not site-wide.
  */
 
 @font-face {

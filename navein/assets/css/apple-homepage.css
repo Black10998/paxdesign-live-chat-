@@ -3,9 +3,7 @@
  */
 
 body.home.page-template-template-apple-homepage,
-body.home.page-template-template-apple-homepage-php,
-body.page-template-template-apple-homepage,
-body.page-template-template-apple-homepage-php {
+body.home.page-template-template-apple-homepage-php {
   --ph-black: #000;
   --ph-ink: #1d1d1f;
   --ph-muted: #86868b;
@@ -15,17 +13,12 @@ body.page-template-template-apple-homepage-php {
   --ph-blue: #0071e3;
   --ph-blue-soft: #2997ff;
   --ph-ease: cubic-bezier(0.25, 0.1, 0.25, 1);
-  --ph-display: "Orbitron", sans-serif;
-  --ph-text: "Voga Diamond", "Voga", serif;
-  font-family: var(--ph-text);
   background: var(--ph-white);
   color: var(--ph-ink);
 }
 
 body.home.page-template-template-apple-homepage #dtr-main-wrapper.pax-apple-home-wrap,
-body.home.page-template-template-apple-homepage-php #dtr-main-wrapper.pax-apple-home-wrap,
-body.page-template-template-apple-homepage #dtr-main-wrapper.pax-apple-home-wrap,
-body.page-template-template-apple-homepage-php #dtr-main-wrapper.pax-apple-home-wrap {
+body.home.page-template-template-apple-homepage-php #dtr-main-wrapper.pax-apple-home-wrap {
   max-width: none;
   width: 100%;
   padding: 0;
@@ -34,13 +27,14 @@ body.page-template-template-apple-homepage-php #dtr-main-wrapper.pax-apple-home-
 }
 
 body.home.page-template-template-apple-homepage .dtr-page-title--section,
-body.home.page-template-template-apple-homepage-php .dtr-page-title--section,
-body.page-template-template-apple-homepage .dtr-page-title--section,
-body.page-template-template-apple-homepage-php .dtr-page-title--section {
+body.home.page-template-template-apple-homepage-php .dtr-page-title--section {
   display: none !important;
 }
 
+/* Orbitron + Voga Diamond: scoped to homepage article content only (not header/footer/chat/auth). */
 .pax-home {
+  --ph-display: "Orbitron", sans-serif;
+  --ph-text: "Voga Diamond", "Voga", serif;
   font-family: var(--ph-text);
   -webkit-font-smoothing: antialiased;
   text-rendering: optimizeLegibility;
@@ -668,17 +662,13 @@ body.page-template-template-apple-homepage-php .dtr-page-title--section {
 
 /* Beat theme Arial heading stack inside homepage sections */
 body.home.page-template-template-apple-homepage .pax-home :is(h1, h2, h3, h4, h5, h6),
-body.home.page-template-template-apple-homepage-php .pax-home :is(h1, h2, h3, h4, h5, h6),
-body.page-template-template-apple-homepage .pax-home :is(h1, h2, h3, h4, h5, h6),
-body.page-template-template-apple-homepage-php .pax-home :is(h1, h2, h3, h4, h5, h6) {
+body.home.page-template-template-apple-homepage-php .pax-home :is(h1, h2, h3, h4, h5, h6) {
   font-family: var(--ph-display);
 }
 
-/* Header Sign Up — beat Customizer transparent override */
+/* Header Sign Up — beat Customizer transparent override (layout/colors only; keep auth typography) */
 html body.home #pdx-auth-bar.pdx-auth-bar--header .pdx-auth-signup-btn.pdx-auth-header-btn,
-html body.home #pdx-auth-bar.pdx-auth-bar--header .pdx-auth-signup-btn,
-html body.page-template-template-apple-homepage #pdx-auth-bar .pdx-auth-signup-btn.pdx-auth-header-btn,
-html body.page-template-template-apple-homepage #pdx-auth-bar .pdx-auth-signup-btn {
+html body.home #pdx-auth-bar.pdx-auth-bar--header .pdx-auth-signup-btn {
   border: 0 !important;
   background: #000 !important;
   background-color: #000 !important;
@@ -688,15 +678,12 @@ html body.page-template-template-apple-homepage #pdx-auth-bar .pdx-auth-signup-b
   min-height: 36px !important;
   padding: 0 16px !important;
   border-radius: 980px !important;
-  font-family: var(--ph-display) !important;
   font-weight: 500 !important;
   letter-spacing: -0.01em !important;
 }
 
 html body.home #pdx-auth-bar .pdx-auth-signup-btn:hover,
-html body.home #pdx-auth-bar .pdx-auth-signup-btn:focus,
-html body.page-template-template-apple-homepage #pdx-auth-bar .pdx-auth-signup-btn:hover,
-html body.page-template-template-apple-homepage #pdx-auth-bar .pdx-auth-signup-btn:focus {
+html body.home #pdx-auth-bar .pdx-auth-signup-btn:focus {
   background: #1d1d1f !important;
   background-color: #1d1d1f !important;
   background-image: none !important;
@@ -704,15 +691,13 @@ html body.page-template-template-apple-homepage #pdx-auth-bar .pdx-auth-signup-b
   outline: none !important;
 }
 
-/* Footer subscribe — Apple clean form on homepage */
-body.home .paxmc-footer-subscribe,
-body.page-template-template-apple-homepage .paxmc-footer-subscribe {
+/* Footer subscribe — Apple clean form on homepage (layout only; keep footer typography) */
+body.home .paxmc-footer-subscribe {
   max-width: 520px !important;
   margin: 0 auto !important;
 }
 
-body.home .paxmc-footer-subscribe .input-wrapper,
-body.page-template-template-apple-homepage .paxmc-footer-subscribe .input-wrapper {
+body.home .paxmc-footer-subscribe .input-wrapper {
   display: flex !important;
   align-items: center !important;
   gap: 10px !important;
@@ -724,26 +709,22 @@ body.page-template-template-apple-homepage .paxmc-footer-subscribe .input-wrappe
   box-shadow: none !important;
 }
 
-body.home .paxmc-footer-subscribe .input,
-body.page-template-template-apple-homepage .paxmc-footer-subscribe .input {
+body.home .paxmc-footer-subscribe .input {
   flex: 1 !important;
   border: 0 !important;
   background: transparent !important;
   box-shadow: none !important;
-  font-family: var(--ph-text) !important;
   font-size: 15px !important;
   color: #1d1d1f !important;
 }
 
-body.home .paxmc-footer-subscribe .Subscribe-btn,
-body.page-template-template-apple-homepage .paxmc-footer-subscribe .Subscribe-btn {
+body.home .paxmc-footer-subscribe .Subscribe-btn {
   min-width: 48px !important;
   min-height: 40px !important;
   border-radius: 980px !important;
   border: 0 !important;
   background: #000 !important;
   color: #fff !important;
-  font-family: var(--ph-display) !important;
 }
 
 @media (max-width: 960px) {
