@@ -22,13 +22,16 @@ body {
 
 /* Theme chrome: header, navigation, footer */
 #dtr-header-wrapper,
+#dtr-header-global,
+#dtr-main-navigation,
+.main-navigation,
 #dtr-header-wrapper a,
 #dtr-header-wrapper button,
 #dtr-header-wrapper input,
 #dtr-header-wrapper label,
-#dtr-main-navigation,
 #dtr-main-navigation a,
 #dtr-main-navigation button,
+#dtr-main-navigation .sf-menu > li > a,
 #dtr-footer-section,
 #dtr-footer-section a,
 #dtr-footer-section p,
@@ -38,6 +41,10 @@ body {
 #dtr-footer-section label,
 .paxmc-footer-subscribe,
 .paxmc-footer-subscribe .input {
+  --dtr-mega-display: var(--pax-voga-body);
+  --dtr-mega-text-font: var(--pax-voga-body);
+  --dtr-amnav-display: var(--pax-voga-body);
+  --dtr-amnav-text: var(--pax-voga-body);
   font-family: var(--pax-voga-body);
   letter-spacing: var(--pax-voga-tracking);
 }
@@ -114,14 +121,28 @@ body.page-cybercrime-support {
 }
 
 /* Cybercrime headings keep --ccs-display (not Voga body). */
-.pax-ccs-portal h1,
-.pax-ccs-portal h2,
-.pax-ccs-portal h3,
-.pax-ccs-portal__title,
-.pax-ccs-portal__section-title,
-.pax-ccs-portal__info-title,
-.pax-ccs-portal__trust-title {
-  font-family: var(--ccs-display, -apple-system, BlinkMacSystemFont, "SF Pro Display", "Helvetica Neue", Helvetica, Arial, sans-serif);
+html body.page-template-template-apple-cybercrime-support .pax-ccs-portal h1,
+html body.page-template-template-apple-cybercrime-support .pax-ccs-portal h2,
+html body.page-template-template-apple-cybercrime-support .pax-ccs-portal h3,
+html body.page-template-template-apple-cybercrime-support-php .pax-ccs-portal h1,
+html body.page-template-template-apple-cybercrime-support-php .pax-ccs-portal h2,
+html body.page-template-template-apple-cybercrime-support-php .pax-ccs-portal h3,
+html body.page-cybercrime-support .pax-ccs-portal h1,
+html body.page-cybercrime-support .pax-ccs-portal h2,
+html body.page-cybercrime-support .pax-ccs-portal h3,
+html body.page-template-template-apple-cybercrime-support .pax-ccs-portal__title,
+html body.page-template-template-apple-cybercrime-support-php .pax-ccs-portal__title,
+html body.page-cybercrime-support .pax-ccs-portal__title,
+html body.page-template-template-apple-cybercrime-support .pax-ccs-portal__section-title,
+html body.page-template-template-apple-cybercrime-support-php .pax-ccs-portal__section-title,
+html body.page-cybercrime-support .pax-ccs-portal__section-title,
+html body.page-template-template-apple-cybercrime-support .pax-ccs-portal__info-title,
+html body.page-template-template-apple-cybercrime-support-php .pax-ccs-portal__info-title,
+html body.page-cybercrime-support .pax-ccs-portal__info-title,
+html body.page-template-template-apple-cybercrime-support .pax-ccs-portal__trust-title,
+html body.page-template-template-apple-cybercrime-support-php .pax-ccs-portal__trust-title,
+html body.page-cybercrime-support .pax-ccs-portal__trust-title {
+  font-family: var(--ccs-display) !important;
   letter-spacing: -0.02em;
 }
 
