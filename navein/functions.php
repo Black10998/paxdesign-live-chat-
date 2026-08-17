@@ -165,6 +165,7 @@ endif; // navein_theme_setup
 add_action( 'after_setup_theme', 'navein_theme_setup' );
 
 require_once get_template_directory() . '/inc/performance.php';
+require_once get_template_directory() . '/inc/public-identity-hardening.php';
 
 /**
  * Enqueue Plugins Scripts and Styles
