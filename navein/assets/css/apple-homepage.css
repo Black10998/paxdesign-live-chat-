@@ -17,6 +17,7 @@ body.page-template-template-apple-homepage-php {
   --ph-ease: cubic-bezier(0.25, 0.1, 0.25, 1);
   --ph-display: "Orbitron", sans-serif;
   --ph-text: "Voga Diamond", "Voga", serif;
+  font-family: var(--ph-text);
   background: var(--ph-white);
   color: var(--ph-ink);
 }
@@ -94,6 +95,7 @@ body.page-template-template-apple-homepage-php .dtr-page-title--section {
 .pax-home-lede {
   margin: 0 0 28px;
   max-width: 34em;
+  font-family: var(--ph-text);
   font-size: clamp(17px, 1.7vw, 21px);
   line-height: 1.45;
   color: var(--ph-muted);
@@ -237,6 +239,7 @@ body.page-template-template-apple-homepage-php .dtr-page-title--section {
 .pax-home-hero__lede {
   margin: 0 0 32px;
   max-width: 34em;
+  font-family: var(--ph-text);
   font-size: clamp(18px, 2vw, 21px);
   line-height: 1.45;
   color: rgba(255, 255, 255, 0.72);
@@ -317,6 +320,7 @@ body.page-template-template-apple-homepage-php .dtr-page-title--section {
 }
 
 .pax-home-service__copy em {
+  font-family: var(--ph-text);
   font-style: normal;
   font-size: 15px;
   color: var(--ph-muted);
@@ -374,6 +378,7 @@ body.page-template-template-apple-homepage-php .dtr-page-title--section {
 .pax-home-pillar p {
   margin: 0 0 18px;
   max-width: 30em;
+  font-family: var(--ph-text);
   font-size: 16px;
   line-height: 1.5;
   color: var(--ph-muted);
@@ -433,6 +438,7 @@ body.page-template-template-apple-homepage-php .dtr-page-title--section {
 }
 
 .pax-home-stats span {
+  font-family: var(--ph-text);
   font-size: 14px;
   color: var(--ph-muted);
 }
@@ -452,7 +458,7 @@ body.page-template-template-apple-homepage-php .dtr-page-title--section {
 .pax-home-quotes p {
   margin: 0 0 14px;
   max-width: 36em;
-  font-family: var(--ph-display);
+  font-family: var(--ph-text);
   font-size: clamp(20px, 2.5vw, 28px);
   font-weight: 500;
   letter-spacing: -0.025em;
@@ -461,6 +467,7 @@ body.page-template-template-apple-homepage-php .dtr-page-title--section {
 }
 
 .pax-home-quotes footer {
+  font-family: var(--ph-text);
   font-size: 14px;
   color: var(--ph-muted);
 }
@@ -502,6 +509,7 @@ body.page-template-template-apple-homepage-php .dtr-page-title--section {
 
 .pax-home-steps p {
   margin: 0;
+  font-family: var(--ph-text);
   font-size: 15px;
   line-height: 1.45;
   color: var(--ph-muted);
@@ -580,8 +588,9 @@ body.page-template-template-apple-homepage-php .dtr-page-title--section {
   border: 0;
   outline: none;
   background: transparent;
-  font: inherit;
+  font-family: var(--ph-text);
   font-size: 16px;
+  font-weight: 400;
   letter-spacing: -0.01em;
   color: var(--ph-ink);
 }
@@ -616,6 +625,7 @@ body.page-template-template-apple-homepage-php .dtr-page-title--section {
 
 .pax-home-signup-form__note {
   margin: 12px 0 0;
+  font-family: var(--ph-text);
   font-size: 13px;
   color: #b42318;
 }
@@ -627,6 +637,7 @@ body.page-template-template-apple-homepage-php .dtr-page-title--section {
   justify-content: center;
   align-items: center;
   margin: 28px 0 0;
+  font-family: var(--ph-text);
   font-size: 14px;
   color: var(--ph-muted);
 }
@@ -653,6 +664,14 @@ body.page-template-template-apple-homepage-php .dtr-page-title--section {
 .pax-home-final {
   padding: clamp(88px, 13vh, 140px) 0;
   background: #fff;
+}
+
+/* Beat theme Arial heading stack inside homepage sections */
+body.home.page-template-template-apple-homepage .pax-home :is(h1, h2, h3, h4, h5, h6),
+body.home.page-template-template-apple-homepage-php .pax-home :is(h1, h2, h3, h4, h5, h6),
+body.page-template-template-apple-homepage .pax-home :is(h1, h2, h3, h4, h5, h6),
+body.page-template-template-apple-homepage-php .pax-home :is(h1, h2, h3, h4, h5, h6) {
+  font-family: var(--ph-display);
 }
 
 /* Header Sign Up — beat Customizer transparent override */
