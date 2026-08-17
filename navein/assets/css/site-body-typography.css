@@ -98,7 +98,6 @@ body.page-cybercrime-support {
   --ccs-font: var(--pax-voga-body);
 }
 
-.pax-ccs-portal,
 .pax-ccs-portal p,
 .pax-ccs-portal label,
 .pax-ccs-portal input,
@@ -112,6 +111,18 @@ body.page-cybercrime-support {
   font-family: var(--pax-voga-body);
   letter-spacing: var(--pax-voga-tracking);
   line-height: var(--pax-voga-leading);
+}
+
+/* Cybercrime headings keep --ccs-display (not Voga body). */
+.pax-ccs-portal h1,
+.pax-ccs-portal h2,
+.pax-ccs-portal h3,
+.pax-ccs-portal__title,
+.pax-ccs-portal__section-title,
+.pax-ccs-portal__info-title,
+.pax-ccs-portal__trust-title {
+  font-family: var(--ccs-display, -apple-system, BlinkMacSystemFont, "SF Pro Display", "Helvetica Neue", Helvetica, Arial, sans-serif);
+  letter-spacing: -0.02em;
 }
 
 /* Preserve monospace / code */
