@@ -123,7 +123,7 @@ body.page-cybercrime-support {
 /* Bilingual spans inside headings inherit display stack, not Voga body. */
 .pax-ccs-portal :is(h1, h2, h3, .pax-ccs-portal__title, .pax-ccs-portal__section-title, .pax-ccs-portal__info-title, .pax-ccs-portal__trust-title) .pax-ccs-t,
 .pax-ccs-portal :is(h1, h2, h3, .pax-ccs-portal__title, .pax-ccs-portal__section-title, .pax-ccs-portal__info-title, .pax-ccs-portal__trust-title) span {
-  font-family: inherit;
+  font-family: -apple-system, BlinkMacSystemFont, "SF Pro Display", "Helvetica Neue", Helvetica, Arial, sans-serif !important;
   letter-spacing: inherit;
   line-height: inherit;
 }
@@ -152,12 +152,6 @@ html body.page-template-template-apple-cybercrime-support-php .pax-ccs-portal__t
 html body.page-cybercrime-support .pax-ccs-portal__trust-title {
   font-family: -apple-system, BlinkMacSystemFont, "SF Pro Display", "Helvetica Neue", Helvetica, Arial, sans-serif !important;
   letter-spacing: -0.02em;
-}
-
-html body.page-template-template-apple-cybercrime-support .pax-ccs-portal__title .pax-ccs-t,
-html body.page-template-template-apple-cybercrime-support-php .pax-ccs-portal__title .pax-ccs-t,
-html body.page-cybercrime-support .pax-ccs-portal__title .pax-ccs-t {
-  font-family: inherit !important;
 }
 
 /* Preserve monospace / code */
