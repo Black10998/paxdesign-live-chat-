@@ -145,6 +145,14 @@ html body.page-cybercrime-support .pax-ccs-portal__trust-title {
   letter-spacing: -0.02em;
 }
 
+html body.page-template-template-apple-cybercrime-support .pax-ccs-portal h1.pax-ccs-portal__title .pax-ccs-t,
+html body.page-template-template-apple-cybercrime-support-php .pax-ccs-portal h1.pax-ccs-portal__title .pax-ccs-t,
+html body.page-cybercrime-support .pax-ccs-portal h1.pax-ccs-portal__title .pax-ccs-t {
+  font-family: -apple-system, BlinkMacSystemFont, "SF Pro Display", "Helvetica Neue", Helvetica, Arial, sans-serif !important;
+  letter-spacing: inherit;
+  line-height: inherit;
+}
+
 /* Preserve monospace / code */
 code,
 pre,
