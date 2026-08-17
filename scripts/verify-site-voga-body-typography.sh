@@ -44,7 +44,8 @@ test "$ORBITRON_CSS_CODE" = "200"
 grep -Eq 'font-family: "Orbitron"' /tmp/orbitron-display-fonts.css
 
 grep -Eq 'orbitron-display-fonts\.css' /tmp/voga-home.html
-grep -Eq 'orbitron-display-fonts\.css' /tmp/voga-ccs.html
+grep -Eq 'Chat window — keep original Voga font' /tmp/site-body-typography.css
+grep -Eq '#paxdesign-booking-root \.paxdesign-booking-chat-auth-login-btn' /tmp/site-body-typography.css
 
 grep -Eq '\-\-pdx-font: "Voga Diamond"' /tmp/pdx-tokens.css
 grep -Eq '\-\-pax-font:\s+"Voga Diamond"' /tmp/booking-styles.css

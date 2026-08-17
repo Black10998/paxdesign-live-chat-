@@ -196,3 +196,13 @@ samp,
 .pdx-auth-page-form-wrap .pdx-auth-link[data-view="register"] {
   font-family: var(--pax-orbitron-display) !important;
 }
+
+/* Chat window — keep original Voga font (no Orbitron on auth controls) */
+#paxdesign-booking-root .paxdesign-booking-chat-auth-login-btn,
+#paxdesign-booking-root .paxdesign-booking-chat-auth-inline .pdx-btn-pearl,
+#paxdesign-booking-root .paxdesign-booking-chat-auth-inline .pdx-btn-pearl .pdx-btn-pearl__wrap,
+#paxdesign-booking-root .paxdesign-booking-chat-auth-inline .pdx-auth-submit,
+#paxdesign-booking-root .paxdesign-booking-chat-auth-inline .pdx-auth-link {
+  font-family: var(--pax-voga-body) !important;
+  --pdx-font: var(--pax-voga-body);
+}
