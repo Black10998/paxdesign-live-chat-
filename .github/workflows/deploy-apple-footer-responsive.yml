@@ -11,6 +11,7 @@ on:
       - 'navein/assets/css/apple-footer.css'
       - 'navein/assets/css/apple-homepage.css'
       - 'navein/assets/js/apple-footer.js'
+      - 'navein/style.css'
 
 permissions:
   contents: read
@@ -59,6 +60,10 @@ jobs:
             navein/assets/css/apple-footer.css \
             navein/assets/css/apple-homepage.css \
             "${REMOTE}:${THEME}/assets/css/"
+
+          rsync -az -e "ssh ${SSH_OPTS[*]}" \
+            navein/style.css \
+            "${REMOTE}:${THEME}/"
 
           rsync -az -e "ssh ${SSH_OPTS[*]}" \
             navein/assets/js/apple-footer.js \
