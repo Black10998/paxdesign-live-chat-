@@ -41,12 +41,12 @@ grep -Eq '\-\-pdx-font: "Voga Diamond"' /tmp/pdx-tokens.css
 grep -Eq '\-\-pax-font:\s+"Voga Diamond"' /tmp/booking-styles.css
 
 HP_CSS="$(curl -sS "${BASE}/wp-content/themes/navein/assets/css/apple-homepage.css?n=${STAMP}")"
-echo "$HP_CSS" | grep -Eq '\-\-ph-display: "Orbitron"'
-echo "$HP_CSS" | grep -Eq '\-\-ph-text: var\(--pax-voga-body'
+grep -Eq '\-\-ph-display: "Orbitron"' <<< "$HP_CSS"
+grep -Eq '\-\-ph-text: var\(--pax-voga-body' <<< "$HP_CSS"
 
 CCS_CSS="$(curl -sS "${BASE}/wp-content/themes/navein/assets/css/apple-cybercrime-support.css?n=${STAMP}")"
-echo "$CCS_CSS" | grep -Eq '\-\-ccs-font: "Voga Diamond"'
-echo "$CCS_CSS" | grep -Eq '\-\-ccs-display:'
+grep -Eq '\-\-ccs-font: "Voga Diamond"' <<< "$CCS_CSS"
+grep -Eq '\-\-ccs-display:' <<< "$CCS_CSS"
 
 # Homepage keeps Orbitron; cybercrime page should not load homepage-only Orbitron bundle as primary typography.
 grep -Eq 'homepage-fonts\.css' /tmp/voga-home.html
