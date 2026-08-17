@@ -242,6 +242,12 @@ function navein_custom_scripts_styles() {
 			array(),
 			$theme_version
 		);
+		wp_enqueue_style(
+			'navein-orbitron-display-fonts',
+			get_template_directory_uri() . '/assets/css/orbitron-display-fonts.css',
+			array(),
+			$theme_version
+		);
 	}
 
 	if ( 'header-v1' == navein_get_theme_option( 'navein_header_layout', 'header-v1' ) ) {
@@ -584,7 +590,7 @@ function navein_site_body_typography() {
 	}
 
 	$theme_version = wp_get_theme()->get( 'Version' );
-	$deps          = array( 'navein-style', 'navein-voga-diamond-fonts' );
+	$deps          = array( 'navein-style', 'navein-voga-diamond-fonts', 'navein-orbitron-display-fonts' );
 	if ( wp_style_is( 'paxdesign-booking-styles', 'registered' ) ) {
 		$deps[] = 'paxdesign-booking-styles';
 	}

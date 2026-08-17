@@ -92,14 +92,15 @@ if ( ! function_exists( 'navein_preload_critical_assets' ) ) {
 			esc_url( $fonts_base . 'voga-medium.woff2?ver=' . $fonts_ver )
 		);
 
+		printf(
+			'<link rel="preload" as="font" href="%s" type="font/woff2" crossorigin>' . "\n",
+			esc_url( $fonts_base . 'orbitron-v35-latin-regular.woff2?ver=' . $fonts_ver )
+		);
+
 		if ( is_front_page() ) {
 			printf(
 				'<link rel="preload" as="image" href="%s" type="image/avif" fetchpriority="high">' . "\n",
 				esc_url( navein_home_lcp_image_url() )
-			);
-			printf(
-				'<link rel="preload" as="font" href="%s" type="font/woff2" crossorigin>' . "\n",
-				esc_url( $fonts_base . 'orbitron-v35-latin-regular.woff2?ver=' . $fonts_ver )
 			);
 			printf(
 				'<link rel="preload" as="font" href="%s" type="font/woff2" crossorigin>' . "\n",

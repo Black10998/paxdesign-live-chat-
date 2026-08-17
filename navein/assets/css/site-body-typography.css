@@ -8,6 +8,7 @@
   --pax-voga-weight: 400;
   --pax-voga-tracking: 0.016em;
   --pax-voga-leading: 1.58;
+  --pax-orbitron-display: "Orbitron", sans-serif;
 }
 
 body {
@@ -171,4 +172,27 @@ samp,
     --pax-voga-tracking: 0.02em;
     --pax-voga-leading: 1.6;
   }
+}
+
+/* Orbitron — primary menu page names (desktop + mobile) */
+#dtr-main-navigation .sf-menu > li > a,
+.main-navigation .sf-menu > li > a,
+.dtr-apple-mnav__link {
+  font-family: var(--pax-orbitron-display) !important;
+  --dtr-mega-display: var(--pax-orbitron-display);
+  --dtr-amnav-display: var(--pax-orbitron-display);
+}
+
+/* Orbitron — auth action buttons/links only (Sign In, Forgot Password, Create Account) */
+#pdx-auth-bar .pdx-auth-signup-btn,
+#pdx-auth-overlay .pdx-auth-form--login .pdx-btn-pearl,
+#pdx-auth-overlay .pdx-auth-form--register .pdx-btn-pearl,
+#pdx-auth-overlay .pdx-auth-link[data-view="forgot"],
+#pdx-auth-overlay .pdx-auth-link[data-view="register"],
+.pdx-auth-page-segment-btn,
+.pdx-auth-page-form-wrap .pdx-auth-form--login .pdx-auth-submit,
+.pdx-auth-page-form-wrap .pdx-auth-form--register .pdx-auth-submit,
+.pdx-auth-page-form-wrap .pdx-auth-link[data-view="forgot"],
+.pdx-auth-page-form-wrap .pdx-auth-link[data-view="register"] {
+  font-family: var(--pax-orbitron-display) !important;
 }

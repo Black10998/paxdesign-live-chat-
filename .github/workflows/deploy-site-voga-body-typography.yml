@@ -9,6 +9,7 @@ on:
       - '.github/triggers/deploy-site-voga-body-typography'
       - '.github/workflows/deploy-site-voga-body-typography.yml'
       - 'navein/assets/css/voga-diamond-fonts.css'
+      - 'navein/assets/css/orbitron-display-fonts.css'
       - 'navein/assets/css/site-body-typography.css'
       - 'navein/assets/css/homepage-fonts.css'
       - 'navein/assets/css/apple-homepage.css'
@@ -103,11 +104,16 @@ jobs:
 
           rsync_with_retry \
             navein/assets/css/voga-diamond-fonts.css \
+            navein/assets/css/orbitron-display-fonts.css \
             navein/assets/css/site-body-typography.css \
             navein/assets/css/homepage-fonts.css \
             navein/assets/css/apple-homepage.css \
             navein/assets/css/apple-cybercrime-support.css \
             "${REMOTE}:${THEME}/assets/css/"
+
+          rsync_with_retry \
+            navein/style.css \
+            "${REMOTE}:${THEME}/"
 
           rsync_with_retry \
             navein/assets/fonts/homepage/voga-medium.woff2 \

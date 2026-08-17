@@ -36,7 +36,15 @@ grep -Eq 'site-body-typography\.css' /tmp/voga-ccs.html
 grep -Eq 'font-family: "Voga Diamond"' /tmp/voga-diamond-fonts.css
 grep -Eq '\-\-pax-voga-body:' /tmp/site-body-typography.css
 grep -Eq '\-\-pax-voga-tracking:' /tmp/site-body-typography.css
-grep -Eq 'Cybercrime headings keep --ccs-display' /tmp/site-body-typography.css
+grep -Eq '\-\-pax-orbitron-display:' /tmp/site-body-typography.css
+grep -Eq 'Orbitron — primary menu page names' /tmp/site-body-typography.css
+
+ORBITRON_CSS_CODE="$(curl -sS -o /tmp/orbitron-display-fonts.css -w '%{http_code}' "${BASE}/wp-content/themes/navein/assets/css/orbitron-display-fonts.css?n=${STAMP}")"
+test "$ORBITRON_CSS_CODE" = "200"
+grep -Eq 'font-family: "Orbitron"' /tmp/orbitron-display-fonts.css
+
+grep -Eq 'orbitron-display-fonts\.css' /tmp/voga-home.html
+grep -Eq 'orbitron-display-fonts\.css' /tmp/voga-ccs.html
 
 grep -Eq '\-\-pdx-font: "Voga Diamond"' /tmp/pdx-tokens.css
 grep -Eq '\-\-pax-font:\s+"Voga Diamond"' /tmp/booking-styles.css
