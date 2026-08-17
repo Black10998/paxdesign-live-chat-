@@ -27,8 +27,9 @@ test "$HP_CSS_CODE" = "200"
 grep -Eq 'never inherit global/page img sizing' /tmp/apple-footer.css
 grep -Eq 'height: 22px !important' /tmp/apple-footer.css
 grep -Eq 'max-width: 88px !important' /tmp/apple-footer.css
-grep -Eq 'Footer subscribe — compact Apple mobile form' /tmp/apple-homepage.css
+grep -Eq 'Footer newsletter — compact Apple inline pill' /tmp/apple-homepage.css
 grep -Eq 'body\.home \.paxmc-footer-subscribe \.input-wrapper' /tmp/apple-homepage.css
+grep -Eq 'flex-direction: row !important' /tmp/apple-homepage.css
 
 grep -Eq 'apple-footer\.css' /tmp/footer-home.html
 grep -Eq 'apple-footer\.css' /tmp/footer-inner.html
