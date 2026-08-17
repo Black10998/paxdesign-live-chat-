@@ -1,0 +1,73 @@
+name: Deploy Apple Footer Responsive
+
+on:
+  workflow_dispatch:
+  push:
+    branches:
+      - main
+    paths:
+      - '.github/triggers/deploy-apple-footer-responsive'
+      - '.github/workflows/deploy-apple-footer-responsive.yml'
+      - 'navein/assets/css/apple-footer.css'
+      - 'navein/assets/css/apple-homepage.css'
+      - 'navein/assets/js/apple-footer.js'
+
+permissions:
+  contents: read
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Validate secrets
+        run: |
+          set -euo pipefail
+          for key in WP_SSH_HOST WP_SSH_USER WP_SSH_PRIVATE_KEY WP_PATH; do
+            [ -n "${!key:-}" ] || { echo "Missing $key"; exit 1; }
+          done
+        env:
+          WP_SSH_HOST: ${{ secrets.WP_SSH_HOST }}
+          WP_SSH_USER: ${{ secrets.WP_SSH_USER }}
+          WP_SSH_PRIVATE_KEY: ${{ secrets.WP_SSH_PRIVATE_KEY }}
+          WP_PATH: ${{ secrets.WP_PATH }}
+
+      - name: Deploy footer responsive assets
+        env:
+          WP_SSH_HOST: ${{ secrets.WP_SSH_HOST }}
+          WP_SSH_PORT: ${{ secrets.WP_SSH_PORT }}
+          WP_SSH_USER: ${{ secrets.WP_SSH_USER }}
+          WP_SSH_PRIVATE_KEY: ${{ secrets.WP_SSH_PRIVATE_KEY }}
+          WP_PATH: ${{ secrets.WP_PATH }}
+        run: |
+          set -euo pipefail
+          PORT="${WP_SSH_PORT:-22}"
+          SSH_OPTS=(-i ~/.ssh/id_deploy -p "$PORT" -o StrictHostKeyChecking=yes -o BatchMode=yes)
+          install -m 600 -D /dev/null ~/.ssh/id_deploy
+          printf '%s\n' "$WP_SSH_PRIVATE_KEY" > ~/.ssh/id_deploy
+          ssh-keyscan -p "$PORT" -H "$WP_SSH_HOST" >> ~/.ssh/known_hosts 2>/dev/null || true
+
+          THEME="${WP_PATH%/}/wp-content/themes/navein"
+          REMOTE="${WP_SSH_USER}@${WP_SSH_HOST}"
+
+          ssh "${SSH_OPTS[@]}" "$REMOTE" \
+            "mkdir -p $(printf '%q' "$THEME/assets/css") $(printf '%q' "$THEME/assets/js")"
+
+          rsync -az -e "ssh ${SSH_OPTS[*]}" \
+            navein/assets/css/apple-footer.css \
+            navein/assets/css/apple-homepage.css \
+            "${REMOTE}:${THEME}/assets/css/"
+
+          rsync -az -e "ssh ${SSH_OPTS[*]}" \
+            navein/assets/js/apple-footer.js \
+            "${REMOTE}:${THEME}/assets/js/"
+
+          ssh "${SSH_OPTS[@]}" "$REMOTE" \
+            "cd '$(printf '%q' "$WP_PATH")' && (command -v wp >/dev/null && wp cache flush || true)"
+
+          echo "Deployed footer responsive CSS (trust badges + homepage mobile subscribe)"
+
+      - name: Verify live footer responsive rules
+        run: bash scripts/verify-apple-footer-responsive.sh
