@@ -1,7 +1,6 @@
 /**
- * Homepage typography — self-hosted Orbitron (OFL) + Voga Medium (Charles Daoud).
- * Loaded only on is_front_page(); @font-face registers globally within that page load.
- * Apply families via .pax-home in apple-homepage.css — not site-wide.
+ * Homepage display font — Orbitron only (front page).
+ * Voga Diamond body font loads site-wide via voga-diamond-fonts.css.
  */
 
 @font-face {
@@ -32,38 +31,6 @@
   font-family: "Orbitron";
   src: url("../fonts/homepage/orbitron-v35-latin-700.woff2") format("woff2");
   font-weight: 700;
-  font-style: normal;
-  font-display: swap;
-}
-
-@font-face {
-  font-family: "Voga";
-  src: url("../fonts/homepage/voga-medium.woff2") format("woff2");
-  font-weight: 400;
-  font-style: normal;
-  font-display: swap;
-}
-
-@font-face {
-  font-family: "Voga";
-  src: url("../fonts/homepage/voga-medium.woff2") format("woff2");
-  font-weight: 500;
-  font-style: normal;
-  font-display: swap;
-}
-
-@font-face {
-  font-family: "Voga Diamond";
-  src: url("../fonts/homepage/voga-medium.woff2") format("woff2");
-  font-weight: 400;
-  font-style: normal;
-  font-display: swap;
-}
-
-@font-face {
-  font-family: "Voga Diamond";
-  src: url("../fonts/homepage/voga-medium.woff2") format("woff2");
-  font-weight: 500;
   font-style: normal;
   font-display: swap;
 }

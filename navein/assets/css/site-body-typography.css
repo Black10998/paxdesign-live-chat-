@@ -1,0 +1,135 @@
+/**
+ * Site-wide body typography — clearer Voga Diamond for normal text.
+ * Headings keep existing font stacks (homepage Orbitron unchanged via apple-homepage.css).
+ */
+
+:root {
+  --pax-voga-body: "Voga Diamond", "Voga", Georgia, "Times New Roman", serif;
+  --pax-voga-weight: 400;
+  --pax-voga-tracking: 0.016em;
+  --pax-voga-leading: 1.58;
+}
+
+body {
+  font-family: var(--pax-voga-body);
+  font-weight: var(--pax-voga-weight);
+  letter-spacing: var(--pax-voga-tracking);
+  line-height: var(--pax-voga-leading);
+  text-rendering: optimizeLegibility;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+}
+
+/* Theme chrome: header, navigation, footer */
+#dtr-header-wrapper,
+#dtr-header-wrapper a,
+#dtr-header-wrapper button,
+#dtr-header-wrapper input,
+#dtr-header-wrapper label,
+#dtr-main-navigation,
+#dtr-main-navigation a,
+#dtr-main-navigation button,
+#dtr-footer-section,
+#dtr-footer-section a,
+#dtr-footer-section p,
+#dtr-footer-section li,
+#dtr-footer-section input,
+#dtr-footer-section button,
+#dtr-footer-section label,
+.paxmc-footer-subscribe,
+.paxmc-footer-subscribe .input {
+  font-family: var(--pax-voga-body);
+  letter-spacing: var(--pax-voga-tracking);
+}
+
+/* Auth / account */
+#pdx-auth-bar,
+#pdx-auth-bar button,
+#pdx-auth-bar a,
+#pdx-auth-overlay,
+#pdx-auth-overlay input,
+#pdx-auth-overlay label,
+#pdx-auth-overlay p,
+#pdx-auth-overlay button,
+#pdx-profile-overlay,
+#pdx-profile-overlay input,
+#pdx-profile-overlay label,
+#pdx-profile-overlay p,
+#pdx-profile-overlay button,
+#pdx-root,
+#pdx-panel,
+.pdx-cx-shell,
+.pdx-cx-shell input,
+.pdx-cx-shell label,
+.pdx-cx-shell p,
+.pdx-cx-shell button,
+.pdx-cx-shell a,
+.pdx-cx-shell td,
+.pdx-cx-shell li {
+  --pdx-font: var(--pax-voga-body);
+  font-family: var(--pax-voga-body);
+  letter-spacing: var(--pax-voga-tracking);
+  line-height: var(--pax-voga-leading);
+}
+
+/* Chat widget */
+#paxdesign-booking-root.paxdesign-booking,
+#paxdesign-booking-root.paxdesign-booking-wrapper,
+#paxdesign-booking-root .pax-chat-panel,
+#paxdesign-booking-root .pax-chat-messages,
+#paxdesign-booking-root .pax-chat-input,
+#paxdesign-booking-root .pax-chat-input textarea,
+#paxdesign-booking-root .pax-chat-bubble,
+#paxdesign-booking-root .pax-chat-meta,
+#paxdesign-booking-root button,
+#paxdesign-booking-root input,
+#paxdesign-booking-root label,
+#paxdesign-booking-root p {
+  --pax-font: var(--pax-voga-body);
+  font-family: var(--pax-voga-body);
+  letter-spacing: var(--pax-voga-tracking);
+  line-height: var(--pax-voga-leading);
+}
+
+/* Cybercrime portal body copy */
+body.page-template-template-apple-cybercrime-support,
+body.page-template-template-apple-cybercrime-support-php,
+body.page-cybercrime-support {
+  --ccs-font: var(--pax-voga-body);
+}
+
+.pax-ccs-portal,
+.pax-ccs-portal p,
+.pax-ccs-portal label,
+.pax-ccs-portal input,
+.pax-ccs-portal textarea,
+.pax-ccs-portal select,
+.pax-ccs-portal button,
+.pax-ccs-portal li,
+.pax-ccs-portal td,
+.pax-ccs-portal span,
+.pax-ccs-portal a {
+  font-family: var(--pax-voga-body);
+  letter-spacing: var(--pax-voga-tracking);
+  line-height: var(--pax-voga-leading);
+}
+
+/* Preserve monospace / code */
+code,
+pre,
+kbd,
+samp,
+.pax-ccs-portal__mono,
+.pax-cc-code,
+.pdx-mono,
+[class*="monospace"] {
+  font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", monospace !important;
+  letter-spacing: normal;
+}
+
+@media (max-width: 734px) {
+  :root {
+    --pax-voga-tracking: 0.02em;
+    --pax-voga-leading: 1.6;
+  }
+}

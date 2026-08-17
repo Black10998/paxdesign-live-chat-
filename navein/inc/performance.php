@@ -83,14 +83,20 @@ if ( ! function_exists( 'navein_preload_critical_assets' ) ) {
 			return;
 		}
 
+		$theme_version = wp_get_theme()->get( 'Version' );
+		$fonts_base    = get_template_directory_uri() . '/assets/fonts/homepage/';
+		$fonts_ver     = rawurlencode( (string) $theme_version );
+
+		printf(
+			'<link rel="preload" as="font" href="%s" type="font/woff2" crossorigin>' . "\n",
+			esc_url( $fonts_base . 'voga-medium.woff2?ver=' . $fonts_ver )
+		);
+
 		if ( is_front_page() ) {
 			printf(
 				'<link rel="preload" as="image" href="%s" type="image/avif" fetchpriority="high">' . "\n",
 				esc_url( navein_home_lcp_image_url() )
 			);
-
-			$fonts_base = get_template_directory_uri() . '/assets/fonts/homepage/';
-			$fonts_ver  = rawurlencode( (string) $theme_version );
 			printf(
 				'<link rel="preload" as="font" href="%s" type="font/woff2" crossorigin>' . "\n",
 				esc_url( $fonts_base . 'orbitron-v35-latin-regular.woff2?ver=' . $fonts_ver )
@@ -99,13 +105,7 @@ if ( ! function_exists( 'navein_preload_critical_assets' ) ) {
 				'<link rel="preload" as="font" href="%s" type="font/woff2" crossorigin>' . "\n",
 				esc_url( $fonts_base . 'orbitron-v35-latin-600.woff2?ver=' . $fonts_ver )
 			);
-			printf(
-				'<link rel="preload" as="font" href="%s" type="font/woff2" crossorigin>' . "\n",
-				esc_url( $fonts_base . 'voga-medium.woff2?ver=' . $fonts_ver )
-			);
 		}
-
-		$theme_version = wp_get_theme()->get( 'Version' );
 		$icon_font     = get_template_directory_uri() . '/fonts/icomoon.woff?ver=' . rawurlencode( (string) $theme_version );
 		printf(
 			'<link rel="preload" as="font" href="%s" type="font/woff" crossorigin>' . "\n",

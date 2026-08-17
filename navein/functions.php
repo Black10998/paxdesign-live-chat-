@@ -234,6 +234,16 @@ function navein_custom_scripts_styles() {
 	// enqueue main stylesheet and colors
 	wp_enqueue_style( 'navein-style', get_stylesheet_uri(), array(), $theme_version );
 
+	// Site-wide Voga Diamond @font-face (loads early on all front-end pages).
+	if ( ! is_admin() ) {
+		wp_enqueue_style(
+			'navein-voga-diamond-fonts',
+			get_template_directory_uri() . '/assets/css/voga-diamond-fonts.css',
+			array(),
+			$theme_version
+		);
+	}
+
 	if ( 'header-v1' == navein_get_theme_option( 'navein_header_layout', 'header-v1' ) ) {
 		wp_register_style( 'navein-header-v1', get_template_directory_uri() . '/assets/css/header-v1.css', array(), $theme_version );
 		wp_enqueue_style( 'navein-header-v1' );
@@ -563,6 +573,26 @@ function navein_cybercrime_mobile_layout_fix() {
 }
 endif;
 add_action( 'wp_enqueue_scripts', 'navein_cybercrime_mobile_layout_fix', 999 );
+
+/**
+ * Site-wide Voga Diamond body typography — loads after plugin CSS for consistent overrides.
+ */
+if ( ! function_exists( 'navein_site_body_typography' ) ) :
+function navein_site_body_typography() {
+	if ( is_admin() ) {
+		return;
+	}
+
+	$theme_version = wp_get_theme()->get( 'Version' );
+	wp_enqueue_style(
+		'navein-site-body-typography',
+		get_template_directory_uri() . '/assets/css/site-body-typography.css',
+		array( 'navein-style', 'navein-voga-diamond-fonts' ),
+		$theme_version
+	);
+}
+endif;
+add_action( 'wp_enqueue_scripts', 'navein_site_body_typography', 999 );
 
 if ( ! function_exists( 'navein_cybercrime_mobile_layout_footer_fix' ) ) :
 function navein_cybercrime_mobile_layout_footer_fix() {

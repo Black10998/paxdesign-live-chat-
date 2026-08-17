@@ -34,8 +34,11 @@ body.home.page-template-template-apple-homepage-php .dtr-page-title--section {
 /* Orbitron + Voga Diamond: scoped to homepage article content only (not header/footer/chat/auth). */
 .pax-home {
   --ph-display: "Orbitron", sans-serif;
-  --ph-text: "Voga Diamond", "Voga", serif;
+  --ph-text: var(--pax-voga-body, "Voga Diamond", "Voga", serif);
   font-family: var(--ph-text);
+  font-weight: var(--pax-voga-weight, 400);
+  letter-spacing: var(--pax-voga-tracking, 0.016em);
+  line-height: var(--pax-voga-leading, 1.58);
   -webkit-font-smoothing: antialiased;
   text-rendering: optimizeLegibility;
 }
