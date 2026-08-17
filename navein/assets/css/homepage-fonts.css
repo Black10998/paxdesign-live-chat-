@@ -1,0 +1,52 @@
+/**
+ * Homepage typography — self-hosted Orbitron (OFL) + Voga Medium (Charles Daoud).
+ * Scoped to apple-homepage.css via enqueue on front page only.
+ */
+
+@font-face {
+  font-family: "Orbitron";
+  src: url("../fonts/homepage/orbitron-v35-latin-regular.woff2") format("woff2");
+  font-weight: 400;
+  font-style: normal;
+  font-display: swap;
+}
+
+@font-face {
+  font-family: "Orbitron";
+  src: url("../fonts/homepage/orbitron-v35-latin-500.woff2") format("woff2");
+  font-weight: 500;
+  font-style: normal;
+  font-display: swap;
+}
+
+@font-face {
+  font-family: "Orbitron";
+  src: url("../fonts/homepage/orbitron-v35-latin-600.woff2") format("woff2");
+  font-weight: 600;
+  font-style: normal;
+  font-display: swap;
+}
+
+@font-face {
+  font-family: "Orbitron";
+  src: url("../fonts/homepage/orbitron-v35-latin-700.woff2") format("woff2");
+  font-weight: 700;
+  font-style: normal;
+  font-display: swap;
+}
+
+@font-face {
+  font-family: "Voga";
+  src: url("../fonts/homepage/voga-medium.woff2") format("woff2");
+  font-weight: 500;
+  font-style: normal;
+  font-display: swap;
+}
+
+@font-face {
+  font-family: "Voga Diamond";
+  src: url("../fonts/homepage/voga-medium.woff2") format("woff2");
+  font-weight: 500;
+  font-style: normal;
+  font-display: swap;
+}

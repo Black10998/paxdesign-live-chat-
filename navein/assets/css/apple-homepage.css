@@ -15,8 +15,8 @@ body.page-template-template-apple-homepage-php {
   --ph-blue: #0071e3;
   --ph-blue-soft: #2997ff;
   --ph-ease: cubic-bezier(0.25, 0.1, 0.25, 1);
-  --ph-display: "SF Pro Display", "SF Pro Text", -apple-system, BlinkMacSystemFont, "Helvetica Neue", Helvetica, sans-serif;
-  --ph-text: "SF Pro Text", -apple-system, BlinkMacSystemFont, "Helvetica Neue", Helvetica, sans-serif;
+  --ph-display: "Orbitron", sans-serif;
+  --ph-text: "Voga Diamond", "Voga", serif;
   background: var(--ph-white);
   color: var(--ph-ink);
 }
@@ -73,6 +73,7 @@ body.page-template-template-apple-homepage-php .dtr-page-title--section {
 
 .pax-home-eyebrow {
   margin: 0 0 16px;
+  font-family: var(--ph-display);
   font-size: 12px;
   font-weight: 600;
   letter-spacing: 0.08em;
@@ -122,7 +123,7 @@ body.page-template-template-apple-homepage-php .dtr-page-title--section {
   padding: 0 20px;
   border: 0;
   border-radius: 980px;
-  font: inherit;
+  font-family: var(--ph-display);
   font-size: 15px;
   font-weight: 500;
   letter-spacing: -0.01em;
@@ -354,6 +355,7 @@ body.page-template-template-apple-homepage-php .dtr-page-title--section {
 .pax-home-pillar span {
   display: block;
   margin-bottom: 14px;
+  font-family: var(--ph-display);
   font-size: 12px;
   font-weight: 600;
   letter-spacing: 0.08em;
@@ -481,6 +483,7 @@ body.page-template-template-apple-homepage-php .dtr-page-title--section {
 .pax-home-steps span {
   display: block;
   margin-bottom: 14px;
+  font-family: var(--ph-display);
   font-size: 12px;
   font-weight: 600;
   letter-spacing: 0.08em;
@@ -595,7 +598,7 @@ body.page-template-template-apple-homepage-php .dtr-page-title--section {
   border-radius: 980px;
   background: #000;
   color: #fff;
-  font: inherit;
+  font-family: var(--ph-display);
   font-size: 15px;
   font-weight: 500;
   letter-spacing: -0.01em;
@@ -666,6 +669,7 @@ html body.page-template-template-apple-homepage #pdx-auth-bar .pdx-auth-signup-b
   min-height: 36px !important;
   padding: 0 16px !important;
   border-radius: 980px !important;
+  font-family: var(--ph-display) !important;
   font-weight: 500 !important;
   letter-spacing: -0.01em !important;
 }
@@ -707,6 +711,7 @@ body.page-template-template-apple-homepage .paxmc-footer-subscribe .input {
   border: 0 !important;
   background: transparent !important;
   box-shadow: none !important;
+  font-family: var(--ph-text) !important;
   font-size: 15px !important;
   color: #1d1d1f !important;
 }
@@ -719,6 +724,7 @@ body.page-template-template-apple-homepage .paxmc-footer-subscribe .Subscribe-bt
   border: 0 !important;
   background: #000 !important;
   color: #fff !important;
+  font-family: var(--ph-display) !important;
 }
 
 @media (max-width: 960px) {

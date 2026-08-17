@@ -490,9 +490,15 @@ function navein_custom_scripts_styles() {
 		|| is_page_template( 'template-apple-homepage.php' );
 	if ( $is_apple_homepage ) {
 		wp_enqueue_style(
+			'navein-homepage-fonts',
+			get_template_directory_uri() . '/assets/css/homepage-fonts.css',
+			array(),
+			$theme_version
+		);
+		wp_enqueue_style(
 			'navein-apple-homepage',
 			get_template_directory_uri() . '/assets/css/apple-homepage.css',
-			array( 'navein-style' ),
+			array( 'navein-style', 'navein-homepage-fonts' ),
 			$theme_version
 		);
 		wp_add_inline_style(
