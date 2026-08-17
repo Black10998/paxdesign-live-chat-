@@ -752,40 +752,42 @@ html body.home #pdx-auth-bar .pdx-auth-signup-btn:focus {
   outline: none !important;
 }
 
-/* Footer subscribe — Apple clean form on homepage (layout only; keep footer typography) */
-body.home .paxmc-footer-subscribe {
-  max-width: 520px !important;
-  margin: 0 auto !important;
-}
+/* Footer subscribe — Apple clean form on homepage desktop (layout only) */
+@media (min-width: 735px) {
+  body.home .paxmc-footer-subscribe {
+    max-width: 520px !important;
+    margin: 0 auto !important;
+  }
 
-body.home .paxmc-footer-subscribe .input-wrapper {
-  display: flex !important;
-  align-items: center !important;
-  gap: 10px !important;
-  min-height: 52px !important;
-  padding: 6px 6px 6px 16px !important;
-  border-radius: 980px !important;
-  border: 1px solid rgba(0, 0, 0, 0.12) !important;
-  background: #fff !important;
-  box-shadow: none !important;
-}
+  body.home .paxmc-footer-subscribe .input-wrapper {
+    display: flex !important;
+    align-items: center !important;
+    gap: 10px !important;
+    min-height: 52px !important;
+    padding: 6px 6px 6px 16px !important;
+    border-radius: 980px !important;
+    border: 1px solid rgba(0, 0, 0, 0.12) !important;
+    background: #fff !important;
+    box-shadow: none !important;
+  }
 
-body.home .paxmc-footer-subscribe .input {
-  flex: 1 !important;
-  border: 0 !important;
-  background: transparent !important;
-  box-shadow: none !important;
-  font-size: 15px !important;
-  color: #1d1d1f !important;
-}
+  body.home .paxmc-footer-subscribe .input {
+    flex: 1 !important;
+    border: 0 !important;
+    background: transparent !important;
+    box-shadow: none !important;
+    font-size: 15px !important;
+    color: #1d1d1f !important;
+  }
 
-body.home .paxmc-footer-subscribe .Subscribe-btn {
-  min-width: 48px !important;
-  min-height: 40px !important;
-  border-radius: 980px !important;
-  border: 0 !important;
-  background: #000 !important;
-  color: #fff !important;
+  body.home .paxmc-footer-subscribe .Subscribe-btn {
+    min-width: 48px !important;
+    min-height: 40px !important;
+    border-radius: 980px !important;
+    border: 0 !important;
+    background: #000 !important;
+    color: #fff !important;
+  }
 }
 
 @media (max-width: 960px) {
@@ -878,12 +880,16 @@ body.home .paxmc-footer-subscribe .Subscribe-btn {
   }
 
   /* Footer newsletter — compact Apple inline pill (homepage mobile only) */
+  body.home.dtr-apple-footer #dtr-footer-section .pax-af__newsletter,
   body.home .pax-af__newsletter {
     gap: 14px !important;
     align-items: stretch !important;
   }
 
+  body.home.dtr-apple-footer #dtr-footer-section .pax-af__newsletter-form,
   body.home .pax-af__newsletter-form,
+  body.home.dtr-apple-footer #dtr-footer-section .pax-af__newsletter-form .paxmc-footer-subscribe,
+  body.home.dtr-apple-footer #dtr-footer-section .paxmc-footer-subscribe,
   body.home .pax-af__newsletter-form .paxmc-footer-subscribe,
   body.home .paxmc-footer-subscribe {
     width: 100% !important;
@@ -891,23 +897,30 @@ body.home .paxmc-footer-subscribe .Subscribe-btn {
     margin: 0 !important;
   }
 
+  body.home.dtr-apple-footer #dtr-footer-section .paxmc-footer-subscribe .input-wrapper,
   body.home .paxmc-footer-subscribe .input-wrapper {
+    display: flex !important;
     flex-direction: row !important;
     flex-wrap: nowrap !important;
     align-items: center !important;
     gap: 6px !important;
     min-height: 40px !important;
+    height: auto !important;
     padding: 4px 4px 4px 12px !important;
     border-radius: 980px !important;
+    border: 1px solid rgba(0, 0, 0, 0.12) !important;
+    background: #fff !important;
     box-shadow: none !important;
   }
 
+  body.home.dtr-apple-footer #dtr-footer-section .paxmc-footer-subscribe .icon,
   body.home .paxmc-footer-subscribe .icon {
     width: 16px !important;
     height: 16px !important;
     flex: 0 0 16px !important;
   }
 
+  body.home.dtr-apple-footer #dtr-footer-section .paxmc-footer-subscribe .input,
   body.home .paxmc-footer-subscribe .input {
     flex: 1 1 auto !important;
     min-width: 0 !important;
@@ -916,8 +929,12 @@ body.home .paxmc-footer-subscribe .Subscribe-btn {
     padding: 0 4px !important;
     font-size: 15px !important;
     line-height: 1.2 !important;
+    border: 0 !important;
+    background: transparent !important;
+    box-shadow: none !important;
   }
 
+  body.home.dtr-apple-footer #dtr-footer-section .paxmc-footer-subscribe .Subscribe-btn,
   body.home .paxmc-footer-subscribe .Subscribe-btn {
     width: auto !important;
     flex: 0 0 auto !important;
@@ -928,6 +945,10 @@ body.home .paxmc-footer-subscribe .Subscribe-btn {
     font-size: 13px !important;
     line-height: 1 !important;
     white-space: nowrap !important;
+    border-radius: 980px !important;
+    border: 0 !important;
+    background: #000 !important;
+    color: #fff !important;
   }
 }
 
