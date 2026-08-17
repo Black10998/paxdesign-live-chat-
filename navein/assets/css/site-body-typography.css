@@ -113,11 +113,19 @@ body.page-cybercrime-support {
 .pax-ccs-portal button,
 .pax-ccs-portal li,
 .pax-ccs-portal td,
-.pax-ccs-portal span,
-.pax-ccs-portal a {
+.pax-ccs-portal a,
+.pax-ccs-portal .pax-ccs-t {
   font-family: var(--pax-voga-body);
   letter-spacing: var(--pax-voga-tracking);
   line-height: var(--pax-voga-leading);
+}
+
+/* Bilingual spans inside headings inherit display stack, not Voga body. */
+.pax-ccs-portal :is(h1, h2, h3, .pax-ccs-portal__title, .pax-ccs-portal__section-title, .pax-ccs-portal__info-title, .pax-ccs-portal__trust-title) .pax-ccs-t,
+.pax-ccs-portal :is(h1, h2, h3, .pax-ccs-portal__title, .pax-ccs-portal__section-title, .pax-ccs-portal__info-title, .pax-ccs-portal__trust-title) span {
+  font-family: inherit;
+  letter-spacing: inherit;
+  line-height: inherit;
 }
 
 /* Cybercrime headings keep --ccs-display (not Voga body). */
@@ -142,8 +150,14 @@ html body.page-cybercrime-support .pax-ccs-portal__info-title,
 html body.page-template-template-apple-cybercrime-support .pax-ccs-portal__trust-title,
 html body.page-template-template-apple-cybercrime-support-php .pax-ccs-portal__trust-title,
 html body.page-cybercrime-support .pax-ccs-portal__trust-title {
-  font-family: var(--ccs-display) !important;
+  font-family: -apple-system, BlinkMacSystemFont, "SF Pro Display", "Helvetica Neue", Helvetica, Arial, sans-serif !important;
   letter-spacing: -0.02em;
+}
+
+html body.page-template-template-apple-cybercrime-support .pax-ccs-portal__title .pax-ccs-t,
+html body.page-template-template-apple-cybercrime-support-php .pax-ccs-portal__title .pax-ccs-t,
+html body.page-cybercrime-support .pax-ccs-portal__title .pax-ccs-t {
+  font-family: inherit !important;
 }
 
 /* Preserve monospace / code */
