@@ -669,6 +669,64 @@ body.home.page-template-template-apple-homepage-php .pax-home :is(h1, h2, h3, h4
   font-family: var(--ph-display);
 }
 
+/* Laptop/desktop: force real Voga Diamond on all normal text in .pax-home (mobile unchanged) */
+@media (min-width: 735px) {
+  body.home.page-template-template-apple-homepage .pax-home,
+  body.home.page-template-template-apple-homepage-php .pax-home {
+    --ph-text: "Voga Diamond", "Voga", Georgia, "Times New Roman", serif;
+  }
+
+  body.home.page-template-template-apple-homepage .pax-home :where(
+    p, em, i, span, footer, label, input, textarea, li, blockquote, cite, a, button
+  ),
+  body.home.page-template-template-apple-homepage-php .pax-home :where(
+    p, em, i, span, footer, label, input, textarea, li, blockquote, cite, a, button
+  ) {
+    font-family: var(--ph-text);
+    letter-spacing: var(--pax-voga-tracking, 0.016em);
+    line-height: var(--pax-voga-leading, 1.58);
+  }
+
+  body.home.page-template-template-apple-homepage .pax-home :is(
+    h1, h2, h3, h4, h5, h6,
+    .pax-home-brand,
+    .pax-home-eyebrow,
+    .pax-home-display,
+    .pax-home-hero__title,
+    .pax-home-statement__text,
+    .pax-home-service__num,
+    .pax-home-service__copy strong,
+    .pax-home-pillar > span,
+    .pax-home-pillar h3,
+    .pax-home-stats strong,
+    .pax-home-steps > li > span,
+    .pax-home-steps strong,
+    .pax-home-btn,
+    .pax-home-signup-form__submit,
+    .pax-sw-ribbon:not(.pax-sw-ribbon--partners) .pax-sw-ribbon__group span
+  ),
+  body.home.page-template-template-apple-homepage-php .pax-home :is(
+    h1, h2, h3, h4, h5, h6,
+    .pax-home-brand,
+    .pax-home-eyebrow,
+    .pax-home-display,
+    .pax-home-hero__title,
+    .pax-home-statement__text,
+    .pax-home-service__num,
+    .pax-home-service__copy strong,
+    .pax-home-pillar > span,
+    .pax-home-pillar h3,
+    .pax-home-stats strong,
+    .pax-home-steps > li > span,
+    .pax-home-steps strong,
+    .pax-home-btn,
+    .pax-home-signup-form__submit,
+    .pax-sw-ribbon:not(.pax-sw-ribbon--partners) .pax-sw-ribbon__group span
+  ) {
+    font-family: var(--ph-display);
+  }
+}
+
 /* Header Sign Up — beat Customizer transparent override (layout/colors only; keep auth typography) */
 html body.home #pdx-auth-bar.pdx-auth-bar--header .pdx-auth-signup-btn.pdx-auth-header-btn,
 html body.home #pdx-auth-bar.pdx-auth-bar--header .pdx-auth-signup-btn {

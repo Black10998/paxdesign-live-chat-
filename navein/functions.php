@@ -507,7 +507,7 @@ function navein_custom_scripts_styles() {
 		wp_enqueue_style(
 			'navein-apple-homepage',
 			get_template_directory_uri() . '/assets/css/apple-homepage.css',
-			array( 'navein-style', 'navein-homepage-fonts' ),
+			array( 'navein-style', 'navein-homepage-fonts', 'navein-voga-diamond-fonts', 'navein-site-body-typography' ),
 			$theme_version
 		);
 		wp_add_inline_style(
