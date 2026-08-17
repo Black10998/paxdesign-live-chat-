@@ -1,0 +1,116 @@
+name: Deploy Public Identity Hardening
+
+on:
+  workflow_dispatch:
+  push:
+    branches:
+      - main
+    paths:
+      - '.github/triggers/deploy-public-identity-hardening'
+      - '.github/workflows/deploy-public-identity-hardening.yml'
+      - 'navein/functions.php'
+      - 'navein/style.css'
+      - 'navein/inc/public-identity-hardening.php'
+      - 'scripts/verify-public-identity-hardening.sh'
+
+permissions:
+  contents: read
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    timeout-minutes: 12
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Validate secrets
+        run: |
+          set -euo pipefail
+          for key in WP_SSH_HOST WP_SSH_USER WP_SSH_PRIVATE_KEY WP_PATH; do
+            [ -n "${!key:-}" ] || { echo "Missing $key"; exit 1; }
+          done
+        env:
+          WP_SSH_HOST: ${{ secrets.WP_SSH_HOST }}
+          WP_SSH_USER: ${{ secrets.WP_SSH_USER }}
+          WP_SSH_PRIVATE_KEY: ${{ secrets.WP_SSH_PRIVATE_KEY }}
+          WP_PATH: ${{ secrets.WP_PATH }}
+
+      - name: Deploy theme identity hardening
+        env:
+          WP_SSH_HOST: ${{ secrets.WP_SSH_HOST }}
+          WP_SSH_PORT: ${{ secrets.WP_SSH_PORT }}
+          WP_SSH_USER: ${{ secrets.WP_SSH_USER }}
+          WP_SSH_PRIVATE_KEY: ${{ secrets.WP_SSH_PRIVATE_KEY }}
+          WP_PATH: ${{ secrets.WP_PATH }}
+        run: |
+          set -euo pipefail
+          PORT="${WP_SSH_PORT:-22}"
+          SSH_OPTS=(-i ~/.ssh/id_deploy -p "$PORT" -o StrictHostKeyChecking=yes -o BatchMode=yes)
+          install -m 600 -D /dev/null ~/.ssh/id_deploy
+          printf '%s\n' "$WP_SSH_PRIVATE_KEY" > ~/.ssh/id_deploy
+          ssh-keyscan -p "$PORT" -H "$WP_SSH_HOST" >> ~/.ssh/known_hosts 2>/dev/null || true
+
+          THEME="${WP_PATH%/}/wp-content/themes/navein"
+          REMOTE="${WP_SSH_USER}@${WP_SSH_HOST}"
+
+          rsync_with_retry() {
+            local attempt=1
+            local max_attempts=4
+            local delay=4
+            while [ "$attempt" -le "$max_attempts" ]; do
+              if rsync -az -e "ssh ${SSH_OPTS[*]}" "$@"; then
+                return 0
+              fi
+              if [ "$attempt" -eq "$max_attempts" ]; then
+                return 1
+              fi
+              echo "rsync failed (attempt ${attempt}/${max_attempts}); retrying in ${delay}s..."
+              sleep "$delay"
+              attempt=$((attempt + 1))
+              delay=$((delay * 2))
+            done
+          }
+
+          ssh_with_retry() {
+            local attempt=1
+            local max_attempts=4
+            local delay=4
+            while [ "$attempt" -le "$max_attempts" ]; do
+              if ssh "${SSH_OPTS[@]}" "$@"; then
+                return 0
+              fi
+              if [ "$attempt" -eq "$max_attempts" ]; then
+                return 1
+              fi
+              echo "ssh failed (attempt ${attempt}/${max_attempts}); retrying in ${delay}s..."
+              sleep "$delay"
+              attempt=$((attempt + 1))
+              delay=$((delay * 2))
+            done
+          }
+
+          ssh_with_retry "$REMOTE" \
+            "mkdir -p $(printf '%q' "$THEME/inc")"
+
+          rsync_with_retry \
+            navein/inc/public-identity-hardening.php \
+            "${REMOTE}:${THEME}/inc/"
+
+          rsync_with_retry \
+            navein/functions.php \
+            "${REMOTE}:${THEME}/"
+
+          rsync_with_retry \
+            navein/style.css \
+            "${REMOTE}:${THEME}/"
+
+          ssh_with_retry "$REMOTE" \
+            "cd '$(printf '%q' "$WP_PATH")' && (command -v wp >/dev/null && wp cache flush || true)"
+
+          echo "Deployed public identity hardening (theme only)"
+
+      - name: Verify live identity hardening
+        run: |
+          set -euo pipefail
+          chmod +x scripts/verify-public-identity-hardening.sh
+          ./scripts/verify-public-identity-hardening.sh

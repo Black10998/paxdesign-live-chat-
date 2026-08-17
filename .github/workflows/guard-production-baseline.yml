@@ -23,3 +23,5 @@ jobs:
         run: php tests/ccs-ai/run.php
       - name: Merge-integration guards
         run: php tests/merge-integration/run.php
+      - name: Public identity hardening guards
+        run: php tests/public-identity-hardening/run.php
