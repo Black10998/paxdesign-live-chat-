@@ -102,6 +102,9 @@ jobs:
           grep -Eq '\-\-ph-text: "Voga Diamond"' /tmp/apple-homepage.css
           grep -Eq 'homepage-fonts\.css' /tmp/home-page.html
           grep -Eq 'font-weight: 400' /tmp/homepage-fonts.css
-          grep -Eq 'font-family: var\(--ph-text\)' /tmp/apple-homepage.css
-          grep -Eq 'preload" as="font".*orbitron-v35-latin-regular' /tmp/home-page.html
+          grep -Eq '\-\-ph-display: "Orbitron"' /tmp/apple-homepage.css
+          grep -Eq 'scoped to homepage article content only' /tmp/apple-homepage.css
+          CCS=$(curl -sS -o /tmp/ccs-page.html -w '%{http_code}' "https://paxdesign.at/cybercrime-support/?n=${stamp}")
+          test "$CCS" = "200"
+          ! grep -Eq 'homepage-fonts\.css|apple-homepage\.css' /tmp/ccs-page.html
           echo "Homepage typography production verification passed."
