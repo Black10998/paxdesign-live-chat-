@@ -584,15 +584,19 @@ function navein_site_body_typography() {
 	}
 
 	$theme_version = wp_get_theme()->get( 'Version' );
+	$deps          = array( 'navein-style', 'navein-voga-diamond-fonts' );
+	if ( wp_style_is( 'paxdesign-booking-styles', 'registered' ) ) {
+		$deps[] = 'paxdesign-booking-styles';
+	}
 	wp_enqueue_style(
 		'navein-site-body-typography',
 		get_template_directory_uri() . '/assets/css/site-body-typography.css',
-		array( 'navein-style', 'navein-voga-diamond-fonts' ),
+		$deps,
 		$theme_version
 	);
 }
 endif;
-add_action( 'wp_enqueue_scripts', 'navein_site_body_typography', 999 );
+add_action( 'wp_enqueue_scripts', 'navein_site_body_typography', 1001 );
 
 if ( ! function_exists( 'navein_cybercrime_mobile_layout_footer_fix' ) ) :
 function navein_cybercrime_mobile_layout_footer_fix() {
