@@ -1,0 +1,151 @@
+name: Deploy Security Hardening Fixes
+
+# Surgical production patch: theme hardening + two plugin files only.
+# Does not rsync-delete the plugin tree.
+on:
+  workflow_dispatch:
+  push:
+    branches:
+      - main
+    paths:
+      - '.github/triggers/deploy-security-hardening-fixes'
+      - '.github/workflows/deploy-security-hardening-fixes.yml'
+      - 'navein/functions.php'
+      - 'navein/style.css'
+      - 'navein/inc/public-identity-hardening.php'
+      - 'paxdesign-booking/includes/customer/class-paxdesign-customer-platform.php'
+      - 'deploy-patches/restored-chat-human-ui/includes/class-paxdesign-chat-live.php'
+      - 'scripts/verify-security-hardening.sh'
+      - 'scripts/verify-public-identity-hardening.sh'
+      - 'scripts/patch-wp-htaccess-security.sh'
+
+permissions:
+  contents: read
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    timeout-minutes: 12
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Validate secrets
+        run: |
+          set -euo pipefail
+          for key in WP_SSH_HOST WP_SSH_USER WP_SSH_PRIVATE_KEY WP_PATH; do
+            [ -n "${!key:-}" ] || { echo "Missing $key"; exit 1; }
+          done
+        env:
+          WP_SSH_HOST: ${{ secrets.WP_SSH_HOST }}
+          WP_SSH_USER: ${{ secrets.WP_SSH_USER }}
+          WP_SSH_PRIVATE_KEY: ${{ secrets.WP_SSH_PRIVATE_KEY }}
+          WP_PATH: ${{ secrets.WP_PATH }}
+
+      - name: Deploy security hardening files
+        env:
+          WP_SSH_HOST: ${{ secrets.WP_SSH_HOST }}
+          WP_SSH_PORT: ${{ secrets.WP_SSH_PORT }}
+          WP_SSH_USER: ${{ secrets.WP_SSH_USER }}
+          WP_SSH_PRIVATE_KEY: ${{ secrets.WP_SSH_PRIVATE_KEY }}
+          WP_PATH: ${{ secrets.WP_PATH }}
+        run: |
+          set -euo pipefail
+          PORT="${WP_SSH_PORT:-22}"
+          SSH_OPTS=(-i ~/.ssh/id_deploy -p "$PORT" -o StrictHostKeyChecking=yes -o BatchMode=yes)
+          install -m 600 -D /dev/null ~/.ssh/id_deploy
+          printf '%s\n' "$WP_SSH_PRIVATE_KEY" > ~/.ssh/id_deploy
+          ssh-keyscan -p "$PORT" -H "$WP_SSH_HOST" >> ~/.ssh/known_hosts 2>/dev/null || true
+
+          THEME="${WP_PATH%/}/wp-content/themes/navein"
+          PLUGIN="${WP_PATH%/}/wp-content/plugins/paxdesign-booking"
+          REMOTE="${WP_SSH_USER}@${WP_SSH_HOST}"
+
+          rsync_with_retry() {
+            local attempt=1
+            local max_attempts=4
+            local delay=4
+            while [ "$attempt" -le "$max_attempts" ]; do
+              if rsync -az -e "ssh ${SSH_OPTS[*]}" "$@"; then
+                return 0
+              fi
+              if [ "$attempt" -eq "$max_attempts" ]; then
+                return 1
+              fi
+              echo "rsync failed (attempt ${attempt}/${max_attempts}); retrying in ${delay}s..."
+              sleep "$delay"
+              attempt=$((attempt + 1))
+              delay=$((delay * 2))
+            done
+          }
+
+          ssh_with_retry() {
+            local attempt=1
+            local max_attempts=4
+            local delay=4
+            while [ "$attempt" -le "$max_attempts" ]; do
+              if ssh "${SSH_OPTS[@]}" "$@"; then
+                return 0
+              fi
+              if [ "$attempt" -eq "$max_attempts" ]; then
+                return 1
+              fi
+              echo "ssh failed (attempt ${attempt}/${max_attempts}); retrying in ${delay}s..."
+              sleep "$delay"
+              attempt=$((attempt + 1))
+              delay=$((delay * 2))
+            done
+          }
+
+          ssh_with_retry "$REMOTE" \
+            "mkdir -p $(printf '%q' "$THEME/inc") $(printf '%q' "$PLUGIN/includes/customer")"
+
+          rsync_with_retry \
+            navein/inc/public-identity-hardening.php \
+            "${REMOTE}:${THEME}/inc/"
+
+          rsync_with_retry \
+            navein/functions.php \
+            "${REMOTE}:${THEME}/"
+
+          rsync_with_retry \
+            navein/style.css \
+            "${REMOTE}:${THEME}/"
+
+          rsync_with_retry \
+            paxdesign-booking/includes/customer/class-paxdesign-customer-platform.php \
+            "${REMOTE}:${PLUGIN}/includes/customer/class-paxdesign-customer-platform.php"
+
+          rsync_with_retry \
+            deploy-patches/restored-chat-human-ui/includes/class-paxdesign-chat-live.php \
+            "${REMOTE}:${PLUGIN}/includes/class-paxdesign-chat-live.php"
+
+          WP_PATH_QUOTED=$(printf '%q' "$WP_PATH")
+          ssh_with_retry "$REMOTE" "WP_PATH=${WP_PATH_QUOTED} bash -s" \
+            < scripts/patch-wp-htaccess-security.sh
+
+          ssh_with_retry "$REMOTE" \
+            "cd '$(printf '%q' "$WP_PATH")' && \
+             rm -f .maintenance && \
+             (command -v wp >/dev/null && wp maintenance-mode deactivate 2>/dev/null || true) && \
+             (command -v wp >/dev/null && wp cache flush || true) && \
+             (command -v wp >/dev/null && wp litespeed-purge all || true) && \
+             (php -r 'if (function_exists(\"opcache_reset\")) { opcache_reset(); echo \"opcache_reset=ok\\n\"; } else { echo \"opcache_reset=skipped\\n\"; }' || true)"
+
+          PLATFORM="${PLUGIN}/includes/customer/class-paxdesign-customer-platform.php"
+          LIVE="${PLUGIN}/includes/class-paxdesign-chat-live.php"
+          HARDENING="${THEME}/inc/public-identity-hardening.php"
+          ssh_with_retry "$REMOTE" \
+            "grep -q paxdesign_chat_nonce '$(printf '%q' "$PLATFORM")' && \
+             grep -q paxdesign_chat_live_user_attach '$(printf '%q' "$PLATFORM")' && \
+             grep -q reject_guest_chat '$(printf '%q' "$LIVE")' && \
+             grep -q paxdesign_replace_open_rest_cors '$(printf '%q' "$HARDENING")' && \
+             grep -q paxdesign_restrict_media_rest_endpoints '$(printf '%q' "$HARDENING")' && \
+             echo 'OK: live files include security hardening'"
+
+          echo "Deployed security hardening (theme + two plugin files, no plugin tree delete)"
+
+      - name: Verify live security hardening
+        run: |
+          set -euo pipefail
+          chmod +x scripts/verify-security-hardening.sh scripts/verify-public-identity-hardening.sh
+          ./scripts/verify-security-hardening.sh

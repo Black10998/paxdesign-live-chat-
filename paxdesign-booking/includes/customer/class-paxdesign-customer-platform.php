@@ -43,9 +43,12 @@ class PAXdesign_Customer_Platform {
         return array(
             'paxdesign_chat',
             'paxdesign_chat_log',
+            'paxdesign_chat_nonce',
             'paxdesign_chat_poll',
             'paxdesign_chat_stream',
+            'paxdesign_chat_disconnect',
             'paxdesign_chat_live_user_send',
+            'paxdesign_chat_live_user_attach',
             'paxdesign_chat_live_request',
             'paxdesign_chat_live_user_typing',
             'paxdesign_chat_live_reaction',

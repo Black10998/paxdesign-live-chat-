@@ -117,6 +117,56 @@ grep -Eqi 'log|pwd|Anmelden|login' "$TMP/login.body" \
   && ok "login form is present" \
   || fail "login form missing"
 
+# --- Generic wp-login errors (no account enumeration) ---
+probe_login() {
+  local name="$1"
+  local user="$2"
+  curl -sS -D "$TMP/${name}.headers" -o "$TMP/${name}.body" -w '%{http_code}' \
+    -X POST "${BASE}/wp-login.php" \
+    -H 'Content-Type: application/x-www-form-urlencoded' \
+    --data-urlencode "log=${user}" \
+    --data-urlencode "pwd=wrong-password-not-used" \
+    --data-urlencode "wp-submit=Log In" \
+    --data-urlencode "testcookie=1" >/dev/null
+  if grep -Eiq 'not registered|nicht registriert|kein konto|unknown username|unknown email' "$TMP/${name}.body"; then
+    fail "${name} still enumerates missing accounts"
+    return
+  fi
+  if grep -Eiq 'entered for the username|für den benutzername|incorrect password for' "$TMP/${name}.body"; then
+    fail "${name} still names the account in the password error"
+    return
+  fi
+  ok "${name} uses a generic login failure"
+}
+probe_login login_unknown "pax-no-such-user-${STAMP}"
+probe_login login_common admin
+
+# --- REST CORS must not reflect a foreign Origin ---
+cors_code="$(curl -sS -D "$TMP/cors.headers" -o "$TMP/cors.body" -w '%{http_code}' \
+  -H 'Origin: https://evil.example' \
+  -H 'Cache-Control: no-cache' \
+  "${BASE}/wp-json/pdx/v1/auth/me?n=${STAMP}")"
+tr -d '\r' < "$TMP/cors.headers" | grep -i '^access-control-allow-origin:' > "$TMP/cors.acao" || true
+if grep -Fqi 'https://evil.example' "$TMP/cors.headers"; then
+  fail "REST CORS reflects a foreign Origin (HTTP ${cors_code})"
+else
+  ok "REST CORS does not reflect a foreign Origin (HTTP ${cors_code})"
+fi
+if grep -Fqi 'access-control-allow-credentials: true' "$TMP/cors.headers" \
+  && grep -Fqi 'access-control-allow-origin: https://evil.example' "$TMP/cors.headers"; then
+  fail "REST CORS still pairs credentials with a foreign Origin"
+else
+  ok "REST CORS does not pair credentials with a foreign Origin"
+fi
+
+# --- Public media library listing ---
+media_code="$(request media GET "${BASE}/wp-json/wp/v2/media?per_page=5&n=${STAMP}")"
+if [ "$media_code" = "200" ] && grep -Eq '"source_url"|"media_details"' "$TMP/media.body"; then
+  fail "media collection still lists files anonymously (HTTP ${media_code})"
+else
+  ok "media collection is closed to anonymous visitors (HTTP ${media_code})"
+fi
+
 ccs_code="$(request ccs GET "${BASE}/cybercrime-support/")"
 [ "$ccs_code" = "200" ] && ok "cybercrime-support HTTP 200" || fail "cybercrime-support HTTP ${ccs_code}"
 grep -Eqi 'cybercrime|Cybercrime' "$TMP/ccs.body" \

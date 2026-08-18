@@ -852,9 +852,20 @@ class PAXdesign_Chat_Live {
     }
 
     public function handle_chat_nonce() {
+        $this->reject_guest_chat();
         wp_send_json_success(array(
             'nonce' => wp_create_nonce('paxdesign_chat_nonce'),
         ));
+    }
+
+    private function reject_guest_chat() {
+        if (is_user_logged_in()) {
+            return;
+        }
+        wp_send_json_error(array(
+            'message' => __('Sign in or create an account to use Live Chat.', 'paxdesign-booking'),
+            'code'    => 'login_required',
+        ), 401);
     }
 
     private function verify_chat_nonce() {
@@ -1466,6 +1477,7 @@ class PAXdesign_Chat_Live {
     }
 
     public function handle_disconnect() {
+        $this->reject_guest_chat();
         if (!$this->verify_chat_nonce()) {
             wp_send_json_error(array('message' => 'Invalid nonce'), 403);
         }
@@ -1892,6 +1904,7 @@ class PAXdesign_Chat_Live {
     }
 
     public function handle_user_attach() {
+        $this->reject_guest_chat();
         if (!$this->verify_chat_nonce()) {
             wp_send_json_error(array('message' => 'Invalid nonce'), 403);
         }
