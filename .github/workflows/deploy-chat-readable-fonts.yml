@@ -12,6 +12,8 @@ on:
       - '.github/workflows/deploy-chat-readable-fonts.yml'
       - 'navein/assets/css/site-body-typography.css'
       - 'navein/style.css'
+      - 'deploy-patches/restored-chat-human-ui/assets/css/booking-styles.css'
+      - 'paxdesign-booking/assets/css/booking-styles.css'
       - 'scripts/verify-chat-readable-fonts.sh'
 
 permissions:
@@ -52,6 +54,7 @@ jobs:
           ssh-keyscan -p "$PORT" -H "$WP_SSH_HOST" >> ~/.ssh/known_hosts 2>/dev/null || true
 
           THEME="${WP_PATH%/}/wp-content/themes/navein"
+          PLUGIN="${WP_PATH%/}/wp-content/plugins/paxdesign-booking"
           REMOTE="${WP_SSH_USER}@${WP_SSH_HOST}"
 
           rsync_with_retry() {
@@ -91,7 +94,7 @@ jobs:
           }
 
           ssh_with_retry "$REMOTE" \
-            "mkdir -p $(printf '%q' "$THEME/assets/css")"
+            "mkdir -p $(printf '%q' "$THEME/assets/css") $(printf '%q' "$PLUGIN/assets/css")"
 
           rsync_with_retry \
             navein/assets/css/site-body-typography.css \
@@ -100,6 +103,10 @@ jobs:
           rsync_with_retry \
             navein/style.css \
             "${REMOTE}:${THEME}/style.css"
+
+          rsync_with_retry \
+            deploy-patches/restored-chat-human-ui/assets/css/booking-styles.css \
+            "${REMOTE}:${PLUGIN}/assets/css/booking-styles.css"
 
           ssh_with_retry "$REMOTE" \
             "cd '$(printf '%q' "$WP_PATH")' && \
@@ -111,9 +118,11 @@ jobs:
             "grep -q pax-chat-read-font '$(printf '%q' "$THEME/assets/css/site-body-typography.css")' && \
              grep -q '#paxdesignChatPanel' '$(printf '%q' "$THEME/assets/css/site-body-typography.css")' && \
              grep -q -- '-apple-system' '$(printf '%q' "$THEME/assets/css/site-body-typography.css")' && \
+             grep -q 'button.paxdesign-booking-chat-auth-login-btn' '$(printf '%q' "$PLUGIN/assets/css/booking-styles.css")' && \
+             grep -q -- '-apple-system' '$(printf '%q' "$PLUGIN/assets/css/booking-styles.css")' && \
              echo 'OK: live typography CSS uses readable chat fonts'"
 
-          echo "Deployed chat readable fonts (theme CSS only)"
+          echo "Deployed chat readable fonts (theme CSS + chat stylesheet)"
 
       - name: Verify live chat fonts
         run: |

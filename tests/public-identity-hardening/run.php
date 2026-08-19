@@ -35,7 +35,7 @@ $fn = file_get_contents($functions);
 $css = file_get_contents($style);
 
 pih_ok(strpos($fn, "inc/public-identity-hardening.php") !== false, 'functions.php loads the hardening helper');
-pih_ok(preg_match('/Version:\\s*1\\.4\\.48/', $css) === 1, 'theme version bumped for deploy cache-bust');
+pih_ok(preg_match('/Version:\\s*1\\.4\\.49/', $css) === 1, 'theme version bumped for deploy cache-bust');
 
 pih_ok(strpos($src, "add_filter( 'rest_endpoints'") !== false, 'restricts REST users endpoints');
 pih_ok(strpos($src, 'paxdesign_restrict_users_rest_endpoints') !== false, 'users REST restriction callback exists');

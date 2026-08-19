@@ -82,6 +82,17 @@ else
   ok "chat JS has no Gespräch beenden control"
 fi
 
+plugin_css="$(curl -sS "${BASE}/wp-content/plugins/paxdesign-booking/assets/css/booking-styles.css?n=${STAMP}")"
+grep -q 'button.paxdesign-booking-chat-auth-login-btn' <<< "$plugin_css" \
+  && ok "live plugin CSS targets chat Sign In" \
+  || fail "live plugin CSS missing chat Sign In override"
+grep -q -- '-apple-system, BlinkMacSystemFont, "Segoe UI"' <<< "$plugin_css" \
+  && ok "live plugin CSS uses system UI stack for chat" \
+  || fail "live plugin CSS missing system UI stack"
+grep -q '.paxdesign-booking-chat-auth-github-btn' <<< "$plugin_css" \
+  && ok "live plugin CSS targets GitHub chat login" \
+  || fail "live plugin CSS missing GitHub chat login override"
+
 if [ "$FAIL" -gt 0 ]; then
   echo "${FAIL} chat readable-font live check(s) failed"
   exit 1

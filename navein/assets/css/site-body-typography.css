@@ -116,12 +116,26 @@ body {
 #paxdesign-booking-root #paxdesignChatPanel *::after,
 #paxdesign-booking-root #paxdesignChatAuthGate,
 #paxdesign-booking-root #paxdesignChatAuthGate *,
+#paxdesign-booking-root .paxdesign-booking-chat-auth-gate,
+#paxdesign-booking-root .paxdesign-booking-chat-auth-gate *,
 #paxdesign-booking-root #paxdesignAgentProfileModal,
-#paxdesign-booking-root #paxdesignAgentProfileModal * {
+#paxdesign-booking-root #paxdesignAgentProfileModal *,
+#paxdesign-booking-root.paxdesign-booking .paxdesign-booking-chat-auth-gate-title,
+#paxdesign-booking-root.paxdesign-booking .paxdesign-booking-chat-auth-gate-sub,
+#paxdesign-booking-root.paxdesign-booking #paxdesignChatAuthGate button,
+#paxdesign-booking-root.paxdesign-booking #paxdesignChatAuthGate p,
+#paxdesign-booking-root.paxdesign-booking #paxdesignChatAuthGate h3,
+#paxdesign-booking-root.paxdesign-booking .paxdesign-booking-chat-auth-gate button,
+#paxdesign-booking-root.paxdesign-booking .paxdesign-booking-chat-auth-gate p,
+#paxdesign-booking-root.paxdesign-booking .paxdesign-booking-chat-auth-gate h3,
+#paxdesign-booking-root.paxdesign-booking button.paxdesign-booking-chat-auth-login-btn,
+#paxdesign-booking-root.paxdesign-booking button.paxdesign-booking-chat-auth-github-btn,
+#paxdesign-booking-root.paxdesign-booking button.paxdesign-booking-chat-auth-apple-btn,
+#paxdesign-booking-root.paxdesign-booking .paxdesign-booking-chat-auth-divider,
+#paxdesign-booking-root.paxdesign-booking textarea.paxdesign-booking-chat-input {
   --pax-font: var(--pax-chat-read-font);
   --pdx-font: var(--pax-chat-read-font);
-  font-family: var(--pax-chat-read-font) !important;
-  letter-spacing: normal;
+  font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, "Noto Sans", "Noto Sans Arabic", sans-serif !important;
 }
 
 #paxdesign-booking-root #paxdesignChatPanel input::placeholder,
@@ -233,10 +247,15 @@ samp,
 
 /* Chat auth controls stay on the readable stack (never Orbitron or Voga) */
 #paxdesign-booking-root .paxdesign-booking-chat-auth-login-btn,
+#paxdesign-booking-root .paxdesign-booking-chat-auth-github-btn,
+#paxdesign-booking-root .paxdesign-booking-chat-auth-apple-btn,
+#paxdesign-booking-root .paxdesign-booking-chat-auth-gate-title,
+#paxdesign-booking-root .paxdesign-booking-chat-auth-gate-sub,
 #paxdesign-booking-root .paxdesign-booking-chat-auth-inline .pdx-btn-pearl,
 #paxdesign-booking-root .paxdesign-booking-chat-auth-inline .pdx-btn-pearl .pdx-btn-pearl__wrap,
 #paxdesign-booking-root .paxdesign-booking-chat-auth-inline .pdx-auth-submit,
 #paxdesign-booking-root .paxdesign-booking-chat-auth-inline .pdx-auth-link {
-  font-family: var(--pax-chat-read-font) !important;
+  font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, "Noto Sans", "Noto Sans Arabic", sans-serif !important;
   --pdx-font: var(--pax-chat-read-font);
+  --pax-font: var(--pax-chat-read-font);
 }
