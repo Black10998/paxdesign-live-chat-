@@ -1,0 +1,122 @@
+name: Deploy Chat Readable Fonts
+
+# Surgical: theme typography override + style.css cache-bust only.
+# Does not rsync-delete the plugin tree. Does not copy chat PHP/JS.
+on:
+  workflow_dispatch:
+  push:
+    branches:
+      - main
+    paths:
+      - '.github/triggers/deploy-chat-readable-fonts'
+      - '.github/workflows/deploy-chat-readable-fonts.yml'
+      - 'navein/assets/css/site-body-typography.css'
+      - 'navein/style.css'
+      - 'scripts/verify-chat-readable-fonts.sh'
+
+permissions:
+  contents: read
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    timeout-minutes: 12
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Validate secrets
+        run: |
+          set -euo pipefail
+          for key in WP_SSH_HOST WP_SSH_USER WP_SSH_PRIVATE_KEY WP_PATH; do
+            [ -n "${!key:-}" ] || { echo "Missing $key"; exit 1; }
+          done
+        env:
+          WP_SSH_HOST: ${{ secrets.WP_SSH_HOST }}
+          WP_SSH_USER: ${{ secrets.WP_SSH_USER }}
+          WP_SSH_PRIVATE_KEY: ${{ secrets.WP_SSH_PRIVATE_KEY }}
+          WP_PATH: ${{ secrets.WP_PATH }}
+
+      - name: Deploy chat readable-font CSS
+        env:
+          WP_SSH_HOST: ${{ secrets.WP_SSH_HOST }}
+          WP_SSH_PORT: ${{ secrets.WP_SSH_PORT }}
+          WP_SSH_USER: ${{ secrets.WP_SSH_USER }}
+          WP_SSH_PRIVATE_KEY: ${{ secrets.WP_SSH_PRIVATE_KEY }}
+          WP_PATH: ${{ secrets.WP_PATH }}
+        run: |
+          set -euo pipefail
+          PORT="${WP_SSH_PORT:-22}"
+          SSH_OPTS=(-i ~/.ssh/id_deploy -p "$PORT" -o StrictHostKeyChecking=yes -o BatchMode=yes)
+          install -m 600 -D /dev/null ~/.ssh/id_deploy
+          printf '%s\n' "$WP_SSH_PRIVATE_KEY" > ~/.ssh/id_deploy
+          ssh-keyscan -p "$PORT" -H "$WP_SSH_HOST" >> ~/.ssh/known_hosts 2>/dev/null || true
+
+          THEME="${WP_PATH%/}/wp-content/themes/navein"
+          REMOTE="${WP_SSH_USER}@${WP_SSH_HOST}"
+
+          rsync_with_retry() {
+            local attempt=1
+            local max_attempts=4
+            local delay=4
+            while [ "$attempt" -le "$max_attempts" ]; do
+              if rsync -az -e "ssh ${SSH_OPTS[*]}" "$@"; then
+                return 0
+              fi
+              if [ "$attempt" -eq "$max_attempts" ]; then
+                return 1
+              fi
+              echo "rsync failed (attempt ${attempt}/${max_attempts}); retrying in ${delay}s..."
+              sleep "$delay"
+              attempt=$((attempt + 1))
+              delay=$((delay * 2))
+            done
+          }
+
+          ssh_with_retry() {
+            local attempt=1
+            local max_attempts=4
+            local delay=4
+            while [ "$attempt" -le "$max_attempts" ]; do
+              if ssh "${SSH_OPTS[@]}" "$@"; then
+                return 0
+              fi
+              if [ "$attempt" -eq "$max_attempts" ]; then
+                return 1
+              fi
+              echo "ssh failed (attempt ${attempt}/${max_attempts}); retrying in ${delay}s..."
+              sleep "$delay"
+              attempt=$((attempt + 1))
+              delay=$((delay * 2))
+            done
+          }
+
+          ssh_with_retry "$REMOTE" \
+            "mkdir -p $(printf '%q' "$THEME/assets/css")"
+
+          rsync_with_retry \
+            navein/assets/css/site-body-typography.css \
+            "${REMOTE}:${THEME}/assets/css/site-body-typography.css"
+
+          rsync_with_retry \
+            navein/style.css \
+            "${REMOTE}:${THEME}/style.css"
+
+          ssh_with_retry "$REMOTE" \
+            "cd '$(printf '%q' "$WP_PATH")' && \
+             rm -f .maintenance && \
+             (command -v wp >/dev/null && wp cache flush || true) && \
+             (command -v wp >/dev/null && wp litespeed-purge all || true)"
+
+          ssh_with_retry "$REMOTE" \
+            "grep -q pax-chat-read-font '$(printf '%q' "$THEME/assets/css/site-body-typography.css")' && \
+             grep -q '#paxdesignChatPanel' '$(printf '%q' "$THEME/assets/css/site-body-typography.css")' && \
+             grep -q -- '-apple-system' '$(printf '%q' "$THEME/assets/css/site-body-typography.css")' && \
+             echo 'OK: live typography CSS uses readable chat fonts'"
+
+          echo "Deployed chat readable fonts (theme CSS only)"
+
+      - name: Verify live chat fonts
+        run: |
+          set -euo pipefail
+          chmod +x scripts/verify-chat-readable-fonts.sh
+          ./scripts/verify-chat-readable-fonts.sh

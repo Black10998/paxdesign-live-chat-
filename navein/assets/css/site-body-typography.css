@@ -80,23 +80,57 @@ body {
   line-height: var(--pax-voga-leading);
 }
 
-/* Chat widget */
-#paxdesign-booking-root.paxdesign-booking,
-#paxdesign-booking-root.paxdesign-booking-wrapper,
-#paxdesign-booking-root .pax-chat-panel,
-#paxdesign-booking-root .pax-chat-messages,
-#paxdesign-booking-root .pax-chat-input,
-#paxdesign-booking-root .pax-chat-input textarea,
-#paxdesign-booking-root .pax-chat-bubble,
-#paxdesign-booking-root .pax-chat-meta,
-#paxdesign-booking-root button,
-#paxdesign-booking-root input,
-#paxdesign-booking-root label,
-#paxdesign-booking-root p {
+/* Booking tab inside the widget keeps site Voga Diamond */
+#paxdesign-booking-root #paxdesignBookingPanel,
+#paxdesign-booking-root #paxdesignBookingPanel * {
   --pax-font: var(--pax-voga-body);
   font-family: var(--pax-voga-body);
   letter-spacing: var(--pax-voga-tracking);
   line-height: var(--pax-voga-leading);
+}
+
+/* Chat window — readable system UI fonts (not Orbitron / Voga Diamond).
+   Layout, colors, sizes, and spacing stay unchanged. */
+#paxdesign-booking-root {
+  --pax-chat-read-font: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, "Noto Sans", "Noto Sans Arabic", sans-serif;
+}
+
+#paxdesign-booking-root .paxdesign-booking-chat-message,
+#paxdesign-booking-root .paxdesign-booking-chat-message *,
+#paxdesign-booking-root .paxdesign-booking-chat-message-bubble,
+#paxdesign-booking-root .paxdesign-booking-chat-message-text,
+#paxdesign-booking-root .paxdesign-booking-chat-input,
+#paxdesign-booking-root .paxdesign-booking-chat-quick-actions,
+#paxdesign-booking-root .paxdesign-booking-chat-quick-actions *,
+#paxdesign-booking-root .paxdesign-booking-chat-entry,
+#paxdesign-booking-root .paxdesign-booking-chat-entry *,
+#paxdesign-booking-root .paxdesign-booking-chat-welcome,
+#paxdesign-booking-root .paxdesign-booking-chat-welcome *,
+#paxdesign-booking-root .paxdesign-booking-header,
+#paxdesign-booking-root .paxdesign-booking-header *,
+#paxdesign-booking-root .paxdesign-booking-mode-switch,
+#paxdesign-booking-root .paxdesign-booking-mode-switch *,
+#paxdesign-booking-root #paxdesignChatPanel,
+#paxdesign-booking-root #paxdesignChatPanel *,
+#paxdesign-booking-root #paxdesignChatPanel *::before,
+#paxdesign-booking-root #paxdesignChatPanel *::after,
+#paxdesign-booking-root #paxdesignChatAuthGate,
+#paxdesign-booking-root #paxdesignChatAuthGate *,
+#paxdesign-booking-root #paxdesignAgentProfileModal,
+#paxdesign-booking-root #paxdesignAgentProfileModal * {
+  --pax-font: var(--pax-chat-read-font);
+  --pdx-font: var(--pax-chat-read-font);
+  font-family: var(--pax-chat-read-font) !important;
+  letter-spacing: normal;
+}
+
+#paxdesign-booking-root #paxdesignChatPanel input::placeholder,
+#paxdesign-booking-root #paxdesignChatPanel textarea::placeholder,
+#paxdesign-booking-root #paxdesignChatAuthGate input::placeholder,
+#paxdesign-booking-root #paxdesignChatAuthGate textarea::placeholder,
+#paxdesign-booking-root .paxdesign-booking-chat-input::placeholder {
+  font-family: var(--pax-chat-read-font) !important;
+  letter-spacing: normal;
 }
 
 /* Cybercrime portal body copy */
@@ -197,12 +231,12 @@ samp,
   font-family: var(--pax-orbitron-display) !important;
 }
 
-/* Chat window — keep original Voga font (no Orbitron on auth controls) */
+/* Chat auth controls stay on the readable stack (never Orbitron or Voga) */
 #paxdesign-booking-root .paxdesign-booking-chat-auth-login-btn,
 #paxdesign-booking-root .paxdesign-booking-chat-auth-inline .pdx-btn-pearl,
 #paxdesign-booking-root .paxdesign-booking-chat-auth-inline .pdx-btn-pearl .pdx-btn-pearl__wrap,
 #paxdesign-booking-root .paxdesign-booking-chat-auth-inline .pdx-auth-submit,
 #paxdesign-booking-root .paxdesign-booking-chat-auth-inline .pdx-auth-link {
-  font-family: var(--pax-voga-body) !important;
-  --pdx-font: var(--pax-voga-body);
+  font-family: var(--pax-chat-read-font) !important;
+  --pdx-font: var(--pax-chat-read-font);
 }
