@@ -119,9 +119,13 @@ jobs:
             deploy-patches/restored-chat-human-ui/includes/class-paxdesign-chat-live.php \
             "${REMOTE}:${PLUGIN}/includes/class-paxdesign-chat-live.php"
 
+          rsync_with_retry \
+            scripts/patch-wp-htaccess-security.sh \
+            "${REMOTE}:/tmp/patch-wp-htaccess-security.sh"
+
           WP_PATH_QUOTED=$(printf '%q' "$WP_PATH")
-          ssh_with_retry "$REMOTE" "WP_PATH=${WP_PATH_QUOTED} bash -s" \
-            < scripts/patch-wp-htaccess-security.sh
+          ssh_with_retry "$REMOTE" \
+            "chmod +x /tmp/patch-wp-htaccess-security.sh && WP_PATH=${WP_PATH_QUOTED} bash /tmp/patch-wp-htaccess-security.sh && rm -f /tmp/patch-wp-htaccess-security.sh"
 
           ssh_with_retry "$REMOTE" \
             "cd '$(printf '%q' "$WP_PATH")' && \
