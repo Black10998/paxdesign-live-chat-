@@ -215,7 +215,7 @@ if [ "$index_code" = "200" ] && grep -qi 'application/json' <<< "$index_ct"; the
 else
   fail "REST index is not JSON (HTTP ${index_code}; ${index_ct:-no content-type})"
 fi
-if grep -Eq '"pdx/v1"|"paxdesign/v1"' "$TMP/rest_index.body"; then
+if grep -Eq 'pdx\\?/v1|paxdesign\\?/v1' "$TMP/rest_index.body"; then
   ok "REST index still advertises app namespaces"
 else
   fail "REST index missing pdx/v1 or paxdesign/v1 namespaces"
