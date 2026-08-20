@@ -263,4 +263,11 @@ cx_assert_true(strpos($deploy, 'wp-eval-toolbar-customer-migration.php') !== fal
 $repo_root = dirname(__DIR__, 2);
 cx_assert_true(!is_dir($repo_root . '/paxdesign-toolbar'), 'paxdesign-toolbar directory must be removed from repository');
 
+$connection_notice = file_get_contents($customer_dir . '/data/news-connection-restored-2026.php');
+cx_assert_true(strpos($connection_notice, 'app-connection-restored-2026') !== false, 'Connection restored notice data must exist');
+cx_assert_true(strpos($connection_notice, 'all_customers') !== false, 'Connection restored notice must target all customers');
+$announcements = file_get_contents($customer_dir . '/class-paxdesign-customer-news-announcements.php');
+cx_assert_true(strpos($announcements, 'publish_connection_restored_2026') !== false, 'Announcements must publish the connection restored notice');
+cx_assert_true(is_readable($repo_root . '/paxdesign-booking/scripts/wp-eval-seed-connection-restored-news.php'), 'Connection restored eval-file must exist');
+
 echo "OK: customer platform static verification passed (" . count($files) . " modules)\n";

@@ -1,0 +1,143 @@
+name: Deploy connection restored notice
+
+# Surgical production patch: customer news notice files only.
+# Does not rsync-delete the plugin tree.
+on:
+  workflow_dispatch:
+  push:
+    branches:
+      - main
+    paths:
+      - '.github/triggers/deploy-connection-restored-notice'
+      - '.github/workflows/deploy-connection-restored-notice.yml'
+      - 'paxdesign-booking/includes/customer/class-paxdesign-customer-news-announcements.php'
+      - 'paxdesign-booking/includes/customer/data/news-connection-restored-2026.php'
+      - 'paxdesign-booking/scripts/wp-eval-seed-connection-restored-news.php'
+      - 'tests/connection-restored-notice/run.php'
+
+permissions:
+  contents: read
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    timeout-minutes: 8
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Install PHP CLI
+        run: sudo apt-get update && sudo apt-get install -y php-cli
+
+      - name: Connection-restored notice tests
+        run: php tests/connection-restored-notice/run.php
+
+      - name: Production baseline tests
+        run: php tests/production-baseline/run.php
+
+  deploy:
+    needs: test
+    runs-on: ubuntu-latest
+    timeout-minutes: 12
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Validate secrets
+        run: |
+          set -euo pipefail
+          for key in WP_SSH_HOST WP_SSH_USER WP_SSH_PRIVATE_KEY WP_PATH; do
+            [ -n "${!key:-}" ] || { echo "Missing $key"; exit 1; }
+          done
+        env:
+          WP_SSH_HOST: ${{ secrets.WP_SSH_HOST }}
+          WP_SSH_USER: ${{ secrets.WP_SSH_USER }}
+          WP_SSH_PRIVATE_KEY: ${{ secrets.WP_SSH_PRIVATE_KEY }}
+          WP_PATH: ${{ secrets.WP_PATH }}
+
+      - name: Publish customer connection notice
+        env:
+          WP_SSH_HOST: ${{ secrets.WP_SSH_HOST }}
+          WP_SSH_PORT: ${{ secrets.WP_SSH_PORT }}
+          WP_SSH_USER: ${{ secrets.WP_SSH_USER }}
+          WP_SSH_PRIVATE_KEY: ${{ secrets.WP_SSH_PRIVATE_KEY }}
+          WP_PATH: ${{ secrets.WP_PATH }}
+        run: |
+          set -euo pipefail
+          PORT="${WP_SSH_PORT:-22}"
+          SSH_OPTS=(-i ~/.ssh/id_deploy -p "$PORT" -o StrictHostKeyChecking=yes -o BatchMode=yes)
+          install -m 600 -D /dev/null ~/.ssh/id_deploy
+          printf '%s\n' "$WP_SSH_PRIVATE_KEY" > ~/.ssh/id_deploy
+          ssh-keyscan -p "$PORT" -H "$WP_SSH_HOST" >> ~/.ssh/known_hosts 2>/dev/null || true
+
+          PLUGIN="${WP_PATH%/}/wp-content/plugins/paxdesign-booking"
+          REMOTE="${WP_SSH_USER}@${WP_SSH_HOST}"
+
+          rsync_with_retry() {
+            local attempt=1
+            local max_attempts=4
+            local delay=4
+            while [ "$attempt" -le "$max_attempts" ]; do
+              if rsync -az -e "ssh ${SSH_OPTS[*]}" "$@"; then
+                return 0
+              fi
+              if [ "$attempt" -eq "$max_attempts" ]; then
+                return 1
+              fi
+              echo "rsync failed (attempt ${attempt}/${max_attempts}); retrying in ${delay}s..."
+              sleep "$delay"
+              attempt=$((attempt + 1))
+              delay=$((delay * 2))
+            done
+          }
+
+          ssh_with_retry() {
+            local attempt=1
+            local max_attempts=4
+            local delay=4
+            while [ "$attempt" -le "$max_attempts" ]; do
+              if ssh "${SSH_OPTS[@]}" "$@"; then
+                return 0
+              fi
+              if [ "$attempt" -eq "$max_attempts" ]; then
+                return 1
+              fi
+              echo "ssh failed (attempt ${attempt}/${max_attempts}); retrying in ${delay}s..."
+              sleep "$delay"
+              attempt=$((attempt + 1))
+              delay=$((delay * 2))
+            done
+          }
+
+          ssh_with_retry "$REMOTE" \
+            "mkdir -p $(printf '%q' "$PLUGIN/includes/customer/data") $(printf '%q' "$PLUGIN/scripts")"
+
+          rsync_with_retry \
+            paxdesign-booking/includes/customer/class-paxdesign-customer-news-announcements.php \
+            "${REMOTE}:${PLUGIN}/includes/customer/class-paxdesign-customer-news-announcements.php"
+
+          rsync_with_retry \
+            paxdesign-booking/includes/customer/data/news-connection-restored-2026.php \
+            "${REMOTE}:${PLUGIN}/includes/customer/data/news-connection-restored-2026.php"
+
+          rsync_with_retry \
+            paxdesign-booking/scripts/wp-eval-seed-connection-restored-news.php \
+            "${REMOTE}:${PLUGIN}/scripts/wp-eval-seed-connection-restored-news.php"
+
+          EVAL_OUT=$(ssh_with_retry "$REMOTE" \
+            "cd '$(printf '%q' "$WP_PATH")' && \
+             command -v wp >/dev/null && \
+             wp eval-file wp-content/plugins/paxdesign-booking/scripts/wp-eval-seed-connection-restored-news.php && \
+             (wp cache flush || true) && \
+             (wp litespeed-purge all || true)")
+
+          printf '%s\n' "$EVAL_OUT"
+
+          printf '%s\n' "$EVAL_OUT" | grep -q 'slug app-connection-restored-2026'
+          printf '%s\n' "$EVAL_OUT" | grep -q 'status=published'
+          printf '%s\n' "$EVAL_OUT" | grep -q 'audience=all_customers'
+          printf '%s\n' "$EVAL_OUT" | grep -q 'priority=high'
+          printf '%s\n' "$EVAL_OUT" | grep -q 'push_on_publish=1'
+          printf '%s\n' "$EVAL_OUT" | grep -q 'Entschuldigung'
+          printf '%s\n' "$EVAL_OUT" | grep -q 'Sorry'
+          printf '%s\n' "$EVAL_OUT" | grep -q 'عذر'
+
+          echo "Published customer connection-restored notice (news files only, no plugin tree delete)"

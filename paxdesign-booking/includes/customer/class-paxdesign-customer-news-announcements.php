@@ -13,8 +13,12 @@ class PAXdesign_Customer_News_Announcements {
     const ATTACHMENT_OPTION  = 'paxdesign_news_platform_update_2026_attachment';
     const DATA_FILE          = 'news-platform-update-2026.php';
 
+    const CONNECTION_OPTION_KEY = 'paxdesign_news_connection_restored_2026_v1';
+    const CONNECTION_DATA_FILE  = 'news-connection-restored-2026.php';
+    const CONNECTION_SLUG       = 'app-connection-restored-2026';
+
     public static function init() {
-        // Published via wp-cli on deploy (wp-eval-seed-platform-news.php), not during web bootstrap.
+        // Published via wp-cli on deploy (wp-eval-seed-*.php), not during web bootstrap.
     }
 
     public static function maybe_publish_platform_update() {
@@ -98,17 +102,7 @@ class PAXdesign_Customer_News_Announcements {
             'published_at'        => gmdate('Y-m-d H:i:s'),
         );
 
-        $actor_id = 1;
-        $admins = get_users(array(
-            'role'    => 'administrator',
-            'number'  => 1,
-            'orderby' => 'ID',
-            'order'   => 'ASC',
-            'fields'  => array('ID'),
-        ));
-        if (!empty($admins[0]->ID)) {
-            $actor_id = (int) $admins[0]->ID;
-        }
+        $actor_id = self::resolve_actor_id();
 
         $saved = PAXdesign_Customer_News::save($payload, $actor_id, $news_id);
         if (is_wp_error($saved)) {
@@ -123,6 +117,83 @@ class PAXdesign_Customer_News_Announcements {
         update_option(self::OPTION_KEY, '1', false);
 
         return (int) $saved;
+    }
+
+    /**
+     * Publish a customer-facing apology that the app-to-website connection is restored.
+     *
+     * @return int|WP_Error News post ID.
+     */
+    public static function publish_connection_restored_2026($force = false) {
+        $path = PAXDESIGN_BOOKING_PLUGIN_DIR . 'includes/customer/data/' . self::CONNECTION_DATA_FILE;
+        if (!is_readable($path)) {
+            return new WP_Error('missing_data', 'News data file not found.', array('status' => 500));
+        }
+        $data = include $path;
+        if (!is_array($data)) {
+            return new WP_Error('invalid_data', 'News data file is invalid.', array('status' => 500));
+        }
+
+        $translations = isset($data['translations']) && is_array($data['translations']) ? $data['translations'] : array();
+        $primary = isset($translations['de']) ? $translations['de'] : reset($translations);
+        if (!is_array($primary)) {
+            return new WP_Error('invalid_data', 'News translations missing.', array('status' => 500));
+        }
+
+        $slug = sanitize_title($data['slug'] ?? self::CONNECTION_SLUG);
+        $existing = PAXdesign_Customer_News::find_row_by_slug($slug, false);
+        $news_id = $existing ? (int) $existing['id'] : 0;
+
+        if (!$force && $news_id > 0 && get_option(self::CONNECTION_OPTION_KEY) === '1') {
+            return $news_id;
+        }
+
+        $payload = array(
+            'slug'               => $slug,
+            'title'              => (string) ($primary['title'] ?? ''),
+            'excerpt'            => (string) ($primary['excerpt'] ?? ''),
+            'body'               => (string) ($primary['body'] ?? ''),
+            'status'             => 'published',
+            'priority'           => sanitize_key($data['priority'] ?? 'high'),
+            'audience'           => sanitize_key($data['audience'] ?? 'all_customers'),
+            'push_on_publish'    => 1,
+            'audience_meta'      => array(
+                'translations' => $translations,
+            ),
+            'published_at'       => gmdate('Y-m-d H:i:s'),
+        );
+
+        $actor_id = self::resolve_actor_id();
+        $saved = PAXdesign_Customer_News::save($payload, $actor_id, $news_id);
+        if (is_wp_error($saved)) {
+            return $saved;
+        }
+
+        if (!$existing || ($existing['status'] ?? '') !== 'published') {
+            PAXdesign_Customer_News::publish((int) $saved, $actor_id);
+        }
+
+        update_option(self::CONNECTION_OPTION_KEY, '1', false);
+
+        return (int) $saved;
+    }
+
+    /**
+     * @return int
+     */
+    private static function resolve_actor_id() {
+        $actor_id = 1;
+        $admins = get_users(array(
+            'role'    => 'administrator',
+            'number'  => 1,
+            'orderby' => 'ID',
+            'order'   => 'ASC',
+            'fields'  => array('ID'),
+        ));
+        if (!empty($admins[0]->ID)) {
+            $actor_id = (int) $admins[0]->ID;
+        }
+        return $actor_id;
     }
 
     /**
