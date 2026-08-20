@@ -12,16 +12,11 @@ class PAXdesign_Customer_Portfolio {
     const CPT = 'dtr_portfolio';
 
     /**
+     * Published WordPress portfolio posts (website Referenzen).
+     *
      * @return array<int, array<string, mixed>>
      */
-    public static function list_items($limit = 100, $category = '', $lang = 'de') {
-        if (class_exists('PAXdesign_Customer_Portfolio_Showcase')) {
-            $showcase = PAXdesign_Customer_Portfolio_Showcase::list_items($limit, $category, $lang);
-            if (!empty($showcase)) {
-                return $showcase;
-            }
-        }
-
+    public static function list_wordpress_items($limit = 100, $category = '') {
         $limit = max(1, min(200, (int) $limit));
         $items = array();
 
@@ -42,16 +37,35 @@ class PAXdesign_Customer_Portfolio {
             }
             $query = new WP_Query($args);
             foreach ($query->posts as $post) {
-                $items[] = self::format_post($post, false);
+                $item = self::format_post($post, false);
+                if (!isset($item['stats'])) {
+                    $item['stats'] = array();
+                }
+                $items[] = $item;
             }
             wp_reset_postdata();
         }
 
-        if (empty($items)) {
-            $items = self::fallback_from_pages($limit);
+        return $items;
+    }
+
+    /**
+     * @return array<int, array<string, mixed>>
+     */
+    public static function list_items($limit = 100, $category = '', $lang = 'de') {
+        $items = self::list_wordpress_items($limit, $category);
+        if (!empty($items)) {
+            return $items;
         }
 
-        return $items;
+        if (class_exists('PAXdesign_Customer_Portfolio_Showcase')) {
+            $showcase = PAXdesign_Customer_Portfolio_Showcase::list_json_items($limit, $category, $lang);
+            if (!empty($showcase)) {
+                return $showcase;
+            }
+        }
+
+        return self::fallback_from_pages($limit);
     }
 
     /**
@@ -63,13 +77,6 @@ class PAXdesign_Customer_Portfolio {
             return null;
         }
 
-        if (class_exists('PAXdesign_Customer_Portfolio_Showcase')) {
-            $showcase = PAXdesign_Customer_Portfolio_Showcase::get_item($slug, $lang);
-            if ($showcase !== null) {
-                return $showcase;
-            }
-        }
-
         if (post_type_exists(self::CPT)) {
             $posts = get_posts(array(
                 'post_type'      => self::CPT,
@@ -79,6 +86,13 @@ class PAXdesign_Customer_Portfolio {
             ));
             if (!empty($posts[0])) {
                 return self::format_post($posts[0], true);
+            }
+        }
+
+        if (class_exists('PAXdesign_Customer_Portfolio_Showcase')) {
+            $showcase = PAXdesign_Customer_Portfolio_Showcase::get_item($slug, $lang);
+            if ($showcase !== null) {
+                return $showcase;
             }
         }
 
@@ -94,31 +108,30 @@ class PAXdesign_Customer_Portfolio {
      * @return string[]
      */
     public static function categories($lang = 'de') {
+        if (taxonomy_exists('portfolio_category')) {
+            $terms = get_terms(array(
+                'taxonomy'   => 'portfolio_category',
+                'hide_empty' => true,
+            ));
+            if (!is_wp_error($terms) && !empty($terms)) {
+                $out = array();
+                foreach ($terms as $term) {
+                    $out[] = array(
+                        'slug'  => $term->slug,
+                        'name'  => $term->name,
+                        'count' => (int) $term->count,
+                    );
+                }
+                return $out;
+            }
+        }
         if (class_exists('PAXdesign_Customer_Portfolio_Showcase')) {
-            $payload = PAXdesign_Customer_Portfolio_Showcase::payload($lang);
+            $payload = PAXdesign_Customer_Portfolio_Showcase::json_payload($lang);
             if (!empty($payload['categories'])) {
                 return $payload['categories'];
             }
         }
-        if (!taxonomy_exists('portfolio_category')) {
-            return array();
-        }
-        $terms = get_terms(array(
-            'taxonomy'   => 'portfolio_category',
-            'hide_empty' => true,
-        ));
-        if (is_wp_error($terms) || empty($terms)) {
-            return array();
-        }
-        $out = array();
-        foreach ($terms as $term) {
-            $out[] = array(
-                'slug'  => $term->slug,
-                'name'  => $term->name,
-                'count' => (int) $term->count,
-            );
-        }
-        return $out;
+        return array();
     }
 
     /**

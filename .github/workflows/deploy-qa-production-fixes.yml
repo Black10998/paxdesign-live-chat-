@@ -1,0 +1,189 @@
+name: Deploy QA production fixes
+
+# Surgical production patch for confirmed website/REST QA issues.
+# Does not rsync-delete the plugin tree and does not build or publish iOS.
+on:
+  workflow_dispatch:
+  push:
+    branches:
+      - main
+    paths:
+      - '.github/triggers/deploy-qa-production-fixes'
+      - '.github/workflows/deploy-qa-production-fixes.yml'
+      - 'navein/functions.php'
+      - 'navein/404.php'
+      - 'navein/inc/qa-production-fixes.php'
+      - 'navein/assets/css/apple-footer.css'
+      - 'navein/template-parts/pages/homepage.php'
+      - 'paxdesign-booking/includes/customer/class-paxdesign-customer-services.php'
+      - 'paxdesign-booking/includes/customer/class-paxdesign-customer-portfolio.php'
+      - 'paxdesign-booking/includes/customer/class-paxdesign-customer-portfolio-showcase.php'
+      - 'paxdesign-booking/includes/customer/class-paxdesign-customer-content.php'
+      - 'paxdesign-booking/includes/customer/class-paxdesign-customer-platform.php'
+      - 'paxdesign-booking/includes/customer/data/homepage-data.php'
+      - 'paxdesign-booking/includes/customer/data/account-ui-l10n.php'
+      - 'paxdesign-booking/includes/auth/class-paxdesign-auth-page.php'
+      - 'paxdesign-booking/includes/class-paxdesign-chat.php'
+      - 'paxdesign-booking/templates/booking-widget.php'
+      - 'paxdesign-booking/assets/js/chat-script.js'
+      - 'paxdesign-booking/assets/customer-auth/js/pax-auth.js'
+      - 'paxdesign-booking/scripts/wp-eval-sync-customer-services.php'
+      - 'scripts/patch-wp-htaccess-security.sh'
+      - 'tests/qa-production-fixes/run.php'
+
+permissions:
+  contents: read
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    timeout-minutes: 8
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Install PHP CLI
+        run: sudo apt-get update && sudo apt-get install -y php-cli
+
+      - name: QA production-fix tests
+        run: php tests/qa-production-fixes/run.php
+
+      - name: Production baseline tests
+        run: php tests/production-baseline/run.php
+
+      - name: Restored chat human UI tests
+        run: php tests/restored-chat-human-ui/run.php
+
+      - name: Merge integration tests
+        run: php tests/merge-integration/run.php
+
+      - name: CCS AI tests
+        run: php tests/ccs-ai/run.php
+
+  deploy:
+    needs: test
+    runs-on: ubuntu-latest
+    timeout-minutes: 12
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Validate secrets
+        run: |
+          set -euo pipefail
+          for key in WP_SSH_HOST WP_SSH_USER WP_SSH_PRIVATE_KEY WP_PATH; do
+            [ -n "${!key:-}" ] || { echo "Missing $key"; exit 1; }
+          done
+        env:
+          WP_SSH_HOST: ${{ secrets.WP_SSH_HOST }}
+          WP_SSH_USER: ${{ secrets.WP_SSH_USER }}
+          WP_SSH_PRIVATE_KEY: ${{ secrets.WP_SSH_PRIVATE_KEY }}
+          WP_PATH: ${{ secrets.WP_PATH }}
+
+      - name: Deploy QA production fixes
+        env:
+          WP_SSH_HOST: ${{ secrets.WP_SSH_HOST }}
+          WP_SSH_PORT: ${{ secrets.WP_SSH_PORT }}
+          WP_SSH_USER: ${{ secrets.WP_SSH_USER }}
+          WP_SSH_PRIVATE_KEY: ${{ secrets.WP_SSH_PRIVATE_KEY }}
+          WP_PATH: ${{ secrets.WP_PATH }}
+        run: |
+          set -euo pipefail
+          PORT="${WP_SSH_PORT:-22}"
+          SSH_OPTS=(-i ~/.ssh/id_deploy -p "$PORT" -o StrictHostKeyChecking=yes -o BatchMode=yes)
+          install -m 600 -D /dev/null ~/.ssh/id_deploy
+          printf '%s\n' "$WP_SSH_PRIVATE_KEY" > ~/.ssh/id_deploy
+          ssh-keyscan -p "$PORT" -H "$WP_SSH_HOST" >> ~/.ssh/known_hosts 2>/dev/null || true
+
+          THEME="${WP_PATH%/}/wp-content/themes/navein"
+          PLUGIN="${WP_PATH%/}/wp-content/plugins/paxdesign-booking"
+          REMOTE="${WP_SSH_USER}@${WP_SSH_HOST}"
+
+          rsync_with_retry() {
+            local attempt=1
+            local max_attempts=4
+            local delay=4
+            while [ "$attempt" -le "$max_attempts" ]; do
+              if rsync -az -e "ssh ${SSH_OPTS[*]}" "$@"; then
+                return 0
+              fi
+              if [ "$attempt" -eq "$max_attempts" ]; then
+                return 1
+              fi
+              echo "rsync failed (attempt ${attempt}/${max_attempts}); retrying in ${delay}s..."
+              sleep "$delay"
+              attempt=$((attempt + 1))
+              delay=$((delay * 2))
+            done
+          }
+
+          ssh_with_retry() {
+            local attempt=1
+            local max_attempts=4
+            local delay=4
+            while [ "$attempt" -le "$max_attempts" ]; do
+              if ssh "${SSH_OPTS[@]}" "$@"; then
+                return 0
+              fi
+              if [ "$attempt" -eq "$max_attempts" ]; then
+                return 1
+              fi
+              echo "ssh failed (attempt ${attempt}/${max_attempts}); retrying in ${delay}s..."
+              sleep "$delay"
+              attempt=$((attempt + 1))
+              delay=$((delay * 2))
+            done
+          }
+
+          ssh_with_retry "$REMOTE" \
+            "mkdir -p $(printf '%q' "$THEME/inc") $(printf '%q' "$THEME/assets/css") $(printf '%q' "$THEME/template-parts/pages") $(printf '%q' "$PLUGIN/includes/customer/data") $(printf '%q' "$PLUGIN/includes/auth") $(printf '%q' "$PLUGIN/includes") $(printf '%q' "$PLUGIN/templates") $(printf '%q' "$PLUGIN/assets/js") $(printf '%q' "$PLUGIN/assets/customer-auth/js") $(printf '%q' "$PLUGIN/scripts")"
+
+          rsync_with_retry navein/inc/qa-production-fixes.php "${REMOTE}:${THEME}/inc/"
+          rsync_with_retry navein/functions.php "${REMOTE}:${THEME}/"
+          rsync_with_retry navein/404.php "${REMOTE}:${THEME}/"
+          rsync_with_retry navein/assets/css/apple-footer.css "${REMOTE}:${THEME}/assets/css/"
+          rsync_with_retry navein/template-parts/pages/homepage.php "${REMOTE}:${THEME}/template-parts/pages/"
+
+          rsync_with_retry paxdesign-booking/includes/customer/class-paxdesign-customer-services.php "${REMOTE}:${PLUGIN}/includes/customer/class-paxdesign-customer-services.php"
+          rsync_with_retry paxdesign-booking/includes/customer/class-paxdesign-customer-portfolio.php "${REMOTE}:${PLUGIN}/includes/customer/class-paxdesign-customer-portfolio.php"
+          rsync_with_retry paxdesign-booking/includes/customer/class-paxdesign-customer-portfolio-showcase.php "${REMOTE}:${PLUGIN}/includes/customer/class-paxdesign-customer-portfolio-showcase.php"
+          rsync_with_retry paxdesign-booking/includes/customer/class-paxdesign-customer-content.php "${REMOTE}:${PLUGIN}/includes/customer/class-paxdesign-customer-content.php"
+          rsync_with_retry paxdesign-booking/includes/customer/class-paxdesign-customer-platform.php "${REMOTE}:${PLUGIN}/includes/customer/class-paxdesign-customer-platform.php"
+          rsync_with_retry paxdesign-booking/includes/customer/data/homepage-data.php "${REMOTE}:${PLUGIN}/includes/customer/data/homepage-data.php"
+          rsync_with_retry paxdesign-booking/includes/customer/data/account-ui-l10n.php "${REMOTE}:${PLUGIN}/includes/customer/data/account-ui-l10n.php"
+          rsync_with_retry paxdesign-booking/includes/auth/class-paxdesign-auth-page.php "${REMOTE}:${PLUGIN}/includes/auth/class-paxdesign-auth-page.php"
+          rsync_with_retry paxdesign-booking/includes/class-paxdesign-chat.php "${REMOTE}:${PLUGIN}/includes/class-paxdesign-chat.php"
+          rsync_with_retry paxdesign-booking/templates/booking-widget.php "${REMOTE}:${PLUGIN}/templates/booking-widget.php"
+          rsync_with_retry paxdesign-booking/assets/js/chat-script.js "${REMOTE}:${PLUGIN}/assets/js/chat-script.js"
+          rsync_with_retry paxdesign-booking/assets/customer-auth/js/pax-auth.js "${REMOTE}:${PLUGIN}/assets/customer-auth/js/pax-auth.js"
+          rsync_with_retry paxdesign-booking/scripts/wp-eval-sync-customer-services.php "${REMOTE}:${PLUGIN}/scripts/wp-eval-sync-customer-services.php"
+
+          rsync_with_retry scripts/patch-wp-htaccess-security.sh "${REMOTE}:/tmp/patch-wp-htaccess-security.sh"
+
+          WP_PATH_QUOTED=$(printf '%q' "$WP_PATH")
+          ssh_with_retry "$REMOTE" \
+            "chmod +x /tmp/patch-wp-htaccess-security.sh && WP_PATH=${WP_PATH_QUOTED} bash /tmp/patch-wp-htaccess-security.sh && rm -f /tmp/patch-wp-htaccess-security.sh"
+
+          EVAL_OUT=$(ssh_with_retry "$REMOTE" \
+            "cd '$(printf '%q' "$WP_PATH")' && \
+             rm -f .maintenance && \
+             (command -v wp >/dev/null && wp eval-file wp-content/plugins/paxdesign-booking/scripts/wp-eval-sync-customer-services.php || true) && \
+             (command -v wp >/dev/null && wp rewrite flush --hard || true) && \
+             (command -v wp >/dev/null && wp cache flush || true) && \
+             (command -v wp >/dev/null && wp litespeed-purge all || true) && \
+             (php -r 'if (function_exists(\"opcache_reset\")) { opcache_reset(); echo \"opcache_reset=ok\\n\"; } else { echo \"opcache_reset=skipped\\n\"; }' || true)")
+
+          printf '%s\n' "$EVAL_OUT"
+          printf '%s\n' "$EVAL_OUT" | grep -q 'synced_services='
+          printf '%s\n' "$EVAL_OUT" | grep -q 'has_website=1'
+          printf '%s\n' "$EVAL_OUT" | grep -q 'has_gdpr=1'
+
+          ssh_with_retry "$REMOTE" \
+            "grep -q services_from_booking_catalog '$(printf '%q' "$PLUGIN")/includes/customer/class-paxdesign-customer-services.php' && \
+             grep -q list_wordpress_items '$(printf '%q' "$PLUGIN")/includes/customer/class-paxdesign-customer-portfolio.php' && \
+             grep -q pax_qa_broken_path_redirects '$(printf '%q' "$THEME")/inc/qa-production-fixes.php' && \
+             grep -q 'Weiter zum Live-Chat' '$(printf '%q' "$PLUGIN")/templates/booking-widget.php' && \
+             grep -q 'Version: 3.174.128' '$(printf '%q' "$PLUGIN")/assets/js/chat-script.js' && \
+             grep -q 'Gespräch beenden' '$(printf '%q' "$PLUGIN")/assets/js/chat-script.js' && exit 1 || \
+             grep -q 'Version: 3.174.128' '$(printf '%q' "$PLUGIN")/assets/js/chat-script.js' && \
+             echo 'OK: live files include QA fixes without 3.176 chat rewrite'"
+
+          echo "Deployed QA production fixes (surgical rsync, no plugin tree delete, no iOS build)"

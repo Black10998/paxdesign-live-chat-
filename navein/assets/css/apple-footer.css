@@ -945,3 +945,16 @@ body.dtr-apple-footer #dtr-footer-section .pax-af .pax-af__trust-list a {
 }
 
 /* contrast fix 1.2.1 */
+
+/*
+ * Custom HTML App Store badge sits in the same corner as Support Message.
+ * Lift it above the chat launcher on phones so both remain tappable.
+ */
+@media (max-width: 768px) {
+  #appstore-popup,
+  .appstore-popup,
+  [id="appstore-popup"] {
+    bottom: calc(72px + env(safe-area-inset-bottom, 0px)) !important;
+    z-index: 99980 !important;
+  }
+}

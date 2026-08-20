@@ -99,9 +99,12 @@ class PAXdesign_Chat {
                 ? PAXdesign_Auth_Page::page_url()
                 : home_url('/account/'),
             'authGate'         => array(
-                'title'       => __('Continue to Live Chat', 'paxdesign-booking'),
-                'subtitle'    => __('Sign in to message our team.', 'paxdesign-booking'),
-                'logIn'       => __('Sign In', 'paxdesign-booking'),
+                'title'       => __('Weiter zum Live-Chat', 'paxdesign-booking'),
+                'subtitle'    => __('Melden Sie sich an, um unserem Team zu schreiben.', 'paxdesign-booking'),
+                'logIn'       => __('Anmelden', 'paxdesign-booking'),
+                'github'      => __('Mit GitHub anmelden', 'paxdesign-booking'),
+                'apple'       => __('Mit Apple anmelden', 'paxdesign-booking'),
+                'or'          => __('oder', 'paxdesign-booking'),
             ),
             'authSocial'       => array(
                 'githubEnabled'  => class_exists('PAXdesign_Auth_GitHub') && PAXdesign_Auth_GitHub::is_web_configured(),

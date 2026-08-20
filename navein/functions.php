@@ -166,6 +166,10 @@ add_action( 'after_setup_theme', 'navein_theme_setup' );
 
 require_once get_template_directory() . '/inc/performance.php';
 require_once get_template_directory() . '/inc/public-identity-hardening.php';
+$pax_qa_fixes = get_template_directory() . '/inc/qa-production-fixes.php';
+if ( is_readable( $pax_qa_fixes ) ) {
+	require_once $pax_qa_fixes;
+}
 
 /**
  * Enqueue Plugins Scripts and Styles

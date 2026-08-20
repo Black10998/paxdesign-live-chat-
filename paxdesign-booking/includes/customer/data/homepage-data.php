@@ -138,7 +138,7 @@ return array(
   'about_teaser' => array(
     'de' => array(
       'title' => 'Ein Einblick in unser Team, unsere Arbeit und unsere Werte',
-      'subtitle' => '',
+      'subtitle' => 'Menschen, Handwerk und Haltung hinter PAXdesign',
       'heading' => 'Wir sind',
       'brand' => "PAXdesign\ndigitale Entwickler",
       'since_label' => 'Tätig seit',
@@ -149,7 +149,7 @@ return array(
     ),
     'en' => array(
       'title' => 'A glimpse into our team, our work and our values',
-      'subtitle' => '',
+      'subtitle' => 'The people, craft and values behind PAXdesign',
       'heading' => 'We are',
       'brand' => "PAXdesign\ndigital developers",
       'since_label' => 'Active since',
@@ -160,7 +160,7 @@ return array(
     ),
     'ar' => array(
       'title' => 'لمحة عن فريقنا وعملنا وقيمنا',
-      'subtitle' => '',
+      'subtitle' => 'الأشخاص والحرفة والقيم خلف PAXdesign',
       'heading' => 'نحن',
       'brand' => "PAXdesign\nمطورون رقميون",
       'since_label' => 'نشطون منذ',

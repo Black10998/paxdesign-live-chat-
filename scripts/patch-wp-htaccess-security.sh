@@ -75,6 +75,8 @@ SEC_BLOCK="${SEC_START}
 </FilesMatch>
 <IfModule mod_headers.c>
   Header always unset X-Powered-By
+  Header always unset Permissions-Policy
+  Header always set Permissions-Policy \"camera=(self), microphone=(self), geolocation=(self)\"
   SetEnvIf Origin \"^https://(www\\.)?paxdesign\\.at$\" PAX_CORS_ORIGIN=\$0
   Header always unset Access-Control-Allow-Origin
   Header always unset Access-Control-Allow-Credentials
@@ -157,3 +159,5 @@ if command -v wp >/dev/null 2>&1; then
 fi
 
 echo "OK: disclosure files removed, /wp-json/ rewrite restored, htaccess patched"
+grep -q 'Permissions-Policy' "$HTACCESS"
+echo "OK: Permissions-Policy allows same-origin camera and microphone"

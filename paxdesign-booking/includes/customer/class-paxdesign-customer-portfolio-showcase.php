@@ -38,10 +38,12 @@ class PAXdesign_Customer_Portfolio_Showcase {
     }
 
     /**
+     * Curated JSON payload (Unsplash seed). Used only when WordPress has no portfolio posts.
+     *
      * @param string $lang
      * @return array<string, mixed>
      */
-    public static function payload($lang = 'de') {
+    public static function json_payload($lang = 'de') {
         $lang = self::normalize_language($lang);
         $data = self::raw_data();
         $header = isset($data['header'][$lang]) ? $data['header'][$lang] : (isset($data['header']['de']) ? $data['header']['de'] : array());
@@ -62,6 +64,46 @@ class PAXdesign_Customer_Portfolio_Showcase {
             'categories' => $categories,
             'items'      => $items,
         );
+    }
+
+    /**
+     * @param string $lang
+     * @return array<string, mixed>
+     */
+    public static function payload($lang = 'de') {
+        $lang = self::normalize_language($lang);
+        $payload = self::json_payload($lang);
+        if (class_exists('PAXdesign_Customer_Portfolio')) {
+            $wp_items = PAXdesign_Customer_Portfolio::list_wordpress_items(200, '');
+            if (!empty($wp_items)) {
+                foreach ($wp_items as &$item) {
+                    if (!isset($item['stats']) || !is_array($item['stats'])) {
+                        $item['stats'] = array();
+                    }
+                }
+                unset($item);
+                $payload['items'] = $wp_items;
+                $payload['categories'] = self::categories_from_items($wp_items);
+            }
+        }
+        return $payload;
+    }
+
+    /**
+     * @return array<int, array<string, mixed>>
+     */
+    public static function list_json_items($limit = 100, $category = '', $lang = 'de') {
+        $payload = self::json_payload($lang);
+        $items = isset($payload['items']) ? $payload['items'] : array();
+        if ($category !== '') {
+            $needle = sanitize_title($category);
+            $items = array_values(array_filter($items, function ($item) use ($needle) {
+                $slugs = isset($item['category_slugs']) && is_array($item['category_slugs']) ? $item['category_slugs'] : array();
+                return in_array($needle, $slugs, true);
+            }));
+        }
+        $limit = max(1, min(200, (int) $limit));
+        return array_slice($items, 0, $limit);
     }
 
     /**

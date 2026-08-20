@@ -1471,18 +1471,23 @@
     var dividerEl = root.querySelector('#paxdesignChatAuthDivider');
     if (!socialEl) return;
     var social = config && config.authSocial ? config.authSocial : {};
+    var gate = config && config.authGate ? config.authGate : {};
     var html = '';
     if (social.githubEnabled) {
       html += '<button type="button" class="paxdesign-booking-chat-auth-github-btn" data-pax-chat-github="1">' +
-        chatAuthGithubIconHtml() + 'Sign in with GitHub</button>';
+        chatAuthGithubIconHtml() + (gate.github || 'Mit GitHub anmelden') + '</button>';
     }
     if (social.appleEnabled) {
       html += '<button type="button" class="paxdesign-booking-chat-auth-apple-btn" data-pax-chat-apple="1">' +
-        chatAuthAppleIconHtml() + 'Sign in with Apple</button>';
+        chatAuthAppleIconHtml() + (gate.apple || 'Mit Apple anmelden') + '</button>';
     }
     socialEl.innerHTML = html;
     socialEl.hidden = !html;
-    if (dividerEl) dividerEl.hidden = !html;
+    if (dividerEl) {
+      dividerEl.hidden = !html;
+      var dividerLabel = dividerEl.querySelector('span');
+      if (dividerLabel) dividerLabel.textContent = gate.or || 'oder';
+    }
     socialEl.querySelectorAll('[data-pax-chat-github]').forEach(function (btn) {
       btn.addEventListener('click', function (e) {
         e.preventDefault();

@@ -222,10 +222,10 @@ class PAXdesign_Auth_Page {
         <div id="pdx-auth-page" class="pdx-auth-page" data-pdx-auth-page="1">
             <div id="pdx-auth-page-guest" class="pdx-auth-page-guest">
                 <div class="pdx-auth-page-shell pdx-auth-page-shell--compact">
-                    <h1 class="pdx-auth-page-title" id="pdx-auth-page-title"><?php echo esc_html__('Sign In', 'paxdesign-booking'); ?></h1>
-                    <div class="pdx-auth-page-segment" role="tablist" aria-label="<?php echo esc_attr__('Authentication', 'paxdesign-booking'); ?>">
-                        <button type="button" class="pdx-auth-page-segment-btn is-active" data-auth-view="login" role="tab" aria-selected="true"><?php echo esc_html__('Sign In', 'paxdesign-booking'); ?></button>
-                        <button type="button" class="pdx-auth-page-segment-btn" data-auth-view="register" role="tab" aria-selected="false"><?php echo esc_html__('Create Account', 'paxdesign-booking'); ?></button>
+                    <h1 class="pdx-auth-page-title" id="pdx-auth-page-title"><?php echo esc_html__('Anmelden', 'paxdesign-booking'); ?></h1>
+                    <div class="pdx-auth-page-segment" role="tablist" aria-label="<?php echo esc_attr__('Anmeldung', 'paxdesign-booking'); ?>">
+                        <button type="button" class="pdx-auth-page-segment-btn is-active" data-auth-view="login" role="tab" aria-selected="true"><?php echo esc_html__('Anmelden', 'paxdesign-booking'); ?></button>
+                        <button type="button" class="pdx-auth-page-segment-btn" data-auth-view="register" role="tab" aria-selected="false"><?php echo esc_html__('Konto erstellen', 'paxdesign-booking'); ?></button>
                     </div>
                     <div id="pdx-auth-page-form" class="pdx-auth-page-form-wrap" role="tabpanel"></div>
                 </div>

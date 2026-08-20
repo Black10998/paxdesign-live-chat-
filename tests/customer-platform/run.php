@@ -92,7 +92,7 @@ cx_assert_true(strpos($showcase, 'portfolio-showcase-data.json') !== false, 'Por
 cx_assert_true(is_readable($customer_dir . '/data/portfolio-showcase-data.json'), 'Portfolio showcase JSON must exist');
 
 $portfolio = file_get_contents($customer_dir . '/class-paxdesign-customer-portfolio.php');
-cx_assert_true(strpos($portfolio, 'PAXdesign_Customer_Portfolio_Showcase') !== false, 'Portfolio must prefer curated showcase data');
+cx_assert_true(strpos($portfolio, 'list_wordpress_items') !== false, 'Portfolio must prefer published WordPress items before curated JSON');
 cx_assert_true(strpos($portfolio, 'structured_from_blocks') !== false, 'Portfolio must build structured showcase payload');
 cx_assert_true(strpos($portfolio, 'clean_title') !== false, 'Portfolio must sanitize titles for native UI');
 

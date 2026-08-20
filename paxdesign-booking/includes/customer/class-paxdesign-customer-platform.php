@@ -70,7 +70,7 @@ class PAXdesign_Customer_Platform {
             return;
         }
         wp_send_json_error(array(
-            'message' => __('Sign in or create an account to use Live Chat.', 'paxdesign-booking'),
+            'message' => __('Melden Sie sich an oder erstellen Sie ein Konto, um den Live-Chat zu nutzen.', 'paxdesign-booking'),
             'code'    => 'login_required',
         ), 401);
     }

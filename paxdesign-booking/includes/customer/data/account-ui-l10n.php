@@ -965,4 +965,114 @@ return array(
 		'de' => 'Weiter',
 		'ar' => 'التالي',
 	),
+	'sign_in' => array(
+		'en' => 'Sign In',
+		'de' => 'Anmelden',
+		'ar' => 'تسجيل الدخول',
+	),
+	'create_account' => array(
+		'en' => 'Create Account',
+		'de' => 'Konto erstellen',
+		'ar' => 'إنشاء حساب',
+	),
+	'forgot_password' => array(
+		'en' => 'Forgot Password',
+		'de' => 'Passwort vergessen',
+		'ar' => 'نسيت كلمة المرور',
+	),
+	'forgot_password_q' => array(
+		'en' => 'Forgot password?',
+		'de' => 'Passwort vergessen?',
+		'ar' => 'نسيت كلمة المرور؟',
+	),
+	'reset_password' => array(
+		'en' => 'Reset Password',
+		'de' => 'Passwort zurücksetzen',
+		'ar' => 'إعادة تعيين كلمة المرور',
+	),
+	'send_reset_link' => array(
+		'en' => 'Send Reset Link',
+		'de' => 'Link senden',
+		'ar' => 'إرسال رابط إعادة التعيين',
+	),
+	'already_have_account' => array(
+		'en' => 'Already have an account? Sign in',
+		'de' => 'Bereits ein Konto? Anmelden',
+		'ar' => 'لديك حساب بالفعل؟ سجّل الدخول',
+	),
+	'back_to_sign_in' => array(
+		'en' => 'Back to sign in',
+		'de' => 'Zurück zur Anmeldung',
+		'ar' => 'العودة لتسجيل الدخول',
+	),
+	'sign_in_github' => array(
+		'en' => 'Sign in with GitHub',
+		'de' => 'Mit GitHub anmelden',
+		'ar' => 'تسجيل الدخول عبر GitHub',
+	),
+	'sign_in_apple' => array(
+		'en' => 'Sign in with Apple',
+		'de' => 'Mit Apple anmelden',
+		'ar' => 'تسجيل الدخول عبر Apple',
+	),
+	'or' => array(
+		'en' => 'or',
+		'de' => 'oder',
+		'ar' => 'أو',
+	),
+	'authentication' => array(
+		'en' => 'Authentication',
+		'de' => 'Anmeldung',
+		'ar' => 'تسجيل الدخول',
+	),
+	'full_name' => array(
+		'en' => 'Full name',
+		'de' => 'Vollständiger Name',
+		'ar' => 'الاسم الكامل',
+	),
+	'password' => array(
+		'en' => 'Password',
+		'de' => 'Passwort',
+		'ar' => 'كلمة المرور',
+	),
+	'password_min' => array(
+		'en' => 'Password (min 8 characters)',
+		'de' => 'Passwort (mindestens 8 Zeichen)',
+		'ar' => 'كلمة المرور (8 أحرف على الأقل)',
+	),
+	'new_password' => array(
+		'en' => 'New password',
+		'de' => 'Neues Passwort',
+		'ar' => 'كلمة مرور جديدة',
+	),
+	'confirm_password' => array(
+		'en' => 'Confirm password',
+		'de' => 'Passwort bestätigen',
+		'ar' => 'تأكيد كلمة المرور',
+	),
+	'sign_in_required' => array(
+		'en' => 'Sign in required',
+		'de' => 'Anmeldung erforderlich',
+		'ar' => 'يلزم تسجيل الدخول',
+	),
+	'sign_in_required_desc' => array(
+		'en' => 'Sign in to access your account, purchases, and subscription.',
+		'de' => 'Melden Sie sich an, um auf Ihr Konto zuzugreifen.',
+		'ar' => 'سجّل الدخول للوصول إلى حسابك.',
+	),
+	'verify_email_title' => array(
+		'en' => 'Verify your email',
+		'de' => 'E-Mail bestätigen',
+		'ar' => 'تحقق من بريدك الإلكتروني',
+	),
+	'verify_email_desc' => array(
+		'en' => 'Please verify your email address to continue using protected modules.',
+		'de' => 'Bitte bestätigen Sie Ihre E-Mail-Adresse, um fortzufahren.',
+		'ar' => 'يرجى التحقق من بريدك الإلكتروني للمتابعة.',
+	),
+	'resend_verification' => array(
+		'en' => 'Resend verification',
+		'de' => 'Bestätigung erneut senden',
+		'ar' => 'إعادة إرسال رمز التحقق',
+	),
 );

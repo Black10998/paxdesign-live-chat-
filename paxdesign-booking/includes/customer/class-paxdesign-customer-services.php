@@ -11,24 +11,41 @@ class PAXdesign_Customer_Services {
 
     public static function init() {
         add_action('paxdesign_customer_platform_ready', array(__CLASS__, 'maybe_seed_catalog'));
+        // Seed used to run while the plugin file loaded, before customer tables
+        // exist (maybe_upgrade is on plugins_loaded:5). Retry after schema is ready.
+        add_action('plugins_loaded', array(__CLASS__, 'maybe_seed_catalog'), 20);
+        add_action('init', array(__CLASS__, 'maybe_seed_catalog'), 20);
     }
 
     public static function maybe_seed_catalog() {
-        if (get_option('paxdesign_customer_services_seeded') === '1') {
+        if (self::active_service_count() > 0) {
+            if (get_option('paxdesign_customer_services_seeded') !== '1') {
+                update_option('paxdesign_customer_services_seeded', '1', false);
+            }
             return;
         }
         self::seed_from_booking_catalog();
-        update_option('paxdesign_customer_services_seeded', '1', false);
+        if (self::active_service_count() > 0) {
+            update_option('paxdesign_customer_services_seeded', '1', false);
+        }
     }
 
     public static function sync_from_booking_catalog() {
         self::seed_from_booking_catalog();
-        update_option('paxdesign_customer_services_seeded', '1', false);
+        if (self::active_service_count() > 0) {
+            update_option('paxdesign_customer_services_seeded', '1', false);
+        }
     }
 
     public static function seed_from_booking_catalog() {
         global $wpdb;
         if (!class_exists('PAXdesign_Booking')) {
+            return;
+        }
+        if (class_exists('PAXdesign_Customer_DB')) {
+            PAXdesign_Customer_DB::maybe_upgrade();
+        }
+        if (!self::services_table_ready()) {
             return;
         }
         $booking = PAXdesign_Booking::get_instance();
@@ -68,13 +85,28 @@ class PAXdesign_Customer_Services {
 
     private static function default_categories() {
         return array(
-            array('slug' => 'development', 'name' => 'Development', 'description' => 'Apps, websites, and custom software.'),
-            array('slug' => 'design', 'name' => 'Design & Branding', 'description' => 'UI/UX and visual identity.'),
-            array('slug' => 'security', 'name' => 'Security', 'description' => 'Protection and compliance services.'),
-            array('slug' => 'ai', 'name' => 'AI & Automation', 'description' => 'Intelligent automation solutions.'),
-            array('slug' => 'operations', 'name' => 'Operations', 'description' => 'Hosting, maintenance, and analytics.'),
-            array('slug' => 'general', 'name' => 'Services', 'description' => 'Professional digital services from PAXDesign.'),
+            array('slug' => 'development', 'name' => 'Entwicklung', 'description' => 'Apps, Websites und individuelle Software.'),
+            array('slug' => 'design', 'name' => 'Design & Branding', 'description' => 'UI/UX und visuelle Identität.'),
+            array('slug' => 'security', 'name' => 'Sicherheit', 'description' => 'Schutz- und Compliance-Leistungen.'),
+            array('slug' => 'ai', 'name' => 'KI & Automatisierung', 'description' => 'Intelligente Automatisierungslösungen.'),
+            array('slug' => 'operations', 'name' => 'Betrieb', 'description' => 'Hosting, Wartung und Analysen.'),
+            array('slug' => 'general', 'name' => 'Leistungen', 'description' => 'Digitale Leistungen von PAXdesign.'),
         );
+    }
+
+    private static function services_table_ready() {
+        global $wpdb;
+        $table = PAXdesign_Customer_DB::table('services');
+        return $wpdb->get_var($wpdb->prepare('SHOW TABLES LIKE %s', $table)) === $table;
+    }
+
+    private static function active_service_count() {
+        global $wpdb;
+        if (!self::services_table_ready()) {
+            return 0;
+        }
+        $table = PAXdesign_Customer_DB::table('services');
+        return (int) $wpdb->get_var("SELECT COUNT(*) FROM $table WHERE is_active = 1");
     }
 
     private static function related_for_key($key) {
@@ -90,26 +122,30 @@ class PAXdesign_Customer_Services {
     public static function list_services($args = array()) {
         self::maybe_seed_catalog();
         global $wpdb;
-        $table = PAXdesign_Customer_DB::table('services');
-        $where = array('is_active = 1');
-        $params = array();
-        if (!empty($args['category'])) {
-            $where[] = 'category_slug = %s';
-            $params[] = sanitize_key($args['category']);
+        $rows = array();
+        if (self::services_table_ready()) {
+            $table = PAXdesign_Customer_DB::table('services');
+            $where = array('is_active = 1');
+            $params = array();
+            if (!empty($args['category'])) {
+                $where[] = 'category_slug = %s';
+                $params[] = sanitize_key($args['category']);
+            }
+            if (!empty($args['search'])) {
+                $like = '%' . $wpdb->esc_like(sanitize_text_field($args['search'])) . '%';
+                $where[] = '(name LIKE %s OR description LIKE %s)';
+                $params[] = $like;
+                $params[] = $like;
+            }
+            $sql = "SELECT * FROM $table WHERE " . implode(' AND ', $where) . " ORDER BY sort_order ASC, name ASC";
+            if (!empty($params)) {
+                $sql = $wpdb->prepare($sql, $params);
+            }
+            $rows = $wpdb->get_results($sql, ARRAY_A);
         }
-        if (!empty($args['search'])) {
-            $like = '%' . $wpdb->esc_like(sanitize_text_field($args['search'])) . '%';
-            $where[] = '(name LIKE %s OR description LIKE %s)';
-            $params[] = $like;
-            $params[] = $like;
-        }
-        $sql = "SELECT * FROM $table WHERE " . implode(' AND ', $where) . " ORDER BY sort_order ASC, name ASC";
-        if (!empty($params)) {
-            $sql = $wpdb->prepare($sql, $params);
-        }
-        $rows = $wpdb->get_results($sql, ARRAY_A);
         $services = array_map(array(__CLASS__, 'format_service'), $rows ? $rows : array());
         $services = self::merge_services($services, self::services_from_wordpress_pages());
+        $services = self::merge_services($services, self::services_from_booking_catalog());
 
         if (!empty($args['category'])) {
             $category = sanitize_key($args['category']);
@@ -131,14 +167,21 @@ class PAXdesign_Customer_Services {
     public static function get_by_slug($slug) {
         global $wpdb;
         $slug = sanitize_key($slug);
-        $table = PAXdesign_Customer_DB::table('services');
-        $row = $wpdb->get_row($wpdb->prepare("SELECT * FROM $table WHERE slug = %s AND is_active = 1 LIMIT 1", $slug), ARRAY_A);
-        if ($row) {
-            return self::format_service($row);
+        if (self::services_table_ready()) {
+            $table = PAXdesign_Customer_DB::table('services');
+            $row = $wpdb->get_row($wpdb->prepare("SELECT * FROM $table WHERE slug = %s AND is_active = 1 LIMIT 1", $slug), ARRAY_A);
+            if ($row) {
+                return self::format_service($row);
+            }
         }
         $page = get_page_by_path($slug, OBJECT, 'page');
         if ($page instanceof WP_Post && $page->post_status === 'publish') {
             return self::format_wordpress_page_service($page);
+        }
+        foreach (self::services_from_booking_catalog() as $service) {
+            if (sanitize_key($service['slug'] ?? '') === $slug) {
+                return $service;
+            }
         }
         return null;
     }
@@ -146,7 +189,11 @@ class PAXdesign_Customer_Services {
     public static function list_categories() {
         global $wpdb;
         $table = PAXdesign_Customer_DB::table('service_categories');
-        $rows = $wpdb->get_results("SELECT slug, name, description, sort_order FROM $table ORDER BY sort_order ASC", ARRAY_A);
+        $cat_exists = $wpdb->get_var($wpdb->prepare('SHOW TABLES LIKE %s', $table)) === $table;
+        $rows = array();
+        if ($cat_exists) {
+            $rows = $wpdb->get_results("SELECT slug, name, description, sort_order FROM $table ORDER BY sort_order ASC", ARRAY_A);
+        }
         if (!empty($rows)) {
             return $rows;
         }
@@ -199,6 +246,57 @@ class PAXdesign_Customer_Services {
         $items = array();
         foreach ($pages as $page) {
             $items[] = self::format_wordpress_page_service($page);
+        }
+        return $items;
+    }
+
+    /**
+     * Live booking catalog (same slugs the iOS app already requests: website, aiautomation, gdpr, …).
+     *
+     * @return array<int, array<string, mixed>>
+     */
+    private static function services_from_booking_catalog() {
+        if (!class_exists('PAXdesign_Booking')) {
+            return array();
+        }
+        $booking = PAXdesign_Booking::get_instance();
+        $catalog = $booking->get_services();
+        if (!is_array($catalog) || empty($catalog)) {
+            return array();
+        }
+        $items = array();
+        $order = 0;
+        foreach ($catalog as $key => $service) {
+            if (!is_array($service)) {
+                continue;
+            }
+            $order++;
+            $slug = sanitize_key((string) $key);
+            if ($slug === '') {
+                continue;
+            }
+            $name = sanitize_text_field((string) ($service['name'] ?? $slug));
+            $description = (string) ($service['description'] ?? '');
+            $category = sanitize_key((string) ($service['category'] ?? 'general'));
+            if ($category === '') {
+                $category = 'general';
+            }
+            $items[] = array(
+                'slug'        => $slug,
+                'name'        => $name,
+                'category'    => $category,
+                'description' => $description,
+                'body_html'   => wp_kses_post($description),
+                'body_text'   => wp_trim_words(wp_strip_all_tags($description), 120),
+                'features'    => isset($service['features']) && is_array($service['features']) ? $service['features'] : array(),
+                'examples'    => array(),
+                'related'     => self::related_for_key($slug),
+                'media'       => array('icon' => $slug),
+                'image_url'   => '',
+                'icon_key'    => $slug,
+                'order_url'   => self::order_url_for_service($slug, $name),
+                'featured'    => !empty($service['popular']) || !empty($service['premium']),
+            );
         }
         return $items;
     }

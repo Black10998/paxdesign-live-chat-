@@ -10,11 +10,11 @@ if ( ! defined( 'ABSPATH' ) ) {
 }
 
 $contact   = home_url( '/kontakt/' );
-$services  = home_url( '/projektpreise/' );
+$services  = home_url( '/preise/' );
 $pricing   = home_url( '/preise/' );
 $about     = home_url( '/ueber-uns/' );
 $projects  = home_url( '/referenzen/' );
-$phone     = '+43 681 20543638';
+$phone     = '+43 681 2054 3638';
 $email     = 'info@paxdesign.at';
 $hero_img  = 'https://paxdesign.at/wp-content/uploads/2026/01/code-2558220_1280.avif';
 $award_img = 'https://paxdesign.at/wp-content/uploads/2025/02/folio-item-img6.avif';

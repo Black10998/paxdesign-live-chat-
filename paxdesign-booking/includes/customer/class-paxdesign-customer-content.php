@@ -70,7 +70,7 @@ class PAXdesign_Customer_Content {
             $tree = self::enrich_section_items($key, $tree);
             $sections[] = array(
                 'key'   => $key,
-                'title' => self::localized_section_title($key, (string) $config['title']),
+                'title' => self::localized_section_title($key, (string) $config['title'], $lang),
                 'items' => $tree,
             );
         }
@@ -462,14 +462,14 @@ class PAXdesign_Customer_Content {
     /**
      * @return string
      */
-    private static function localized_section_title($key, $fallback) {
+    private static function localized_section_title($key, $fallback, $lang = '') {
         $map = array(
-            'services'   => array('de' => 'Services', 'en' => 'Services', 'ar' => 'الخدمات'),
+            'services'   => array('de' => 'Leistungen', 'en' => 'Services', 'ar' => 'الخدمات'),
             'referenzen' => array('de' => 'Referenzen', 'en' => 'Portfolio', 'ar' => 'الأعمال'),
             'leistungen' => array('de' => 'Leistungen', 'en' => 'Capabilities', 'ar' => 'القدرات'),
             'kontakt'    => array('de' => 'Kontakt', 'en' => 'Contact', 'ar' => 'تواصل'),
         );
-        $lang = substr(determine_locale(), 0, 2);
+        $lang = strtolower(substr(sanitize_key($lang !== '' ? $lang : determine_locale()), 0, 2));
         if (isset($map[$key][$lang])) {
             return $map[$key][$lang];
         }

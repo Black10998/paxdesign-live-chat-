@@ -65,7 +65,9 @@
   }
 
   function customerPortalLang() {
-    var lang = (navigator.language || navigator.userLanguage || document.documentElement.lang || 'de').toLowerCase();
+    var htmlLang = (document.documentElement.getAttribute('lang') || document.documentElement.lang || '').toLowerCase();
+    var navLang = (navigator.language || navigator.userLanguage || '').toLowerCase();
+    var lang = htmlLang || navLang || 'de';
     if (lang.indexOf('ar') === 0) return 'ar';
     if (lang.indexOf('en') === 0) return 'en';
     return 'de';
@@ -1148,7 +1150,7 @@
     authBar.className = 'pdx-cx-shell';
     authBar.innerHTML =
       '<div class="pdx-auth-bar-inner">' +
-        '<button type="button" class="pdx-auth-signup-btn pdx-cx-btn pdx-auth-header-btn">Sign In</button>' +
+        '<button type="button" class="pdx-auth-signup-btn pdx-cx-btn pdx-auth-header-btn">' + escHtml(t('sign_in', 'Anmelden')) + '</button>' +
         '<button type="button" class="pdx-auth-account-btn pdx-cx-btn pdx-cx-btn--ghost pdx-auth-header-btn" aria-haspopup="true" aria-expanded="false" hidden>' +
           '<span class="pdx-auth-account-identity"></span>' +
         '</button>' +
@@ -1491,10 +1493,10 @@
     overlay.className = 'pdx-cx-shell';
     overlay.setAttribute('role', 'dialog');
     overlay.setAttribute('aria-modal', 'true');
-    overlay.setAttribute('aria-label', 'Authentication');
+    overlay.setAttribute('aria-label', t('authentication', 'Anmeldung'));
     overlay.innerHTML =
       '<div class="pdx-auth-wrapper">' +
-        '<button type="button" class="pdx-auth-close" aria-label="Close">&times;</button>' +
+        '<button type="button" class="pdx-auth-close" aria-label="' + escHtml(t('close', 'Schließen')) + '">&times;</button>' +
         '<div class="pdx-auth-form-wrap"></div>' +
       '</div>';
     document.body.appendChild(overlay);
@@ -1544,19 +1546,24 @@
       }
     }
     var compact = !!(inlineAuthMount && inlineAuthMount.compact);
-    var titles = { login: 'Sign In', register: 'Create Account', forgot: 'Forgot Password', reset: 'Reset Password' };
+    var titles = {
+      login: t('sign_in', 'Anmelden'),
+      register: t('create_account', 'Konto erstellen'),
+      forgot: t('forgot_password', 'Passwort vergessen'),
+      reset: t('reset_password', 'Passwort zurücksetzen')
+    };
     var subtitles = {
-      login: 'Welcome back. Sign in to your PAXDesign account.',
-      register: 'Create your account to access modules and billing.',
-      forgot: 'Enter your email and we will send a secure reset link.',
-      reset: 'Choose a strong new password for your account.',
+      login: t('welcome_back', 'Willkommen zurück. Melden Sie sich bei Ihrem PAXdesign-Konto an.'),
+      register: t('create_account_sub', 'Erstellen Sie Ihr Konto, um Module und Anfragen zu nutzen.'),
+      forgot: t('forgot_sub', 'Geben Sie Ihre E-Mail ein. Wir senden einen sicheren Reset-Link.'),
+      reset: t('reset_sub', 'Wählen Sie ein neues, sicheres Passwort für Ihr Konto.'),
     };
     var headIcons = { login: 'login', register: 'register', forgot: 'mail', reset: 'lock' };
     var html = '<form class="pdx-auth-form pdx-auth-form--' + currentView + (compact ? ' pdx-auth-form--compact' : '') + '" novalidate>';
     if (!compact) {
       html += '<div class="pdx-cx-auth-head">';
       html += '<div class="pdx-cx-icon-wrap">' + cxIcon(headIcons[currentView] || 'login', 22) + '</div>';
-      html += '<span class="pdx-auth-title">' + escHtml(titles[currentView] || 'Sign In') + '</span>';
+      html += '<span class="pdx-auth-title">' + escHtml(titles[currentView] || t('sign_in', 'Anmelden')) + '</span>';
       html += '<p class="pdx-cx-auth-subtitle">' + escHtml(subtitles[currentView] || '') + '</p>';
       html += '</div>';
     }
@@ -1569,39 +1576,39 @@
     html += '<div class="pdx-auth-fields">';
 
     if (currentView === 'login') {
-      html += fieldInput('email', 'email', 'Email', 'mail', 'email', true);
-      html += fieldInput('password', 'password', 'Password', 'lock', 'current-password', true);
+      html += fieldInput('email', 'email', t('email', 'E-Mail'), 'mail', 'email', true);
+      html += fieldInput('password', 'password', t('password', 'Passwort'), 'lock', 'current-password', true);
     } else if (currentView === 'register') {
-      html += fieldInput('name', 'text', 'Full name', 'user', 'name', true);
-      html += fieldInput('email', 'email', 'Email', 'mail', 'email', true);
-      html += fieldInput('password', 'password', 'Password (min 8 characters)', 'lock', 'new-password', true);
+      html += fieldInput('name', 'text', t('full_name', 'Vollständiger Name'), 'user', 'name', true);
+      html += fieldInput('email', 'email', t('email', 'E-Mail'), 'mail', 'email', true);
+      html += fieldInput('password', 'password', t('password_min', 'Passwort (mindestens 8 Zeichen)'), 'lock', 'new-password', true);
     } else if (currentView === 'forgot') {
-      html += fieldInput('email', 'email', 'Email', 'mail', 'email', true);
+      html += fieldInput('email', 'email', t('email', 'E-Mail'), 'mail', 'email', true);
     } else if (currentView === 'reset') {
-      html += fieldInput('password', 'password', 'New password', 'lock', 'new-password', true);
-      html += fieldInput('password2', 'password', 'Confirm password', 'lock', 'new-password', true);
+      html += fieldInput('password', 'password', t('new_password', 'Neues Passwort'), 'lock', 'new-password', true);
+      html += fieldInput('password2', 'password', t('confirm_password', 'Passwort bestätigen'), 'lock', 'new-password', true);
     }
 
     html += '</div>';
 
     if (currentView === 'login') {
-      html += submitBtn('Sign In', 'login');
+      html += submitBtn(t('sign_in', 'Anmelden'), 'login');
       html += links([
-        { view: 'forgot', label: 'Forgot password?' },
-        { view: 'register', label: 'Create account' },
+        { view: 'forgot', label: t('forgot_password_q', 'Passwort vergessen?') },
+        { view: 'register', label: t('create_account', 'Konto erstellen') },
       ]);
       if (!isAuthPageFormMount()) {
         html += appleSignInButtonHtml();
       }
     } else if (currentView === 'register') {
-      html += submitBtn('Create Account', 'register');
-      html += links([{ view: 'login', label: 'Already have an account? Sign in' }]);
+      html += submitBtn(t('create_account', 'Konto erstellen'), 'register');
+      html += links([{ view: 'login', label: t('already_have_account', 'Bereits ein Konto? Anmelden') }]);
     } else if (currentView === 'forgot') {
-      html += submitBtn('Send Reset Link', 'mail');
-      html += links([{ view: 'login', label: 'Back to sign in' }]);
+      html += submitBtn(t('send_reset_link', 'Link senden'), 'mail');
+      html += links([{ view: 'login', label: t('back_to_sign_in', 'Zurück zur Anmeldung') }]);
     } else if (currentView === 'reset') {
-      html += submitBtn('Reset Password', 'lock');
-      html += links([{ view: 'login', label: 'Back to sign in' }]);
+      html += submitBtn(t('reset_password', 'Passwort zurücksetzen'), 'lock');
+      html += links([{ view: 'login', label: t('back_to_sign_in', 'Zurück zur Anmeldung') }]);
     }
 
     html += '</form>';
@@ -1775,7 +1782,7 @@
       '<svg width="16" height="16" viewBox="0 0 16 16" xmlns="http://www.w3.org/2000/svg" focusable="false">' +
       '<path fill="currentColor" d="M8 0C3.58 0 0 3.58 0 8c0 3.54 2.29 6.53 5.47 7.59.4.07.55-.17.55-.38 0-.19-.01-.82-.01-1.49-2.01.37-2.53-.49-2.69-.94-.09-.23-.48-.94-.82-1.13-.28-.15-.68-.52-.01-.53.63-.01 1.08.58 1.23.82.72 1.21 1.87.87 2.33.66.07-.52.28-.87.51-1.07-1.78-.2-3.64-.89-3.64-3.95 0-.87.31-1.59.82-2.15-.08-.2-.36-1.02.08-2.12 0 0 .67-.21 2.2.82.64-.18 1.32-.27 2-.27s1.36.09 2 .27c1.53-1.04 2.2-.82 2.2-.82.44 1.1.16 1.92.08 2.12.51.56.82 1.27.82 2.15 0 3.07-1.87 3.75-3.65 3.95.29.25.54.73.54 1.48 0 1.07-.01 1.93-.01 2.2 0 .21.15.46.55.38A8.013 8.013 0 0016 8c0-4.42-3.58-8-8-8z"/>' +
       '</svg></span>' +
-      'Sign in with GitHub' +
+      t('sign_in_github', 'Mit GitHub anmelden') +
       '</button>';
   }
 
@@ -1785,7 +1792,7 @@
       '<svg width="16" height="16" viewBox="0 0 814 1000" xmlns="http://www.w3.org/2000/svg" focusable="false">' +
       '<path fill="currentColor" d="M788.1 340.9c-5.8 4.5-108.2 62.2-108.2 190.5 0 148.4 130.3 200.9 134.2 202.2-.6 3.2-20.7 71.9-68.7 141.9-42.8 61.6-87.5 123.1-155.5 123.1s-85.5-39.5-163.5-39.5c-76.5 0-103.7 40.8-165.9 40.8s-105.6-57-155.5-127C46.7 790.7 0 663 0 541.8c0-194.4 126.4-297.5 250.8-297.5 66.1 0 121.2 43.4 162.7 43.4 39.5 0 101.1-46 176.3-46 28.5 0 130.9 2.6 198.3 99.2zm-234-181.5c31.1-36.9 53.1-88.1 53.1-139.3 0-7.1-.6-14.3-1.9-20.1-50.6 1.9-110.8 33.7-147.1 75.8-28.5 32.4-55.1 83.6-55.1 135.5 0 7.8 1.3 15.6 1.9 18.1 3.2.6 8.4 1.3 13.6 1.3 45.4 0 102.5-30.4 135.5-71.3z"/>' +
       '</svg></span>' +
-      'Sign in with Apple' +
+      t('sign_in_apple', 'Mit Apple anmelden') +
       '</button>';
   }
 
@@ -1798,7 +1805,7 @@
     return '<div class="pdx-auth-social-wrap pdx-auth-social-wrap--lead">' +
       buttons +
       '</div>' +
-      '<div class="pdx-auth-apple-divider pdx-auth-apple-divider--after-apple" aria-hidden="true"><span>or</span></div>';
+      '<div class="pdx-auth-apple-divider pdx-auth-apple-divider--after-apple" aria-hidden="true"><span>' + escHtml(t('or', 'oder')) + '</span></div>';
   }
 
   function appleSignInTopBlockHtml() {
@@ -3500,7 +3507,7 @@
     });
     var pageTitle = document.getElementById('pdx-auth-page-title');
     if (pageTitle) {
-      pageTitle.textContent = activeView === 'register' ? 'Create Account' : 'Sign In';
+      pageTitle.textContent = activeView === 'register' ? t('create_account', 'Konto erstellen') : t('sign_in', 'Anmelden');
     }
   }
 
@@ -3571,18 +3578,18 @@
 
   /* ─── Access gate ──────────────────────────────────────── */
   function renderAuthGate(container, moduleId, reason) {
-    var title = reason === 'verify' ? 'Verify your email' : 'Sign in required';
+    var title = reason === 'verify' ? t('verify_email_title', 'E-Mail bestätigen') : t('sign_in_required', 'Anmeldung erforderlich');
     var desc = reason === 'verify'
-      ? 'Please verify your email address to continue using protected modules.'
-      : 'Sign in to access your account, purchases, and subscription.';
+      ? t('verify_email_desc', 'Bitte bestätigen Sie Ihre E-Mail-Adresse, um fortzufahren.')
+      : t('sign_in_required_desc', 'Melden Sie sich an, um auf Ihr Konto zuzugreifen.');
     var gateIcon = reason === 'verify' ? 'mail' : 'shield';
     var actions =
       '<button type="button" class="pdx-btn-pearl pdx-btn-pearl--sm pdx-btn-pearl--inline pdx-auth-gate-login">' +
         '<span class="pdx-btn-pearl__wrap">' + cxIcon(reason === 'verify' ? 'mail' : 'login', 16) +
-        '<span>' + escHtml(reason === 'verify' ? 'Resend verification' : 'Sign In') + '</span></span></button>';
+        '<span>' + escHtml(reason === 'verify' ? t('resend_verification', 'Bestätigung erneut senden') : t('sign_in', 'Anmelden')) + '</span></span></button>';
     if (reason !== 'verify') {
       actions += '<button type="button" class="pdx-cx-btn pdx-cx-btn--ghost pdx-auth-gate-register">' +
-        cxIcon('register', 16) + escHtml('Create Account') + '</button>';
+        cxIcon('register', 16) + escHtml(t('create_account', 'Konto erstellen')) + '</button>';
     }
     container.innerHTML =
       '<div class="pdx-auth-gate pdx-cx-shell">' +
