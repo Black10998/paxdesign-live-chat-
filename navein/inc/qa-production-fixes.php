@@ -182,6 +182,25 @@ add_filter( 'widget_custom_html_content', 'pax_qa_rewrite_legacy_markup', 20 );
 add_filter( 'widget_text', 'pax_qa_rewrite_legacy_markup', 20 );
 add_filter( 'widget_block_content', 'pax_qa_rewrite_legacy_markup', 20 );
 
+if ( ! function_exists( 'pax_qa_start_html_rewrite' ) ) {
+	/**
+	 * Rewrite stale URLs/phone in the final public HTML, including Custom HTML footer markup.
+	 */
+	function pax_qa_start_html_rewrite() {
+		if ( is_admin() || wp_doing_ajax() || wp_doing_cron() ) {
+			return;
+		}
+		if ( defined( 'REST_REQUEST' ) && REST_REQUEST ) {
+			return;
+		}
+		if ( function_exists( 'is_feed' ) && is_feed() ) {
+			return;
+		}
+		ob_start( 'pax_qa_rewrite_legacy_markup' );
+	}
+}
+add_action( 'template_redirect', 'pax_qa_start_html_rewrite', 1 );
+
 if ( ! function_exists( 'pax_qa_footer_client_fixes' ) ) {
 	function pax_qa_footer_client_fixes() {
 		if ( is_admin() ) {
