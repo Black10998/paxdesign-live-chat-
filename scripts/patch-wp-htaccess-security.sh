@@ -15,6 +15,8 @@ SEC_START='# BEGIN PAXDesign security'
 SEC_END='# END PAXDesign security'
 REST_START='# BEGIN PAXDesign REST permalinks'
 REST_END='# END PAXDesign REST permalinks'
+HOSTINGER_AUTH_START='# BEGIN PAXdesign Hostinger REST auth'
+HOSTINGER_AUTH_END='# END PAXdesign Hostinger REST auth'
 
 echo "Cleaning public disclosure files under ${ROOT}"
 rm -f \
@@ -53,7 +55,9 @@ strip_marked_block() {
 REST_BLOCK="${REST_START}
 <IfModule mod_rewrite.c>
 RewriteEngine On
-RewriteRule ^wp-json/?$ /index.php?rest_route=/ [QSA,L]
+RewriteCond %{HTTP:Authorization} .
+RewriteRule ^wp-json/ - [E=HTTP_AUTHORIZATION:%{HTTP:Authorization}]
+RewriteRule ^wp-json/?\$ /index.php?rest_route=/ [QSA,L]
 RewriteRule ^wp-json/(.*)\$ /index.php?rest_route=/\$1 [QSA,L]
 </IfModule>
 ${REST_END}
@@ -88,6 +92,7 @@ trap cleanup EXIT
 if [ -f "$HTACCESS" ]; then
   strip_marked_block "$SEC_START" "$SEC_END" < "$HTACCESS" \
     | strip_marked_block "$REST_START" "$REST_END" \
+    | strip_marked_block "$HOSTINGER_AUTH_START" "$HOSTINGER_AUTH_END" \
     > "$TMP.body"
 else
   : > "$TMP.body"
@@ -103,10 +108,25 @@ fi
 } > "$TMP"
 rm -f "$TMP.body"
 
+# LiteSpeed: a RewriteEngine On AFTER the WordPress block starts a new rewrite
+# context and drops pretty permalinks (pages, /wp-json/, the iOS app).
+awk '
+  $0 == "# END WordPress" { after_wp=1 }
+  after_wp && $0 ~ /^[[:space:]]*RewriteEngine[[:space:]]+On[[:space:]]*$/ {
+    print "# RewriteEngine inherited from the WordPress block (do not restart LiteSpeed rewrite context)"
+    next
+  }
+  { print }
+' "$TMP" > "$TMP.norm"
+mv "$TMP.norm" "$TMP"
+
 mv "$TMP" "$HTACCESS"
 trap - EXIT
 
 echo "updated PAXDesign REST permalinks and security FilesMatch in .htaccess"
+echo "----- htaccess markers -----"
+grep -n 'BEGIN \|END \|RewriteEngine' "$HTACCESS" || true
+echo "----- end markers -----"
 grep -Fqx "$REST_START" "$HTACCESS"
 grep -Fqx "$SEC_START" "$HTACCESS"
 grep -q 'rest_route' "$HTACCESS"
@@ -121,6 +141,19 @@ if awk '
   echo "ERROR: security block still contains RewriteEngine On" >&2
   exit 1
 fi
+if awk '
+  $0 == "# END WordPress" { after=1 }
+  after && $0 ~ /^[[:space:]]*RewriteEngine[[:space:]]+On[[:space:]]*$/ { found=1 }
+  END { exit found ? 0 : 1 }
+' "$HTACCESS"; then
+  echo "ERROR: RewriteEngine On still appears after the WordPress block" >&2
+  exit 1
+fi
 test ! -f "${ROOT}/readme.html"
 test ! -f "${ROOT}/llms.txt"
+
+if command -v wp >/dev/null 2>&1; then
+  (cd "$ROOT" && wp rewrite flush --hard) || echo "wp rewrite flush skipped"
+fi
+
 echo "OK: disclosure files removed, /wp-json/ rewrite restored, htaccess patched"

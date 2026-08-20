@@ -39,6 +39,14 @@ RewriteRule . /index.php [L]
 </IfModule>
 # END WordPress
 
+# BEGIN PAXdesign Hostinger REST auth
+<IfModule mod_rewrite.c>
+RewriteEngine On
+RewriteCond %{HTTP:Authorization} .
+RewriteRule .* - [E=HTTP_AUTHORIZATION:%{HTTP:Authorization}]
+</IfModule>
+# END PAXdesign Hostinger REST auth
+
 # BEGIN PAXDesign security
 <IfModule mod_rewrite.c>
   RewriteEngine On
@@ -73,6 +81,10 @@ rar_ok(strpos($sec, 'RewriteRule') === false, 'security block has no RewriteRule
 $rest_pos = strpos($ht, '# BEGIN PAXDesign REST permalinks');
 $wp_pos = strpos($ht, '# BEGIN WordPress');
 rar_ok($rest_pos !== false && $wp_pos !== false && $rest_pos < $wp_pos, 'REST permalinks are inserted before the WordPress block');
+rar_ok(strpos($ht, '# BEGIN PAXdesign Hostinger REST auth') === false, 'legacy Hostinger REST auth rewrite block is removed');
+rar_ok(strpos($ht, 'HTTP_AUTHORIZATION') !== false, 'Authorization passthrough stays in the first rewrite block');
+$after_wp = substr($ht, strpos($ht, '# END WordPress') ?: 0);
+rar_ok(preg_match('/^[[:space:]]*RewriteEngine[[:space:]]+On[[:space:]]*$/m', $after_wp) !== 1, 'no RewriteEngine On after the WordPress block');
 
 foreach (glob($fixture . '/.htaccess*') ?: array() as $leftover) {
 	@unlink($leftover);

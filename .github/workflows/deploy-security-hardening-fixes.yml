@@ -130,10 +130,16 @@ jobs:
           ssh_with_retry "$REMOTE" \
             "cd '$(printf '%q' "$WP_PATH")' && \
              rm -f .maintenance && \
+             (command -v wp >/dev/null && wp rewrite flush --hard || true) && \
              (command -v wp >/dev/null && wp maintenance-mode deactivate 2>/dev/null || true) && \
              (command -v wp >/dev/null && wp cache flush || true) && \
              (command -v wp >/dev/null && wp litespeed-purge all || true) && \
-             (php -r 'if (function_exists(\"opcache_reset\")) { opcache_reset(); echo \"opcache_reset=ok\\n\"; } else { echo \"opcache_reset=skipped\\n\"; }' || true)"
+             (php -r 'if (function_exists(\"opcache_reset\")) { opcache_reset(); echo \"opcache_reset=ok\\n\"; } else { echo \"opcache_reset=skipped\\n\"; }' || true) && \
+             echo '----- live htaccess rewrite markers -----' && \
+             grep -n 'BEGIN \\|END \\|RewriteEngine' .htaccess || true && \
+             echo '----- local origin probe -----' && \
+             curl -sS -o /tmp/pax-wpjson.body -w 'local_wpjson:%{http_code} %{content_type}\\n' -H 'Host: paxdesign.at' --connect-to paxdesign.at:80:127.0.0.1:80 http://paxdesign.at/wp-json/ || true && \
+             head -c 80 /tmp/pax-wpjson.body 2>/dev/null || true"
 
           PLATFORM="${PLUGIN}/includes/customer/class-paxdesign-customer-platform.php"
           LIVE="${PLUGIN}/includes/class-paxdesign-chat-live.php"
