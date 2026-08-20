@@ -158,3 +158,48 @@ if ( ! function_exists( 'pax_qa_send_permissions_policy_header' ) ) {
 	}
 }
 add_action( 'send_headers', 'pax_qa_send_permissions_policy_header', 20 );
+
+if ( ! function_exists( 'pax_qa_rewrite_legacy_markup' ) ) {
+	/**
+	 * Replace stale marketing URLs and the unspaced phone display in stored HTML.
+	 *
+	 * @param string $html HTML fragment.
+	 * @return string
+	 */
+	function pax_qa_rewrite_legacy_markup( $html ) {
+		if ( ! is_string( $html ) || $html === '' ) {
+			return $html;
+		}
+		$html = str_replace( 'https://paxdesign.at/projektpreise/', home_url( '/preise/' ), $html );
+		$html = str_replace( 'http://paxdesign.at/projektpreise/', home_url( '/preise/' ), $html );
+		$html = str_replace( 'https://paxdesign.at/team/', home_url( '/unsere-experten/' ), $html );
+		$html = str_replace( 'http://paxdesign.at/team/', home_url( '/unsere-experten/' ), $html );
+		$html = str_replace( '+43 681 20543638', '+43 681 2054 3638', $html );
+		return $html;
+	}
+}
+add_filter( 'widget_custom_html_content', 'pax_qa_rewrite_legacy_markup', 20 );
+add_filter( 'widget_text', 'pax_qa_rewrite_legacy_markup', 20 );
+add_filter( 'widget_block_content', 'pax_qa_rewrite_legacy_markup', 20 );
+
+if ( ! function_exists( 'pax_qa_footer_client_fixes' ) ) {
+	function pax_qa_footer_client_fixes() {
+		if ( is_admin() ) {
+			return;
+		}
+		?>
+<script>
+(function () {
+  document.querySelectorAll('.dtr-mega-feature__img[alt=""], .dtr-mega-panel img[alt=""]').forEach(function (img) {
+    if (img.closest('[aria-hidden="true"]')) return;
+    var card = img.closest('a');
+    var title = card && card.querySelector('.dtr-mega-feature__title, .dtr-mega-title');
+    var label = title ? String(title.textContent || '').replace(/\s+/g, ' ').trim() : '';
+    if (label) img.setAttribute('alt', label);
+  });
+})();
+</script>
+		<?php
+	}
+}
+add_action( 'wp_footer', 'pax_qa_footer_client_fixes', 99 );

@@ -328,7 +328,7 @@ $chat_social_ready  = $chat_github_ready || $chat_apple_ready;
 
               <div class="paxdesign-booking-form-group">
                 <label for="paxdesignBookingPhone">Telefonnummer</label>
-                <input type="tel" id="paxdesignBookingPhone" placeholder="<?php echo esc_attr( get_option( 'paxdesign_booking_phone', '+43 681 2054 3638' ) ); ?>" autocomplete="tel">
+                <input type="tel" id="paxdesignBookingPhone" placeholder="+43 681 2054 3638" autocomplete="tel">
               </div>
 
               <div class="paxdesign-booking-form-group">

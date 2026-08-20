@@ -951,10 +951,11 @@ body.dtr-apple-footer #dtr-footer-section .pax-af .pax-af__trust-list a {
  * Lift it above the chat launcher on phones so both remain tappable.
  */
 @media (max-width: 768px) {
-  #appstore-popup,
-  .appstore-popup,
-  [id="appstore-popup"] {
+  html body #appstore-popup,
+  html body .appstore-popup,
+  html body [id="appstore-popup"] {
     bottom: calc(72px + env(safe-area-inset-bottom, 0px)) !important;
+    left: 16px !important;
     z-index: 99980 !important;
   }
 }

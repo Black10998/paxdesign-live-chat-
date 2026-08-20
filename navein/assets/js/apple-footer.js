@@ -152,6 +152,24 @@
     initReveal(root);
     initAccordions(root);
     initGithubModal(root);
+    rewriteLegacyFooterLinks(root);
+  }
+
+  function rewriteLegacyFooterLinks(root) {
+    root.querySelectorAll('a[href*="projektpreise"]').forEach(function (a) {
+      a.setAttribute('href', a.getAttribute('href').replace(/\/projektpreise\/?/, '/preise/'));
+    });
+    root.querySelectorAll('a[href]').forEach(function (a) {
+      var href = a.getAttribute('href') || '';
+      if (/\/team\/?(\?|#|$)/.test(href) && href.indexOf('unsere-experten') === -1) {
+        a.setAttribute('href', href.replace(/\/team\/?/, '/unsere-experten/'));
+      }
+    });
+    root.querySelectorAll('span, a').forEach(function (el) {
+      if (el.childNodes.length === 1 && (el.textContent || '').trim() === '+43 681 20543638') {
+        el.textContent = '+43 681 2054 3638';
+      }
+    });
   }
 
   if (document.readyState === 'loading') {

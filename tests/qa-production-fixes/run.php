@@ -55,7 +55,11 @@ qa_ok(strpos($theme_fixes, 'camera=(self), microphone=(self)') !== false, 'PHP s
 qa_ok(strpos($htaccess, 'Permissions-Policy') !== false, 'htaccess security block sets Permissions-Policy');
 qa_ok(strpos($widget, 'Weiter zum Live-Chat') !== false, 'chat gate title is German');
 qa_ok(strpos($widget, 'Support-Nachricht') !== false, 'chat launcher label is German');
-qa_ok(strpos($widget, '+43 123 456789') === false, 'booking phone placeholder is not the dummy number');
+qa_ok(strpos($widget, '+43 681 2054 3638') !== false, 'booking phone placeholder uses the live contact number');
+qa_ok(strpos($footer_css, '#appstore-popup') !== false, 'mobile App Store badge is lifted above Support Message');
+$footer_js = file_get_contents($root . '/navein/assets/js/apple-footer.js');
+qa_ok(strpos($footer_js, 'projektpreise') !== false, 'footer JS rewrites stale /projektpreise/ links');
+qa_ok(strpos($theme_fixes, 'pax_qa_rewrite_legacy_markup') !== false, 'stored footer HTML rewrites stale marketing URLs');
 qa_ok(strpos($chat, 'Weiter zum Live-Chat') !== false, 'chat JS authGate title is German');
 qa_ok(strpos($chat_js, 'Mit GitHub anmelden') !== false, 'chat JS GitHub button uses German copy');
 qa_ok(strpos($auth_js, 'htmlLang') !== false, 'account UI prefers document language over navigator');

@@ -14,6 +14,7 @@ on:
       - 'navein/404.php'
       - 'navein/inc/qa-production-fixes.php'
       - 'navein/assets/css/apple-footer.css'
+      - 'navein/assets/js/apple-footer.js'
       - 'navein/template-parts/pages/homepage.php'
       - 'paxdesign-booking/includes/customer/class-paxdesign-customer-services.php'
       - 'paxdesign-booking/includes/customer/class-paxdesign-customer-portfolio.php'
@@ -140,6 +141,7 @@ jobs:
           rsync_with_retry navein/functions.php "${REMOTE}:${THEME}/"
           rsync_with_retry navein/404.php "${REMOTE}:${THEME}/"
           rsync_with_retry navein/assets/css/apple-footer.css "${REMOTE}:${THEME}/assets/css/"
+          rsync_with_retry navein/assets/js/apple-footer.js "${REMOTE}:${THEME}/assets/js/"
           rsync_with_retry navein/template-parts/pages/homepage.php "${REMOTE}:${THEME}/template-parts/pages/"
 
           rsync_with_retry paxdesign-booking/includes/customer/class-paxdesign-customer-services.php "${REMOTE}:${PLUGIN}/includes/customer/class-paxdesign-customer-services.php"
