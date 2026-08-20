@@ -82,6 +82,13 @@ pih_ok(strpos($sec_wf, 'public-identity-hardening.php') !== false, 'security dep
 pih_ok(strpos($sec_wf, 'patch-wp-htaccess-security.sh') !== false, 'security deploy patches readme/llms deny rules');
 pih_ok(strpos($sec_wf, 'verify-security-hardening.sh') !== false, 'security deploy verifies live closures');
 
+$patcher = $root . '/scripts/patch-wp-htaccess-security.sh';
+pih_ok(is_file($patcher), 'htaccess patcher exists');
+$patcher_src = is_file($patcher) ? file_get_contents($patcher) : '';
+pih_ok(strpos($patcher_src, 'FilesMatch') !== false, 'htaccess patcher uses FilesMatch');
+pih_ok(strpos($patcher_src, 'rest_route') !== false, 'htaccess patcher restores /wp-json/ pretty permalinks');
+pih_ok(preg_match('/^\s*python3\b/m', $patcher_src) !== 1, 'htaccess patcher does not require python3');
+
 $logic = $root . '/tests/public-identity-hardening/logic.php';
 pih_ok(is_file($logic), 'logic test exists');
 exec('php ' . escapeshellarg($logic), $logic_out, $logic_code);

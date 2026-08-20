@@ -205,9 +205,21 @@ else
   fail "guest chat gate changed (HTTP ${ajax_code})"
 fi
 
-# Public REST index and a non-users route must keep working.
+# Public REST index and app/customer namespaces must keep working.
+# Pretty permalinks (/wp-json/*) are what the iOS app uses. Query-string
+# rest_route is not enough — a Hostinger 404 on /wp-json/ disconnects the app.
 index_code="$(request rest_index GET "${BASE}/wp-json/?n=${STAMP}")"
-[ "$index_code" = "200" ] && ok "REST index HTTP 200" || fail "REST index HTTP ${index_code}"
+index_ct="$(tr -d '\r' < "$TMP/rest_index.headers" | awk 'tolower($1)=="content-type:" {print tolower($0); exit}')"
+if [ "$index_code" = "200" ] && grep -qi 'application/json' <<< "$index_ct"; then
+  ok "REST index HTTP 200 JSON"
+else
+  fail "REST index is not JSON (HTTP ${index_code}; ${index_ct:-no content-type})"
+fi
+if grep -Eq '"pdx/v1"|"paxdesign/v1"' "$TMP/rest_index.body"; then
+  ok "REST index still advertises app namespaces"
+else
+  fail "REST index missing pdx/v1 or paxdesign/v1 namespaces"
+fi
 
 pages_code="$(request pages GET "${BASE}/wp-json/wp/v2/pages?per_page=1&n=${STAMP}")"
 [ "$pages_code" = "200" ] && ok "pages REST still works without users listing" || fail "pages REST HTTP ${pages_code}"
@@ -215,6 +227,22 @@ if grep -Eq '"author"[[:space:]]*:' "$TMP/pages.body"; then
   fail "pages REST still includes author user IDs"
 else
   ok "pages REST no longer includes author user IDs"
+fi
+
+home_api_code="$(request app_home GET "${BASE}/wp-json/pdx/v1/content/homepage?n=${STAMP}")"
+if [ "$home_api_code" = "200" ] && grep -Eq '"hero"|"lang"' "$TMP/app_home.body"; then
+  ok "customer app homepage REST is reachable (HTTP ${home_api_code})"
+else
+  fail "customer app homepage REST is down (HTTP ${home_api_code})"
+fi
+
+me_code="$(request app_me GET "${BASE}/wp-json/paxdesign/v1/live-admin/me?n=${STAMP}")"
+if [ "$me_code" = "404" ]; then
+  fail "staff app live-admin REST is missing (HTTP 404)"
+elif [ "$me_code" = "401" ] || [ "$me_code" = "403" ]; then
+  ok "staff app live-admin REST is reachable and still requires auth (HTTP ${me_code})"
+else
+  ok "staff app live-admin REST is reachable (HTTP ${me_code})"
 fi
 
 if [ "$FAIL" -gt 0 ]; then
