@@ -62,12 +62,15 @@ class PAXdesign_Customer_Content {
         $lang = self::resolve_lang($request);
         $sections = array();
         foreach (self::$sections as $key => $config) {
-            $items = self::menu_items_for_slugs((array) $config['menu_slugs']);
-            if (empty($items)) {
-                $items = self::fallback_section_items($key);
+            $menu_items = self::menu_items_for_slugs((array) $config['menu_slugs']);
+            $tree = self::build_menu_tree($menu_items);
+            if (empty($tree)) {
+                $tree = self::fallback_section_items($key);
             }
-            $tree = self::build_menu_tree($items);
             $tree = self::enrich_section_items($key, $tree);
+            if (empty($tree)) {
+                continue;
+            }
             $sections[] = array(
                 'key'   => $key,
                 'title' => self::localized_section_title($key, (string) $config['title'], $lang),
@@ -316,25 +319,19 @@ class PAXdesign_Customer_Content {
         }
         $cfg = $map[$section_key];
         $parent = get_page_by_path($cfg['slug'], OBJECT, 'page');
-        if (!$parent instanceof WP_Post) {
-            return array();
-        }
-        $children = get_pages(array(
-            'parent'      => (int) $parent->ID,
-            'post_status' => 'publish',
-            'sort_column' => 'menu_order,post_title',
-        ));
         $items = array();
-        foreach ($children as $child) {
-            $items[] = array(
-                'id'        => (int) $child->ID,
-                'parent_id' => (int) $parent->ID,
-                'title'     => get_the_title($child),
-                'slug'      => $child->post_name,
-                'type'      => self::guess_content_type($child),
-                'url'       => get_permalink($child),
-                'children'  => array(),
-            );
+        if ($parent instanceof WP_Post) {
+            $children = get_pages(array(
+                'parent'      => (int) $parent->ID,
+                'post_status' => 'publish',
+                'sort_column' => 'menu_order,post_title',
+            ));
+            foreach ($children as $child) {
+                $items[] = self::format_page_nav_item($child, 0);
+            }
+            if (empty($items)) {
+                $items[] = self::format_page_nav_item($parent, 0);
+            }
         }
         if (empty($items) && $section_key === 'referenzen') {
             foreach (PAXdesign_Customer_Portfolio::list_items(100) as $portfolio) {
@@ -348,6 +345,48 @@ class PAXdesign_Customer_Content {
                     'children'  => array(),
                 );
             }
+        }
+        if ($section_key === 'kontakt') {
+            $items = self::merge_kontakt_pages($items);
+        }
+        return $items;
+    }
+
+    /**
+     * @param WP_Post $post
+     * @param int     $parent_id
+     * @return array<string, mixed>
+     */
+    private static function format_page_nav_item($post, $parent_id = 0) {
+        return array(
+            'id'        => (int) $post->ID,
+            'parent_id' => (int) $parent_id,
+            'title'     => get_the_title($post),
+            'slug'      => $post->post_name,
+            'type'      => self::guess_content_type($post),
+            'url'       => get_permalink($post),
+            'children'  => array(),
+        );
+    }
+
+    /**
+     * Discover still needs Kontakt destinations when WP has no dedicated contact menu.
+     *
+     * @param array<int, array<string, mixed>> $items
+     * @return array<int, array<string, mixed>>
+     */
+    private static function merge_kontakt_pages(array $items) {
+        $existing = self::collect_menu_slugs($items);
+        foreach (array('kontakt', 'unsere-experten', 'ueber-uns', 'impressum', 'datenschutz') as $slug) {
+            if (in_array($slug, $existing, true)) {
+                continue;
+            }
+            $page = get_page_by_path($slug, OBJECT, 'page');
+            if (!$page instanceof WP_Post) {
+                continue;
+            }
+            $items[] = self::format_page_nav_item($page, 0);
+            $existing[] = $slug;
         }
         return $items;
     }

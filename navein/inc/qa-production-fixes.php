@@ -175,6 +175,12 @@ if ( ! function_exists( 'pax_qa_rewrite_legacy_markup' ) ) {
 		$html = str_replace( 'https://paxdesign.at/team/', home_url( '/unsere-experten/' ), $html );
 		$html = str_replace( 'http://paxdesign.at/team/', home_url( '/unsere-experten/' ), $html );
 		$html = str_replace( '+43 681 20543638', '+43 681 2054 3638', $html );
+		$html = str_replace( '>cybercrime-support</a>', '>Cybercrime Support</a>', $html );
+		$html = preg_replace(
+			'/@media\s*\(\s*max-width\s*:\s*600px\s*\)\s*\{\s*#appstore-popup\s*\{[^}]*?bottom\s*:\s*\d+px/is',
+			'@media(max-width:600px){' . "\n" . '    #appstore-popup{' . "\n" . '        left:15px;' . "\n" . '        bottom:calc(84px + env(safe-area-inset-bottom, 0px))',
+			$html
+		);
 		return $html;
 	}
 }
@@ -222,3 +228,17 @@ if ( ! function_exists( 'pax_qa_footer_client_fixes' ) ) {
 	}
 }
 add_action( 'wp_footer', 'pax_qa_footer_client_fixes', 99 );
+
+if ( ! function_exists( 'pax_qa_appstore_badge_overlap_css' ) ) {
+	/**
+	 * Widget CSS prints #appstore-popup { bottom:20px } in the footer.
+	 * Emit a later !important rule so the badge sits above Support-Nachricht.
+	 */
+	function pax_qa_appstore_badge_overlap_css() {
+		if ( is_admin() ) {
+			return;
+		}
+		echo '<style id="pax-qa-appstore-badge">@media (max-width:768px){html body #appstore-popup,html body #appstore-popup.show{bottom:calc(84px + env(safe-area-inset-bottom, 0px))!important;left:12px!important;right:auto!important;max-width:min(160px,calc(100vw - 168px))!important;z-index:99980!important}html body #appstore-popup img{height:28px!important;width:auto!important;max-width:100%!important}}</style>' . "\n";
+	}
+}
+add_action( 'wp_footer', 'pax_qa_appstore_badge_overlap_css', 9999 );

@@ -952,10 +952,20 @@ body.dtr-apple-footer #dtr-footer-section .pax-af .pax-af__trust-list a {
  */
 @media (max-width: 768px) {
   html body #appstore-popup,
+  html body #appstore-popup.show,
   html body .appstore-popup,
   html body [id="appstore-popup"] {
-    bottom: calc(72px + env(safe-area-inset-bottom, 0px)) !important;
-    left: 16px !important;
+    bottom: calc(84px + env(safe-area-inset-bottom, 0px)) !important;
+    left: 12px !important;
+    right: auto !important;
+    max-width: min(160px, calc(100vw - 168px)) !important;
     z-index: 99980 !important;
+  }
+
+  html body #appstore-popup img,
+  html body .appstore-popup img {
+    height: 28px !important;
+    width: auto !important;
+    max-width: 100% !important;
   }
 }

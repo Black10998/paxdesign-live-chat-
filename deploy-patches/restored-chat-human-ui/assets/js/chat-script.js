@@ -2684,9 +2684,10 @@
   }
 
   function detectChatLanguage() {
-    var htmlLang = (document.documentElement.lang || '').toLowerCase();
+    var htmlLang = (document.documentElement.getAttribute('lang') || document.documentElement.lang || '').toLowerCase();
     if (htmlLang.indexOf('ar') === 0) { return 'ar'; }
     if (htmlLang.indexOf('en') === 0) { return 'en'; }
+    if (htmlLang.indexOf('de') === 0) { return 'de'; }
     var nav = (navigator.language || navigator.userLanguage || 'de').toLowerCase();
     if (nav.indexOf('ar') === 0) { return 'ar'; }
     if (nav.indexOf('en') === 0) { return 'en'; }
@@ -5302,10 +5303,7 @@
   }
 
   function attachUiLang() {
-    var lang = ((navigator.language || navigator.userLanguage || '') + '').toLowerCase();
-    if (lang.indexOf('ar') === 0) return 'ar';
-    if (lang.indexOf('en') === 0) return 'en';
-    return 'de';
+    return detectChatLanguage();
   }
 
   function attachMenuLabel(key) {
