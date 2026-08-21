@@ -222,6 +222,23 @@ if ( ! function_exists( 'pax_qa_footer_client_fixes' ) ) {
     var label = title ? String(title.textContent || '').replace(/\s+/g, ' ').trim() : '';
     if (label) img.setAttribute('alt', label);
   });
+
+  function liftAppStoreBadge() {
+    var el = document.getElementById('appstore-popup');
+    if (!el) return;
+    if (!window.matchMedia('(max-width: 1100px)').matches) return;
+    el.style.setProperty('bottom', 'calc(84px + env(safe-area-inset-bottom, 0px))', 'important');
+    el.style.setProperty('left', '12px', 'important');
+    el.style.setProperty('right', 'auto', 'important');
+    el.style.setProperty('max-width', 'min(160px, calc(100vw - 168px))', 'important');
+    var img = el.querySelector('img');
+    if (img) {
+      img.style.setProperty('height', '28px', 'important');
+      img.style.setProperty('max-width', '100%', 'important');
+    }
+  }
+  liftAppStoreBadge();
+  window.addEventListener('resize', liftAppStoreBadge);
 })();
 </script>
 		<?php
@@ -238,7 +255,7 @@ if ( ! function_exists( 'pax_qa_appstore_badge_overlap_css' ) ) {
 		if ( is_admin() ) {
 			return;
 		}
-		echo '<style id="pax-qa-appstore-badge">@media (max-width:768px){html body #appstore-popup,html body #appstore-popup.show{bottom:calc(84px + env(safe-area-inset-bottom, 0px))!important;left:12px!important;right:auto!important;max-width:min(160px,calc(100vw - 168px))!important;z-index:99980!important}html body #appstore-popup img{height:28px!important;width:auto!important;max-width:100%!important}}</style>' . "\n";
+		echo '<style id="pax-qa-appstore-badge">@media (max-width:1100px){html body #appstore-popup,html body #appstore-popup.show{bottom:calc(84px + env(safe-area-inset-bottom, 0px))!important;left:12px!important;right:auto!important;max-width:min(160px,calc(100vw - 168px))!important;z-index:99980!important}html body #appstore-popup img{height:28px!important;width:auto!important;max-width:100%!important}}</style>' . "\n";
 	}
 }
 add_action( 'wp_footer', 'pax_qa_appstore_badge_overlap_css', 9999 );

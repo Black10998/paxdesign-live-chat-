@@ -71,6 +71,11 @@ class PAXdesign_Customer_Content {
             if (empty($tree)) {
                 continue;
             }
+            // The services catalog already fills a Leistungen card. Do not emit a
+            // second Discover section that is only the empty Leistungen landing page.
+            if ($key === 'leistungen' && count($tree) <= 1) {
+                continue;
+            }
             $sections[] = array(
                 'key'   => $key,
                 'title' => self::localized_section_title($key, (string) $config['title'], $lang),

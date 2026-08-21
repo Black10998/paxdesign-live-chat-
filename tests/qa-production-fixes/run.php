@@ -44,6 +44,7 @@ qa_ok(strpos($showcase, 'function json_payload') !== false, 'JSON seed remains a
 qa_ok(strpos($content, "'de' => 'Leistungen'") !== false, 'navigation services title is Leistungen in German');
 qa_ok(strpos($content, 'localized_section_title($key, (string) $config[\'title\'], $lang)') !== false, 'navigation titles honor request lang');
 qa_ok(strpos($content, 'if (empty($tree))') !== false, 'empty Discover sections are omitted from navigation REST');
+qa_ok(strpos($content, "\$key === 'leistungen' && count(\$tree) <= 1") !== false, 'duplicate thin Leistungen Discover card is omitted');
 qa_ok(strpos($content, 'function merge_kontakt_pages') !== false, 'Kontakt section falls back to published contact pages');
 qa_ok(strpos($content, "'unsere-experten'") !== false, 'Kontakt fallback includes unsere-experten');
 qa_ok(strpos($homepage, "home_url( '/projektpreise/' )") === false, 'homepage Alle Leistungen does not use /projektpreise/');
@@ -61,7 +62,7 @@ qa_ok(strpos($widget, 'Support-Nachricht') !== false, 'chat launcher label is Ge
 qa_ok(strpos($widget, '+43 681 2054 3638') !== false, 'booking phone placeholder uses the live contact number');
 qa_ok(strpos($footer_css, '#appstore-popup') !== false, 'mobile App Store badge is lifted above Support Message');
 qa_ok(strpos($footer_css, 'calc(84px + env(safe-area-inset-bottom') !== false, 'App Store badge clears the Support Message launcher height');
-qa_ok(strpos($theme_fixes, 'pax_qa_appstore_badge_overlap_css') !== false, 'footer emits a late App Store overlap rule after widget CSS');
+qa_ok(strpos($theme_fixes, 'liftAppStoreBadge') !== false, 'footer JS lifts the App Store badge above Support Message');
 qa_ok(strpos($chat_js, "htmlLang.indexOf('de') === 0") !== false, 'chat language prefers html lang=de over navigator');
 qa_ok(strpos($chat_js, 'return detectChatLanguage()') !== false, 'attach menu uses the same html-lang chat locale');
 $footer_js = file_get_contents($root . '/navein/assets/js/apple-footer.js');
