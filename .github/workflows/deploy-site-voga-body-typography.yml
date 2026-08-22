@@ -15,6 +15,7 @@ on:
       - 'navein/assets/css/apple-homepage.css'
       - 'navein/assets/css/apple-cybercrime-support.css'
       - 'navein/assets/fonts/homepage/voga-medium.woff2'
+      - 'navein/assets/fonts/homepage/exo2-latin.woff2'
       - 'navein/functions.php'
       - 'navein/inc/performance.php'
       - 'deploy-patches/restored-chat-human-ui/assets/css/booking-styles.css'
@@ -117,6 +118,7 @@ jobs:
 
           rsync_with_retry \
             navein/assets/fonts/homepage/voga-medium.woff2 \
+            navein/assets/fonts/homepage/exo2-latin.woff2 \
             "${REMOTE}:${THEME}/assets/fonts/homepage/"
 
           rsync_with_retry \
@@ -138,7 +140,7 @@ jobs:
           ssh_with_retry "$REMOTE" \
             "cd '$(printf '%q' "$WP_PATH")' && (command -v wp >/dev/null && wp cache flush || true)"
 
-          echo "Deployed site-wide Voga Diamond body typography"
+          echo "Deployed site-wide Exo 2 body typography"
 
       - name: Verify production typography
         run: |

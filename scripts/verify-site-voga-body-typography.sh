@@ -33,7 +33,8 @@ grep -Eq 'site-body-typography\.css' /tmp/voga-home.html
 grep -Eq 'voga-diamond-fonts\.css' /tmp/voga-ccs.html
 grep -Eq 'site-body-typography\.css' /tmp/voga-ccs.html
 
-grep -Eq 'font-family: "Voga Diamond"' /tmp/voga-diamond-fonts.css
+grep -Eq 'font-family: "Exo 2"' /tmp/voga-diamond-fonts.css
+grep -Eq 'exo2-latin\.woff2' /tmp/voga-diamond-fonts.css
 grep -Eq '\-\-pax-voga-body:' /tmp/site-body-typography.css
 grep -Eq '\-\-pax-voga-tracking:' /tmp/site-body-typography.css
 grep -Eq '\-\-pax-orbitron-display:' /tmp/site-body-typography.css
@@ -52,19 +53,19 @@ grep -Eq 'font-family: "Orbitron"' /tmp/orbitron-display-fonts.css
 grep -Eq 'orbitron-display-fonts\.css' /tmp/voga-home.html
 grep -Eq 'orbitron-display-fonts\.css' /tmp/voga-ccs.html
 
-grep -Eq '\-\-pdx-font: "Voga Diamond"' /tmp/pdx-tokens.css
-grep -Eq '\-\-pax-font:\s+"Voga Diamond"' /tmp/booking-styles.css
+grep -Eq '\-\-pdx-font: "Exo 2"' /tmp/pdx-tokens.css
+grep -Eq '\-\-pax-font:\s+"Exo 2"' /tmp/booking-styles.css
 
 HP_CSS="$(curl -sS "${BASE}/wp-content/themes/navein/assets/css/apple-homepage.css?n=${STAMP}")"
 grep -Eq '\-\-ph-display: "Orbitron"' <<< "$HP_CSS"
 grep -Eq '\-\-ph-text: var\(--pax-voga-body' <<< "$HP_CSS"
 
 CCS_CSS="$(curl -sS "${BASE}/wp-content/themes/navein/assets/css/apple-cybercrime-support.css?n=${STAMP}")"
-grep -Eq '\-\-ccs-font: "Voga Diamond"' <<< "$CCS_CSS"
+grep -Eq '\-\-ccs-font: "Exo 2"' <<< "$CCS_CSS"
 grep -Eq '\-\-ccs-display:' <<< "$CCS_CSS"
 
 # Homepage keeps Orbitron; cybercrime page should not load homepage-only Orbitron bundle as primary typography.
 grep -Eq 'homepage-fonts\.css' /tmp/voga-home.html
 ! grep -Eq 'homepage-fonts\.css' /tmp/voga-ccs.html || true
 
-echo "Site-wide Voga body typography production verification passed."
+echo "Site-wide Exo 2 body typography production verification passed."

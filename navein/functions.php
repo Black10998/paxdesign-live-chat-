@@ -239,7 +239,7 @@ function navein_custom_scripts_styles() {
 	// enqueue main stylesheet and colors
 	wp_enqueue_style( 'navein-style', get_stylesheet_uri(), array(), $theme_version );
 
-	// Site-wide Voga Diamond @font-face (loads early on all front-end pages).
+	// Site-wide Exo 2 @font-face (loads early on all front-end pages).
 	if ( ! is_admin() ) {
 		wp_enqueue_style(
 			'navein-voga-diamond-fonts',
@@ -586,7 +586,7 @@ endif;
 add_action( 'wp_enqueue_scripts', 'navein_cybercrime_mobile_layout_fix', 999 );
 
 /**
- * Site-wide Voga Diamond body typography — loads after plugin CSS for consistent overrides.
+ * Site-wide Exo 2 body typography — loads after plugin CSS for consistent overrides.
  */
 if ( ! function_exists( 'navein_site_body_typography' ) ) :
 function navein_site_body_typography() {

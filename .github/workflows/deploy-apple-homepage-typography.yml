@@ -77,7 +77,7 @@ jobs:
           ssh "${SSH_OPTS[@]}" "$REMOTE" \
             "cd '$(printf '%q' "$WP_PATH")' && (command -v wp >/dev/null && wp cache flush || true)"
 
-          echo "Deployed homepage typography (Orbitron + Voga)"
+          echo "Deployed homepage typography (Orbitron + Exo 2)"
 
       - name: Verify live homepage fonts
         run: |
@@ -87,15 +87,15 @@ jobs:
           FONTS_CSS=$(curl -sS -o /tmp/homepage-fonts.css -w '%{http_code}' "https://paxdesign.at/wp-content/themes/navein/assets/css/homepage-fonts.css?n=${stamp}")
           HP_CSS=$(curl -sS -o /tmp/apple-homepage.css -w '%{http_code}' "https://paxdesign.at/wp-content/themes/navein/assets/css/apple-homepage.css?n=${stamp}")
           ORBITRON=$(curl -sS -o /tmp/orbitron.woff2 -w '%{http_code}' "https://paxdesign.at/wp-content/themes/navein/assets/fonts/homepage/orbitron-v35-latin-regular.woff2?n=${stamp}")
-          VOGA=$(curl -sS -o /tmp/voga.woff2 -w '%{http_code}' "https://paxdesign.at/wp-content/themes/navein/assets/fonts/homepage/voga-medium.woff2?n=${stamp}")
-          echo "HOME $HOME | FONTS_CSS $FONTS_CSS | HP_CSS $HP_CSS | ORBITRON $ORBITRON | VOGA $VOGA"
+          EXO=$(curl -sS -o /tmp/exo2.woff2 -w '%{http_code}' "https://paxdesign.at/wp-content/themes/navein/assets/fonts/homepage/exo2-latin.woff2?n=${stamp}")
+          echo "HOME $HOME | FONTS_CSS $FONTS_CSS | HP_CSS $HP_CSS | ORBITRON $ORBITRON | EXO $EXO"
           test "$HOME" = "200"
           test "$FONTS_CSS" = "200"
           test "$HP_CSS" = "200"
           test "$ORBITRON" = "200"
-          test "$VOGA" = "200"
+          test "$EXO" = "200"
           file /tmp/orbitron.woff2 | grep -Eq 'Web Open Font Format|woff'
-          file /tmp/voga.woff2 | grep -Eq 'Web Open Font Format|woff'
+          file /tmp/exo2.woff2 | grep -Eq 'Web Open Font Format|woff'
           grep -Eq 'font-family: "Orbitron"' /tmp/homepage-fonts.css
           grep -Eq '\-\-ph-display: "Orbitron"' /tmp/apple-homepage.css
           grep -Eq '\-\-ph-text: var\(--pax-voga-body' /tmp/apple-homepage.css

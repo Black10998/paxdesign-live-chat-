@@ -31,10 +31,10 @@ body.home.page-template-template-apple-homepage-php .dtr-page-title--section {
   display: none !important;
 }
 
-/* Orbitron + Voga Diamond: scoped to homepage article content only (not header/footer/chat/auth). */
+/* Orbitron headings + Exo 2 body: scoped to homepage article content only (not header/footer/chat/auth). */
 .pax-home {
   --ph-display: "Orbitron", sans-serif;
-  --ph-text: var(--pax-voga-body, "Voga Diamond", "Voga", serif);
+  --ph-text: var(--pax-voga-body, "Exo 2", sans-serif);
   font-family: var(--ph-text);
   font-weight: var(--pax-voga-weight, 400);
   letter-spacing: var(--pax-voga-tracking, 0.016em);
@@ -669,11 +669,11 @@ body.home.page-template-template-apple-homepage-php .pax-home :is(h1, h2, h3, h4
   font-family: var(--ph-display);
 }
 
-/* Laptop/desktop: force real Voga Diamond on all normal text in .pax-home (mobile unchanged) */
+/* Laptop/desktop: force Exo 2 on all normal text in .pax-home (Orbitron headings unchanged) */
 @media (min-width: 735px) {
   body.home.page-template-template-apple-homepage .pax-home,
   body.home.page-template-template-apple-homepage-php .pax-home {
-    --ph-text: "Voga Diamond", "Voga", Georgia, "Times New Roman", serif;
+    --ph-text: "Exo 2", sans-serif;
   }
 
   body.home.page-template-template-apple-homepage .pax-home :where(

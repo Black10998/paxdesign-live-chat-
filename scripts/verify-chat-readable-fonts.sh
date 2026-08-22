@@ -36,10 +36,10 @@ else
   ok "live CSS no longer forces Voga on the chat window"
 fi
 
-if grep -q 'Voga Diamond' "$TMP/typo.css" && grep -q '#paxdesignBookingPanel' "$TMP/typo.css"; then
-  ok "booking tab still has a Voga keep-rule"
+if grep -q 'Exo 2' "$TMP/typo.css" && grep -q '#paxdesignBookingPanel' "$TMP/typo.css"; then
+  ok "booking tab still has a site body-font keep-rule"
 else
-  ok "booking tab Voga keep-rule present or inherited from site tokens"
+  ok "booking tab body-font keep-rule present or inherited from site tokens"
 fi
 
 home_code="$(curl -sS -o "$TMP/home.html" -w '%{http_code}' "${BASE}/?n=${STAMP}")"
@@ -56,16 +56,16 @@ grep -Eq -- '--ph-display: "Orbitron"' <<< "$hp_css" \
 ccs_code="$(curl -sS -o "$TMP/ccs.html" -w '%{http_code}' "${BASE}/cybercrime-support/?n=${STAMP}")"
 [ "$ccs_code" = "200" ] && ok "cybercrime-support HTTP 200" || fail "cybercrime-support HTTP ${ccs_code}"
 ccs_css="$(curl -sS "${BASE}/wp-content/themes/navein/assets/css/apple-cybercrime-support.css?n=${STAMP}")"
-grep -Eq -- '--ccs-font: "Voga Diamond"' <<< "$ccs_css" \
-  && ok "cybercrime support body font is still Voga" \
-  || fail "cybercrime support font changed"
+grep -Eq -- '--ccs-font: "Exo 2"' <<< "$ccs_css" \
+  && ok "cybercrime support body font is Exo 2" \
+  || fail "cybercrime support font is not Exo 2"
 
 login_code="$(curl -sS -o /dev/null -w '%{http_code}' "${BASE}/wp-login.php")"
 [ "$login_code" = "200" ] && ok "wp-login.php HTTP 200" || fail "wp-login.php HTTP ${login_code}"
 tokens="$(curl -sS "${BASE}/wp-content/plugins/paxdesign-booking/assets/customer-auth/css/pdx-tokens.css?n=${STAMP}")"
-grep -Eq -- '--pdx-font: "Voga Diamond"' <<< "$tokens" \
-  && ok "login/dashboard tokens still use Voga" \
-  || fail "login/dashboard font tokens changed"
+grep -Eq -- '--pdx-font: "Exo 2"' <<< "$tokens" \
+  && ok "login/dashboard tokens use Exo 2" \
+  || fail "login/dashboard font tokens are not Exo 2"
 
 chat_js="$(curl -sS "${BASE}/wp-content/plugins/paxdesign-booking/assets/js/chat-script.js?n=${STAMP}")"
 grep -q 'Version: 3.174.128' <<< "$chat_js" \

@@ -26,7 +26,7 @@
   border: 0;
   margin: 0;
   padding: 0;
-  font-family: "Voga Diamond", "Voga", Georgia, "Times New Roman", serif;
+  font-family: "Exo 2", sans-serif;
   line-height: 1.4;
   -webkit-font-smoothing: antialiased;
   color: #ffffff;
@@ -81,7 +81,7 @@
   --pax-ease:           ease;
   --pax-transition:     0.3s ease;
   --pax-transition-fast: 0.15s ease;
-  --pax-font:           "Voga Diamond", "Voga", Georgia, "Times New Roman", serif;
+  --pax-font:           "Exo 2", sans-serif;
   --pax-shadow-color:   #292929;
   /* Mobile viewport layout — sheet uses the phone screen, not a 380px stub */
   --pax-mobile-header-clearance: 10px;
@@ -4748,7 +4748,7 @@ html.paxdesign-scroll-lock body {
   opacity: 0.72;
 }
 
-/* Chat window readable UI fonts — not Voga/Orbitron. Sizes/colors/spacing unchanged. */
+/* Chat window readable UI fonts — not Exo 2/Orbitron. Sizes/colors/spacing unchanged. */
 #paxdesign-booking-root #paxdesignChatPanel,
 #paxdesign-booking-root #paxdesignChatPanel *,
 #paxdesign-booking-root #paxdesignChatAuthGate,

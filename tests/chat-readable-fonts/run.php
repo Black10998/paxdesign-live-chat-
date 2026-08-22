@@ -33,7 +33,7 @@ crf_ok(strpos($typo, '.paxdesign-booking-chat-input::placeholder') !== false, 'c
 crf_ok(strpos($typo, '.paxdesign-booking-chat-message') !== false || strpos($typo, '#paxdesignChatPanel *') !== false, 'chat messages inherit the readable stack');
 crf_ok(strpos($typo, 'Chat window — keep original Voga font') === false, 'chat no longer forces Voga');
 crf_ok(strpos($typo, 'var(--pax-orbitron-display) !important') !== false, 'Orbitron remains on nav/auth actions');
-crf_ok(strpos($typo, '#paxdesignBookingPanel') !== false, 'booking tab keeps Voga');
+crf_ok(strpos($typo, '#paxdesignBookingPanel') !== false, 'booking tab keeps the site body font');
 
 $auth_idx = strpos($typo, '#paxdesign-booking-root .paxdesign-booking-chat-auth-login-btn');
 crf_ok($auth_idx !== false, 'chat Sign In button is targeted');
@@ -45,15 +45,15 @@ if ($auth_idx !== false) {
 }
 
 crf_ok(strpos($home, '--ph-display: "Orbitron"') !== false, 'homepage display font stays Orbitron');
-crf_ok(strpos($home, '--ph-text: var(--pax-voga-body') !== false || strpos($home, '"Voga Diamond"') !== false, 'homepage body text stays Voga');
-crf_ok(strpos($ccs, '--ccs-font: "Voga Diamond"') !== false, 'cybercrime support body stays Voga');
-crf_ok(strpos($tokens, '--pdx-font: "Voga Diamond"') !== false, 'login/dashboard tokens stay Voga');
+crf_ok(strpos($home, '--ph-text: var(--pax-voga-body') !== false || strpos($home, '"Exo 2"') !== false, 'homepage body text uses Exo 2');
+crf_ok(strpos($ccs, '--ccs-font: "Exo 2"') !== false, 'cybercrime support body uses Exo 2');
+crf_ok(strpos($tokens, '--pdx-font: "Exo 2"') !== false, 'login/dashboard tokens use Exo 2');
 crf_ok(strpos($booking, 'button.paxdesign-booking-chat-auth-login-btn') !== false, 'plugin chat Sign In uses readable fonts');
 crf_ok(strpos($booking, '-apple-system, BlinkMacSystemFont, "Segoe UI"') !== false, 'plugin chat CSS includes system UI stack');
 crf_ok(strpos($booking, '.paxdesign-booking-chat-auth-github-btn') !== false, 'plugin css also overrides GitHub/Apple chat login buttons');
-crf_ok(preg_match('/--pax-font:\s+"Voga Diamond"/', $booking) === 1, 'booking tab still uses the Voga token at the plugin root');
+crf_ok(preg_match('/--pax-font:\s+"Exo 2"/', $booking) === 1, 'booking tab uses Exo 2 at the plugin root');
 crf_ok(md5($booking) === md5($overlay), 'overlay booking-styles still matches plugin');
-crf_ok(preg_match('/Version:\\s*1\\.4\\.49/', $style) === 1, 'theme version bumped for cache-bust');
+crf_ok(preg_match('/Version:\\s*1\\.4\\.50/', $style) === 1, 'theme version bumped for cache-bust');
 crf_ok(strpos($typo, 'skipping stacked sync') === false, 'does not include 3.176 chat rewrite');
 
 $workflow = $root . '/.github/workflows/deploy-chat-readable-fonts.yml';

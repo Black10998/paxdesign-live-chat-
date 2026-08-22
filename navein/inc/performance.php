@@ -89,7 +89,7 @@ if ( ! function_exists( 'navein_preload_critical_assets' ) ) {
 
 		printf(
 			'<link rel="preload" as="font" href="%s" type="font/woff2" crossorigin>' . "\n",
-			esc_url( $fonts_base . 'voga-medium.woff2?ver=' . $fonts_ver )
+			esc_url( $fonts_base . 'exo2-latin.woff2?ver=' . $fonts_ver )
 		);
 
 		printf(

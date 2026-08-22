@@ -19,7 +19,7 @@ body.page-cybercrime-support {
   --ccs-content-max: min(1080px, 100%);
   --ccs-content-wide: min(1200px, 100%);
   --ccs-section-y: clamp(28px, 5vw, 56px);
-  --ccs-font: "Voga Diamond", "Voga", Georgia, "Times New Roman", serif;
+  --ccs-font: "Exo 2", sans-serif;
   --ccs-display: -apple-system, BlinkMacSystemFont, "SF Pro Display", "Helvetica Neue", Helvetica, Arial, sans-serif;
   background: #fff;
   color: var(--ccs-ink);

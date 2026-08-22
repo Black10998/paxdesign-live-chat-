@@ -14,7 +14,7 @@
 #pdx-auth-overlay,
 #pdx-profile-overlay,
 .pdx-cx-shell {
-  --pdx-font: "Voga Diamond", "Voga", Georgia, "Times New Roman", serif;
+  --pdx-font: "Exo 2", sans-serif;
   --pdx-mono: ui-monospace, SFMono-Regular, "SF Mono", Menlo, Consolas, monospace;
   --pdx-radius-sm: 10px;
   --pdx-radius: 10px;
