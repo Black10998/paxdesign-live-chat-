@@ -15,6 +15,8 @@ code="$(curl -sS -A 'Mozilla/5.0' -o "$TMP/pax-auth.js" -w '%{http_code}' "${BAS
 [ "$code" = "200" ] && ok "pax-auth.js HTTP 200" || fail "pax-auth.js HTTP ${code}"
 
 grep -q "pdx-account-sidebar-profile" "$TMP/pax-auth.js" && ok "live JS has single sidebar profile control" || fail "live JS missing sidebar profile control"
+grep -q "pdx-auth-menu--apple" "$TMP/pax-auth.js" && ok "live JS has Apple header profile dropdown" || fail "live JS missing Apple header profile dropdown"
+grep -q "function positionAuthMenu" "$TMP/pax-auth.js" && ok "live JS positions the header dropdown" || fail "live JS missing header dropdown positioning"
 grep -q "function renderAccountPreferencesSection" "$TMP/pax-auth.js" && ok "live JS has notification preferences section" || fail "live JS missing preferences section"
 grep -q "Security & Privacy" "$TMP/pax-auth.js" && ok "live JS has Security & Privacy" || fail "live JS missing Security & Privacy"
 if grep -q "pdx-account-profile-name" "$TMP/pax-auth.js"; then
@@ -45,6 +47,8 @@ grep -q "background: #f5f5f7" "$TMP/account-app.css" && ok "live CSS uses Apple 
 auth_css_code="$(curl -sS -A 'Mozilla/5.0' -o "$TMP/pdx-auth.css" -w '%{http_code}' "${BASE}/wp-content/plugins/paxdesign-booking/assets/customer-auth/css/pdx-auth.css?n=${STAMP}")"
 [ "$auth_css_code" = "200" ] && ok "pdx-auth.css HTTP 200" || fail "pdx-auth.css HTTP ${auth_css_code}"
 grep -q "pdx-profile-overlay--apple" "$TMP/pdx-auth.css" && ok "live overlay CSS is Apple-styled" || fail "live overlay CSS missing Apple sheet"
+grep -q "pdx-auth-menu--apple" "$TMP/pdx-auth.css" && ok "live CSS restyles the header profile dropdown" || fail "live CSS missing header profile dropdown Apple rules"
+grep -q ".pdx-auth-menu--apple .pdx-auth-menu-status--verified" "$TMP/pdx-auth.css" && ok "live CSS has a green verified pill" || fail "live CSS missing verified pill"
 
 hp_code="$(curl -sS -A 'Mozilla/5.0' -o "$TMP/apple-homepage.css" -w '%{http_code}' "${BASE}/wp-content/themes/navein/assets/css/apple-homepage.css?n=${STAMP}")"
 [ "$hp_code" = "200" ] && ok "homepage CSS HTTP 200" || fail "homepage CSS HTTP ${hp_code}"

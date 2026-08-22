@@ -55,6 +55,7 @@
 
   var publicModules = C.publicModules || ['trust', 'create', 'workspace'];
   var authMenuOpen = false;
+  var authMenuPositionBound = false;
   var profileOverlay = null;
 
   function escHtml(s) {
@@ -1204,13 +1205,15 @@
           '<span class="pdx-auth-account-identity"></span>' +
         '</button>' +
         '<button type="button" class="pdx-auth-portal-btn pdx-cx-btn pdx-auth-header-btn" hidden>Customer Portal</button>' +
-        '<div class="pdx-auth-menu" hidden>' +
+        '<div class="pdx-auth-menu pdx-auth-menu--apple" hidden>' +
           '<div class="pdx-auth-menu-head"></div>' +
           '<div class="pdx-auth-menu-actions">' +
-            '<button type="button" class="pdx-auth-menu-item" data-action="portal">' + cxIcon('dashboard', 16) + escHtml(t('customer_portal', 'Customer Portal')) + '</button>' +
-            '<button type="button" class="pdx-auth-menu-item" data-action="profile">' + cxIcon('user', 16) + escHtml(t('my_profile', 'My Profile')) + '</button>' +
-            '<button type="button" class="pdx-auth-menu-item" data-action="account">' + cxIcon('settings', 16) + escHtml(t('my_account', 'My Account')) + '</button>' +
-            '<button type="button" class="pdx-auth-menu-item pdx-auth-menu-item--logout" data-action="logout">' + cxIcon('logout', 16) + escHtml(t('logout', 'Logout')) + '</button>' +
+            renderHeaderMenuItem('portal', 'dashboard', t('customer_portal', 'Customer Portal')) +
+            renderHeaderMenuItem('profile', 'user', t('my_profile', 'My Profile')) +
+            renderHeaderMenuItem('account', 'settings', t('my_account', 'My Account')) +
+          '</div>' +
+          '<div class="pdx-auth-menu-footer">' +
+            renderHeaderMenuItem('logout', 'logout', t('logout', 'Logout'), 'pdx-auth-menu-item--logout') +
           '</div>' +
         '</div>' +
       '</div>';
@@ -1252,6 +1255,11 @@
     document.addEventListener('keydown', function (e) {
       if (e.key === 'Escape') closeAuthMenu();
     });
+    if (!authMenuPositionBound) {
+      authMenuPositionBound = true;
+      window.addEventListener('resize', positionAuthMenu);
+      window.addEventListener('scroll', positionAuthMenu, true);
+    }
 
     mountAuthBar();
     updateAuthBar();
@@ -1264,10 +1272,18 @@
     authBar.setAttribute('dir', rtl ? 'rtl' : 'ltr');
   }
 
+  function renderHeaderMenuItem(action, icon, label, extraClass) {
+    var isLogout = extraClass && extraClass.indexOf('logout') !== -1;
+    return '<button type="button" class="pdx-auth-menu-item' + (extraClass ? ' ' + extraClass : '') + '" data-action="' + escHtml(action) + '">' +
+      '<span class="pdx-auth-menu-item__icon">' + cxIcon(icon, 18) + '</span>' +
+      '<span class="pdx-auth-menu-item__label">' + escHtml(label) + '</span>' +
+      (isLogout ? '' : '<span class="pdx-auth-menu-item__chevron" aria-hidden="true">' + cxIcon('chevron', 14) + '</span>') +
+    '</button>';
+  }
+
   function accountStatusLabel() {
-    if (!user.logged_in) return 'Guest';
-    if (user.is_admin) return 'Administrator';
-    return user.verified ? 'Verified' : 'Pending verification';
+    if (!user.logged_in) return t('signed_out', 'Signed out');
+    return accountStatusText(user.verified);
   }
 
   function updateAuthBar() {
@@ -1307,13 +1323,15 @@
     }
 
     if (user.logged_in && head) {
+      var statusClass = user.verified ? 'pdx-auth-menu-status--verified' : 'pdx-auth-menu-status--pending';
+      if (user.is_admin) statusClass = 'pdx-auth-menu-status--admin';
       head.innerHTML =
         '<div class="pdx-auth-menu-identity">' +
           renderAccountAvatarHtml({ sizeClass: 'pdx-account-avatar--menu' }) +
           '<div class="pdx-auth-menu-identity-text">' +
-            '<div class="pdx-auth-menu-name">' + escHtml(user.display_name || 'Account') + '</div>' +
+            '<div class="pdx-auth-menu-name">' + escHtml(user.display_name || t('account', 'Account')) + '</div>' +
             '<div class="pdx-auth-menu-email">' + escHtml(user.email || '') + '</div>' +
-            '<div class="pdx-auth-menu-status">' + escHtml(accountStatusLabel()) + '</div>' +
+            '<div class="pdx-auth-menu-status ' + statusClass + '">' + escHtml(accountStatusLabel()) + '</div>' +
           '</div>' +
         '</div>';
       authMenu.removeAttribute('hidden');
@@ -1327,12 +1345,46 @@
     applyPublicHeaderLocale();
   }
 
+  function positionAuthMenu() {
+    if (!authMenu || !authBtn || !authMenuOpen) return;
+    var rect = authBtn.getBoundingClientRect();
+    var gap = 8;
+    var width = Math.min(320, window.innerWidth - 24);
+    if (width < 240) width = Math.max(200, window.innerWidth - 24);
+    var rtl = !!(authBar && authBar.getAttribute('dir') === 'rtl');
+    authMenu.style.position = 'fixed';
+    authMenu.style.width = width + 'px';
+    authMenu.style.maxWidth = 'calc(100vw - 24px)';
+    authMenu.style.zIndex = '10050';
+    var top = Math.round(rect.bottom + gap);
+    var height = authMenu.offsetHeight || 0;
+    if (height && top + height > window.innerHeight - 12) {
+      var above = Math.round(rect.top - height - gap);
+      if (above >= 12) top = above;
+      else top = Math.max(12, window.innerHeight - height - 12);
+    }
+    authMenu.style.top = top + 'px';
+    if (rtl) {
+      var left = Math.round(rect.left);
+      if (left + width > window.innerWidth - 12) left = window.innerWidth - width - 12;
+      authMenu.style.left = Math.max(12, left) + 'px';
+      authMenu.style.right = 'auto';
+    } else {
+      var right = Math.round(window.innerWidth - rect.right);
+      if (right < 12) right = 12;
+      authMenu.style.right = right + 'px';
+      authMenu.style.left = 'auto';
+    }
+  }
+
   function openAuthMenu() {
     if (!user.logged_in || !authMenu || !authBtn) return;
     authMenu.hidden = false;
     authMenu.classList.add('is-open');
     authBtn.setAttribute('aria-expanded', 'true');
     authMenuOpen = true;
+    if (authBar) authBar.classList.add('pdx-auth-bar--menu-open');
+    positionAuthMenu();
   }
 
   function closeAuthMenu() {
@@ -1340,6 +1392,7 @@
     authMenu.classList.remove('is-open');
     authBtn.setAttribute('aria-expanded', 'false');
     authMenuOpen = false;
+    if (authBar) authBar.classList.remove('pdx-auth-bar--menu-open');
   }
 
   function onAuthBarClick() {

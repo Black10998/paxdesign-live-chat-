@@ -56,6 +56,8 @@ aau_ok(strpos($css, '.pdx-apple-row') !== false, 'account CSS has Apple rows');
 aau_ok(strpos($css, 'background: #f5f5f7') !== false, 'account main uses Apple gray canvas');
 aau_ok(strpos($css, '.pdx-account-nav-btn.is-active') !== false && strpos($css, 'background: #e8e8ed') !== false, 'selected nav uses Apple gray, not yellow/blue chips');
 aau_ok(strpos($auth_css, 'pdx-profile-overlay--apple') !== false, 'auth CSS restyles the profile overlay');
+aau_ok(strpos($js, 'pdx-auth-menu--apple') !== false, 'header profile dropdown uses the Apple menu class');
+aau_ok(strpos($auth_css, 'pdx-auth-menu--apple') !== false, 'auth CSS restyles the header profile dropdown');
 
 aau_ok(strpos($l10n, "'nav_preferences'") !== false, 'l10n includes notification preferences');
 aau_ok(strpos($l10n, 'Sicherheit & Datenschutz') !== false, 'German security label is updated');

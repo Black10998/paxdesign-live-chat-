@@ -1,0 +1,117 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Header profile dropdown — Apple UI</title>
+<link rel="stylesheet" href="../../paxdesign-booking/assets/customer-auth/css/pdx-customer-ui.css">
+<link rel="stylesheet" href="../../paxdesign-booking/assets/customer-auth/css/pdx-auth.css">
+<style>
+html, body {
+  margin: 0;
+  min-height: 100%;
+  background: #111;
+  font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+}
+.preview-note {
+  margin: 0;
+  padding: 14px 20px 0;
+  color: #86868b;
+  font-size: 12px;
+}
+.preview-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  height: 64px;
+  padding: 0 24px;
+  background: #0b0b0b;
+  border-bottom: 1px solid rgba(255,255,255,.08);
+  overflow: hidden;
+}
+.preview-brand {
+  color: #fff;
+  font-weight: 700;
+  letter-spacing: .08em;
+}
+#pdx-auth-bar.pdx-cx-shell {
+  margin-left: auto;
+}
+#pdx-auth-bar.pdx-cx-shell .pdx-auth-account-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  min-height: 36px;
+  padding: 0 12px;
+  border: 0;
+  border-radius: 980px;
+  background: transparent;
+  color: #fff;
+  font: 600 13px/1 -apple-system, BlinkMacSystemFont, sans-serif;
+}
+.pdx-account-avatar {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 50%;
+  background: #d2d2d7;
+  color: #1d1d1f;
+  font-weight: 700;
+}
+.pdx-account-avatar--header { width: 32px; height: 32px; font-size: 12px; }
+.pdx-account-avatar--menu { width: 48px; height: 48px; font-size: 18px; }
+.pdx-cx-icon { display: block; }
+</style>
+</head>
+<body>
+<p class="preview-note">This is the header profile dropdown that opens from the name in the public header — not the /account page.</p>
+<header class="preview-header">
+  <div class="preview-brand">PAXDESIGN</div>
+  <div id="pdx-auth-bar" class="pdx-cx-shell pdx-auth-bar--header pdx-auth-bar--menu-open">
+    <div class="pdx-auth-bar-inner">
+      <button type="button" class="pdx-auth-account-btn pdx-cx-btn pdx-cx-btn--ghost pdx-auth-header-btn" aria-haspopup="true" aria-expanded="true">
+        <span class="pdx-auth-account-identity">
+          <span class="pdx-account-avatar pdx-account-avatar--header">A</span>
+          <span>ALKHA</span>
+        </span>
+      </button>
+      <div class="pdx-auth-menu pdx-auth-menu--apple is-open" style="position:fixed;top:72px;right:24px;width:320px;z-index:10050">
+        <div class="pdx-auth-menu-head">
+          <div class="pdx-auth-menu-identity">
+            <span class="pdx-account-avatar pdx-account-avatar--menu">A</span>
+            <div class="pdx-auth-menu-identity-text">
+              <div class="pdx-auth-menu-name">ALKHA</div>
+              <div class="pdx-auth-menu-email">gltcrtl.play@gmail.com</div>
+              <div class="pdx-auth-menu-status pdx-auth-menu-status--verified">Verifiziert</div>
+            </div>
+          </div>
+        </div>
+        <div class="pdx-auth-menu-actions">
+          <button type="button" class="pdx-auth-menu-item" data-action="portal">
+            <span class="pdx-auth-menu-item__icon"><svg class="pdx-cx-icon" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75"><rect x="3" y="3" width="7" height="9" rx="1"/><rect x="14" y="3" width="7" height="5" rx="1"/><rect x="14" y="12" width="7" height="9" rx="1"/><rect x="3" y="16" width="7" height="5" rx="1"/></svg></span>
+            <span class="pdx-auth-menu-item__label">Kundenportal</span>
+            <span class="pdx-auth-menu-item__chevron" aria-hidden="true"><svg class="pdx-cx-icon" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75"><polyline points="9 18 15 12 9 6"/></svg></span>
+          </button>
+          <button type="button" class="pdx-auth-menu-item" data-action="profile">
+            <span class="pdx-auth-menu-item__icon"><svg class="pdx-cx-icon" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg></span>
+            <span class="pdx-auth-menu-item__label">Mein Profil</span>
+            <span class="pdx-auth-menu-item__chevron" aria-hidden="true"><svg class="pdx-cx-icon" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75"><polyline points="9 18 15 12 9 6"/></svg></span>
+          </button>
+          <button type="button" class="pdx-auth-menu-item" data-action="account">
+            <span class="pdx-auth-menu-item__icon"><svg class="pdx-cx-icon" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75"><circle cx="12" cy="12" r="3"/><path d="M12 1v2M12 21v2M4.22 4.22l1.42 1.42M18.36 18.36l1.42 1.42M1 12h2M21 12h2M4.22 19.78l1.42-1.42M18.36 5.64l1.42-1.42"/></svg></span>
+            <span class="pdx-auth-menu-item__label">Mein Konto</span>
+            <span class="pdx-auth-menu-item__chevron" aria-hidden="true"><svg class="pdx-cx-icon" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75"><polyline points="9 18 15 12 9 6"/></svg></span>
+          </button>
+        </div>
+        <div class="pdx-auth-menu-footer">
+          <button type="button" class="pdx-auth-menu-item pdx-auth-menu-item--logout" data-action="logout">
+            <span class="pdx-auth-menu-item__icon"><svg class="pdx-cx-icon" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75"><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"/><polyline points="16 17 21 12 16 7"/><line x1="21" y1="12" x2="9" y2="12"/></svg></span>
+            <span class="pdx-auth-menu-item__label">Abmelden</span>
+          </button>
+        </div>
+      </div>
+    </div>
+  </div>
+</header>
+</body>
+</html>

@@ -19,6 +19,7 @@ on:
       - 'deploy-patches/restored-chat-human-ui/assets/customer-auth/css/pdx-auth.css'
       - 'scripts/verify-account-apple-ui.sh'
       - 'tests/account-apple-ui/run.php'
+      - 'tests/header-profile-menu/run.php'
 
 permissions:
   contents: read
@@ -31,6 +32,8 @@ jobs:
       - uses: actions/checkout@v4
       - name: Account Apple UI guards
         run: php tests/account-apple-ui/run.php
+      - name: Header profile dropdown guards
+        run: php tests/header-profile-menu/run.php
       - name: Production baseline guards
         run: php tests/production-baseline/run.php
       - name: Restored overlay guards
@@ -143,6 +146,8 @@ jobs:
 
           ssh_with_retry "$REMOTE" \
             "grep -q pdx-account-sidebar-profile '$(printf '%q' "$PLUGIN")/assets/customer-auth/js/pax-auth.js' && \
+             grep -q pdx-auth-menu--apple '$(printf '%q' "$PLUGIN")/assets/customer-auth/js/pax-auth.js' && \
+             grep -q pdx-auth-menu--apple '$(printf '%q' "$PLUGIN")/assets/customer-auth/css/pdx-auth.css' && \
              grep -q pdx-apple-group '$(printf '%q' "$PLUGIN")/assets/customer-auth/css/pdx-account-app.css' && \
              grep -q 'nav_preferences' '$(printf '%q' "$PLUGIN")/includes/customer/data/account-ui-l10n.php' && \
              grep -q 'Version: 3.174.128' '$(printf '%q' "$PLUGIN")/assets/js/chat-script.js' && \
