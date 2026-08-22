@@ -630,6 +630,53 @@ html[dir="rtl"] #pdx-auth-bar.pdx-auth-bar--header .pdx-header-user-text,
   margin-top: 16px;
 }
 
+#pdx-profile-overlay.pdx-profile-overlay--apple {
+  background: rgba(0, 0, 0, 0.36);
+  backdrop-filter: blur(18px);
+  -webkit-backdrop-filter: blur(18px);
+}
+
+#pdx-profile-overlay.pdx-profile-overlay--apple .pdx-profile-card,
+#pdx-profile-overlay.pdx-cx-shell.pdx-profile-overlay--apple .pdx-profile-card {
+  max-width: 400px;
+  background: #f5f5f7;
+  border: 0;
+  border-radius: 18px;
+  box-shadow: 0 18px 48px rgba(0, 0, 0, 0.22);
+  padding: 22px 20px 18px;
+  color: #1d1d1f;
+}
+
+#pdx-profile-overlay.pdx-profile-overlay--apple .pdx-profile-card-title,
+#pdx-profile-overlay.pdx-cx-shell.pdx-profile-overlay--apple .pdx-profile-card-title {
+  font-size: 22px;
+  letter-spacing: -0.03em;
+  color: #1d1d1f;
+}
+
+#pdx-profile-overlay.pdx-profile-overlay--apple .pdx-profile-identity-name {
+  font-size: 17px;
+  font-weight: 600;
+  color: #1d1d1f;
+}
+
+#pdx-profile-overlay.pdx-profile-overlay--apple .pdx-profile-identity-email,
+#pdx-profile-overlay.pdx-profile-overlay--apple .pdx-profile-label {
+  color: #6e6e73;
+}
+
+#pdx-profile-overlay.pdx-profile-overlay--apple .pdx-profile-row {
+  border-bottom-color: rgba(60, 60, 67, 0.18);
+}
+
+#pdx-profile-overlay.pdx-profile-overlay--apple .pdx-profile-value {
+  color: #1d1d1f;
+}
+
+#pdx-profile-overlay.pdx-profile-overlay--apple .pdx-auth-close {
+  color: #1d1d1f;
+}
+
 .pdx-error--premium {
   border: 1px solid rgba(255, 224, 166, 0.25);
   color: #ffe0a6;

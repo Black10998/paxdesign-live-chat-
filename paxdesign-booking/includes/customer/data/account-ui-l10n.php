@@ -41,14 +41,19 @@ return array(
 		'ar' => 'المعلومات الشخصية',
 	),
 	'nav_security'       => array(
-		'en' => 'Security',
-		'de' => 'Sicherheit',
-		'ar' => 'الأمان',
+		'en' => 'Security & Privacy',
+		'de' => 'Sicherheit & Datenschutz',
+		'ar' => 'الأمان والخصوصية',
 	),
 	'nav_settings'       => array(
-		'en' => 'Settings',
-		'de' => 'Einstellungen',
-		'ar' => 'الإعدادات',
+		'en' => 'Account Settings',
+		'de' => 'Kontoeinstellungen',
+		'ar' => 'إعدادات الحساب',
+	),
+	'nav_preferences'    => array(
+		'en' => 'Notification Preferences',
+		'de' => 'Mitteilungseinstellungen',
+		'ar' => 'تفضيلات الإشعارات',
 	),
 	'nav_projects'       => array(
 		'en' => 'Projects',
@@ -76,9 +81,9 @@ return array(
 		'ar' => 'الأخبار',
 	),
 	'nav_notifications'  => array(
-		'en' => 'Alerts',
-		'de' => 'Hinweise',
-		'ar' => 'التنبيهات',
+		'en' => 'Notifications',
+		'de' => 'Mitteilungen',
+		'ar' => 'الإشعارات',
 	),
 	'nav_support'        => array(
 		'en' => 'Messages',
@@ -96,19 +101,24 @@ return array(
 		'ar' => 'لمحة عن مشاريعك وطلباتك ونشاط حسابك.',
 	),
 	'lead_personal'      => array(
-		'en' => 'Update your name and contact details.',
-		'de' => 'Aktualisieren Sie Ihren Namen und Ihre Kontaktdaten.',
-		'ar' => 'حدّث اسمك وبيانات الاتصال.',
+		'en' => 'Update your name, photo, and contact details.',
+		'de' => 'Aktualisieren Sie Ihren Namen, Ihr Foto und Ihre Kontaktdaten.',
+		'ar' => 'حدّث اسمك وصورتك وبيانات الاتصال.',
 	),
 	'lead_security'      => array(
-		'en' => 'Manage your password and account security.',
-		'de' => 'Verwalten Sie Ihr Passwort und die Kontosicherheit.',
-		'ar' => 'أدِر كلمة المرور وأمان حسابك.',
+		'en' => 'Manage your password, verification, and account privacy.',
+		'de' => 'Verwalten Sie Passwort, Bestätigung und Datenschutz.',
+		'ar' => 'أدِر كلمة المرور والتحقق وخصوصية الحساب.',
 	),
 	'lead_settings'      => array(
-		'en' => 'Control notifications and communication preferences.',
-		'de' => 'Steuern Sie Benachrichtigungen und Kommunikationseinstellungen.',
-		'ar' => 'تحكّم في التنبيهات وتفضيلات التواصل.',
+		'en' => 'Review account details and jump to the right control.',
+		'de' => 'Kontodaten prüfen und zum passenden Bereich wechseln.',
+		'ar' => 'راجع تفاصيل الحساب وانتقل إلى التحكم المناسب.',
+	),
+	'lead_preferences'   => array(
+		'en' => 'Choose which emails and alerts you receive.',
+		'de' => 'Wählen Sie, welche E-Mails und Hinweise Sie erhalten.',
+		'ar' => 'اختر رسائل البريد والتنبيهات التي تصلك.',
 	),
 	'lead_projects'      => array(
 		'en' => 'Track active work and deliverables.',
@@ -1074,5 +1084,40 @@ return array(
 		'en' => 'Resend verification',
 		'de' => 'Bestätigung erneut senden',
 		'ar' => 'إعادة إرسال رمز التحقق',
+	),
+	'account_status' => array(
+		'en' => 'Account Status',
+		'de' => 'Kontostatus',
+		'ar' => 'حالة الحساب',
+	),
+	'language' => array(
+		'en' => 'Language',
+		'de' => 'Sprache',
+		'ar' => 'اللغة',
+	),
+	'language_de' => array(
+		'en' => 'Deutsch',
+		'de' => 'Deutsch',
+		'ar' => 'الألمانية',
+	),
+	'language_en' => array(
+		'en' => 'English',
+		'de' => 'Englisch',
+		'ar' => 'الإنجليزية',
+	),
+	'language_ar' => array(
+		'en' => 'Arabic',
+		'de' => 'Arabisch',
+		'ar' => 'العربية',
+	),
+	'privacy_caption' => array(
+		'en' => 'Your email identifies this account. It is not shown publicly on the website.',
+		'de' => 'Ihre E-Mail identifiziert dieses Konto. Sie wird auf der Website nicht öffentlich angezeigt.',
+		'ar' => 'بريدك يحدد هذا الحساب ولا يُعرض علنًا على الموقع.',
+	),
+	'settings_caption' => array(
+		'en' => 'These controls stay on this device and follow the language of the website.',
+		'de' => 'Diese Einstellungen gelten auf diesem Gerät und folgen der Sprache der Website.',
+		'ar' => 'تبقى هذه الإعدادات على هذا الجهاز وتتبع لغة الموقع.',
 	),
 );

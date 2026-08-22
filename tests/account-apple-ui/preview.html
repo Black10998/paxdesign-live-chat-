@@ -1,0 +1,77 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Account preview — Apple UI</title>
+<link rel="stylesheet" href="../../paxdesign-booking/assets/customer-auth/css/pdx-auth-page.css">
+<link rel="stylesheet" href="../../paxdesign-booking/assets/customer-auth/css/pdx-account-app.css">
+<link rel="stylesheet" href="../../paxdesign-booking/assets/customer-auth/css/pdx-portal-apple.css">
+<link rel="stylesheet" href="../../paxdesign-booking/assets/customer-auth/css/pdx-verified-badge.css">
+<style>
+html, body { margin: 0; min-height: 100%; }
+#pdx-auth-isolated-shell { min-height: 100vh; display: flex; flex-direction: column; }
+.pdx-account-header { height: 56px; display: flex; align-items: center; padding: 0 20px; background: #fff; border-bottom: 1px solid rgba(0,0,0,.08); font: 600 14px/1 -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif; }
+</style>
+</head>
+<body class="pdx-auth-isolated pdx-account-dashboard-body">
+<div id="pdx-auth-isolated-shell">
+  <div id="pdx-account-header" class="pdx-account-header" role="banner">PAXDesign Konto</div>
+  <div id="pdx-account-app" class="pdx-account-app">
+    <aside class="pdx-account-sidebar" id="pdx-account-sidebar">
+      <div class="pdx-account-sidebar-user">
+        <button type="button" class="pdx-account-sidebar-profile is-active" data-account-section="personal">
+          <div class="pdx-account-identity">
+            <span class="pdx-account-avatar pdx-account-avatar--sidebar" style="width:40px;height:40px;border-radius:50%;background:#d2d2d7;display:block;flex:0 0 40px"></span>
+            <div class="pdx-account-sidebar-name-row">
+              <div class="pdx-account-name-line pdx-account-sidebar-name"><span class="pdx-account-name-text">Ahmad Al-Khalaf</span></div>
+              <span class="pdx-account-level-badge pdx-account-level-badge--compact">PAXDesign Level 03</span>
+              <div class="pdx-account-sidebar-email">ahmad@paxdesign.at</div>
+            </div>
+          </div>
+        </button>
+      </div>
+      <div class="pdx-account-sidebar-nav">
+        <div class="pdx-account-nav-group">
+          <div class="pdx-account-nav-label">Konto</div>
+          <button type="button" class="pdx-account-nav-btn" data-account-section="overview"><span class="pdx-account-nav-text">Übersicht</span></button>
+          <button type="button" class="pdx-account-nav-btn" data-account-section="personal"><span class="pdx-account-nav-text">Persönliche Daten</span></button>
+          <button type="button" class="pdx-account-nav-btn is-active" data-account-section="settings"><span class="pdx-account-nav-text">Kontoeinstellungen</span></button>
+          <button type="button" class="pdx-account-nav-btn" data-account-section="security"><span class="pdx-account-nav-text">Sicherheit & Datenschutz</span></button>
+          <button type="button" class="pdx-account-nav-btn" data-account-section="notifications"><span class="pdx-account-nav-text">Mitteilungen</span></button>
+          <button type="button" class="pdx-account-nav-btn" data-account-section="preferences"><span class="pdx-account-nav-text">Mitteilungseinstellungen</span></button>
+        </div>
+        <div class="pdx-account-nav-group">
+          <div class="pdx-account-nav-label">Ihre Arbeit</div>
+          <button type="button" class="pdx-account-nav-btn" data-account-section="projects"><span class="pdx-account-nav-text">Projekte</span></button>
+          <button type="button" class="pdx-account-nav-btn" data-account-section="orders"><span class="pdx-account-nav-text">Anfragen</span></button>
+        </div>
+      </div>
+      <div class="pdx-account-sidebar-footer">
+        <button type="button" class="pdx-portal-btn pdx-portal-btn--destructive pdx-portal-btn--full pdx-account-signout">Abmelden</button>
+      </div>
+    </aside>
+    <div class="pdx-account-main" id="pdx-account-main">
+      <div class="pdx-account-page-head">
+        <h2 class="pdx-account-page-title">Kontoeinstellungen</h2>
+        <p class="pdx-account-page-lead">Kontodaten prüfen und zum passenden Bereich wechseln.</p>
+      </div>
+      <div class="pdx-apple-group">
+        <button type="button" class="pdx-apple-row"><span class="pdx-apple-row__text"><span class="pdx-apple-row__label">Persönliche Daten</span></span><span class="pdx-apple-row__value">Ahmad Al-Khalaf</span><span class="pdx-apple-row__chevron">›</span></button>
+        <button type="button" class="pdx-apple-row"><span class="pdx-apple-row__text"><span class="pdx-apple-row__label">Sicherheit & Datenschutz</span></span><span class="pdx-apple-row__chevron">›</span></button>
+        <button type="button" class="pdx-apple-row"><span class="pdx-apple-row__text"><span class="pdx-apple-row__label">Mitteilungen</span></span><span class="pdx-apple-row__chevron">›</span></button>
+        <button type="button" class="pdx-apple-row"><span class="pdx-apple-row__text"><span class="pdx-apple-row__label">Mitteilungseinstellungen</span></span><span class="pdx-apple-row__chevron">›</span></button>
+      </div>
+      <div class="pdx-apple-group">
+        <button type="button" class="pdx-apple-row pdx-apple-row--static"><span class="pdx-apple-row__text"><span class="pdx-apple-row__label">Sprache</span></span><span class="pdx-apple-row__value">Deutsch</span></button>
+        <button type="button" class="pdx-apple-row"><span class="pdx-apple-row__text"><span class="pdx-apple-row__label">E-Mail</span></span><span class="pdx-apple-row__value">ahmad@paxdesign.at</span><span class="pdx-apple-row__chevron">›</span></button>
+      </div>
+      <p class="pdx-apple-caption">Diese Einstellungen gelten auf diesem Gerät und folgen der Sprache der Website.</p>
+      <div class="pdx-apple-group">
+        <a class="pdx-apple-row pdx-apple-row--link" href="#"><span class="pdx-apple-row__text"><span class="pdx-apple-row__label">Zur Website</span></span><span class="pdx-apple-row__chevron">›</span></a>
+      </div>
+    </div>
+  </div>
+</div>
+</body>
+</html>

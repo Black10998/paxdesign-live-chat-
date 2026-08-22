@@ -151,8 +151,8 @@ body.pdx-account-dashboard-body .pdx-account-nav-btn:hover {
 }
 
 body.pdx-account-dashboard-body .pdx-account-nav-btn.is-active {
-  background: rgba(0, 113, 227, 0.1);
-  color: var(--pdx-portal-blue);
+  background: #e8e8ed;
+  color: var(--pdx-portal-text);
 }
 
 body.pdx-account-dashboard-body .pdx-account-sidebar-footer {

@@ -710,6 +710,7 @@
   }
 
   var accountSidebarEventsBound = false;
+  var accountMainEventsBound = false;
 
   function bindAccountSidebarEvents() {
     if (!accountSidebarEl || accountSidebarEventsBound) return;
@@ -733,6 +734,54 @@
         promptAccountSignOut();
       }
     });
+  }
+
+  function bindAccountMainEvents() {
+    if (!accountMainEl || accountMainEventsBound) return;
+    accountMainEventsBound = true;
+    accountMainEl.addEventListener('click', function (e) {
+      var jump = e.target.closest('[data-account-section]');
+      if (!jump || jump.closest('form')) return;
+      var section = jump.getAttribute('data-account-section');
+      if (!section) return;
+      e.preventDefault();
+      setAccountSection(section);
+    });
+  }
+
+  function accountLanguageLabel() {
+    var lang = customerPortalLang();
+    if (lang === 'ar') return t('language_ar', 'العربية');
+    if (lang === 'en') return t('language_en', 'English');
+    return t('language_de', 'Deutsch');
+  }
+
+  function renderAppleRow(opts) {
+    opts = opts || {};
+    var isLink = !!opts.href;
+    var extra = '';
+    if (opts.section) extra += ' data-account-section="' + escHtml(opts.section) + '"';
+    if (isLink) extra += ' href="' + escHtml(opts.href) + '"';
+    else extra += ' type="button"';
+    if (opts.external) extra += ' target="_blank" rel="noopener"';
+    var icon = opts.icon ? '<span class="pdx-apple-row__icon">' + cxIcon(opts.icon, 18) + '</span>' : '';
+    var value = opts.value ? '<span class="pdx-apple-row__value">' + escHtml(opts.value) + '</span>' : '';
+    var chevron = opts.chevron === false ? '' : '<span class="pdx-apple-row__chevron" aria-hidden="true">' + cxIcon('chevron', 14) + '</span>';
+    var tag = isLink ? 'a' : 'button';
+    return '<' + tag + ' class="pdx-apple-row' + (opts.className ? ' ' + opts.className : '') + '"' + extra + '>' +
+      icon +
+      '<span class="pdx-apple-row__text"><span class="pdx-apple-row__label">' + escHtml(opts.label || '') + '</span></span>' +
+      value +
+      chevron +
+    '</' + tag + '>';
+  }
+
+  function renderAppleGroup(rows, caption) {
+    var html = '<div class="pdx-apple-group">' + (rows || []).join('') + '</div>';
+    if (caption) {
+      html += '<p class="pdx-apple-caption">' + escHtml(caption) + '</p>';
+    }
+    return html;
   }
 
   function cxIcon(name, size) {
@@ -1322,18 +1371,18 @@
     if (!profileOverlay) {
       profileOverlay = document.createElement('div');
       profileOverlay.id = 'pdx-profile-overlay';
-      profileOverlay.className = 'pdx-cx-shell';
+      profileOverlay.className = 'pdx-cx-shell pdx-profile-overlay--apple';
       profileOverlay.setAttribute('role', 'dialog');
       profileOverlay.setAttribute('aria-modal', 'true');
-      profileOverlay.setAttribute('aria-label', 'My Profile');
+      profileOverlay.setAttribute('aria-label', t('my_profile', 'My Profile'));
       profileOverlay.innerHTML =
         '<div class="pdx-profile-card">' +
-          '<button type="button" class="pdx-auth-close" aria-label="Close">&times;</button>' +
-          '<div class="pdx-profile-card-title">' + cxIcon('user', 18) + 'My Profile</div>' +
+          '<button type="button" class="pdx-auth-close" aria-label="' + escHtml(t('close', 'Close')) + '">&times;</button>' +
+          '<div class="pdx-profile-card-title">' + escHtml(t('my_profile', 'My Profile')) + '</div>' +
           '<div class="pdx-profile-card-body"></div>' +
           '<div class="pdx-profile-card-actions">' +
-            '<button type="button" class="pdx-cx-btn pdx-profile-open-account">' + cxIcon('settings', 16) + 'My Account</button>' +
-            '<button type="button" class="pdx-cx-btn pdx-cx-btn--ghost pdx-profile-logout">' + cxIcon('logout', 16) + 'Logout</button>' +
+            '<button type="button" class="pdx-portal-btn pdx-profile-open-account">' + cxIcon('settings', 16) + escHtml(t('my_account', 'My Account')) + '</button>' +
+            '<button type="button" class="pdx-portal-btn pdx-portal-btn--ghost pdx-profile-logout">' + cxIcon('logout', 16) + escHtml(t('logout', 'Logout')) + '</button>' +
           '</div>' +
         '</div>';
       document.body.appendChild(profileOverlay);
@@ -1359,8 +1408,8 @@
           '<div class="pdx-profile-identity-email">' + escHtml(user.email || '—') + '</div>' +
         '</div>' +
       '</div>' +
-      '<div class="pdx-profile-row"><span class="pdx-profile-label">Account Status</span><span class="pdx-profile-value pdx-profile-value--status">' + escHtml(accountStatusText(user.verified)) + '</span></div>' +
-      '<div class="pdx-profile-row"><span class="pdx-profile-label">Login Status</span><span class="pdx-profile-value">' + (user.logged_in ? 'Signed in' : 'Signed out') + '</span></div>';
+      '<div class="pdx-profile-row"><span class="pdx-profile-label">' + escHtml(t('account_status', 'Account Status')) + '</span><span class="pdx-profile-value pdx-profile-value--status">' + escHtml(accountStatusText(user.verified)) + '</span></div>' +
+      '<div class="pdx-profile-row"><span class="pdx-profile-label">' + escHtml(t('login_status', 'Login Status')) + '</span><span class="pdx-profile-value">' + escHtml(user.logged_in ? t('signed_in', 'Signed in') : t('signed_out', 'Signed out')) + '</span></div>';
     profileOverlay.classList.add('is-open');
     document.body.classList.add('pdx-no-scroll');
   }
@@ -2394,8 +2443,10 @@
         items: [
           { id: 'overview', label: t('nav_overview', 'Overview'), icon: 'dashboard' },
           { id: 'personal', label: t('nav_personal', 'Personal Information'), icon: 'user' },
-          { id: 'security', label: t('nav_security', 'Security'), icon: 'lock' },
-          { id: 'settings', label: t('nav_settings', 'Settings'), icon: 'settings' },
+          { id: 'settings', label: t('nav_settings', 'Account Settings'), icon: 'settings' },
+          { id: 'security', label: t('nav_security', 'Security & Privacy'), icon: 'lock' },
+          { id: 'notifications', label: t('nav_notifications', 'Notifications'), icon: 'bell' },
+          { id: 'preferences', label: t('nav_preferences', 'Notification Preferences'), icon: 'settings' },
         ],
       },
       {
@@ -2411,7 +2462,6 @@
         label: t('nav_group_updates', 'Updates'),
         items: [
           { id: 'news', label: t('nav_news', 'News'), icon: 'news' },
-          { id: 'notifications', label: t('nav_notifications', 'Alerts'), icon: 'bell' },
         ],
       },
       {
@@ -2437,15 +2487,16 @@
     var titles = {
       overview: t('nav_overview', 'Overview'),
       personal: t('nav_personal', 'Personal Information'),
-      security: t('nav_security', 'Security'),
-      settings: t('nav_settings', 'Settings'),
+      security: t('nav_security', 'Security & Privacy'),
+      settings: t('nav_settings', 'Account Settings'),
+      preferences: t('nav_preferences', 'Notification Preferences'),
       administration: t('nav_administration', 'Customer Management'),
       projects: t('nav_projects', 'Projects'),
       orders: t('nav_orders', 'Requests'),
       records: t('nav_records', 'Records / Ticket History'),
       files: t('nav_files', 'Files & Invoices'),
       news: t('nav_news', 'News'),
-      notifications: t('nav_notifications', 'Alerts'),
+      notifications: t('nav_notifications', 'Notifications'),
       support: t('nav_support', 'Messages'),
       services: t('nav_services', 'Services'),
     };
@@ -2455,9 +2506,10 @@
   function accountSectionLead(section) {
     var leads = {
       overview: t('lead_overview', 'A snapshot of your projects, requests, and account activity.'),
-      personal: t('lead_personal', 'Update your name and contact details.'),
-      security: t('lead_security', 'Manage your password and account security.'),
-      settings: t('lead_settings', 'Control notifications and communication preferences.'),
+      personal: t('lead_personal', 'Update your name, photo, and contact details.'),
+      security: t('lead_security', 'Manage your password, verification, and account privacy.'),
+      settings: t('lead_settings', 'Review account details and jump to the right control.'),
+      preferences: t('lead_preferences', 'Choose which emails and alerts you receive.'),
       administration: t('lead_administration', 'Manage registered customer profiles, levels, and permissions.'),
       projects: t('lead_projects', 'Track active work and deliverables.'),
       orders: t('lead_orders', 'View requests, billing, and payment history.'),
@@ -2491,6 +2543,9 @@
     if (!hash) hash = 'overview';
     if (hash === 'chat') hash = 'support';
     if (hash === 'profile') hash = 'personal';
+    if (hash === 'alerts') hash = 'notifications';
+    if (hash === 'privacy') hash = 'security';
+    if (hash === 'notification-preferences' || hash === 'prefs') hash = 'preferences';
     accountState.section = hash;
     if (accountState.loaded) renderAccountApp();
   }
@@ -2531,6 +2586,7 @@
   function renderAccountSidebar() {
     if (!accountSidebarEl) return;
     accountSidebarEl.style.removeProperty('display');
+    var profileActive = accountState.section === 'personal' ? ' is-active' : '';
     var html = '<div class="pdx-account-sidebar-mobile-head">' +
       '<span class="pdx-account-sidebar-mobile-title">' + escHtml(t('account_navigation', 'Account navigation')) + '</span>' +
       '<button type="button" class="pdx-account-sidebar-close" aria-label="' + escHtml(t('close', 'Close')) + '">' +
@@ -2538,15 +2594,16 @@
       '</button>' +
     '</div>' +
     '<div class="pdx-account-sidebar-user">' +
-      '<div class="pdx-account-identity">' +
-        renderAccountAvatarHtml({ sizeClass: 'pdx-account-avatar--sidebar' }) +
-        '<div class="pdx-account-sidebar-name-row">' +
-          '<div class="pdx-account-name-line pdx-account-sidebar-name">' + accountDashboardNameWithBadge(user.display_name || t('account', 'Account'), user.verified, { size: 14, inline: true, context: 'account' }) + '</div>' +
-          renderCustomerLevelBadge(null, { compact: true }) +
-          '<div class="pdx-account-sidebar-email">' + escHtml(user.email || '') + '</div>' +
-          '<div class="pdx-account-sidebar-status">' + escHtml(accountStatusText(user.verified)) + '</div>' +
+      '<button type="button" class="pdx-account-sidebar-profile' + profileActive + '" data-account-section="personal">' +
+        '<div class="pdx-account-identity">' +
+          renderAccountAvatarHtml({ sizeClass: 'pdx-account-avatar--sidebar' }) +
+          '<div class="pdx-account-sidebar-name-row">' +
+            '<div class="pdx-account-name-line pdx-account-sidebar-name">' + accountDashboardNameWithBadge(user.display_name || t('account', 'Account'), user.verified, { size: 14, inline: true, context: 'account' }) + '</div>' +
+            renderCustomerLevelBadge(null, { compact: true }) +
+            '<div class="pdx-account-sidebar-email">' + escHtml(user.email || '') + '</div>' +
+          '</div>' +
         '</div>' +
-      '</div>' +
+      '</button>' +
     '</div><div class="pdx-account-sidebar-nav">';
     accountNavGroups().forEach(function (group) {
       html += '<div class="pdx-account-nav-group"><div class="pdx-account-nav-label">' + escHtml(group.label) + '</div>';
@@ -2585,16 +2642,11 @@
     var removePhotoMobileBtn = hasUpload
       ? '<button type="button" class="pdx-account-avatar__remove pdx-account-avatar__remove--mobile" id="pdx-profile-avatar-remove-mobile">' + escHtml(t('remove_photo', 'Remove photo')) + '</button>'
       : '';
-    return '<div class="pdx-account-card">' +
-      '<div class="pdx-account-card-title">' + escHtml(t('personal_information', 'Personal Information')) + '</div>' +
-      '<div class="pdx-account-profile-identity">' +
-        renderAccountAvatarHtml({ url: avatarUrl, sizeClass: 'pdx-account-avatar--profile-compact', profile: profile }) +
-        '<div class="pdx-account-profile-identity-text">' +
-          '<div class="pdx-account-name-line pdx-account-profile-name">' + accountDashboardNameWithBadge(profile.display_name || user.display_name || t('account', 'Account'), profile.verified !== undefined ? profile.verified : user.verified, { size: 14, inline: true, context: 'account' }) + '</div>' +
-          renderCustomerLevelBadge(profile) +
-          (accountLevelData(profile).level_description ? '<div class="pdx-account-profile-level-desc">' + escHtml(accountLevelData(profile).level_description) + '</div>' : '') +
-          '<div class="pdx-account-profile-email">' + escHtml(profile.email || user.email || '') + '</div>' +
-        '</div>' +
+    return '<div class="pdx-account-card pdx-account-card--photo">' +
+      '<div class="pdx-account-photo-hero">' +
+        renderAccountAvatarHtml({ url: avatarUrl, sizeClass: 'pdx-account-avatar--profile-hero', profile: profile }) +
+        renderCustomerLevelBadge(profile) +
+        (accountLevelData(profile).level_description ? '<div class="pdx-account-profile-level-desc">' + escHtml(accountLevelData(profile).level_description) + '</div>' : '') +
       '</div>' +
       '<div class="pdx-account-profile-avatar-block pdx-account-profile-avatar-block--desktop">' +
         '<label class="pdx-account-avatar__change">' +
@@ -2610,27 +2662,50 @@
         '</div>' +
       '</div>' +
       renderAccountAvatarPickerHtml(profile) +
-      '<form id="pdx-customer-profile-form">' +
+      '<form id="pdx-customer-profile-form" class="pdx-apple-form">' +
         field('display_name', t('display_name', 'Display name'), profile.display_name || user.display_name) +
         field('email', t('email', 'Email'), profile.email || user.email, 'email') +
-        '<div style="margin-top:12px">' + actionBtn(t('save_changes', 'Save changes'), { type: 'submit', icon: 'check', small: true, inline: true }) + '</div>' +
+        '<div class="pdx-apple-form-actions">' + actionBtn(t('save_changes', 'Save changes'), { type: 'submit', icon: 'check', small: true, inline: true }) + '</div>' +
       '</form>' +
     '</div>';
   }
 
   function renderAccountSecuritySection() {
-    return '<div class="pdx-account-card">' +
-      '<div class="pdx-account-card-title">' + escHtml(t('nav_security', 'Security')) + '</div>' +
-      '<form id="pdx-customer-security-form">' +
+    var status = accountStatusText(user.verified);
+    return renderAppleGroup([
+      renderAppleRow({ label: t('account_status', 'Account Status'), value: status, chevron: false, className: 'pdx-apple-row--static' }),
+      renderAppleRow({ label: t('email', 'Email'), value: user.email || '—', section: 'personal' }),
+    ], t('privacy_caption', 'Your email identifies this account. It is not shown publicly on the website.')) +
+    '<div class="pdx-account-card">' +
+      '<div class="pdx-account-card-title">' + escHtml(t('password', 'Password')) + '</div>' +
+      '<form id="pdx-customer-security-form" class="pdx-apple-form">' +
         field('current_password', t('current_password', 'Current password'), '', 'password') +
         field('new_password', t('new_password', 'New password'), '', 'password') +
         field('confirm_password', t('confirm_password', 'Confirm new password'), '', 'password') +
-        '<div style="margin-top:12px">' + actionBtn(t('update_password', 'Update password'), { type: 'submit', icon: 'lock', small: true, inline: true }) + '</div>' +
+        '<div class="pdx-apple-form-actions">' + actionBtn(t('update_password', 'Update password'), { type: 'submit', icon: 'lock', small: true, inline: true }) + '</div>' +
       '</form>' +
     '</div>';
   }
 
-  function renderAccountSettingsSection(settings) {
+  function renderAccountSettingsSection() {
+    var profile = accountProfileData();
+    var name = profile.display_name || user.display_name || t('account', 'Account');
+    return renderAppleGroup([
+      renderAppleRow({ icon: 'user', label: t('nav_personal', 'Personal Information'), value: name, section: 'personal' }),
+      renderAppleRow({ icon: 'lock', label: t('nav_security', 'Security & Privacy'), section: 'security' }),
+      renderAppleRow({ icon: 'bell', label: t('nav_notifications', 'Notifications'), section: 'notifications' }),
+      renderAppleRow({ icon: 'settings', label: t('nav_preferences', 'Notification Preferences'), section: 'preferences' }),
+    ]) +
+    renderAppleGroup([
+      renderAppleRow({ label: t('language', 'Language'), value: accountLanguageLabel(), chevron: false, className: 'pdx-apple-row--static' }),
+      renderAppleRow({ label: t('email', 'Email'), value: profile.email || user.email || '—', section: 'personal' }),
+    ], t('settings_caption', 'These controls stay on this device and follow the language of the website.')) +
+    renderAppleGroup([
+      renderAppleRow({ label: t('continue_website', 'Continue to website'), href: homePageUrl(), className: 'pdx-apple-row--link' }),
+    ]);
+  }
+
+  function renderAccountPreferencesSection(settings) {
     settings = settings || {};
     var prefs = settings.notifications || {};
     var toggles = [
@@ -2641,14 +2716,14 @@
       { key: 'security', label: t('notify_security', 'Security alerts') },
       { key: 'push_enabled', label: t('notify_push', 'Push notifications (mobile app)') },
     ];
-    var html = '<div class="pdx-account-card"><div class="pdx-account-card-title">' + escHtml(t('notification_preferences', 'Notification preferences')) + '</div>' +
+    var html = '<div class="pdx-account-card pdx-account-card--toggles"><div class="pdx-account-card-title">' + escHtml(t('notification_preferences', 'Notification preferences')) + '</div>' +
       '<form id="pdx-customer-settings-form"><div class="pdx-portal-toggle-group">';
-    toggles.forEach(function (t) {
-      var checked = prefs[t.key] !== false ? ' checked' : '';
+    toggles.forEach(function (item) {
+      var checked = prefs[item.key] !== false ? ' checked' : '';
       html += '<label class="pdx-portal-toggle">' +
-        '<span class="pdx-portal-toggle__label">' + escHtml(t.label) + '</span>' +
+        '<span class="pdx-portal-toggle__label">' + escHtml(item.label) + '</span>' +
         '<span class="pdx-portal-toggle__switch">' +
-          '<input type="checkbox" name="' + escHtml(t.key) + '"' + checked + ' />' +
+          '<input type="checkbox" name="' + escHtml(item.key) + '"' + checked + ' />' +
           '<span class="pdx-portal-toggle__track" aria-hidden="true"></span>' +
         '</span>' +
       '</label>';
@@ -3372,7 +3447,11 @@
       return;
     }
     if (section === 'settings') {
-      accountMainEl.innerHTML = head + renderAccountSettingsSection(accountState.settings);
+      accountMainEl.innerHTML = head + renderAccountSettingsSection();
+      return;
+    }
+    if (section === 'preferences') {
+      accountMainEl.innerHTML = head + renderAccountPreferencesSection(accountState.settings);
       bindAccountSettingsForm(accountMainEl);
       return;
     }
@@ -3455,6 +3534,8 @@
     if (!accountAppEl || !accountSidebarEl || !accountMainEl) return;
     applyAccountLocale();
     ensureAccountMobileChrome();
+    bindAccountSidebarEvents();
+    bindAccountMainEvents();
     renderAccountSidebar();
     renderAccountMain();
     bindAccountAvatarFallbacks(accountAppEl);

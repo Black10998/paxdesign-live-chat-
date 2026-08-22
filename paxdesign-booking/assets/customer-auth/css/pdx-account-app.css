@@ -132,8 +132,8 @@
 }
 
 .pdx-account-nav-btn.is-active {
-  background: rgba(0, 113, 227, 0.1);
-  color: #0071e3;
+  background: #e8e8ed;
+  color: #1d1d1f;
   font-weight: 600;
 }
 
@@ -163,9 +163,9 @@
 .pdx-account-main {
   min-width: 0;
   min-height: 0;
-  padding: 20px 24px 24px;
+  padding: 28px 28px 40px;
   overflow: auto;
-  background: #ffffff;
+  background: #f5f5f7;
   -webkit-overflow-scrolling: touch;
 }
 
@@ -174,11 +174,11 @@
 }
 
 .pdx-account-page-title {
-  margin: 0 0 4px;
-  font-size: clamp(24px, 3vw, 30px);
+  margin: 0 0 6px;
+  font-size: clamp(28px, 3.4vw, 34px);
   font-weight: 700;
-  letter-spacing: -0.03em;
-  line-height: 1.1;
+  letter-spacing: -0.035em;
+  line-height: 1.08;
   color: #1d1d1f;
 }
 
@@ -504,8 +504,8 @@
   }
 
   .pdx-account-sidebar--mobile-overlay .pdx-account-nav-btn.is-active {
-    color: #0071e3 !important;
-    background: rgba(0, 113, 227, 0.12) !important;
+    color: #1d1d1f !important;
+    background: #e8e8ed !important;
   }
 
   .pdx-account-sidebar--mobile-overlay .pdx-account-nav-btn .pdx-cx-icon {
@@ -513,7 +513,7 @@
   }
 
   .pdx-account-sidebar--mobile-overlay .pdx-account-nav-btn.is-active .pdx-cx-icon {
-    color: #0071e3 !important;
+    color: #1d1d1f !important;
   }
 
   .pdx-account-sidebar--mobile-overlay .pdx-account-sidebar-close {
@@ -1660,4 +1660,183 @@ body.pdx-account-signout-confirm-open {
   margin-bottom: 16px;
   padding-bottom: 16px;
   border-bottom: 1px solid rgba(0, 0, 0, 0.08);
+}
+
+.pdx-account-sidebar-profile {
+  display: block;
+  width: 100%;
+  margin: 0;
+  padding: 10px;
+  border: 0;
+  border-radius: 14px;
+  background: transparent;
+  text-align: start;
+  cursor: pointer;
+  font: inherit;
+  color: inherit;
+}
+
+.pdx-account-sidebar-profile:hover,
+.pdx-account-sidebar-profile.is-active {
+  background: #e8e8ed;
+}
+
+.pdx-account-sidebar-profile .pdx-account-identity {
+  pointer-events: none;
+}
+
+.pdx-account-avatar--profile-hero {
+  width: 88px !important;
+  height: 88px !important;
+  min-width: 88px !important;
+  min-height: 88px !important;
+  max-width: 88px !important;
+  max-height: 88px !important;
+  flex-basis: 88px !important;
+}
+
+.pdx-account-photo-hero {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  text-align: center;
+  gap: 8px;
+  padding: 8px 8px 4px;
+}
+
+.pdx-account-card--photo {
+  padding-top: 24px;
+}
+
+.pdx-account-photo-hero .pdx-account-level-badge {
+  margin-top: 4px;
+}
+
+.pdx-apple-group {
+  background: #ffffff;
+  border-radius: 12px;
+  overflow: hidden;
+  margin: 0 0 8px;
+  box-shadow: 0 1px 2px rgba(0, 0, 0, 0.04);
+}
+
+.pdx-apple-caption {
+  margin: 0 16px 22px;
+  font-size: 12px;
+  line-height: 1.4;
+  color: #86868b;
+}
+
+.pdx-apple-row {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  width: 100%;
+  min-height: 44px;
+  margin: 0;
+  padding: 11px 16px;
+  border: 0;
+  border-bottom: 0.5px solid rgba(60, 60, 67, 0.18);
+  background: #ffffff;
+  color: #1d1d1f;
+  font: inherit;
+  font-size: 17px;
+  font-weight: 400;
+  text-align: start;
+  text-decoration: none;
+  cursor: pointer;
+}
+
+.pdx-apple-row:last-child {
+  border-bottom: 0;
+}
+
+.pdx-apple-row:hover,
+.pdx-apple-row:focus-visible {
+  background: #f2f2f7;
+}
+
+.pdx-apple-row--static {
+  cursor: default;
+}
+
+.pdx-apple-row--static:hover {
+  background: #ffffff;
+}
+
+.pdx-apple-row__icon {
+  display: inline-flex;
+  width: 28px;
+  height: 28px;
+  align-items: center;
+  justify-content: center;
+  color: #0071e3;
+  flex: 0 0 auto;
+}
+
+.pdx-apple-row__text {
+  flex: 1 1 auto;
+  min-width: 0;
+}
+
+.pdx-apple-row__label {
+  display: block;
+  line-height: 1.25;
+}
+
+.pdx-apple-row__value {
+  flex: 0 1 auto;
+  max-width: 46%;
+  color: #86868b;
+  font-size: 16px;
+  text-align: end;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.pdx-apple-row__chevron {
+  display: inline-flex;
+  color: #c7c7cc;
+  flex: 0 0 auto;
+}
+
+.pdx-apple-row__chevron .pdx-cx-icon {
+  transform: rotate(-90deg);
+}
+
+.pdx-account-app[dir="rtl"] .pdx-apple-row__chevron .pdx-cx-icon {
+  transform: rotate(90deg);
+}
+
+.pdx-account-app[dir="rtl"] .pdx-apple-row__value {
+  text-align: start;
+}
+
+.pdx-apple-form {
+  margin-top: 8px;
+}
+
+.pdx-apple-form-actions {
+  margin-top: 16px;
+}
+
+.pdx-account-card {
+  background: #ffffff;
+  box-shadow: 0 1px 2px rgba(0, 0, 0, 0.04);
+}
+
+.pdx-account-card--toggles .pdx-portal-toggle {
+  min-height: 44px;
+}
+
+@media (max-width: 900px) {
+  .pdx-account-main {
+    padding: 20px 16px 32px;
+  }
+
+  .pdx-apple-row {
+    font-size: 16px;
+    padding-inline: 14px;
+  }
 }

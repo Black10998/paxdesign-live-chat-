@@ -1,0 +1,157 @@
+name: Deploy Account Apple UI
+
+# Surgical: account/profile CSS + auth JS + l10n only.
+# Does not rsync-delete the plugin tree. Does not copy chat PHP or build iOS.
+on:
+  workflow_dispatch:
+  push:
+    branches:
+      - main
+    paths:
+      - '.github/triggers/deploy-account-apple-ui'
+      - '.github/workflows/deploy-account-apple-ui.yml'
+      - 'paxdesign-booking/assets/customer-auth/js/pax-auth.js'
+      - 'paxdesign-booking/assets/customer-auth/css/pdx-auth.css'
+      - 'paxdesign-booking/assets/customer-auth/css/pdx-account-app.css'
+      - 'paxdesign-booking/assets/customer-auth/css/pdx-portal-apple.css'
+      - 'paxdesign-booking/includes/customer/data/account-ui-l10n.php'
+      - 'deploy-patches/restored-chat-human-ui/assets/customer-auth/js/pax-auth.js'
+      - 'deploy-patches/restored-chat-human-ui/assets/customer-auth/css/pdx-auth.css'
+      - 'scripts/verify-account-apple-ui.sh'
+      - 'tests/account-apple-ui/run.php'
+
+permissions:
+  contents: read
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    timeout-minutes: 8
+    steps:
+      - uses: actions/checkout@v4
+      - name: Account Apple UI guards
+        run: php tests/account-apple-ui/run.php
+      - name: Production baseline guards
+        run: php tests/production-baseline/run.php
+      - name: Restored overlay guards
+        run: php tests/restored-chat-human-ui/run.php
+      - name: Merge-integration guards
+        run: php tests/merge-integration/run.php
+
+  deploy:
+    needs: test
+    runs-on: ubuntu-latest
+    timeout-minutes: 12
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Validate secrets
+        run: |
+          set -euo pipefail
+          for key in WP_SSH_HOST WP_SSH_USER WP_SSH_PRIVATE_KEY WP_PATH; do
+            [ -n "${!key:-}" ] || { echo "Missing $key"; exit 1; }
+          done
+        env:
+          WP_SSH_HOST: ${{ secrets.WP_SSH_HOST }}
+          WP_SSH_USER: ${{ secrets.WP_SSH_USER }}
+          WP_SSH_PRIVATE_KEY: ${{ secrets.WP_SSH_PRIVATE_KEY }}
+          WP_PATH: ${{ secrets.WP_PATH }}
+
+      - name: Deploy account Apple UI
+        env:
+          WP_SSH_HOST: ${{ secrets.WP_SSH_HOST }}
+          WP_SSH_PORT: ${{ secrets.WP_SSH_PORT }}
+          WP_SSH_USER: ${{ secrets.WP_SSH_USER }}
+          WP_SSH_PRIVATE_KEY: ${{ secrets.WP_SSH_PRIVATE_KEY }}
+          WP_PATH: ${{ secrets.WP_PATH }}
+        run: |
+          set -euo pipefail
+          PORT="${WP_SSH_PORT:-22}"
+          SSH_OPTS=(-i ~/.ssh/id_deploy -p "$PORT" -o StrictHostKeyChecking=yes -o BatchMode=yes)
+          install -m 600 -D /dev/null ~/.ssh/id_deploy
+          printf '%s\n' "$WP_SSH_PRIVATE_KEY" > ~/.ssh/id_deploy
+          ssh-keyscan -p "$PORT" -H "$WP_SSH_HOST" >> ~/.ssh/known_hosts 2>/dev/null || true
+
+          PLUGIN="${WP_PATH%/}/wp-content/plugins/paxdesign-booking"
+          REMOTE="${WP_SSH_USER}@${WP_SSH_HOST}"
+
+          rsync_with_retry() {
+            local attempt=1
+            local max_attempts=4
+            local delay=4
+            while [ "$attempt" -le "$max_attempts" ]; do
+              if rsync -az -e "ssh ${SSH_OPTS[*]}" "$@"; then
+                return 0
+              fi
+              if [ "$attempt" -eq "$max_attempts" ]; then
+                return 1
+              fi
+              echo "rsync failed (attempt ${attempt}/${max_attempts}); retrying in ${delay}s..."
+              sleep "$delay"
+              attempt=$((attempt + 1))
+              delay=$((delay * 2))
+            done
+          }
+
+          ssh_with_retry() {
+            local attempt=1
+            local max_attempts=4
+            local delay=4
+            while [ "$attempt" -le "$max_attempts" ]; do
+              if ssh "${SSH_OPTS[@]}" "$@"; then
+                return 0
+              fi
+              if [ "$attempt" -eq "$max_attempts" ]; then
+                return 1
+              fi
+              echo "ssh failed (attempt ${attempt}/${max_attempts}); retrying in ${delay}s..."
+              sleep "$delay"
+              attempt=$((attempt + 1))
+              delay=$((delay * 2))
+            done
+          }
+
+          ssh_with_retry "$REMOTE" \
+            "mkdir -p $(printf '%q' "$PLUGIN/assets/customer-auth/js") $(printf '%q' "$PLUGIN/assets/customer-auth/css") $(printf '%q' "$PLUGIN/includes/customer/data")"
+
+          rsync_with_retry \
+            paxdesign-booking/assets/customer-auth/js/pax-auth.js \
+            "${REMOTE}:${PLUGIN}/assets/customer-auth/js/pax-auth.js"
+
+          rsync_with_retry \
+            paxdesign-booking/assets/customer-auth/css/pdx-auth.css \
+            "${REMOTE}:${PLUGIN}/assets/customer-auth/css/pdx-auth.css"
+
+          rsync_with_retry \
+            paxdesign-booking/assets/customer-auth/css/pdx-account-app.css \
+            "${REMOTE}:${PLUGIN}/assets/customer-auth/css/pdx-account-app.css"
+
+          rsync_with_retry \
+            paxdesign-booking/assets/customer-auth/css/pdx-portal-apple.css \
+            "${REMOTE}:${PLUGIN}/assets/customer-auth/css/pdx-portal-apple.css"
+
+          rsync_with_retry \
+            paxdesign-booking/includes/customer/data/account-ui-l10n.php \
+            "${REMOTE}:${PLUGIN}/includes/customer/data/account-ui-l10n.php"
+
+          ssh_with_retry "$REMOTE" \
+            "cd '$(printf '%q' "$WP_PATH")' && \
+             rm -f .maintenance && \
+             (command -v wp >/dev/null && wp cache flush || true) && \
+             (command -v wp >/dev/null && wp litespeed-purge all || true) && \
+             (php -r 'if (function_exists(\"opcache_reset\")) { opcache_reset(); echo \"opcache_reset=ok\\n\"; } else { echo \"opcache_reset=skipped\\n\"; }' || true)"
+
+          ssh_with_retry "$REMOTE" \
+            "grep -q pdx-account-sidebar-profile '$(printf '%q' "$PLUGIN")/assets/customer-auth/js/pax-auth.js' && \
+             grep -q pdx-apple-group '$(printf '%q' "$PLUGIN")/assets/customer-auth/css/pdx-account-app.css' && \
+             grep -q 'nav_preferences' '$(printf '%q' "$PLUGIN")/includes/customer/data/account-ui-l10n.php' && \
+             grep -q 'Version: 3.174.128' '$(printf '%q' "$PLUGIN")/assets/js/chat-script.js' && \
+             echo 'OK: live account Apple UI files deployed without 3.176 chat rewrite'"
+
+          echo "Deployed account Apple UI (surgical rsync, no plugin tree delete, no iOS build)"
+
+      - name: Verify live account Apple UI
+        run: |
+          set -euo pipefail
+          chmod +x scripts/verify-account-apple-ui.sh
+          ./scripts/verify-account-apple-ui.sh

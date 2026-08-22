@@ -27,3 +27,5 @@ jobs:
         run: php tests/public-identity-hardening/run.php
       - name: Chat readable-font guards
         run: php tests/chat-readable-fonts/run.php
+      - name: Account Apple UI guards
+        run: php tests/account-apple-ui/run.php

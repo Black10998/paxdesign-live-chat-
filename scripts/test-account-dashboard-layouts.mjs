@@ -42,14 +42,15 @@ function buildHtml() {
   var groups = [
     { label: 'Account', items: [
       { id: 'overview', label: 'Overview' }, { id: 'personal', label: 'Personal Information' },
-      { id: 'security', label: 'Security' }, { id: 'settings', label: 'Settings' }
+      { id: 'settings', label: 'Account Settings' }, { id: 'security', label: 'Security & Privacy' },
+      { id: 'notifications', label: 'Notifications' }, { id: 'preferences', label: 'Notification Preferences' }
     ]},
     { label: 'Your Work', items: [
       { id: 'projects', label: 'Projects' }, { id: 'orders', label: 'Requests' },
       { id: 'records', label: 'Records' }, { id: 'files', label: 'Files & Invoices' }
     ]},
     { label: 'Updates', items: [
-      { id: 'news', label: 'News' }, { id: 'notifications', label: 'Alerts' }
+      { id: 'news', label: 'News' }
     ]},
     { label: 'Support', items: [
       { id: 'support', label: 'Messages' }, { id: 'services', label: 'Services' }
@@ -142,7 +143,7 @@ if (desktop.appDisplay !== 'grid') { console.error('FAIL desktop: app should be 
 if (desktop.sidebarPosition !== 'static') { console.error('FAIL desktop: sidebar should be static, got ' + desktop.sidebarPosition); failed++; }
 if (!desktop.mainVisible || desktop.mainLeft < 200) { console.error('FAIL desktop: main should be visible on the right'); failed++; }
 if (!mobile.shellContainsSidebar) { console.error('FAIL mobile: sidebar should mount inside isolated shell'); failed++; }
-if (mobile.navItemCount < 12) { console.error('FAIL mobile: expected 12 nav items, got ' + mobile.navItemCount); failed++; }
+if (mobile.navItemCount < 13) { console.error('FAIL mobile: expected at least 13 nav items, got ' + mobile.navItemCount); failed++; }
 if (!mobile.sidebarVisible) { console.error('FAIL mobile: sidebar overlay should be visible when menu opens'); failed++; }
 if (!mobile.sidebarBgOpaque) { console.error('FAIL mobile: sidebar overlay background must be solid opaque white'); failed++; }
 if (!mobile.mainVisible) { console.error('FAIL mobile: main content should remain visible'); failed++; }
