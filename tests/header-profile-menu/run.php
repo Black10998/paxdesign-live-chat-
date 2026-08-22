@@ -33,8 +33,11 @@ hpm_ok(strpos($chat, 'skipping stacked sync') === false, 'chat is not the 3.176 
 hpm_ok(strpos($chat, 'Gespräch beenden') === false, 'chat has no Gespräch beenden');
 
 hpm_ok(strpos($js, 'pdx-auth-menu--apple') !== false, 'header dropdown markup uses the Apple menu class');
+hpm_ok(strpos($js, 'function headerMenuSvg') !== false, 'header dropdown uses dedicated transparent SVGs');
+hpm_ok(strpos($js, 'pdx-auth-menu-svg') !== false, 'header dropdown SVG class is present');
 hpm_ok(strpos($js, 'pdx-auth-menu-item__icon') !== false, 'header dropdown items render icons');
 hpm_ok(strpos($js, 'pdx-auth-menu-item__chevron') !== false, 'header dropdown items render chevrons');
+hpm_ok(strpos($js, 'family=Inter') !== false, 'header dropdown loads Inter as the Apple-style fallback');
 hpm_ok(strpos($js, 'pdx-auth-menu-footer') !== false, 'logout lives in a separated footer');
 hpm_ok(strpos($js, 'function positionAuthMenu') !== false, 'header dropdown is positioned so the header cannot clip it');
 hpm_ok(strpos($js, 'pdx-auth-menu-status--verified') !== false, 'verified status has its own class');
@@ -51,10 +54,21 @@ hpm_ok($create && strpos($create, "renderHeaderMenuItem('account'") !== false, '
 hpm_ok($create && strpos($create, "renderHeaderMenuItem('logout'") !== false, 'dropdown includes Abmelden');
 
 hpm_ok(strpos($css, '#pdx-auth-bar.pdx-cx-shell .pdx-auth-menu.pdx-auth-menu--apple') !== false, 'auth CSS restyles the header dropdown with high specificity');
-hpm_ok(strpos($css, '.pdx-auth-menu--apple .pdx-auth-menu-status--verified') !== false, 'verified status is a green Apple pill');
+hpm_ok(strpos($css, '.pdx-auth-menu--apple .pdx-auth-menu-status--verified') !== false, 'verified status has a dedicated class');
 hpm_ok(strpos($css, '.pdx-auth-menu--apple .pdx-auth-menu-item--logout') !== false, 'logout row is restyled separately');
+hpm_ok(preg_match('/pdx-auth-menu\\.pdx-auth-menu--apple,[\\s\\S]{0,220}Inter/', $css) === 1, 'Apple dropdown forces SF/Inter typography');
+hpm_ok(strpos($css, '.pdx-auth-menu-item__icon,') !== false && strpos($css, '.pdx-auth-menu--apple .pdx-auth-menu-svg') !== false, 'icon wrappers and SVGs are styled as transparent strokes');
+$apple_css = '';
+if (preg_match('/Header profile dropdown[\\s\\S]*$/', $css, $apple_m)) {
+	$apple_css = $apple_m[0];
+}
+hpm_ok($apple_css !== '', 'Apple dropdown CSS block exists');
+hpm_ok($apple_css && strpos($apple_css, '#0071e3') === false, 'Apple dropdown has no blue accent');
+hpm_ok($apple_css && strpos($apple_css, '#e8f1ff') === false, 'Apple dropdown has no blue icon tiles');
+hpm_ok($apple_css && strpos($apple_css, '#ff3b30') === false, 'Apple dropdown has no red logout color');
+hpm_ok($apple_css && strpos($apple_css, '#248a3d') === false && strpos($apple_css, '#e8f8ee') === false, 'Apple dropdown has no green verified pill');
 hpm_ok(preg_match('/pdx-auth-menu\\.pdx-auth-menu--apple\\s*\\{[^}]*background:\\s*#ffffff/', $css) === 1, 'Apple dropdown uses a white card');
-hpm_ok(strpos($css, '#ffe0a6') === false || preg_match('/pdx-auth-menu--apple[\s\S]{0,800}#ffe0a6/', $css) !== 1, 'Apple dropdown does not reuse the gold status color');
+hpm_ok(strpos($css, '#ffe0a6') === false || preg_match('/pdx-auth-menu--apple[\\s\\S]{0,800}#ffe0a6/', $css) !== 1, 'Apple dropdown does not reuse the gold status color');
 
 hpm_ok(strpos($homepage, 'Orbitron') !== false, 'homepage Orbitron headings stay unchanged');
 hpm_ok(is_file($root . '/navein/assets/css/orbitron-display-fonts.css'), 'Orbitron heading stylesheet remains');

@@ -48,7 +48,9 @@ auth_css_code="$(curl -sS -A 'Mozilla/5.0' -o "$TMP/pdx-auth.css" -w '%{http_cod
 [ "$auth_css_code" = "200" ] && ok "pdx-auth.css HTTP 200" || fail "pdx-auth.css HTTP ${auth_css_code}"
 grep -q "pdx-profile-overlay--apple" "$TMP/pdx-auth.css" && ok "live overlay CSS is Apple-styled" || fail "live overlay CSS missing Apple sheet"
 grep -q "pdx-auth-menu--apple" "$TMP/pdx-auth.css" && ok "live CSS restyles the header profile dropdown" || fail "live CSS missing header profile dropdown Apple rules"
-grep -q ".pdx-auth-menu--apple .pdx-auth-menu-status--verified" "$TMP/pdx-auth.css" && ok "live CSS has a green verified pill" || fail "live CSS missing verified pill"
+grep -q ".pdx-auth-menu--apple .pdx-auth-menu-status--verified" "$TMP/pdx-auth.css" && ok "live CSS has the header verified status" || fail "live CSS missing verified status"
+grep -q "pdx-auth-menu-svg" "$TMP/pax-auth.js" && ok "live JS uses transparent header SVGs" || fail "live JS missing transparent header SVGs"
+grep -q "background: transparent" "$TMP/pdx-auth.css" && ok "live CSS keeps header icons transparent" || fail "live CSS missing transparent icon treatment"
 
 hp_code="$(curl -sS -A 'Mozilla/5.0' -o "$TMP/apple-homepage.css" -w '%{http_code}' "${BASE}/wp-content/themes/navein/assets/css/apple-homepage.css?n=${STAMP}")"
 [ "$hp_code" = "200" ] && ok "homepage CSS HTTP 200" || fail "homepage CSS HTTP ${hp_code}"

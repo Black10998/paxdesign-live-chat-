@@ -1261,6 +1261,7 @@
       window.addEventListener('scroll', positionAuthMenu, true);
     }
 
+    ensureAppleMenuFont();
     mountAuthBar();
     updateAuthBar();
   }
@@ -1272,12 +1273,38 @@
     authBar.setAttribute('dir', rtl ? 'rtl' : 'ltr');
   }
 
+  function headerMenuSvg(paths, size) {
+    size = size || 20;
+    return '<svg class="pdx-auth-menu-svg" width="' + size + '" height="' + size + '" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" focusable="false">' + paths + '</svg>';
+  }
+
+  function headerMenuIcon(name, size) {
+    var icons = {
+      dashboard: '<rect x="3.4" y="3.4" width="7.2" height="8.4" rx="1.5"/><rect x="13.4" y="3.4" width="7.2" height="5" rx="1.5"/><rect x="13.4" y="11.4" width="7.2" height="9.2" rx="1.5"/><rect x="3.4" y="14.8" width="7.2" height="5.8" rx="1.5"/>',
+      user: '<circle cx="12" cy="8" r="3.2"/><path d="M5.4 19.4c.75-3.15 3.2-4.8 6.6-4.8s5.85 1.65 6.6 4.8"/>',
+      settings: '<circle cx="12" cy="12" r="2.85"/><path d="M12 3.25v2.1M12 18.65v2.1M4.75 4.75l1.48 1.48M17.77 17.77l1.48 1.48M3.25 12h2.1M18.65 12h2.1M4.75 19.25l1.48-1.48M17.77 6.23l1.48-1.48"/>',
+      logout: '<path d="M9.6 20.4H6.1A2.1 2.1 0 0 1 4 18.3V5.7A2.1 2.1 0 0 1 6.1 3.6h3.5"/><path d="M15.2 16.4 20 12l-4.8-4.4"/><path d="M19.6 12H9.5"/>',
+      chevron: '<path d="M9.4 5.8 15.6 12 9.4 18.2"/>',
+      check: '<path d="M5.4 12.4 10 17l8.6-9.6"/>'
+    };
+    return headerMenuSvg(icons[name] || icons.user, size);
+  }
+
+  function ensureAppleMenuFont() {
+    if (document.getElementById('pdx-apple-menu-font')) return;
+    var link = document.createElement('link');
+    link.id = 'pdx-apple-menu-font';
+    link.rel = 'stylesheet';
+    link.href = 'https://fonts.googleapis.com/css2?family=Inter:opsz,wght@14..32,400;14..32,510;14..32,590;14..32,600&display=swap';
+    document.head.appendChild(link);
+  }
+
   function renderHeaderMenuItem(action, icon, label, extraClass) {
     var isLogout = extraClass && extraClass.indexOf('logout') !== -1;
     return '<button type="button" class="pdx-auth-menu-item' + (extraClass ? ' ' + extraClass : '') + '" data-action="' + escHtml(action) + '">' +
-      '<span class="pdx-auth-menu-item__icon">' + cxIcon(icon, 18) + '</span>' +
+      '<span class="pdx-auth-menu-item__icon">' + headerMenuIcon(icon, 20) + '</span>' +
       '<span class="pdx-auth-menu-item__label">' + escHtml(label) + '</span>' +
-      (isLogout ? '' : '<span class="pdx-auth-menu-item__chevron" aria-hidden="true">' + cxIcon('chevron', 14) + '</span>') +
+      (isLogout ? '' : '<span class="pdx-auth-menu-item__chevron" aria-hidden="true">' + headerMenuIcon('chevron', 14) + '</span>') +
     '</button>';
   }
 
@@ -1331,7 +1358,10 @@
           '<div class="pdx-auth-menu-identity-text">' +
             '<div class="pdx-auth-menu-name">' + escHtml(user.display_name || t('account', 'Account')) + '</div>' +
             '<div class="pdx-auth-menu-email">' + escHtml(user.email || '') + '</div>' +
-            '<div class="pdx-auth-menu-status ' + statusClass + '">' + escHtml(accountStatusLabel()) + '</div>' +
+            '<div class="pdx-auth-menu-status ' + statusClass + '">' +
+              (user.verified || user.is_admin ? '<span class="pdx-auth-menu-status__icon">' + headerMenuIcon('check', 12) + '</span>' : '') +
+              '<span class="pdx-auth-menu-status__label">' + escHtml(accountStatusLabel()) + '</span>' +
+            '</div>' +
           '</div>' +
         '</div>';
       authMenu.removeAttribute('hidden');
