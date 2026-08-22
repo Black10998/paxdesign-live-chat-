@@ -2691,7 +2691,7 @@
     var profile = accountProfileData();
     var name = profile.display_name || user.display_name || t('account', 'Account');
     return renderAppleGroup([
-      renderAppleRow({ icon: 'user', label: t('nav_personal', 'Personal Information'), value: name, section: 'personal' }),
+      renderAppleRow({ icon: 'user', label: t('nav_personal', 'Personal Information'), section: 'personal' }),
       renderAppleRow({ icon: 'lock', label: t('nav_security', 'Security & Privacy'), section: 'security' }),
       renderAppleRow({ icon: 'bell', label: t('nav_notifications', 'Notifications'), section: 'notifications' }),
       renderAppleRow({ icon: 'settings', label: t('nav_preferences', 'Notification Preferences'), section: 'preferences' }),
