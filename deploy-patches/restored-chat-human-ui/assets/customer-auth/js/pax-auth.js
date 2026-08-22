@@ -2689,7 +2689,6 @@
 
   function renderAccountSettingsSection() {
     var profile = accountProfileData();
-    var name = profile.display_name || user.display_name || t('account', 'Account');
     return renderAppleGroup([
       renderAppleRow({ icon: 'user', label: t('nav_personal', 'Personal Information'), section: 'personal' }),
       renderAppleRow({ icon: 'lock', label: t('nav_security', 'Security & Privacy'), section: 'security' }),
