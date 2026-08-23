@@ -31,7 +31,7 @@ html body.dtr-apple-sticky-header #dtr-header-global .container {
   height: var(--dtr-apple-header-height);
   min-height: var(--dtr-apple-header-height);
   max-height: var(--dtr-apple-header-height);
-  overflow: visible;
+  overflow: visible !important;
 }
 
 html body.dtr-apple-sticky-header #dtr-header-global .dtr-header-left,
@@ -50,9 +50,9 @@ html body.dtr-apple-sticky-header #dtr-header-global .dtr-logo svg {
 html body.dtr-apple-sticky-header #dtr-header-global .main-navigation {
   display: flex;
   align-items: center;
-  flex: 1 1 auto;
-  min-width: 0;
-  overflow: hidden;
+  flex: 1 0 auto;
+  min-width: max-content;
+  overflow: visible !important;
 }
 
 html body.dtr-apple-sticky-header #dtr-header-global .main-navigation .sf-menu {
@@ -60,6 +60,12 @@ html body.dtr-apple-sticky-header #dtr-header-global .main-navigation .sf-menu {
   align-items: center;
   flex-wrap: nowrap;
   margin: 0;
+  overflow: visible !important;
+}
+
+html body.dtr-apple-sticky-header #dtr-header-global .main-navigation .sf-menu > li {
+  flex: 0 0 auto;
+  overflow: visible !important;
 }
 
 html body.dtr-apple-sticky-header #dtr-header-global .main-navigation .sf-menu > li > a {
@@ -67,6 +73,30 @@ html body.dtr-apple-sticky-header #dtr-header-global .main-navigation .sf-menu >
   height: var(--dtr-apple-header-height);
   line-height: var(--dtr-apple-header-height);
   box-sizing: border-box;
+  white-space: nowrap;
+  overflow: visible;
+  text-overflow: clip;
+}
+
+/* Full “Cybercrime Support” label — never wrap or clip the last nav item. */
+html body.dtr-apple-sticky-header #dtr-header-global .main-navigation .sf-menu > li.cybercrime-menu,
+html body.dtr-apple-sticky-header #dtr-header-global .main-navigation .sf-menu > li.cybercrime-menu > a {
+  flex: 0 0 auto;
+  white-space: nowrap;
+  overflow: visible !important;
+  max-width: none;
+}
+
+/*
+ * Mega-menu panels live inside .main-navigation. They must paint outside
+ * the 52px bar on hover — do not clip them.
+ */
+html body.dtr-apple-sticky-header #dtr-header-global .main-navigation .sf-menu > li.dtr-has-mega,
+html body.dtr-apple-sticky-header #dtr-header-global .main-navigation .sf-menu > li.dtr-has-mega > ul.sub-menu,
+html body.dtr-apple-sticky-header #dtr-header-global .main-navigation .sf-menu > li.dtr-has-mega > ul.dtr-mega-panel {
+  overflow: visible !important;
+  clip: auto !important;
+  clip-path: none !important;
 }
 
 /* Search is a utility control, not a sibling of Cybercrime / the nav. */
@@ -115,10 +145,10 @@ html body.dtr-apple-sticky-header #dtr-header-global #pdx-auth-bar.pdx-auth-bar-
   display: flex;
   align-items: center;
   justify-content: flex-end;
-  flex: 0 0 128px;
-  width: 128px;
-  min-width: 128px;
-  max-width: 128px;
+  flex: 0 0 auto;
+  width: auto;
+  min-width: 88px;
+  max-width: none;
   height: var(--dtr-apple-header-height);
   min-height: var(--dtr-apple-header-height);
   max-height: var(--dtr-apple-header-height);
