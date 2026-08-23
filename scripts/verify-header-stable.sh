@@ -37,6 +37,7 @@ grep -q "#dtr-header-global .dtr-header-global-content" "$TMP/pax-auth.js" && ok
 hp_code="$(curl -sS -A 'Mozilla/5.0' -o "$TMP/home.html" -w '%{http_code}' "${BASE}/?n=${STAMP}")"
 [ "$hp_code" = "200" ] && ok "homepage HTTP 200" || fail "homepage HTTP ${hp_code}"
 grep -q "apple-header-stable.css" "$TMP/home.html" && ok "homepage loads stable header CSS" || fail "homepage missing stable header CSS"
+grep -q "navein-apple-header-desktop-cascade" "$TMP/home.html" && ok "homepage loads desktop header cascade override" || fail "homepage missing desktop header cascade override"
 grep -q "dtr-search-modal-trigger" "$TMP/home.html" && ok "homepage still has the Search trigger" || fail "homepage missing Search trigger"
 grep -q "Cybercrime Support" "$TMP/home.html" && ok "homepage still has the full Cybercrime Support label" || fail "homepage missing Cybercrime Support label"
 grep -q "dtr-has-mega" "$TMP/home.html" && ok "homepage still has mega-menu items" || fail "homepage missing mega-menu items"
