@@ -9,7 +9,7 @@
   --dtr-apple-header-height: 52px;
   --dtr-apple-header-control: 28px;
   --dtr-apple-header-gap: 12px;
-  --dtr-apple-header-util-min: 272px;
+  --dtr-apple-header-util-min: clamp(320px, 32vw, 440px);
   --dtr-apple-header-nav-gap: 16px;
   --dtr-apple-header-ui: -apple-system, BlinkMacSystemFont, "SF Pro Text", Inter, "Segoe UI", Helvetica, Arial, sans-serif;
 }
@@ -20,6 +20,8 @@ html body.dtr-apple-sticky-header #dtr-header-global.dtr-apple-bar {
   height: var(--dtr-apple-header-height) !important;
   min-height: var(--dtr-apple-header-height) !important;
   max-height: var(--dtr-apple-header-height) !important;
+  padding-top: 0 !important;
+  padding-bottom: 0 !important;
   box-sizing: border-box !important;
   overflow: visible !important;
 }
@@ -32,11 +34,11 @@ html body.dtr-apple-sticky-header #dtr-header-global.dtr-apple-bar {
 
 html body.dtr-apple-sticky-header #dtr-header-global .dtr-header-global-content,
 html body.dtr-apple-sticky-header #dtr-header-global .container {
-  display: flex !important;
+  display: grid !important;
+  grid-template-columns: auto minmax(0, 1fr) minmax(var(--dtr-apple-header-util-min), max-content);
+  grid-template-areas: "logo nav util";
   align-items: center !important;
-  flex-wrap: nowrap !important;
-  justify-content: flex-start !important;
-  gap: var(--dtr-apple-header-gap);
+  column-gap: var(--dtr-apple-header-gap);
   width: 100%;
   min-width: 0;
   height: var(--dtr-apple-header-height);
@@ -48,6 +50,7 @@ html body.dtr-apple-sticky-header #dtr-header-global .container {
 
 html body.dtr-apple-sticky-header #dtr-header-global .dtr-header-left,
 html body.dtr-apple-sticky-header #dtr-header-global .dtr-logo {
+  grid-area: logo;
   flex: 0 0 auto;
   transform: none !important;
 }
@@ -64,11 +67,12 @@ html body.dtr-apple-sticky-header #dtr-header-global .dtr-logo svg {
  */
 html body.dtr-apple-sticky-header #dtr-header-global .main-navigation,
 html body.dtr-apple-sticky-header #dtr-header-global .main-navigation.ms-auto {
+  grid-area: nav;
   display: flex;
   align-items: center;
   flex: 1 1 auto !important;
   min-width: 0 !important;
-  max-width: calc(100% - var(--dtr-apple-header-util-min));
+  max-width: 100% !important;
   margin-left: clamp(6px, 0.8vw, 14px) !important;
   margin-right: 0 !important;
   padding-right: var(--dtr-apple-header-nav-gap) !important;
@@ -145,10 +149,10 @@ html body.dtr-apple-sticky-header #dtr-header-global a.dtr-search-modal-trigger 
   height: var(--dtr-apple-header-height);
   min-height: var(--dtr-apple-header-height);
   max-height: var(--dtr-apple-header-height);
-  margin: 0 0 0 auto !important;
-  padding: 0 0 0 10px !important;
+  margin: 0 !important;
+  padding: 0 !important;
   border: 0;
-  border-left: 0.5px solid rgba(0, 0, 0, 0.18);
+  border-left: 0;
   border-radius: 0;
   background: transparent !important;
   box-shadow: none !important;
@@ -563,14 +567,17 @@ html body.dtr-apple-sticky-header #dtr-header-global .pdx-auth-menu.pdx-auth-men
    * Keeps utilities grouped with explicit gap so they never overlap the nav.
    */
   html body.dtr-apple-sticky-header #dtr-header-global .dtr-header-utility-cluster {
+    grid-area: util;
     display: inline-flex !important;
     align-items: center !important;
     flex: 0 0 auto !important;
     flex-shrink: 0 !important;
     gap: 10px !important;
-    margin-left: auto !important;
+    justify-self: end !important;
+    margin-left: 0 !important;
     min-width: 0 !important;
     max-width: none !important;
+    width: max-content !important;
     height: var(--dtr-apple-header-height);
     min-height: var(--dtr-apple-header-height);
     max-height: var(--dtr-apple-header-height);
@@ -578,6 +585,18 @@ html body.dtr-apple-sticky-header #dtr-header-global .pdx-auth-menu.pdx-auth-men
     border-left: 0.5px solid rgba(0, 0, 0, 0.18);
     box-sizing: border-box;
     overflow: visible !important;
+    isolation: isolate;
+  }
+
+  /* Neutralize legacy Customizer offsets that pull auth/search out of the row. */
+  html body.dtr-apple-sticky-header #dtr-header-global #pdx-auth-bar,
+  html body.dtr-apple-sticky-header #dtr-header-global #pdx-auth-bar .pdx-auth-trigger,
+  html body.dtr-apple-sticky-header #dtr-header-global #pdx-auth-bar .pdx-auth-signup-btn,
+  html body.dtr-apple-sticky-header #dtr-header-global #pdx-auth-bar .pdx-auth-account-btn {
+    position: relative !important;
+    top: 0 !important;
+    right: auto !important;
+    left: auto !important;
   }
 
   html body.dtr-apple-sticky-header #dtr-header-global .dtr-header-utility-cluster .dtr-search-modal-trigger,

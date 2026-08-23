@@ -375,6 +375,8 @@
     }
 
     cleanupLegacyHeaderIdentityNodes(authBar);
+    ensureHeaderUtilityCluster();
+    stabilizeDesktopHeaderAuthLayout();
   }
 
   function renderHeaderUserIdentityHtml(opts) {

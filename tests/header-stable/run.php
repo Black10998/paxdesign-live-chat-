@@ -28,7 +28,7 @@ $workflow = file_get_contents($root . '/.github/workflows/deploy-header-stable.y
 hs_ok(is_file($root . '/navein/assets/css/apple-header-stable.css'), 'stable header stylesheet exists');
 hs_ok(strpos($functions, 'navein-apple-header-stable') !== false, 'functions.php enqueues the stable header CSS');
 hs_ok(strpos($functions, 'apple-header-stable.css') !== false, 'stable header CSS path is registered');
-hs_ok(preg_match('/Version:\\s*1\\.4\\.(\\d+)/', $style, $v) === 1 && (int) $v[1] >= 58, 'theme version is cache-busted to 1.4.58+');
+hs_ok(preg_match('/Version:\\s*1\\.4\\.(\\d+)/', $style, $v) === 1 && (int) $v[1] >= 59, 'theme version is cache-busted to 1.4.59+');
 
 hs_ok(strpos($css, 'dtr-search-modal-trigger') !== false, 'Search trigger is restyled');
 hs_ok(strpos($css, 'border-left: 0.5px solid') !== false, 'Search is separated from the nav with a hairline');
@@ -57,9 +57,10 @@ hs_ok(strpos($functions, 'navein-apple-header-desktop-cascade') !== false, 'desk
 hs_ok(strpos($functions, 'position:relative!important') !== false || strpos($functions, "position\",\"relative\",\"important\"") !== false, 'desktop cascade resets fixed auth positioning');
 
 hs_ok(strpos($css, '--dtr-apple-header-util-min') !== false, 'header reserves fixed width for Search, CTA, and auth');
-hs_ok(strpos($css, 'margin: 0 0 0 auto') !== false, 'Search auto-pushes the utility cluster away from the nav');
+hs_ok(strpos($css, 'justify-self: end') !== false, 'utility cluster stays in its own grid column');
 hs_ok(strpos($css, '--dtr-apple-header-nav-gap') !== false, 'nav and utilities keep an explicit separator gap');
-hs_ok(strpos($functions, 'navein-apple-header-utility-cluster-early') !== false, 'utility cluster is grouped before deferred auth JS');
+hs_ok(strpos($functions, 'navein-apple-header-utility-cluster-head') !== false, 'utility cluster is grouped before deferred auth JS');
+hs_ok(strpos($css, 'grid-template-columns') !== false && strpos($css, 'grid-area: util') !== false, 'desktop header uses isolated grid columns');
 hs_ok(strpos($css, 'pdx-auth-bar--logged-out') !== false && strpos($css, '.pdx-auth-portal-btn') !== false, 'Customer Portal is hidden before login in the header bar');
 hs_ok(strpos($css, '@media (max-width: 992px)') !== false && strpos($css, '#dtr-main-header') !== false && strpos($css, 'padding-top: 0 !important') !== false, 'mobile removes the blank bar under the header');
 
