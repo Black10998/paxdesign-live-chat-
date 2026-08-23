@@ -28,7 +28,7 @@ $workflow = file_get_contents($root . '/.github/workflows/deploy-header-stable.y
 hs_ok(is_file($root . '/navein/assets/css/apple-header-stable.css'), 'stable header stylesheet exists');
 hs_ok(strpos($functions, 'navein-apple-header-stable') !== false, 'functions.php enqueues the stable header CSS');
 hs_ok(strpos($functions, 'apple-header-stable.css') !== false, 'stable header CSS path is registered');
-hs_ok(preg_match('/Version:\\s*1\\.4\\.(\\d+)/', $style, $v) === 1 && (int) $v[1] >= 54, 'theme version is cache-busted to 1.4.54+');
+hs_ok(preg_match('/Version:\\s*1\\.4\\.(\\d+)/', $style, $v) === 1 && (int) $v[1] >= 55, 'theme version is cache-busted to 1.4.55+');
 
 hs_ok(strpos($css, 'dtr-search-modal-trigger') !== false, 'Search trigger is restyled');
 hs_ok(strpos($css, 'border-left: 0.5px solid') !== false, 'Search is separated from the nav with a hairline');
@@ -50,6 +50,14 @@ hs_ok(strpos($css, '.pdx-header-user-name') !== false && strpos($css, 'font-size
 hs_ok(strpos($css, '.pdx-account-avatar--header') !== false && strpos($css, '24px') !== false, 'header avatar is scaled to 24px');
 hs_ok(strpos($css, '.pdx-account-level-badge--header') !== false && strpos($css, 'background-image: none !important') !== false, 'header level badge drops unreadable gold gradient');
 hs_ok(strpos($css, '.pdx-account-level-badge--header') !== false && strpos($css, 'color: #3a3a3c !important') !== false, 'header level badge has readable gray contrast');
+hs_ok(strpos($css, 'position: relative !important') !== false && strpos($css, '#dtr-header-global #pdx-auth-bar') !== false, 'desktop auth bar stays in the header flex row');
+
+hs_ok(strpos($functions, 'navein_apple_header_desktop_cascade_footer') !== false, 'functions.php prints final desktop header cascade CSS');
+hs_ok(strpos($functions, 'navein-apple-header-desktop-cascade') !== false, 'desktop cascade style id is registered');
+hs_ok(strpos($functions, 'position:relative!important') !== false || strpos($functions, "position\",\"relative\",\"important\"") !== false, 'desktop cascade resets fixed auth positioning');
+
+hs_ok(strpos($js, 'stabilizeDesktopHeaderAuthLayout') !== false, 'pax-auth.js clears legacy fixed auth positioning on desktop');
+hs_ok(strpos($js, "authBar.closest('#dtr-header-global')") !== false || strpos($js, 'authBar.closest("#dtr-header-global")') !== false, 'desktop auth reset only applies inside the glass header');
 
 hs_ok($js === $overlay_js, 'overlay pax-auth.js matches plugin');
 hs_ok(strpos($js, '#dtr-header-global .dtr-header-global-content') !== false, 'auth bar mounts inside the glass header row');

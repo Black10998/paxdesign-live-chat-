@@ -407,6 +407,45 @@ html body.dtr-apple-sticky-header #dtr-header-global .pdx-auth-menu.pdx-auth-men
 }
 
 @media (min-width: 993px) {
+  /*
+   * Beat legacy Customizer snippets that position #pdx-auth-bar fixed on desktop.
+   * Auth must stay inside the flex header row beside Search and the CTA.
+   */
+  html body.dtr-apple-sticky-header #dtr-header-global #pdx-auth-bar,
+  html body.dtr-apple-sticky-header #dtr-header-global #pdx-auth-bar.pdx-auth-bar--header,
+  html body.dtr-apple-sticky-header #dtr-header-global #pdx-auth-bar.pdx-auth-bar--menu-open {
+    position: relative !important;
+    top: auto !important;
+    right: auto !important;
+    left: auto !important;
+    bottom: auto !important;
+    z-index: 2 !important;
+    transform: none !important;
+  }
+
+  html body.dtr-apple-sticky-header #dtr-header-global #pdx-auth-bar .pdx-auth-trigger,
+  html body.dtr-apple-sticky-header #dtr-header-global #pdx-auth-bar .pdx-auth-account-btn,
+  html body.dtr-apple-sticky-header #dtr-header-global #pdx-auth-bar .pdx-auth-signup-btn {
+    border: 0 !important;
+    background: transparent !important;
+    background-image: none !important;
+    box-shadow: none !important;
+    backdrop-filter: none !important;
+    -webkit-backdrop-filter: none !important;
+    filter: none !important;
+    color: #000 !important;
+  }
+
+  html body.dtr-apple-sticky-header #dtr-header-global #pdx-auth-bar .pdx-auth-signup-btn {
+    background: #000 !important;
+    color: #fff !important;
+  }
+
+  html body.dtr-apple-sticky-header #dtr-header-global #pdx-auth-bar svg {
+    stroke: currentColor !important;
+    color: currentColor !important;
+  }
+
   html body.page-cybercrime-support.dtr-apple-sticky-header #dtr-main-wrapper,
   html body.page-template-template-apple-cybercrime-support.dtr-apple-sticky-header #dtr-main-wrapper,
   html body.page-template-template-apple-cybercrime-support-php.dtr-apple-sticky-header #dtr-main-wrapper {

@@ -1174,6 +1174,61 @@
     return null;
   }
 
+  function stabilizeDesktopHeaderAuthLayout() {
+    if (!authBar || !window.matchMedia('(min-width: 993px)').matches) return;
+    if (!authBar.classList.contains('pdx-auth-bar--header')) return;
+    if (!authBar.closest('#dtr-header-global')) return;
+
+    authBar.style.setProperty('position', 'relative', 'important');
+    authBar.style.setProperty('top', 'auto', 'important');
+    authBar.style.setProperty('right', 'auto', 'important');
+    authBar.style.setProperty('left', 'auto', 'important');
+    authBar.style.setProperty('bottom', 'auto', 'important');
+    authBar.style.setProperty('z-index', '2', 'important');
+    authBar.style.setProperty('transform', 'none', 'important');
+    authBar.style.setProperty('opacity', '1', 'important');
+    authBar.style.setProperty('visibility', 'visible', 'important');
+
+    authBar.querySelectorAll('.pdx-auth-trigger, .pdx-auth-account-btn, .pdx-auth-signup-btn').forEach(function (el) {
+      el.style.setProperty('height', '28px', 'important');
+      el.style.setProperty('min-height', '28px', 'important');
+      el.style.setProperty('max-height', '28px', 'important');
+      el.style.setProperty('top', '0', 'important');
+      el.style.setProperty('border', '0', 'important');
+      el.style.setProperty('box-shadow', 'none', 'important');
+      el.style.setProperty('backdrop-filter', 'none', 'important');
+      el.style.setProperty('-webkit-backdrop-filter', 'none', 'important');
+      el.style.setProperty('filter', 'none', 'important');
+      if (el.classList.contains('pdx-auth-signup-btn')) {
+        el.style.setProperty('background', '#000', 'important');
+        el.style.setProperty('color', '#fff', 'important');
+      } else {
+        el.style.setProperty('background', 'transparent', 'important');
+        el.style.setProperty('color', '#000', 'important');
+      }
+    });
+
+    authBar.querySelectorAll('.pdx-account-level-badge--header, .pdx-account-level-badge').forEach(function (el) {
+      el.style.setProperty('background', 'rgba(0,0,0,0.06)', 'important');
+      el.style.setProperty('background-image', 'none', 'important');
+      el.style.setProperty('color', '#3a3a3c', 'important');
+      el.style.setProperty('border', '0.5px solid rgba(0,0,0,0.14)', 'important');
+      el.style.setProperty('box-shadow', 'none', 'important');
+    });
+
+    authBar.querySelectorAll('svg').forEach(function (el) {
+      el.style.setProperty('stroke', 'currentColor', 'important');
+      el.style.setProperty('color', 'currentColor', 'important');
+    });
+  }
+
+  function scheduleDesktopHeaderAuthLayoutReset() {
+    stabilizeDesktopHeaderAuthLayout();
+    setTimeout(stabilizeDesktopHeaderAuthLayout, 0);
+    setTimeout(stabilizeDesktopHeaderAuthLayout, 50);
+    setTimeout(stabilizeDesktopHeaderAuthLayout, 250);
+  }
+
   function mountAuthBar() {
     removeLegacyTopbar();
     dedupeAuthBars();
@@ -1188,6 +1243,7 @@
       mount.classList.add('pdx-header-has-auth');
       authBar.classList.add('pdx-auth-bar--header');
       mount.appendChild(authBar);
+      scheduleDesktopHeaderAuthLayoutReset();
       return;
     }
     authBar.classList.add('pdx-auth-bar--header');
@@ -1387,6 +1443,7 @@
     if (authBar) bindAccountAvatarFallbacks(authBar);
     if (authMenu) bindAccountAvatarFallbacks(authMenu);
     applyPublicHeaderLocale();
+    scheduleDesktopHeaderAuthLayoutReset();
   }
 
   function positionAuthMenu() {
@@ -5383,7 +5440,9 @@
       bindSessionAutoSync();
       window.addEventListener('resize', function () {
         updateAuthBar();
+        stabilizeDesktopHeaderAuthLayout();
       }, { passive: true });
+      window.addEventListener('load', scheduleDesktopHeaderAuthLayoutReset);
     },
     isLoggedIn: function () { return !!user.logged_in; },
     isVerified: function () { return !!user.verified || !!user.is_admin; },
