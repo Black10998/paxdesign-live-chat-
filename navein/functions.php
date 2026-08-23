@@ -1069,6 +1069,36 @@ if ( ! function_exists( 'navein_apple_header_username_contrast_footer' ) ) {
 add_action( 'wp_footer', 'navein_apple_header_username_contrast_footer', 99999 );
 
 /**
+ * Group Search, CTA, and auth as early as possible so desktop layout never
+ * overlaps Cybercrime Support before deferred auth JS runs.
+ */
+if ( ! function_exists( 'navein_apple_header_utility_cluster_early_footer' ) ) {
+	function navein_apple_header_utility_cluster_early_footer() {
+		if ( is_admin() ) {
+			return;
+		}
+		echo '<script id="navein-apple-header-utility-cluster-early">'
+			. '(function(){'
+			. 'function ensureUtilityCluster(){'
+			. 'if(window.innerWidth<993)return;'
+			. 'var content=document.querySelector("#dtr-header-global .dtr-header-global-content");'
+			. 'if(!content)return;'
+			. 'var cluster=content.querySelector(":scope > .dtr-header-utility-cluster");'
+			. 'if(!cluster){cluster=document.createElement("div");cluster.className="dtr-header-utility-cluster";content.appendChild(cluster);}'
+			. 'var search=content.querySelector(".dtr-search-modal-trigger,a.dtr-search-modal-trigger");'
+			. 'var cta=content.querySelector("a.dtr-header-btn,.dtr-header-btn");'
+			. 'var bar=document.getElementById("pdx-auth-bar");'
+			. '[search,cta,bar].forEach(function(el){if(el&&el.parentNode!==cluster){cluster.appendChild(el);}});'
+			. '}'
+			. 'if(document.readyState==="loading"){document.addEventListener("DOMContentLoaded",ensureUtilityCluster);}'
+			. 'else{ensureUtilityCluster();}'
+			. '})();'
+			. '</script>' . "\n";
+	}
+}
+add_action( 'wp_footer', 'navein_apple_header_utility_cluster_early_footer', 20 );
+
+/**
  * Final desktop header cascade fix: legacy Customizer snippets inject CSS and JS
  * that pull #pdx-auth-bar out of the flex row (position:fixed + yellow glow).
  * This prints after those snippets and resets the rendered desktop header layout.
@@ -1092,10 +1122,13 @@ if ( ! function_exists( 'navein_apple_header_desktop_cascade_footer' ) ) {
 			. 'gap:var(--dtr-apple-header-gap,12px)!important;min-width:0!important;'
 			. 'height:var(--dtr-apple-header-height,52px)!important;overflow:visible!important;}'
 			. 'html body.dtr-apple-sticky-header #dtr-header-global .main-navigation{'
-			. 'flex:1 1 auto!important;min-width:0!important;overflow:visible!important;'
+			. 'flex:1 1 auto!important;min-width:0!important;max-width:calc(100% - var(--dtr-apple-header-util-min,272px))!important;'
+			. 'padding-right:var(--dtr-apple-header-nav-gap,16px)!important;overflow:visible!important;'
 			. 'margin-right:0!important;}'
 			. 'html body.dtr-apple-sticky-header #dtr-header-global .dtr-search-modal-trigger,'
-			. 'html body.dtr-apple-sticky-header #dtr-header-global a.dtr-search-modal-trigger,'
+			. 'html body.dtr-apple-sticky-header #dtr-header-global a.dtr-search-modal-trigger{'
+			. 'margin:0 0 0 auto!important;padding:0 0 0 10px!important;'
+			. 'border-left:.5px solid rgba(0,0,0,.18)!important;flex:0 0 auto!important;}'
 			. 'html body.dtr-apple-sticky-header #dtr-header-global a.dtr-btn.dtr-header-btn,'
 			. 'html body.dtr-apple-sticky-header #dtr-header-global .dtr-header-btn,'
 			. 'html body.dtr-apple-sticky-header #dtr-header-global #pdx-auth-bar{'
@@ -1119,7 +1152,7 @@ if ( ! function_exists( 'navein_apple_header_desktop_cascade_footer' ) ) {
 			. 'align-items:center!important;justify-content:flex-end!important;width:auto!important;'
 			. 'min-width:0!important;max-width:none!important;height:52px!important;'
 			. 'min-height:52px!important;max-height:52px!important;margin:0!important;'
-			. 'padding:0 0 0 10px!important;border-left:.5px solid rgba(0,0,0,.18)!important;'
+			. 'padding:0!important;border-left:0!important;'
 			. 'overflow:visible!important;transform:none!important;opacity:1!important;'
 			. 'visibility:visible!important;}'
 			. 'html body.dtr-apple-sticky-header #dtr-header-global #pdx-auth-bar.pdx-auth-bar--logged-out .pdx-auth-signup-btn,'
@@ -1170,7 +1203,12 @@ if ( ! function_exists( 'navein_apple_header_desktop_cascade_footer' ) ) {
 			. 'html body.dtr-apple-sticky-header #dtr-header-global .dtr-header-utility-cluster{'
 			. 'display:inline-flex!important;align-items:center!important;flex:0 0 auto!important;'
 			. 'flex-shrink:0!important;gap:10px!important;margin-left:auto!important;min-width:0!important;'
+			. 'padding-left:var(--dtr-apple-header-nav-gap,16px)!important;'
+			. 'border-left:.5px solid rgba(0,0,0,.18)!important;'
 			. 'height:52px!important;overflow:visible!important;}'
+			. 'html body.dtr-apple-sticky-header #dtr-header-global .dtr-header-utility-cluster .dtr-search-modal-trigger,'
+			. 'html body.dtr-apple-sticky-header #dtr-header-global .dtr-header-utility-cluster a.dtr-search-modal-trigger{'
+			. 'margin:0!important;padding:0!important;border-left:0!important;}'
 			. 'html body.dtr-apple-sticky-header #dtr-header-global .dtr-header-utility-cluster #pdx-auth-bar{'
 			. 'padding:0!important;border-left:0!important;margin:0!important;}'
 			. 'html body.dtr-apple-sticky-header #dtr-header-global #pdx-auth-bar .pdx-auth-portal-btn,'
