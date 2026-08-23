@@ -312,15 +312,69 @@
     '</span>';
   }
 
-  function cleanupLegacyHeaderIdentityNodes(accountBtn) {
-    if (!accountBtn) return;
-    accountBtn.querySelectorAll(
-      '.pdx-auth-account-label, .pdx-auth-trigger, .pdx-auth-trigger-label, .pdx-name-with-badge, .pdx-name-with-badge--account'
+  function cleanupLegacyHeaderIdentityNodes(root) {
+    var scope = root || authBar;
+    if (!scope) return;
+    scope.querySelectorAll(
+      '.pdx-auth-account-label, .pdx-auth-trigger, .pdx-auth-trigger-label, .pdx-name-with-badge, .pdx-name-with-badge--account, .pdx-public-user-identity, .pdx-public-user-name'
     ).forEach(function (node) {
-      if (!node.closest('.pdx-auth-account-identity')) {
+      if (!node.closest('.pdx-auth-account-identity') && !node.closest('.pdx-auth-menu')) {
         node.remove();
       }
     });
+  }
+
+  function bindSignupButton(signupBtn) {
+    if (!signupBtn || signupBtn.dataset.pdxBound === '1') return;
+    signupBtn.dataset.pdxBound = '1';
+    signupBtn.addEventListener('click', function () { navigateToAuthPage('login'); });
+  }
+
+  function syncHeaderAuthControls() {
+    if (!authBar) return;
+    var inner = authBar.querySelector('.pdx-auth-bar-inner');
+    if (!inner) return;
+
+    inner.querySelectorAll('.pdx-auth-portal-btn').forEach(function (node) { node.remove(); });
+
+    var accountBtn = inner.querySelector('.pdx-auth-account-btn');
+    var authMenuEl = inner.querySelector('.pdx-auth-menu');
+    var signupBtn = inner.querySelector('.pdx-auth-signup-btn');
+
+    authBar.classList.toggle('pdx-auth-bar--logged-in', !!user.logged_in);
+    authBar.classList.toggle('pdx-auth-bar--logged-out', !user.logged_in);
+
+    if (user.logged_in) {
+      if (signupBtn) signupBtn.remove();
+      if (accountBtn) {
+        accountBtn.hidden = false;
+        accountBtn.removeAttribute('hidden');
+      }
+    } else {
+      if (accountBtn) {
+        accountBtn.hidden = true;
+        accountBtn.setAttribute('hidden', 'hidden');
+        var identityEl = accountBtn.querySelector('.pdx-auth-account-identity');
+        if (identityEl) identityEl.innerHTML = '';
+      }
+      closeAuthMenu();
+      if (!signupBtn) {
+        signupBtn = document.createElement('button');
+        signupBtn.type = 'button';
+        signupBtn.className = 'pdx-auth-signup-btn pdx-cx-btn pdx-auth-header-btn';
+        signupBtn.textContent = t('sign_in', 'Anmelden');
+        inner.insertBefore(signupBtn, accountBtn || authMenuEl);
+        bindSignupButton(signupBtn);
+      } else if (!signupBtn.parentNode) {
+        inner.insertBefore(signupBtn, accountBtn || authMenuEl);
+      }
+      signupBtn.hidden = false;
+      signupBtn.removeAttribute('hidden');
+      signupBtn.style.removeProperty('display');
+      signupBtn.style.removeProperty('visibility');
+    }
+
+    cleanupLegacyHeaderIdentityNodes(authBar);
   }
 
   function renderHeaderUserIdentityHtml(opts) {
@@ -1211,7 +1265,16 @@
     authBar.style.setProperty('opacity', '1', 'important');
     authBar.style.setProperty('visibility', 'visible', 'important');
 
-    authBar.querySelectorAll('.pdx-auth-trigger, .pdx-auth-account-btn, .pdx-auth-signup-btn').forEach(function (el) {
+    authBar.querySelectorAll('.pdx-auth-account-btn, .pdx-auth-signup-btn, .pdx-auth-trigger').forEach(function (el) {
+      if (el.classList.contains('pdx-auth-signup-btn') && authBar.classList.contains('pdx-auth-bar--logged-in')) {
+        return;
+      }
+      if (el.classList.contains('pdx-auth-account-btn') && authBar.classList.contains('pdx-auth-bar--logged-out')) {
+        return;
+      }
+      if (el.hidden || el.hasAttribute('hidden')) {
+        return;
+      }
       el.style.setProperty('height', '28px', 'important');
       el.style.setProperty('min-height', '28px', 'important');
       el.style.setProperty('max-height', '28px', 'important');
@@ -1323,7 +1386,6 @@
         '<button type="button" class="pdx-auth-account-btn pdx-cx-btn pdx-cx-btn--ghost pdx-auth-header-btn" aria-haspopup="true" aria-expanded="false" hidden>' +
           '<span class="pdx-auth-account-identity"></span>' +
         '</button>' +
-        '<button type="button" class="pdx-auth-portal-btn pdx-cx-btn pdx-auth-header-btn" hidden>Customer Portal</button>' +
         '<div class="pdx-auth-menu pdx-auth-menu--apple" hidden>' +
           '<div class="pdx-auth-menu-head"></div>' +
           '<div class="pdx-auth-menu-actions">' +
@@ -1359,12 +1421,8 @@
     });
 
     var signupBtn = authBar.querySelector('.pdx-auth-signup-btn');
-    var portalBtn = authBar.querySelector('.pdx-auth-portal-btn');
     if (signupBtn) {
-      signupBtn.addEventListener('click', function () { navigateToAuthPage('login'); });
-    }
-    if (portalBtn) {
-      portalBtn.addEventListener('click', function () { openCustomerPortal(); });
+      bindSignupButton(signupBtn);
     }
 
     document.addEventListener('click', function (e) {
@@ -1437,25 +1495,12 @@
     if (isAuthPage() && authBar) {
       authBar.hidden = true;
     }
+    syncHeaderAuthControls();
     var accountBtn = authBar ? authBar.querySelector('.pdx-auth-account-btn') : null;
     var identityEl = accountBtn ? accountBtn.querySelector('.pdx-auth-account-identity') : null;
     var head = authMenu.querySelector('.pdx-auth-menu-head');
-    var signupBtn = authBar ? authBar.querySelector('.pdx-auth-signup-btn') : null;
-    var portalBtn = authBar ? authBar.querySelector('.pdx-auth-portal-btn') : null;
     var label = user.logged_in ? (user.display_name || t('account', 'Account')) : t('account', 'Account');
 
-    if (signupBtn) signupBtn.hidden = !!user.logged_in;
-    if (accountBtn) accountBtn.hidden = !user.logged_in;
-    /* Customer Portal lives in the profile dropdown only — never as a header pill. */
-    if (portalBtn) portalBtn.hidden = true;
-    if (authBar) {
-      authBar.classList.toggle('pdx-auth-bar--logged-in', !!user.logged_in);
-      authBar.classList.toggle('pdx-auth-bar--logged-out', !user.logged_in);
-    }
-
-    if (accountBtn) {
-      cleanupLegacyHeaderIdentityNodes(accountBtn);
-    }
     if (identityEl) {
       if (user.logged_in) {
         identityEl.innerHTML = renderHeaderUserIdentityHtml({
@@ -1487,7 +1532,7 @@
             '</div>' +
           '</div>' +
         '</div>';
-      authMenu.removeAttribute('hidden');
+      authMenu.setAttribute('hidden', 'hidden');
     } else {
       if (head) head.innerHTML = '';
       closeAuthMenu();

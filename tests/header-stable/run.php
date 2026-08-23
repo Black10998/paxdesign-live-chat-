@@ -28,7 +28,7 @@ $workflow = file_get_contents($root . '/.github/workflows/deploy-header-stable.y
 hs_ok(is_file($root . '/navein/assets/css/apple-header-stable.css'), 'stable header stylesheet exists');
 hs_ok(strpos($functions, 'navein-apple-header-stable') !== false, 'functions.php enqueues the stable header CSS');
 hs_ok(strpos($functions, 'apple-header-stable.css') !== false, 'stable header CSS path is registered');
-hs_ok(preg_match('/Version:\\s*1\\.4\\.(\\d+)/', $style, $v) === 1 && (int) $v[1] >= 56, 'theme version is cache-busted to 1.4.56+');
+hs_ok(preg_match('/Version:\\s*1\\.4\\.(\\d+)/', $style, $v) === 1 && (int) $v[1] >= 57, 'theme version is cache-busted to 1.4.57+');
 
 hs_ok(strpos($css, 'dtr-search-modal-trigger') !== false, 'Search trigger is restyled');
 hs_ok(strpos($css, 'border-left: 0.5px solid') !== false, 'Search is separated from the nav with a hairline');
@@ -61,7 +61,12 @@ hs_ok(strpos($css, 'pdx-auth-bar--logged-out') !== false && strpos($css, '.pdx-a
 hs_ok(strpos($css, '@media (max-width: 992px)') !== false && strpos($css, '#dtr-main-header') !== false && strpos($css, 'padding-top: 0 !important') !== false, 'mobile removes the blank bar under the header');
 
 hs_ok(strpos($js, 'ensureHeaderUtilityCluster') !== false, 'pax-auth.js groups Search, CTA, and auth into a utility cluster');
-hs_ok(strpos($js, 'pdx-auth-bar--logged-out') !== false && strpos($js, 'portalBtn.hidden = true') !== false, 'Customer Portal never appears as a header pill before login');
+hs_ok(strpos($js, 'syncHeaderAuthControls') !== false, 'pax-auth.js syncs header controls to auth state');
+hs_ok(strpos($js, 'signupBtn.remove()') !== false, 'Anmelden button is removed from DOM when logged in');
+hs_ok(strpos($css, 'pdx-auth-bar--logged-in .pdx-auth-signup-btn') !== false, 'logged-in CSS never styles the signup button as visible');
+hs_ok(strpos($functions, 'pdx-auth-bar--logged-in .pdx-auth-signup-btn') !== false, 'footer cascade hides signup when logged in');
+hs_ok(strpos($functions, 'pdx-auth-bar--logged-out .pdx-auth-signup-btn') !== false, 'footer cascade styles signup only when logged out');
+hs_ok(strpos($js, 'pdx-auth-portal-btn') !== false && strpos($js, "node.remove()") !== false, 'Customer Portal never appears as a header pill');
 hs_ok(strpos($functions, 'dtr-header-utility-cluster') !== false, 'footer cascade keeps the desktop utility cluster layout');
 hs_ok(strpos($js, "authBar.closest('#dtr-header-global')") !== false || strpos($js, 'authBar.closest("#dtr-header-global")') !== false, 'desktop auth reset only applies inside the glass header');
 

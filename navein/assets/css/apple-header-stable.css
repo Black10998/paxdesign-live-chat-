@@ -225,10 +225,10 @@ html body.dtr-apple-sticky-header #dtr-header-global #pdx-auth-bar .pdx-auth-bar
   min-width: 0;
 }
 
-html body.dtr-apple-sticky-header #dtr-header-global #pdx-auth-bar .pdx-auth-header-btn,
-html body.dtr-apple-sticky-header #dtr-header-global #pdx-auth-bar .pdx-auth-signup-btn,
-html body.dtr-apple-sticky-header #dtr-header-global #pdx-auth-bar .pdx-auth-account-btn,
-html body.dtr-apple-sticky-header #dtr-header-global #pdx-auth-bar .pdx-auth-trigger {
+html body.dtr-apple-sticky-header #dtr-header-global #pdx-auth-bar.pdx-auth-bar--logged-out .pdx-auth-header-btn,
+html body.dtr-apple-sticky-header #dtr-header-global #pdx-auth-bar.pdx-auth-bar--logged-out .pdx-auth-signup-btn,
+html body.dtr-apple-sticky-header #dtr-header-global #pdx-auth-bar.pdx-auth-bar--logged-in .pdx-auth-account-btn,
+html body.dtr-apple-sticky-header #dtr-header-global #pdx-auth-bar.pdx-auth-bar--logged-in .pdx-auth-trigger {
   display: inline-flex !important;
   align-items: center !important;
   height: var(--dtr-apple-header-control) !important;
@@ -239,11 +239,23 @@ html body.dtr-apple-sticky-header #dtr-header-global #pdx-auth-bar .pdx-auth-tri
   font-family: var(--dtr-apple-header-ui) !important;
 }
 
-html body.dtr-apple-sticky-header #dtr-header-global #pdx-auth-bar .pdx-auth-signup-btn {
+html body.dtr-apple-sticky-header #dtr-header-global #pdx-auth-bar.pdx-auth-bar--logged-out .pdx-auth-signup-btn {
   padding: 0 12px !important;
   font-size: 12px !important;
   font-weight: 510 !important;
   letter-spacing: -0.01em !important;
+}
+
+html body.dtr-apple-sticky-header #dtr-header-global #pdx-auth-bar.pdx-auth-bar--logged-out .pdx-auth-signup-btn {
+  background: #000 !important;
+  color: #fff !important;
+}
+
+html body.dtr-apple-sticky-header #dtr-header-global #pdx-auth-bar.pdx-auth-bar--logged-in .pdx-auth-signup-btn,
+html body.dtr-apple-sticky-header #dtr-header-global #pdx-auth-bar.pdx-auth-bar--logged-in .pdx-auth-portal-btn {
+  display: none !important;
+  visibility: hidden !important;
+  pointer-events: none !important;
 }
 
 /*
@@ -483,9 +495,7 @@ html body.dtr-apple-sticky-header #dtr-header-global .pdx-auth-menu.pdx-auth-men
     transform: none !important;
   }
 
-  html body.dtr-apple-sticky-header #dtr-header-global #pdx-auth-bar .pdx-auth-trigger,
-  html body.dtr-apple-sticky-header #dtr-header-global #pdx-auth-bar .pdx-auth-account-btn,
-  html body.dtr-apple-sticky-header #dtr-header-global #pdx-auth-bar .pdx-auth-signup-btn {
+  html body.dtr-apple-sticky-header #dtr-header-global #pdx-auth-bar.pdx-auth-bar--logged-out .pdx-auth-signup-btn {
     border: 0 !important;
     background: transparent !important;
     background-image: none !important;
@@ -496,9 +506,37 @@ html body.dtr-apple-sticky-header #dtr-header-global .pdx-auth-menu.pdx-auth-men
     color: #000 !important;
   }
 
-  html body.dtr-apple-sticky-header #dtr-header-global #pdx-auth-bar .pdx-auth-signup-btn {
+  html body.dtr-apple-sticky-header #dtr-header-global #pdx-auth-bar.pdx-auth-bar--logged-out .pdx-auth-signup-btn {
     background: #000 !important;
     color: #fff !important;
+  }
+
+  html body.dtr-apple-sticky-header #dtr-header-global #pdx-auth-bar.pdx-auth-bar--logged-in .pdx-auth-signup-btn,
+  html body.dtr-apple-sticky-header #dtr-header-global #pdx-auth-bar.pdx-auth-bar--logged-in .pdx-auth-portal-btn {
+    display: none !important;
+    visibility: hidden !important;
+    pointer-events: none !important;
+  }
+
+  html body.dtr-apple-sticky-header #dtr-header-global #pdx-auth-bar.pdx-auth-bar--logged-in .pdx-auth-account-btn {
+    border: 0 !important;
+    background: transparent !important;
+    background-image: none !important;
+    box-shadow: none !important;
+    backdrop-filter: none !important;
+    -webkit-backdrop-filter: none !important;
+    filter: none !important;
+    color: #000 !important;
+  }
+
+  html body.dtr-apple-sticky-header #dtr-header-global #pdx-auth-bar.pdx-auth-bar--logged-in .pdx-auth-account-btn {
+    background: transparent !important;
+    background-image: none !important;
+    box-shadow: none !important;
+    backdrop-filter: none !important;
+    -webkit-backdrop-filter: none !important;
+    filter: none !important;
+    color: #000 !important;
   }
 
   html body.dtr-apple-sticky-header #dtr-header-global #pdx-auth-bar svg {
