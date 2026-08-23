@@ -599,6 +599,37 @@ html body.dtr-apple-sticky-header #dtr-header-global .pdx-auth-menu.pdx-auth-men
     left: auto !important;
   }
 
+  /* Utilities only render inside the grouped cluster — loose copies stay hidden. */
+  html body.dtr-apple-sticky-header #dtr-header-global .dtr-header-global-content > .dtr-search-modal-trigger,
+  html body.dtr-apple-sticky-header #dtr-header-global .dtr-header-global-content > a.dtr-search-modal-trigger,
+  html body.dtr-apple-sticky-header #dtr-header-global .dtr-header-global-content > a.dtr-header-btn,
+  html body.dtr-apple-sticky-header #dtr-header-global .dtr-header-global-content > .dtr-header-btn,
+  html body.dtr-apple-sticky-header #dtr-header-global .dtr-header-global-content > #pdx-auth-bar {
+    display: none !important;
+    visibility: hidden !important;
+    pointer-events: none !important;
+  }
+
+  html body.dtr-apple-sticky-header #dtr-header-global .dtr-header-utility-cluster .dtr-search-modal-trigger,
+  html body.dtr-apple-sticky-header #dtr-header-global .dtr-header-utility-cluster a.dtr-search-modal-trigger {
+    display: inline-flex !important;
+    visibility: visible !important;
+    pointer-events: auto !important;
+  }
+
+  html body.dtr-apple-sticky-header #dtr-header-global .dtr-header-utility-cluster a.dtr-btn.dtr-header-btn,
+  html body.dtr-apple-sticky-header #dtr-header-global .dtr-header-utility-cluster .dtr-header-btn {
+    display: inline-flex !important;
+    visibility: visible !important;
+    pointer-events: auto !important;
+  }
+
+  html body.dtr-apple-sticky-header #dtr-header-global .dtr-header-utility-cluster #pdx-auth-bar {
+    display: flex !important;
+    visibility: visible !important;
+    pointer-events: auto !important;
+  }
+
   html body.dtr-apple-sticky-header #dtr-header-global .dtr-header-utility-cluster .dtr-search-modal-trigger,
   html body.dtr-apple-sticky-header #dtr-header-global .dtr-header-utility-cluster a.dtr-search-modal-trigger {
     margin: 0 !important;

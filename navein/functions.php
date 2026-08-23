@@ -1069,6 +1069,51 @@ if ( ! function_exists( 'navein_apple_header_username_contrast_footer' ) ) {
 add_action( 'wp_footer', 'navein_apple_header_username_contrast_footer', 99999 );
 
 /**
+ * Server-side utility cluster wrapper so Search/CTA/auth never sit as loose
+ * grid items beside the nav before JavaScript runs.
+ */
+if ( ! function_exists( 'navein_apple_header_utility_cluster_ob_start' ) ) {
+	function navein_apple_header_utility_cluster_ob_filter( $html ) {
+		if ( ! is_string( $html ) || $html === '' ) {
+			return $html;
+		}
+		if ( strpos( $html, 'dtr-header-global-content' ) === false ) {
+			return $html;
+		}
+		if ( strpos( $html, 'dtr-header-utility-cluster' ) !== false ) {
+			return $html;
+		}
+
+		$wrapped = preg_replace(
+			'#(<div class="dtr-header-global-content">[\s\S]*?<div class="main-navigation[\s\S]*?</div>)\s*(<a[^>]*dtr-search-modal-trigger[^>]*>)#',
+			'$1<div class="dtr-header-utility-cluster">$2',
+			$html,
+			1
+		);
+		if ( ! is_string( $wrapped ) || $wrapped === $html ) {
+			return $html;
+		}
+
+		$wrapped = preg_replace(
+			'#(<div class="dtr-header-utility-cluster">[\s\S]*?<a[^>]*dtr-header-btn[^>]*>[\s\S]*?</a>)\s*(</div>\s*</div>\s*</div>\s*<div id="dtr-responsive-header")#',
+			'$1</div>$2',
+			$wrapped,
+			1
+		);
+
+		return is_string( $wrapped ) ? $wrapped : $html;
+	}
+
+	function navein_apple_header_utility_cluster_ob_start() {
+		if ( is_admin() ) {
+			return;
+		}
+		ob_start( 'navein_apple_header_utility_cluster_ob_filter' );
+	}
+}
+add_action( 'template_redirect', 'navein_apple_header_utility_cluster_ob_start', 0 );
+
+/**
  * Group Search, CTA, and auth as early as possible so desktop layout never
  * overlaps Cybercrime Support before deferred auth JS runs.
  */
@@ -1219,6 +1264,18 @@ if ( ! function_exists( 'navein_apple_header_desktop_cascade_footer' ) ) {
 			. 'width:max-content!important;padding-left:var(--dtr-apple-header-nav-gap,16px)!important;'
 			. 'border-left:.5px solid rgba(0,0,0,.18)!important;'
 			. 'height:52px!important;overflow:visible!important;isolation:isolate!important;}'
+			. 'html body.dtr-apple-sticky-header #dtr-header-global .dtr-header-global-content > .dtr-search-modal-trigger,'
+			. 'html body.dtr-apple-sticky-header #dtr-header-global .dtr-header-global-content > a.dtr-search-modal-trigger,'
+			. 'html body.dtr-apple-sticky-header #dtr-header-global .dtr-header-global-content > a.dtr-header-btn,'
+			. 'html body.dtr-apple-sticky-header #dtr-header-global .dtr-header-global-content > .dtr-header-btn,'
+			. 'html body.dtr-apple-sticky-header #dtr-header-global .dtr-header-global-content > #pdx-auth-bar{'
+			. 'display:none!important;visibility:hidden!important;pointer-events:none!important;}'
+			. 'html body.dtr-apple-sticky-header #dtr-header-global .dtr-header-utility-cluster .dtr-search-modal-trigger,'
+			. 'html body.dtr-apple-sticky-header #dtr-header-global .dtr-header-utility-cluster a.dtr-search-modal-trigger,'
+			. 'html body.dtr-apple-sticky-header #dtr-header-global .dtr-header-utility-cluster a.dtr-header-btn,'
+			. 'html body.dtr-apple-sticky-header #dtr-header-global .dtr-header-utility-cluster .dtr-header-btn,'
+			. 'html body.dtr-apple-sticky-header #dtr-header-global .dtr-header-utility-cluster #pdx-auth-bar{'
+			. 'visibility:visible!important;pointer-events:auto!important;}'
 			. 'html body.dtr-apple-sticky-header #dtr-header-global .dtr-header-utility-cluster .dtr-search-modal-trigger,'
 			. 'html body.dtr-apple-sticky-header #dtr-header-global .dtr-header-utility-cluster a.dtr-search-modal-trigger{'
 			. 'margin:0!important;padding:0!important;border-left:0!important;}'

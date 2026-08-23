@@ -1198,7 +1198,18 @@
     document.body.classList.remove('pdx-has-account-topbar');
   }
 
+  function findUtilityClusterMount() {
+    if (!window.matchMedia('(min-width: 993px)').matches) return null;
+    var content = document.querySelector('#dtr-header-global .dtr-header-global-content');
+    if (!content) return null;
+    var cluster = content.querySelector(':scope > .dtr-header-utility-cluster');
+    if (cluster) return cluster;
+    return null;
+  }
+
   function findHeaderMount() {
+    var clusterMount = findUtilityClusterMount();
+    if (clusterMount) return clusterMount;
     var desktop = window.matchMedia('(min-width: 993px)').matches;
     var selectors = desktop ? [
       '#dtr-header-global .dtr-header-global-content',
