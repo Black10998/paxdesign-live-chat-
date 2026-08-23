@@ -19,6 +19,9 @@ grep -q "pdx-auth-menu--apple" "$TMP/apple-header-stable.css" && ok "live CSS ke
 grep -q "cybercrime-menu" "$TMP/apple-header-stable.css" && ok "live CSS keeps Cybercrime Support unclipped" || fail "live CSS missing Cybercrime Support guard"
 grep -q "a.dtr-btn.dtr-header-btn" "$TMP/apple-header-stable.css" && ok "live CSS scales Angebot anfordern" || fail "live CSS missing compact CTA"
 grep -q "pdx-header-user-name" "$TMP/apple-header-stable.css" && ok "live CSS scales the logged-in name" || fail "live CSS missing username scale"
+grep -q "min-width: 0 !important" "$TMP/apple-header-stable.css" && ok "live CSS lets nav shrink" || fail "live CSS missing nav shrink guard"
+grep -q "background-image: none !important" "$TMP/apple-header-stable.css" && ok "live CSS fixes unreadable gold level badge" || fail "live CSS missing level badge contrast fix"
+grep -q "flex-direction: row !important" "$TMP/apple-header-stable.css" && ok "live CSS keeps identity on one row" || fail "live CSS missing horizontal identity layout"
 grep -q "dtr-has-mega" "$TMP/apple-header-stable.css" && ok "live CSS keeps mega menus unclipped" || fail "live CSS missing mega-menu overflow restore"
 if grep -A8 "#dtr-header-global .main-navigation {" "$TMP/apple-header-stable.css" | grep -q "overflow: hidden"; then
   fail "live CSS still clips .main-navigation"

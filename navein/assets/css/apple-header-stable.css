@@ -1,14 +1,14 @@
 /**
  * Apple-stable site header.
- * Isolates the Search control from the nav (Cybercrime is last) and
- * locks header geometry so login, refresh, and the profile menu cannot
- * resize or shift the bar.
+ * Isolates Search from the nav, locks header geometry, and keeps the
+ * right-side cluster (Search, Angebot anfordern, auth) from overlapping
+ * navigation on desktop widths.
  */
 
 :root {
   --dtr-apple-header-height: 52px;
   --dtr-apple-header-control: 28px;
-  --dtr-apple-header-gap: 14px;
+  --dtr-apple-header-gap: 12px;
   --dtr-apple-header-ui: -apple-system, BlinkMacSystemFont, "SF Pro Text", Inter, "Segoe UI", Helvetica, Arial, sans-serif;
 }
 
@@ -31,15 +31,19 @@ html body.dtr-apple-sticky-header #dtr-header-global .container {
   display: flex !important;
   align-items: center !important;
   flex-wrap: nowrap !important;
+  justify-content: flex-start !important;
+  gap: var(--dtr-apple-header-gap);
+  width: 100%;
+  min-width: 0;
   height: var(--dtr-apple-header-height);
   min-height: var(--dtr-apple-header-height);
   max-height: var(--dtr-apple-header-height);
   overflow: visible !important;
+  box-sizing: border-box;
 }
 
 html body.dtr-apple-sticky-header #dtr-header-global .dtr-header-left,
-html body.dtr-apple-sticky-header #dtr-header-global .dtr-logo,
-html body.dtr-apple-sticky-header #dtr-header-global .dtr-header-btn {
+html body.dtr-apple-sticky-header #dtr-header-global .dtr-logo {
   flex: 0 0 auto;
   transform: none !important;
 }
@@ -50,11 +54,19 @@ html body.dtr-apple-sticky-header #dtr-header-global .dtr-logo svg {
   max-height: 28px;
 }
 
-html body.dtr-apple-sticky-header #dtr-header-global .main-navigation {
+/*
+ * Navigation may shrink between logo and utilities. Never use max-content
+ * here — that was forcing overlap with Search / CTA / auth on tighter widths.
+ */
+html body.dtr-apple-sticky-header #dtr-header-global .main-navigation,
+html body.dtr-apple-sticky-header #dtr-header-global .main-navigation.ms-auto {
   display: flex;
   align-items: center;
-  flex: 1 0 auto;
-  min-width: max-content;
+  flex: 1 1 auto !important;
+  min-width: 0 !important;
+  max-width: 100%;
+  margin-left: clamp(6px, 0.8vw, 14px) !important;
+  margin-right: 0 !important;
   overflow: visible !important;
 }
 
@@ -62,26 +74,31 @@ html body.dtr-apple-sticky-header #dtr-header-global .main-navigation .sf-menu {
   display: flex;
   align-items: center;
   flex-wrap: nowrap;
-  margin: 0;
+  margin: 0 !important;
+  min-width: 0;
   overflow: visible !important;
 }
 
 html body.dtr-apple-sticky-header #dtr-header-global .main-navigation .sf-menu > li {
   flex: 0 0 auto;
+  float: none !important;
   overflow: visible !important;
 }
 
 html body.dtr-apple-sticky-header #dtr-header-global .main-navigation .sf-menu > li > a {
+  display: inline-flex;
+  align-items: center;
   min-height: var(--dtr-apple-header-height);
   height: var(--dtr-apple-header-height);
-  line-height: var(--dtr-apple-header-height);
+  padding: 0 clamp(5px, 0.72vw, 12px);
   box-sizing: border-box;
+  font-size: clamp(11px, 0.82vw, 13px);
+  line-height: 1.2;
   white-space: nowrap;
   overflow: visible;
   text-overflow: clip;
 }
 
-/* Full “Cybercrime Support” label — never wrap or clip the last nav item. */
 html body.dtr-apple-sticky-header #dtr-header-global .main-navigation .sf-menu > li.cybercrime-menu,
 html body.dtr-apple-sticky-header #dtr-header-global .main-navigation .sf-menu > li.cybercrime-menu > a {
   flex: 0 0 auto;
@@ -90,10 +107,6 @@ html body.dtr-apple-sticky-header #dtr-header-global .main-navigation .sf-menu >
   max-width: none;
 }
 
-/*
- * Mega-menu panels live inside .main-navigation. They must paint outside
- * the 52px bar on hover — do not clip them.
- */
 html body.dtr-apple-sticky-header #dtr-header-global .main-navigation .sf-menu > li.dtr-has-mega,
 html body.dtr-apple-sticky-header #dtr-header-global .main-navigation .sf-menu > li.dtr-has-mega > ul.sub-menu,
 html body.dtr-apple-sticky-header #dtr-header-global .main-navigation .sf-menu > li.dtr-has-mega > ul.dtr-mega-panel {
@@ -102,21 +115,31 @@ html body.dtr-apple-sticky-header #dtr-header-global .main-navigation .sf-menu >
   clip-path: none !important;
 }
 
-/* Search is a utility control, not a sibling of Cybercrime / the nav. */
+/* Utility cluster: Search, CTA, auth — never shrink or slide under the nav. */
+html body.dtr-apple-sticky-header #dtr-header-global .dtr-search-modal-trigger,
+html body.dtr-apple-sticky-header #dtr-header-global a.dtr-search-modal-trigger,
+html body.dtr-apple-sticky-header #dtr-header-global a.dtr-btn.dtr-header-btn,
+html body.dtr-apple-sticky-header #dtr-header-global .dtr-header-btn,
+html body.dtr-apple-sticky-header #dtr-header-global #pdx-auth-bar {
+  flex: 0 0 auto !important;
+  flex-shrink: 0 !important;
+  position: relative;
+  z-index: 2;
+}
+
 html body.dtr-apple-sticky-header #dtr-header-global .dtr-search-modal-trigger,
 html body.dtr-apple-sticky-header #dtr-header-global a.dtr-search-modal-trigger {
   display: inline-flex !important;
   align-items: center;
   justify-content: center;
-  flex: 0 0 36px;
-  width: 36px;
-  min-width: 36px;
-  max-width: 36px;
+  width: 32px;
+  min-width: 32px;
+  max-width: 32px;
   height: var(--dtr-apple-header-height);
   min-height: var(--dtr-apple-header-height);
   max-height: var(--dtr-apple-header-height);
-  margin: 0 0 0 14px !important;
-  padding: 0 0 0 14px !important;
+  margin: 0 !important;
+  padding: 0 0 0 10px !important;
   border: 0;
   border-left: 0.5px solid rgba(0, 0, 0, 0.18);
   border-radius: 0;
@@ -133,21 +156,16 @@ html body.dtr-apple-sticky-header #dtr-header-global a.dtr-search-modal-trigger:
   line-height: 16px;
 }
 
-/*
- * Angebot anfordern — compact Apple CTA.
- * Beats theme .dtr-btn (16px / 15×30 padding) and the 24px / 30px icon.
- */
 html body.dtr-apple-sticky-header #dtr-header-global a.dtr-btn.dtr-header-btn,
 html body.dtr-apple-sticky-header #dtr-header-global .dtr-header-btn {
   display: inline-flex !important;
   align-items: center !important;
   justify-content: center !important;
-  flex: 0 0 auto !important;
   gap: 0 !important;
   height: var(--dtr-apple-header-control) !important;
   min-height: var(--dtr-apple-header-control) !important;
   max-height: var(--dtr-apple-header-control) !important;
-  margin: 0 0 0 var(--dtr-apple-header-gap) !important;
+  margin: 0 !important;
   padding: 0 12px !important;
   border: 0 !important;
   border-radius: 980px !important;
@@ -186,18 +204,23 @@ html body.dtr-apple-sticky-header #dtr-header-global #pdx-auth-bar.pdx-auth-bar-
   display: flex;
   align-items: center;
   justify-content: flex-end;
-  flex: 0 0 auto;
   width: auto;
   min-width: 0;
   max-width: none;
   height: var(--dtr-apple-header-height);
   min-height: var(--dtr-apple-header-height);
   max-height: var(--dtr-apple-header-height);
-  margin: 0 0 0 var(--dtr-apple-header-gap);
-  padding: 0 0 0 var(--dtr-apple-header-gap);
+  margin: 0 !important;
+  padding: 0 0 0 10px !important;
   border-left: 0.5px solid rgba(0, 0, 0, 0.18);
   overflow: visible !important;
   transform: none !important;
+}
+
+html body.dtr-apple-sticky-header #dtr-header-global #pdx-auth-bar .pdx-auth-bar-inner {
+  display: flex;
+  align-items: center;
+  min-width: 0;
 }
 
 html body.dtr-apple-sticky-header #dtr-header-global #pdx-auth-bar .pdx-auth-header-btn,
@@ -221,14 +244,22 @@ html body.dtr-apple-sticky-header #dtr-header-global #pdx-auth-bar .pdx-auth-sig
   letter-spacing: -0.01em !important;
 }
 
+/*
+ * Logged-in trigger: one horizontal row (avatar + name + status).
+ * Beats pdx-auth.css height:auto / stacked badge layout that overlapped
+ * inside the 28px control.
+ */
 html body.dtr-apple-sticky-header #dtr-header-global #pdx-auth-bar .pdx-auth-account-btn,
 html body.dtr-apple-sticky-header #dtr-header-global #pdx-auth-bar .pdx-auth-account-btn.pdx-auth-header-btn {
   gap: 8px !important;
-  padding: 0 6px 0 2px !important;
+  padding: 0 4px 0 0 !important;
   background: transparent !important;
   border: 0 !important;
   box-shadow: none !important;
-  max-width: none !important;
+  max-width: min(168px, 22vw) !important;
+  white-space: nowrap !important;
+  overflow: hidden !important;
+  text-overflow: ellipsis;
 }
 
 html body.dtr-apple-sticky-header #dtr-header-global #pdx-auth-bar .pdx-header-user-identity,
@@ -237,6 +268,7 @@ html body.dtr-apple-sticky-header #dtr-header-global #pdx-auth-bar .pdx-auth-acc
   align-items: center !important;
   gap: 8px !important;
   min-width: 0;
+  max-width: 100%;
 }
 
 html body.dtr-apple-sticky-header #dtr-header-global #pdx-auth-bar .pdx-account-avatar--header {
@@ -249,40 +281,95 @@ html body.dtr-apple-sticky-header #dtr-header-global #pdx-auth-bar .pdx-account-
 }
 
 html body.dtr-apple-sticky-header #dtr-header-global #pdx-auth-bar .pdx-header-user-text {
-  display: flex !important;
-  flex-direction: column;
-  align-items: flex-start;
-  justify-content: center;
-  gap: 1px !important;
+  display: inline-flex !important;
+  flex-direction: row !important;
+  align-items: center !important;
+  flex-wrap: nowrap !important;
+  gap: 6px !important;
   min-width: 0;
+  max-width: 100%;
 }
 
 html body.dtr-apple-sticky-header #dtr-header-global #pdx-auth-bar .pdx-header-user-name,
 html body.dtr-apple-sticky-header #dtr-header-global #pdx-auth-bar .pdx-auth-account-label,
 html body.dtr-apple-sticky-header #dtr-header-global #pdx-auth-bar .pdx-name-with-badge,
 html body.dtr-apple-sticky-header #dtr-header-global #pdx-auth-bar .pdx-public-user-name {
+  display: inline-block !important;
   font-family: var(--dtr-apple-header-ui) !important;
   font-size: 12px !important;
   font-weight: 510 !important;
   letter-spacing: -0.01em !important;
-  line-height: 1.15 !important;
-  max-width: 104px !important;
+  line-height: 1 !important;
+  white-space: nowrap !important;
+  overflow: hidden !important;
+  text-overflow: ellipsis !important;
+  max-width: min(88px, 14vw) !important;
+  text-shadow: none !important;
+  -webkit-text-fill-color: currentColor !important;
 }
 
+/*
+ * Yellow/gold level badge in the header bar — restored to readable Apple gray.
+ * Full gold treatment remains on account pages; profile dropdown stays monochrome.
+ */
 html body.dtr-apple-sticky-header #dtr-header-global #pdx-auth-bar .pdx-account-level-badge,
 html body.dtr-apple-sticky-header #dtr-header-global #pdx-auth-bar .pdx-account-level-badge--header {
+  display: inline-flex !important;
+  align-items: center !important;
+  flex: 0 0 auto;
   font-family: var(--dtr-apple-header-ui) !important;
-  font-size: 9px !important;
+  font-size: 10px !important;
   font-weight: 600 !important;
   letter-spacing: 0.01em !important;
-  line-height: 1.2 !important;
-  padding: 1px 6px !important;
+  line-height: 1 !important;
+  padding: 2px 7px !important;
   margin: 0 !important;
+  border-radius: 999px !important;
+  white-space: nowrap !important;
+  overflow: hidden !important;
+  text-overflow: ellipsis !important;
+  max-width: min(72px, 12vw) !important;
+  color: #3a3a3c !important;
+  background: rgba(0, 0, 0, 0.06) !important;
+  background-image: none !important;
+  border: 0.5px solid rgba(0, 0, 0, 0.14) !important;
+  box-shadow: none !important;
 }
 
-/* Profile dropdown stays out of the header box model. */
 html body.dtr-apple-sticky-header #dtr-header-global .pdx-auth-menu.pdx-auth-menu--apple {
   position: fixed;
+}
+
+@media (min-width: 993px) and (max-width: 1180px) {
+  :root {
+    --dtr-apple-header-gap: 8px;
+  }
+
+  html body.dtr-apple-sticky-header #dtr-header-global .main-navigation .sf-menu > li > a {
+    padding: 0 5px;
+    font-size: 11px;
+  }
+
+  html body.dtr-apple-sticky-header #dtr-header-global a.dtr-btn.dtr-header-btn,
+  html body.dtr-apple-sticky-header #dtr-header-global .dtr-header-btn {
+    padding: 0 10px !important;
+    font-size: 11px !important;
+  }
+
+  html body.dtr-apple-sticky-header #dtr-header-global .dtr-header-btn .dtr-btn__text {
+    font-size: 11px !important;
+  }
+
+  html body.dtr-apple-sticky-header #dtr-header-global #pdx-auth-bar .pdx-header-user-name {
+    max-width: 72px !important;
+  }
+}
+
+@media (min-width: 1181px) and (max-width: 1320px) {
+  html body.dtr-apple-sticky-header #dtr-header-global .main-navigation .sf-menu > li > a {
+    padding: 0 clamp(5px, 0.65vw, 10px);
+    font-size: 12px;
+  }
 }
 
 @media (max-width: 992px) {
@@ -301,13 +388,15 @@ html body.dtr-apple-sticky-header #dtr-header-global .pdx-auth-menu.pdx-auth-men
     align-items: center;
     height: var(--dtr-apple-header-height);
     flex-wrap: nowrap;
+    min-width: 0;
+    gap: 8px;
   }
 
   html body.dtr-apple-sticky-header #dtr-responsive-header .dtr-search-modal-trigger,
   html body.dtr-apple-sticky-header #dtr-responsive-header a.dtr-search-modal-trigger {
     position: relative;
     margin: 0 48px 0 0 !important;
-    padding: 0 0 0 12px !important;
+    padding: 0 0 0 10px !important;
     border-left: 0.5px solid rgba(0, 0, 0, 0.18);
     height: var(--dtr-apple-header-height);
     min-height: var(--dtr-apple-header-height);
@@ -317,7 +406,6 @@ html body.dtr-apple-sticky-header #dtr-header-global .pdx-auth-menu.pdx-auth-men
   }
 }
 
-/* Cybercrime page: keep the portal clearly below the locked header. */
 @media (min-width: 993px) {
   html body.page-cybercrime-support.dtr-apple-sticky-header #dtr-main-wrapper,
   html body.page-template-template-apple-cybercrime-support.dtr-apple-sticky-header #dtr-main-wrapper,
