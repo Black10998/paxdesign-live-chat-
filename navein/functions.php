@@ -1080,28 +1080,42 @@ if ( ! function_exists( 'navein_apple_header_utility_cluster_ob_start' ) ) {
 		if ( strpos( $html, 'dtr-header-global-content' ) === false ) {
 			return $html;
 		}
-		if ( strpos( $html, 'dtr-header-utility-cluster' ) !== false ) {
+		if ( strpos( $html, 'class="dtr-header-utility-cluster"' ) !== false ) {
 			return $html;
 		}
 
-		$wrapped = preg_replace(
-			'#(<div class="dtr-header-global-content">[\s\S]*?<div class="main-navigation[\s\S]*?</div>)\s*(<a[^>]*dtr-search-modal-trigger[^>]*>)#',
-			'$1<div class="dtr-header-utility-cluster">$2',
+		return preg_replace_callback(
+			'#(<div class="dtr-header-global-content">)([\s\S]*?)(</div>\s*</div>\s*</div>\s*<div id="dtr-responsive-header")#',
+			static function ( $matches ) {
+				$inner = $matches[2];
+				if ( strpos( $inner, 'class="dtr-header-utility-cluster"' ) !== false ) {
+					return $matches[0];
+				}
+				if ( ! preg_match( '#<a[^>]*dtr-search-modal-trigger#', $inner ) ) {
+					return $matches[0];
+				}
+
+				$parts = preg_split( '#(?=<a[^>]*dtr-search-modal-trigger)#', $inner, 2 );
+				if ( ! is_array( $parts ) || count( $parts ) !== 2 ) {
+					return $matches[0];
+				}
+
+				$utilities = $parts[1];
+				$utilities = preg_replace(
+					'#^(<a[^>]*dtr-search-modal-trigger[\s\S]*?<a[^>]*dtr-header-btn[\s\S]*?</a>)#',
+					'<div class="dtr-header-utility-cluster">$1</div>',
+					$utilities,
+					1
+				);
+				if ( ! is_string( $utilities ) ) {
+					return $matches[0];
+				}
+
+				return $matches[1] . $parts[0] . $utilities . $matches[3];
+			},
 			$html,
 			1
 		);
-		if ( ! is_string( $wrapped ) || $wrapped === $html ) {
-			return $html;
-		}
-
-		$wrapped = preg_replace(
-			'#(<div class="dtr-header-utility-cluster">[\s\S]*?<a[^>]*dtr-header-btn[^>]*>[\s\S]*?</a>)\s*(</div>\s*</div>\s*</div>\s*<div id="dtr-responsive-header")#',
-			'$1</div>$2',
-			$wrapped,
-			1
-		);
-
-		return is_string( $wrapped ) ? $wrapped : $html;
 	}
 
 	function navein_apple_header_utility_cluster_ob_start() {
