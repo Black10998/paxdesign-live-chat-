@@ -28,7 +28,7 @@ $workflow = file_get_contents($root . '/.github/workflows/deploy-header-stable.y
 hs_ok(is_file($root . '/navein/assets/css/apple-header-stable.css'), 'stable header stylesheet exists');
 hs_ok(strpos($functions, 'navein-apple-header-stable') !== false, 'functions.php enqueues the stable header CSS');
 hs_ok(strpos($functions, 'apple-header-stable.css') !== false, 'stable header CSS path is registered');
-hs_ok(preg_match('/Version:\\s*1\\.4\\.(\\d+)/', $style, $v) === 1 && (int) $v[1] >= 52, 'theme version is cache-busted to 1.4.52+');
+hs_ok(preg_match('/Version:\\s*1\\.4\\.(\\d+)/', $style, $v) === 1 && (int) $v[1] >= 53, 'theme version is cache-busted to 1.4.53+');
 
 hs_ok(strpos($css, 'dtr-search-modal-trigger') !== false, 'Search trigger is restyled');
 hs_ok(strpos($css, 'border-left: 0.5px solid') !== false, 'Search is separated from the nav with a hairline');
@@ -40,6 +40,11 @@ hs_ok(preg_match('/#dtr-header-global \\.main-navigation \\{[^}]*overflow:\\s*vi
 hs_ok(preg_match('/#dtr-header-global \\.main-navigation \\{[^}]*overflow:\\s*hidden/', $css) !== 1, 'nav does not clip labels or hover dropdowns');
 hs_ok(strpos($css, 'cybercrime-menu') !== false && strpos($css, 'white-space: nowrap') !== false, 'Cybercrime Support label cannot wrap or clip');
 hs_ok(strpos($css, 'dtr-has-mega') !== false && strpos($css, 'dtr-mega-panel') !== false, 'mega-menu panels stay unclipped');
+hs_ok(strpos($css, 'a.dtr-btn.dtr-header-btn') !== false && strpos($css, '--dtr-apple-header-control') !== false, 'Angebot anfordern is a compact Apple CTA');
+hs_ok(strpos($css, '.dtr-header-btn .dtr-btn__icon') !== false && strpos($css, 'display: none !important') !== false, 'CTA theme icon is hidden so the pill stays compact');
+hs_ok(strpos($css, '.pdx-header-user-name') !== false && strpos($css, 'font-size: 12px !important') !== false, 'logged-in name is reduced to 12px');
+hs_ok(strpos($css, '.pdx-account-avatar--header') !== false && strpos($css, '24px') !== false, 'header avatar is scaled to 24px');
+hs_ok(strpos($css, '.pdx-account-level-badge--header') !== false && strpos($css, 'font-size: 9px !important') !== false, 'level badge is secondary to the name');
 
 hs_ok($js === $overlay_js, 'overlay pax-auth.js matches plugin');
 hs_ok(strpos($js, '#dtr-header-global .dtr-header-global-content') !== false, 'auth bar mounts inside the glass header row');

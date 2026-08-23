@@ -17,6 +17,8 @@ grep -q "dtr-search-modal-trigger" "$TMP/apple-header-stable.css" && ok "live CS
 grep -q "max-height: var(--dtr-apple-header-height)" "$TMP/apple-header-stable.css" && ok "live CSS locks header height" || fail "live CSS missing header height lock"
 grep -q "pdx-auth-menu--apple" "$TMP/apple-header-stable.css" && ok "live CSS keeps the profile dropdown fixed" || fail "live CSS missing dropdown exception"
 grep -q "cybercrime-menu" "$TMP/apple-header-stable.css" && ok "live CSS keeps Cybercrime Support unclipped" || fail "live CSS missing Cybercrime Support guard"
+grep -q "a.dtr-btn.dtr-header-btn" "$TMP/apple-header-stable.css" && ok "live CSS scales Angebot anfordern" || fail "live CSS missing compact CTA"
+grep -q "pdx-header-user-name" "$TMP/apple-header-stable.css" && ok "live CSS scales the logged-in name" || fail "live CSS missing username scale"
 grep -q "dtr-has-mega" "$TMP/apple-header-stable.css" && ok "live CSS keeps mega menus unclipped" || fail "live CSS missing mega-menu overflow restore"
 if grep -A8 "#dtr-header-global .main-navigation {" "$TMP/apple-header-stable.css" | grep -q "overflow: hidden"; then
   fail "live CSS still clips .main-navigation"

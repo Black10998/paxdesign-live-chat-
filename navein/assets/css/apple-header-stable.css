@@ -7,6 +7,9 @@
 
 :root {
   --dtr-apple-header-height: 52px;
+  --dtr-apple-header-control: 28px;
+  --dtr-apple-header-gap: 14px;
+  --dtr-apple-header-ui: -apple-system, BlinkMacSystemFont, "SF Pro Text", Inter, "Segoe UI", Helvetica, Arial, sans-serif;
 }
 
 html body.dtr-apple-sticky-header #dtr-header-global,
@@ -126,17 +129,55 @@ html body.dtr-apple-sticky-header #dtr-header-global a.dtr-search-modal-trigger 
 
 html body.dtr-apple-sticky-header #dtr-header-global .dtr-search-modal-trigger::after,
 html body.dtr-apple-sticky-header #dtr-header-global a.dtr-search-modal-trigger::after {
-  font-size: 18px;
-  line-height: 18px;
+  font-size: 16px;
+  line-height: 16px;
 }
 
+/*
+ * Angebot anfordern — compact Apple CTA.
+ * Beats theme .dtr-btn (16px / 15×30 padding) and the 24px / 30px icon.
+ */
+html body.dtr-apple-sticky-header #dtr-header-global a.dtr-btn.dtr-header-btn,
 html body.dtr-apple-sticky-header #dtr-header-global .dtr-header-btn {
-  height: 32px;
-  min-height: 32px;
-  max-height: 32px;
-  margin: 0 0 0 12px !important;
-  padding: 0 14px;
-  white-space: nowrap;
+  display: inline-flex !important;
+  align-items: center !important;
+  justify-content: center !important;
+  flex: 0 0 auto !important;
+  gap: 0 !important;
+  height: var(--dtr-apple-header-control) !important;
+  min-height: var(--dtr-apple-header-control) !important;
+  max-height: var(--dtr-apple-header-control) !important;
+  margin: 0 0 0 var(--dtr-apple-header-gap) !important;
+  padding: 0 12px !important;
+  border: 0 !important;
+  border-radius: 980px !important;
+  background: #000 !important;
+  background-image: none !important;
+  color: #fff !important;
+  box-shadow: none !important;
+  font-family: var(--dtr-apple-header-ui) !important;
+  font-size: 12px !important;
+  font-weight: 510 !important;
+  letter-spacing: -0.01em !important;
+  line-height: 1 !important;
+  white-space: nowrap !important;
+  transform: none !important;
+}
+
+html body.dtr-apple-sticky-header #dtr-header-global .dtr-header-btn .dtr-btn__text {
+  font-family: var(--dtr-apple-header-ui) !important;
+  font-size: 12px !important;
+  font-weight: 510 !important;
+  letter-spacing: -0.01em !important;
+  line-height: 1 !important;
+  color: #fff !important;
+}
+
+html body.dtr-apple-sticky-header #dtr-header-global .dtr-header-btn .dtr-btn__icon,
+html body.dtr-apple-sticky-header #dtr-header-global .dtr-header-btn .dtr-icon {
+  display: none !important;
+  margin: 0 !important;
+  font-size: 0 !important;
 }
 
 html body.dtr-apple-sticky-header #dtr-header-global #pdx-auth-bar,
@@ -147,12 +188,14 @@ html body.dtr-apple-sticky-header #dtr-header-global #pdx-auth-bar.pdx-auth-bar-
   justify-content: flex-end;
   flex: 0 0 auto;
   width: auto;
-  min-width: 88px;
+  min-width: 0;
   max-width: none;
   height: var(--dtr-apple-header-height);
   min-height: var(--dtr-apple-header-height);
   max-height: var(--dtr-apple-header-height);
-  margin: 0 0 0 8px;
+  margin: 0 0 0 var(--dtr-apple-header-gap);
+  padding: 0 0 0 var(--dtr-apple-header-gap);
+  border-left: 0.5px solid rgba(0, 0, 0, 0.18);
   overflow: visible !important;
   transform: none !important;
 }
@@ -161,11 +204,80 @@ html body.dtr-apple-sticky-header #dtr-header-global #pdx-auth-bar .pdx-auth-hea
 html body.dtr-apple-sticky-header #dtr-header-global #pdx-auth-bar .pdx-auth-signup-btn,
 html body.dtr-apple-sticky-header #dtr-header-global #pdx-auth-bar .pdx-auth-account-btn,
 html body.dtr-apple-sticky-header #dtr-header-global #pdx-auth-bar .pdx-auth-trigger {
-  height: 32px !important;
-  min-height: 32px !important;
-  max-height: 32px !important;
+  display: inline-flex !important;
+  align-items: center !important;
+  height: var(--dtr-apple-header-control) !important;
+  min-height: var(--dtr-apple-header-control) !important;
+  max-height: var(--dtr-apple-header-control) !important;
   top: 0 !important;
   transform: none !important;
+  font-family: var(--dtr-apple-header-ui) !important;
+}
+
+html body.dtr-apple-sticky-header #dtr-header-global #pdx-auth-bar .pdx-auth-signup-btn {
+  padding: 0 12px !important;
+  font-size: 12px !important;
+  font-weight: 510 !important;
+  letter-spacing: -0.01em !important;
+}
+
+html body.dtr-apple-sticky-header #dtr-header-global #pdx-auth-bar .pdx-auth-account-btn,
+html body.dtr-apple-sticky-header #dtr-header-global #pdx-auth-bar .pdx-auth-account-btn.pdx-auth-header-btn {
+  gap: 8px !important;
+  padding: 0 6px 0 2px !important;
+  background: transparent !important;
+  border: 0 !important;
+  box-shadow: none !important;
+  max-width: none !important;
+}
+
+html body.dtr-apple-sticky-header #dtr-header-global #pdx-auth-bar .pdx-header-user-identity,
+html body.dtr-apple-sticky-header #dtr-header-global #pdx-auth-bar .pdx-auth-account-identity {
+  display: inline-flex !important;
+  align-items: center !important;
+  gap: 8px !important;
+  min-width: 0;
+}
+
+html body.dtr-apple-sticky-header #dtr-header-global #pdx-auth-bar .pdx-account-avatar--header {
+  width: 24px !important;
+  height: 24px !important;
+  min-width: 24px !important;
+  min-height: 24px !important;
+  max-width: 24px !important;
+  max-height: 24px !important;
+}
+
+html body.dtr-apple-sticky-header #dtr-header-global #pdx-auth-bar .pdx-header-user-text {
+  display: flex !important;
+  flex-direction: column;
+  align-items: flex-start;
+  justify-content: center;
+  gap: 1px !important;
+  min-width: 0;
+}
+
+html body.dtr-apple-sticky-header #dtr-header-global #pdx-auth-bar .pdx-header-user-name,
+html body.dtr-apple-sticky-header #dtr-header-global #pdx-auth-bar .pdx-auth-account-label,
+html body.dtr-apple-sticky-header #dtr-header-global #pdx-auth-bar .pdx-name-with-badge,
+html body.dtr-apple-sticky-header #dtr-header-global #pdx-auth-bar .pdx-public-user-name {
+  font-family: var(--dtr-apple-header-ui) !important;
+  font-size: 12px !important;
+  font-weight: 510 !important;
+  letter-spacing: -0.01em !important;
+  line-height: 1.15 !important;
+  max-width: 104px !important;
+}
+
+html body.dtr-apple-sticky-header #dtr-header-global #pdx-auth-bar .pdx-account-level-badge,
+html body.dtr-apple-sticky-header #dtr-header-global #pdx-auth-bar .pdx-account-level-badge--header {
+  font-family: var(--dtr-apple-header-ui) !important;
+  font-size: 9px !important;
+  font-weight: 600 !important;
+  letter-spacing: 0.01em !important;
+  line-height: 1.2 !important;
+  padding: 1px 6px !important;
+  margin: 0 !important;
 }
 
 /* Profile dropdown stays out of the header box model. */
