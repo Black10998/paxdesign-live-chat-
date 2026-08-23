@@ -53,7 +53,9 @@ crf_ok(strpos($booking, '-apple-system, BlinkMacSystemFont, "Segoe UI"') !== fal
 crf_ok(strpos($booking, '.paxdesign-booking-chat-auth-github-btn') !== false, 'plugin css also overrides GitHub/Apple chat login buttons');
 crf_ok(preg_match('/--pax-font:\s+"Exo 2"/', $booking) === 1, 'booking tab uses Exo 2 at the plugin root');
 crf_ok(md5($booking) === md5($overlay), 'overlay booking-styles still matches plugin');
-crf_ok(preg_match('/Version:\\s*1\\.4\\.50/', $style) === 1, 'theme version bumped for cache-bust');
+$theme_version_ok = preg_match('/Version:\\s*1\\.4\\.(\\d+)/', $style, $theme_version) === 1
+	&& (int) $theme_version[1] >= 50;
+crf_ok($theme_version_ok, 'theme version bumped for cache-bust');
 crf_ok(strpos($typo, 'skipping stacked sync') === false, 'does not include 3.176 chat rewrite');
 
 $workflow = $root . '/.github/workflows/deploy-chat-readable-fonts.yml';
