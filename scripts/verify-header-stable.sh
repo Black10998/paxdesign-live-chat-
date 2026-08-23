@@ -21,7 +21,8 @@ grep -q "a.dtr-btn.dtr-header-btn" "$TMP/apple-header-stable.css" && ok "live CS
 grep -q "pdx-header-user-name" "$TMP/apple-header-stable.css" && ok "live CSS scales the logged-in name" || fail "live CSS missing username scale"
 grep -q "min-width: 0 !important" "$TMP/apple-header-stable.css" && ok "live CSS lets nav shrink" || fail "live CSS missing nav shrink guard"
 grep -q "background-image: none !important" "$TMP/apple-header-stable.css" && ok "live CSS fixes unreadable gold level badge" || fail "live CSS missing level badge contrast fix"
-grep -q "flex-direction: row !important" "$TMP/apple-header-stable.css" && ok "live CSS keeps identity on one row" || fail "live CSS missing horizontal identity layout"
+grep -q "pdx-auth-bar--logged-in .pdx-auth-signup-btn" "$TMP/apple-header-stable.css" && ok "live CSS hides signup when logged in" || fail "live CSS missing logged-in signup hide"
+grep -q "pdx-auth-bar--logged-out .pdx-auth-signup-btn" "$TMP/apple-header-stable.css" && ok "live CSS styles signup only when logged out" || fail "live CSS missing logged-out signup scope"
 grep -q "dtr-has-mega" "$TMP/apple-header-stable.css" && ok "live CSS keeps mega menus unclipped" || fail "live CSS missing mega-menu overflow restore"
 if grep -A8 "#dtr-header-global .main-navigation {" "$TMP/apple-header-stable.css" | grep -q "overflow: hidden"; then
   fail "live CSS still clips .main-navigation"
@@ -33,6 +34,8 @@ js_code="$(curl -sS -A 'Mozilla/5.0' -o "$TMP/pax-auth.js" -w '%{http_code}' "${
 [ "$js_code" = "200" ] && ok "pax-auth.js HTTP 200" || fail "pax-auth.js HTTP ${js_code}"
 grep -q "pdx-auth-menu--apple" "$TMP/pax-auth.js" && ok "live JS keeps the Apple profile dropdown" || fail "live JS missing Apple profile dropdown"
 grep -q "#dtr-header-global .dtr-header-global-content" "$TMP/pax-auth.js" && ok "live JS mounts auth in the glass header" || fail "live JS missing glass header mount"
+grep -q "syncHeaderAuthControls" "$TMP/pax-auth.js" && ok "live JS syncs header auth controls" || fail "live JS missing syncHeaderAuthControls"
+grep -q "signupBtn.remove()" "$TMP/pax-auth.js" && ok "live JS removes Anmelden from DOM when logged in" || fail "live JS missing signup removal on login"
 
 hp_code="$(curl -sS -A 'Mozilla/5.0' -o "$TMP/home.html" -w '%{http_code}' "${BASE}/?n=${STAMP}")"
 [ "$hp_code" = "200" ] && ok "homepage HTTP 200" || fail "homepage HTTP ${hp_code}"
