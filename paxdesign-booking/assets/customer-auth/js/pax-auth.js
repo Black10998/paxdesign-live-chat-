@@ -1174,6 +1174,28 @@
     return null;
   }
 
+  function ensureHeaderUtilityCluster() {
+    if (!window.matchMedia('(min-width: 993px)').matches) return;
+    var content = document.querySelector('#dtr-header-global .dtr-header-global-content');
+    if (!content) return;
+
+    var cluster = content.querySelector(':scope > .dtr-header-utility-cluster');
+    if (!cluster) {
+      cluster = document.createElement('div');
+      cluster.className = 'dtr-header-utility-cluster';
+      content.appendChild(cluster);
+    }
+
+    var search = content.querySelector('.dtr-search-modal-trigger, a.dtr-search-modal-trigger');
+    var cta = content.querySelector('a.dtr-header-btn, .dtr-header-btn');
+    var bar = document.getElementById('pdx-auth-bar');
+    [search, cta, bar].forEach(function (el) {
+      if (el && el.parentNode !== cluster) {
+        cluster.appendChild(el);
+      }
+    });
+  }
+
   function stabilizeDesktopHeaderAuthLayout() {
     if (!authBar || !window.matchMedia('(min-width: 993px)').matches) return;
     if (!authBar.classList.contains('pdx-auth-bar--header')) return;
@@ -1222,11 +1244,38 @@
     });
   }
 
+  function stabilizeMobileHeaderAuthLayout() {
+    if (!authBar || !window.matchMedia('(max-width: 992px)').matches) return;
+    if (!authBar.classList.contains('pdx-auth-bar--header')) return;
+    if (!authBar.closest('#dtr-responsive-header')) return;
+
+    authBar.style.setProperty('position', 'relative', 'important');
+    authBar.style.setProperty('top', 'auto', 'important');
+    authBar.style.setProperty('right', 'auto', 'important');
+    authBar.style.setProperty('left', 'auto', 'important');
+    authBar.style.setProperty('transform', 'none', 'important');
+    authBar.style.setProperty('margin', '0 44px 0 auto', 'important');
+  }
+
   function scheduleDesktopHeaderAuthLayoutReset() {
+    ensureHeaderUtilityCluster();
     stabilizeDesktopHeaderAuthLayout();
-    setTimeout(stabilizeDesktopHeaderAuthLayout, 0);
-    setTimeout(stabilizeDesktopHeaderAuthLayout, 50);
-    setTimeout(stabilizeDesktopHeaderAuthLayout, 250);
+    stabilizeMobileHeaderAuthLayout();
+    setTimeout(function () {
+      ensureHeaderUtilityCluster();
+      stabilizeDesktopHeaderAuthLayout();
+      stabilizeMobileHeaderAuthLayout();
+    }, 0);
+    setTimeout(function () {
+      ensureHeaderUtilityCluster();
+      stabilizeDesktopHeaderAuthLayout();
+      stabilizeMobileHeaderAuthLayout();
+    }, 50);
+    setTimeout(function () {
+      ensureHeaderUtilityCluster();
+      stabilizeDesktopHeaderAuthLayout();
+      stabilizeMobileHeaderAuthLayout();
+    }, 250);
   }
 
   function mountAuthBar() {
@@ -1397,8 +1446,12 @@
 
     if (signupBtn) signupBtn.hidden = !!user.logged_in;
     if (accountBtn) accountBtn.hidden = !user.logged_in;
-    /* Portal is in the account dropdown on desktop; standalone btn is mobile-only. */
-    if (portalBtn) portalBtn.hidden = !user.logged_in || !window.matchMedia('(max-width: 768px)').matches;
+    /* Customer Portal lives in the profile dropdown only — never as a header pill. */
+    if (portalBtn) portalBtn.hidden = true;
+    if (authBar) {
+      authBar.classList.toggle('pdx-auth-bar--logged-in', !!user.logged_in);
+      authBar.classList.toggle('pdx-auth-bar--logged-out', !user.logged_in);
+    }
 
     if (accountBtn) {
       cleanupLegacyHeaderIdentityNodes(accountBtn);
@@ -5440,7 +5493,9 @@
       bindSessionAutoSync();
       window.addEventListener('resize', function () {
         updateAuthBar();
+        ensureHeaderUtilityCluster();
         stabilizeDesktopHeaderAuthLayout();
+        stabilizeMobileHeaderAuthLayout();
       }, { passive: true });
       window.addEventListener('load', scheduleDesktopHeaderAuthLayoutReset);
     },

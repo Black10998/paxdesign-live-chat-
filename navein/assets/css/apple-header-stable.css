@@ -22,8 +22,10 @@ html body.dtr-apple-sticky-header #dtr-header-global.dtr-apple-bar {
   overflow: visible !important;
 }
 
-html body.dtr-apple-sticky-header.show-onscroll #dtr-main-header {
-  padding-top: var(--dtr-apple-header-height);
+@media (min-width: 993px) {
+  html body.dtr-apple-sticky-header.show-onscroll #dtr-main-header {
+    padding-top: var(--dtr-apple-header-height);
+  }
 }
 
 html body.dtr-apple-sticky-header #dtr-header-global .dtr-header-global-content,
@@ -373,36 +375,94 @@ html body.dtr-apple-sticky-header #dtr-header-global .pdx-auth-menu.pdx-auth-men
 }
 
 @media (max-width: 992px) {
+  html body.dtr-apple-sticky-header #dtr-main-header,
+  html body.dtr-apple-sticky-header.show-onscroll #dtr-main-header {
+    padding-top: 0 !important;
+    margin-top: 0 !important;
+    min-height: 0 !important;
+  }
+
+  html body.dtr-apple-sticky-header {
+    padding-top: var(--dtr-apple-header-height) !important;
+  }
+
+  html body.dtr-apple-sticky-header #dtr-header-global,
+  html body.dtr-apple-sticky-header #dtr-header-global.header-fixed {
+    display: none !important;
+    height: 0 !important;
+    min-height: 0 !important;
+    max-height: 0 !important;
+    overflow: hidden !important;
+    padding: 0 !important;
+    margin: 0 !important;
+    border: 0 !important;
+  }
+
   html body.dtr-apple-sticky-header #dtr-responsive-header {
+    display: block !important;
+    position: fixed !important;
+    top: 0 !important;
+    left: 0 !important;
+    right: 0 !important;
+    width: 100% !important;
     height: var(--dtr-apple-header-height) !important;
     min-height: var(--dtr-apple-header-height) !important;
     max-height: var(--dtr-apple-header-height) !important;
-    padding-top: 0 !important;
-    padding-bottom: 0 !important;
-    box-sizing: border-box;
-    overflow: visible;
+    padding: 0 !important;
+    margin: 0 !important;
+    box-sizing: border-box !important;
+    overflow: visible !important;
+    z-index: 10050 !important;
   }
 
   html body.dtr-apple-sticky-header #dtr-responsive-header .container {
-    display: flex;
-    align-items: center;
-    height: var(--dtr-apple-header-height);
-    flex-wrap: nowrap;
-    min-width: 0;
-    gap: 8px;
+    display: flex !important;
+    align-items: center !important;
+    flex-wrap: nowrap !important;
+    gap: 8px !important;
+    height: var(--dtr-apple-header-height) !important;
+    min-height: var(--dtr-apple-header-height) !important;
+    max-height: var(--dtr-apple-header-height) !important;
+    min-width: 0 !important;
+    box-sizing: border-box !important;
   }
 
   html body.dtr-apple-sticky-header #dtr-responsive-header .dtr-search-modal-trigger,
   html body.dtr-apple-sticky-header #dtr-responsive-header a.dtr-search-modal-trigger {
-    position: relative;
+    position: relative !important;
     margin: 0 48px 0 0 !important;
     padding: 0 0 0 10px !important;
-    border-left: 0.5px solid rgba(0, 0, 0, 0.18);
-    height: var(--dtr-apple-header-height);
-    min-height: var(--dtr-apple-header-height);
-    max-height: var(--dtr-apple-header-height);
+    border-left: 0.5px solid rgba(0, 0, 0, 0.18) !important;
+    height: var(--dtr-apple-header-height) !important;
+    min-height: var(--dtr-apple-header-height) !important;
+    max-height: var(--dtr-apple-header-height) !important;
     top: auto !important;
     transform: none !important;
+  }
+
+  html body.dtr-apple-sticky-header #dtr-responsive-header #pdx-auth-bar,
+  html body.dtr-apple-sticky-header #dtr-responsive-header #pdx-auth-bar.pdx-auth-bar--header {
+    position: relative !important;
+    top: auto !important;
+    right: auto !important;
+    left: auto !important;
+    transform: none !important;
+    margin: 0 44px 0 auto !important;
+    flex: 0 0 auto !important;
+    z-index: 2 !important;
+  }
+
+  html body.dtr-apple-sticky-header #dtr-responsive-header #pdx-auth-bar .pdx-auth-portal-btn,
+  html body.dtr-apple-sticky-header #dtr-responsive-header #pdx-auth-bar.pdx-auth-bar--logged-out .pdx-auth-account-btn,
+  html body.dtr-apple-sticky-header #dtr-responsive-header #pdx-auth-bar.pdx-auth-bar--logged-out .pdx-auth-menu {
+    display: none !important;
+    visibility: hidden !important;
+  }
+
+  html body.dtr-apple-sticky-header #dtr-main-wrapper,
+  html body.dtr-apple-sticky-header #dtr-main-wrapper.dtr-page-wrapper {
+    padding-top: 0 !important;
+    margin-top: 0 !important;
   }
 }
 
@@ -450,5 +510,52 @@ html body.dtr-apple-sticky-header #dtr-header-global .pdx-auth-menu.pdx-auth-men
   html body.page-template-template-apple-cybercrime-support.dtr-apple-sticky-header #dtr-main-wrapper,
   html body.page-template-template-apple-cybercrime-support-php.dtr-apple-sticky-header #dtr-main-wrapper {
     margin-top: 0;
+  }
+
+  /*
+   * Right-side utility cluster: Search + Angebot anfordern + Anmelden/account.
+   * Keeps utilities grouped with explicit gap so they never overlap the nav.
+   */
+  html body.dtr-apple-sticky-header #dtr-header-global .dtr-header-utility-cluster {
+    display: inline-flex !important;
+    align-items: center !important;
+    flex: 0 0 auto !important;
+    flex-shrink: 0 !important;
+    gap: 10px !important;
+    margin-left: auto !important;
+    min-width: 0 !important;
+    max-width: none !important;
+    height: var(--dtr-apple-header-height);
+    min-height: var(--dtr-apple-header-height);
+    max-height: var(--dtr-apple-header-height);
+    overflow: visible !important;
+  }
+
+  html body.dtr-apple-sticky-header #dtr-header-global .dtr-header-utility-cluster .dtr-search-modal-trigger,
+  html body.dtr-apple-sticky-header #dtr-header-global .dtr-header-utility-cluster a.dtr-search-modal-trigger {
+    margin: 0 !important;
+    padding: 0 0 0 10px !important;
+    border-left: 0.5px solid rgba(0, 0, 0, 0.18) !important;
+  }
+
+  html body.dtr-apple-sticky-header #dtr-header-global .dtr-header-utility-cluster a.dtr-btn.dtr-header-btn,
+  html body.dtr-apple-sticky-header #dtr-header-global .dtr-header-utility-cluster .dtr-header-btn {
+    margin: 0 !important;
+  }
+
+  html body.dtr-apple-sticky-header #dtr-header-global .dtr-header-utility-cluster #pdx-auth-bar,
+  html body.dtr-apple-sticky-header #dtr-header-global .dtr-header-utility-cluster #pdx-auth-bar.pdx-auth-bar--header {
+    margin: 0 !important;
+    padding: 0 !important;
+    border-left: 0 !important;
+    min-width: 0 !important;
+  }
+
+  /* Before login: only Anmelden — never Customer Portal in the header bar. */
+  html body.dtr-apple-sticky-header #dtr-header-global #pdx-auth-bar.pdx-auth-bar--header .pdx-auth-portal-btn,
+  html body.dtr-apple-sticky-header #dtr-header-global #pdx-auth-bar.pdx-auth-bar--logged-out .pdx-auth-account-btn,
+  html body.dtr-apple-sticky-header #dtr-header-global #pdx-auth-bar.pdx-auth-bar--logged-out .pdx-auth-menu {
+    display: none !important;
+    visibility: hidden !important;
   }
 }
