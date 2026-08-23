@@ -291,6 +291,14 @@ function navein_custom_scripts_styles() {
 		true
 	);
 
+	// Isolate Search from the nav and lock header geometry sitewide.
+	wp_enqueue_style(
+		'navein-apple-header-stable',
+		get_template_directory_uri() . '/assets/css/apple-header-stable.css',
+		array( 'navein-style', 'navein-apple-sticky-header' ),
+		$theme_version
+	);
+
 	// Apple-style compact inner page titles (replaces legacy banner card).
 	wp_enqueue_style(
 		'navein-apple-inner-page-title',

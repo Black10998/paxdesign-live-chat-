@@ -1,0 +1,185 @@
+/**
+ * Apple-stable site header.
+ * Isolates the Search control from the nav (Cybercrime is last) and
+ * locks header geometry so login, refresh, and the profile menu cannot
+ * resize or shift the bar.
+ */
+
+:root {
+  --dtr-apple-header-height: 52px;
+}
+
+html body.dtr-apple-sticky-header #dtr-header-global,
+html body.dtr-apple-sticky-header #dtr-header-global.header-fixed,
+html body.dtr-apple-sticky-header #dtr-header-global.dtr-apple-bar {
+  height: var(--dtr-apple-header-height) !important;
+  min-height: var(--dtr-apple-header-height) !important;
+  max-height: var(--dtr-apple-header-height) !important;
+  box-sizing: border-box !important;
+  overflow: visible !important;
+}
+
+html body.dtr-apple-sticky-header.show-onscroll #dtr-main-header {
+  padding-top: var(--dtr-apple-header-height);
+}
+
+html body.dtr-apple-sticky-header #dtr-header-global .dtr-header-global-content,
+html body.dtr-apple-sticky-header #dtr-header-global .container {
+  display: flex !important;
+  align-items: center !important;
+  flex-wrap: nowrap !important;
+  height: var(--dtr-apple-header-height);
+  min-height: var(--dtr-apple-header-height);
+  max-height: var(--dtr-apple-header-height);
+  overflow: visible;
+}
+
+html body.dtr-apple-sticky-header #dtr-header-global .dtr-header-left,
+html body.dtr-apple-sticky-header #dtr-header-global .dtr-logo,
+html body.dtr-apple-sticky-header #dtr-header-global .dtr-header-btn {
+  flex: 0 0 auto;
+  transform: none !important;
+}
+
+html body.dtr-apple-sticky-header #dtr-header-global .dtr-logo,
+html body.dtr-apple-sticky-header #dtr-header-global .dtr-logo img,
+html body.dtr-apple-sticky-header #dtr-header-global .dtr-logo svg {
+  max-height: 28px;
+}
+
+html body.dtr-apple-sticky-header #dtr-header-global .main-navigation {
+  display: flex;
+  align-items: center;
+  flex: 1 1 auto;
+  min-width: 0;
+  overflow: hidden;
+}
+
+html body.dtr-apple-sticky-header #dtr-header-global .main-navigation .sf-menu {
+  display: flex;
+  align-items: center;
+  flex-wrap: nowrap;
+  margin: 0;
+}
+
+html body.dtr-apple-sticky-header #dtr-header-global .main-navigation .sf-menu > li > a {
+  min-height: var(--dtr-apple-header-height);
+  height: var(--dtr-apple-header-height);
+  line-height: var(--dtr-apple-header-height);
+  box-sizing: border-box;
+}
+
+/* Search is a utility control, not a sibling of Cybercrime / the nav. */
+html body.dtr-apple-sticky-header #dtr-header-global .dtr-search-modal-trigger,
+html body.dtr-apple-sticky-header #dtr-header-global a.dtr-search-modal-trigger {
+  display: inline-flex !important;
+  align-items: center;
+  justify-content: center;
+  flex: 0 0 36px;
+  width: 36px;
+  min-width: 36px;
+  max-width: 36px;
+  height: var(--dtr-apple-header-height);
+  min-height: var(--dtr-apple-header-height);
+  max-height: var(--dtr-apple-header-height);
+  margin: 0 0 0 14px !important;
+  padding: 0 0 0 14px !important;
+  border: 0;
+  border-left: 0.5px solid rgba(0, 0, 0, 0.18);
+  border-radius: 0;
+  background: transparent !important;
+  box-shadow: none !important;
+  line-height: 1;
+  transform: none !important;
+  top: auto !important;
+}
+
+html body.dtr-apple-sticky-header #dtr-header-global .dtr-search-modal-trigger::after,
+html body.dtr-apple-sticky-header #dtr-header-global a.dtr-search-modal-trigger::after {
+  font-size: 18px;
+  line-height: 18px;
+}
+
+html body.dtr-apple-sticky-header #dtr-header-global .dtr-header-btn {
+  height: 32px;
+  min-height: 32px;
+  max-height: 32px;
+  margin: 0 0 0 12px !important;
+  padding: 0 14px;
+  white-space: nowrap;
+}
+
+html body.dtr-apple-sticky-header #dtr-header-global #pdx-auth-bar,
+html body.dtr-apple-sticky-header #dtr-header-global #pdx-auth-bar.pdx-auth-bar--header,
+html body.dtr-apple-sticky-header #dtr-header-global #pdx-auth-bar.pdx-auth-bar--menu-open {
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  flex: 0 0 128px;
+  width: 128px;
+  min-width: 128px;
+  max-width: 128px;
+  height: var(--dtr-apple-header-height);
+  min-height: var(--dtr-apple-header-height);
+  max-height: var(--dtr-apple-header-height);
+  margin: 0 0 0 8px;
+  overflow: visible !important;
+  transform: none !important;
+}
+
+html body.dtr-apple-sticky-header #dtr-header-global #pdx-auth-bar .pdx-auth-header-btn,
+html body.dtr-apple-sticky-header #dtr-header-global #pdx-auth-bar .pdx-auth-signup-btn,
+html body.dtr-apple-sticky-header #dtr-header-global #pdx-auth-bar .pdx-auth-account-btn,
+html body.dtr-apple-sticky-header #dtr-header-global #pdx-auth-bar .pdx-auth-trigger {
+  height: 32px !important;
+  min-height: 32px !important;
+  max-height: 32px !important;
+  top: 0 !important;
+  transform: none !important;
+}
+
+/* Profile dropdown stays out of the header box model. */
+html body.dtr-apple-sticky-header #dtr-header-global .pdx-auth-menu.pdx-auth-menu--apple {
+  position: fixed;
+}
+
+@media (max-width: 992px) {
+  html body.dtr-apple-sticky-header #dtr-responsive-header {
+    height: var(--dtr-apple-header-height) !important;
+    min-height: var(--dtr-apple-header-height) !important;
+    max-height: var(--dtr-apple-header-height) !important;
+    padding-top: 0 !important;
+    padding-bottom: 0 !important;
+    box-sizing: border-box;
+    overflow: visible;
+  }
+
+  html body.dtr-apple-sticky-header #dtr-responsive-header .container {
+    display: flex;
+    align-items: center;
+    height: var(--dtr-apple-header-height);
+    flex-wrap: nowrap;
+  }
+
+  html body.dtr-apple-sticky-header #dtr-responsive-header .dtr-search-modal-trigger,
+  html body.dtr-apple-sticky-header #dtr-responsive-header a.dtr-search-modal-trigger {
+    position: relative;
+    margin: 0 48px 0 0 !important;
+    padding: 0 0 0 12px !important;
+    border-left: 0.5px solid rgba(0, 0, 0, 0.18);
+    height: var(--dtr-apple-header-height);
+    min-height: var(--dtr-apple-header-height);
+    max-height: var(--dtr-apple-header-height);
+    top: auto !important;
+    transform: none !important;
+  }
+}
+
+/* Cybercrime page: keep the portal clearly below the locked header. */
+@media (min-width: 993px) {
+  html body.page-cybercrime-support.dtr-apple-sticky-header #dtr-main-wrapper,
+  html body.page-template-template-apple-cybercrime-support.dtr-apple-sticky-header #dtr-main-wrapper,
+  html body.page-template-template-apple-cybercrime-support-php.dtr-apple-sticky-header #dtr-main-wrapper {
+    margin-top: 0;
+  }
+}

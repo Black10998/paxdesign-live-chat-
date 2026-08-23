@@ -1,0 +1,58 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Header stability + isolated Search</title>
+<link rel="stylesheet" href="../../navein/assets/css/apple-header-stable.css">
+<style>
+html, body { margin: 0; background: #f5f5f7; font-family: Inter, -apple-system, BlinkMacSystemFont, sans-serif; }
+body.dtr-apple-sticky-header.show-onscroll #dtr-main-header { display: block; }
+#dtr-header-global {
+  position: fixed; left: 0; right: 0; top: 0; z-index: 20;
+  display: flex; align-items: center;
+  padding: 0 24px;
+  background: rgba(255,255,255,.92);
+  border-bottom: 1px solid rgba(0,0,0,.08);
+}
+.dtr-header-global-content { width: 100%; }
+.dtr-logo { font-weight: 700; letter-spacing: .08em; color: #1d1d1f; text-decoration: none; }
+.sf-menu { list-style: none; padding: 0; }
+.sf-menu > li > a { display: flex; align-items: center; padding: 0 12px; color: #1d1d1f; text-decoration: none; font-size: 13px; }
+.dtr-search-modal-trigger { color: #1d1d1f; text-decoration: none; }
+.dtr-search-modal-trigger::after { content: "⌕"; font-size: 18px; }
+.dtr-header-btn { display: inline-flex; align-items: center; border-radius: 980px; background: #000; color: #fff; text-decoration: none; font-size: 13px; }
+#pdx-auth-bar { display: flex; align-items: center; }
+.pdx-auth-account-btn { border: 0; background: transparent; font: 600 13px/1 Inter, sans-serif; }
+.page { padding: 80px 32px 40px; }
+.page h1 { margin: 0 0 8px; font-size: 28px; }
+.note { color: #6e6e73; }
+</style>
+</head>
+<body class="dtr-apple-sticky-header show-onscroll page-cybercrime-support">
+<header id="dtr-main-header">
+  <div id="dtr-header-global">
+    <div class="dtr-header-global-content">
+      <div class="dtr-header-left"><a class="dtr-logo" href="#">PAXDESIGN</a></div>
+      <div class="main-navigation">
+        <ul class="sf-menu">
+          <li><a href="#">Preise</a></li>
+          <li><a href="#">Referenzen</a></li>
+          <li class="cybercrime-menu"><a href="#">Cybercrime Support</a></li>
+        </ul>
+      </div>
+      <a href="#search" class="dtr-search-modal-trigger" aria-label="Search Modal Button"></a>
+      <a href="#kontakt" class="dtr-header-btn">Angebot anfordern</a>
+      <div id="pdx-auth-bar" class="pdx-auth-bar--header">
+        <button type="button" class="pdx-auth-account-btn pdx-auth-header-btn">ALKHA</button>
+      </div>
+    </div>
+  </div>
+</header>
+<main class="page">
+  <p class="note">Search is separated from Cybercrime Support by a hairline. The header row is a locked 52px bar.</p>
+  <h1>Cybercrime Support</h1>
+  <p>Page content starts below the header. Opening a profile menu must not move this bar.</p>
+</main>
+</body>
+</html>

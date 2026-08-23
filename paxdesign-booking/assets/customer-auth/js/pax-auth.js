@@ -1143,7 +1143,21 @@
   }
 
   function findHeaderMount() {
-    var selectors = [
+    var desktop = window.matchMedia('(min-width: 993px)').matches;
+    var selectors = desktop ? [
+      '#dtr-header-global .dtr-header-global-content',
+      '#dtr-header-global',
+      'header .inside-header',
+      '#masthead .inside-header',
+      'header .header-inner',
+      'header .site-header-main',
+      'header .elementor-container',
+      '#masthead',
+      'header',
+      '.site-header'
+    ] : [
+      '#dtr-responsive-header .container',
+      '#dtr-responsive-header',
       'header .inside-header',
       '#masthead .inside-header',
       'header .header-inner',
