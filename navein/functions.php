@@ -1038,40 +1038,21 @@ if ( ! function_exists( 'navein_set_default_page_template' ) ) {
 add_filter( 'template_include', 'navein_set_default_page_template' );
 
 /**
- * Print logged-in username contrast CSS at the very end of the footer so it
- * beats legacy Customizer / snippet rules that force white text on #pdx-auth-bar.
+ * Restore the original header row on the server: logo | nav | Search + CTA + account.
+ * Reserved #pdx-auth-bar is in the HTML before JavaScript so the row cannot jump.
  */
-if ( ! function_exists( 'navein_apple_header_username_contrast_footer' ) ) {
-	function navein_apple_header_username_contrast_footer() {
-		if ( is_admin() ) {
-			return;
-		}
-		echo '<style id="navein-apple-auth-username-contrast">'
-			. 'html body.dtr-apple-sticky-header #pdx-auth-bar.pdx-auth-bar--header .pdx-auth-account-btn,'
-			. 'html body.dtr-apple-sticky-header #pdx-auth-bar.pdx-auth-bar--header .pdx-header-user-name,'
-			. 'html body.dtr-apple-sticky-header #pdx-auth-bar.pdx-auth-bar--header .pdx-auth-account-label,'
-			. 'html body.dtr-apple-sticky-header #pdx-auth-bar.pdx-auth-bar--header .pdx-name-with-badge,'
-			. 'html body.dtr-apple-sticky-header #pdx-auth-bar .pdx-auth-account-btn .pdx-name-with-badge,'
-			. 'html body.dtr-apple-sticky-header header #pdx-auth-bar .pdx-name-with-badge,'
-			. 'html body.dtr-apple-sticky-header header #pdx-auth-bar .pdx-auth-trigger,'
-			. 'html body.dtr-apple-sticky-header header #pdx-auth-bar .pdx-auth-trigger-label,'
-			. 'html body.dtr-apple-sticky-header header button.pdx-auth-trigger.pdx-auth-trigger--logged-in,'
-			. 'html body.dtr-apple-sticky-header header button.pdx-auth-trigger.pdx-auth-trigger--verified{'
-			. 'color:#000!important;text-shadow:none!important;}'
-			. 'html body.dtr-apple-sticky-header header #pdx-auth-bar .pdx-auth-trigger,'
-			. 'html body.dtr-apple-sticky-header header button.pdx-auth-trigger.pdx-auth-trigger--logged-in,'
-			. 'html body.dtr-apple-sticky-header header button.pdx-auth-trigger.pdx-auth-trigger--verified{'
-			. 'background:rgba(0,0,0,.04)!important;border:1px solid rgba(0,0,0,.12)!important;'
-			. 'box-shadow:none!important;filter:none!important;}'
-			. '</style>' . "\n";
+if ( ! function_exists( 'navein_apple_header_reserved_auth_markup' ) ) {
+	function navein_apple_header_reserved_auth_markup() {
+		return '<div id="pdx-auth-bar" class="pdx-cx-shell pdx-auth-bar--header pdx-auth-bar--logged-out" data-pdx-header-slot="1">'
+			. '<div class="pdx-auth-bar-inner">'
+			. '<button type="button" class="pdx-auth-signup-btn pdx-cx-btn pdx-auth-header-btn">Anmelden</button>'
+			. '<button type="button" class="pdx-auth-account-btn pdx-cx-btn pdx-cx-btn--ghost pdx-auth-header-btn" aria-haspopup="true" aria-expanded="false" hidden>'
+			. '<span class="pdx-auth-account-identity"></span></button>'
+			. '<div class="pdx-auth-menu pdx-auth-menu--apple" hidden></div>'
+			. '</div></div>';
 	}
 }
-add_action( 'wp_footer', 'navein_apple_header_username_contrast_footer', 99999 );
 
-/**
- * Server-side utility cluster wrapper so Search/CTA/auth never sit as loose
- * grid items beside the nav before JavaScript runs.
- */
 if ( ! function_exists( 'navein_apple_header_utility_cluster_ob_start' ) ) {
 	function navein_apple_header_utility_cluster_ob_filter( $html ) {
 		if ( ! is_string( $html ) || $html === '' ) {
@@ -1080,13 +1061,26 @@ if ( ! function_exists( 'navein_apple_header_utility_cluster_ob_start' ) ) {
 		if ( strpos( $html, 'dtr-header-global-content' ) === false ) {
 			return $html;
 		}
+
+		$has_auth = ( strpos( $html, 'id="pdx-auth-bar"' ) !== false || strpos( $html, "id='pdx-auth-bar'" ) !== false );
+		$slot     = $has_auth ? '' : navein_apple_header_reserved_auth_markup();
+
 		if ( strpos( $html, 'class="dtr-header-utility-cluster"' ) !== false ) {
-			return $html;
+			if ( $slot === '' ) {
+				return $html;
+			}
+			$with_slot = preg_replace(
+				'#(<div class="dtr-header-utility-cluster">[\s\S]*?<a[^>]*dtr-header-btn[\s\S]*?</a>)#',
+				'$1' . $slot,
+				$html,
+				1
+			);
+			return is_string( $with_slot ) ? $with_slot : $html;
 		}
 
-		return preg_replace_callback(
+		$wrapped = preg_replace_callback(
 			'#(<div class="dtr-header-global-content">)([\s\S]*?)(</div>\s*</div>\s*</div>\s*<div id="dtr-responsive-header")#',
-			static function ( $matches ) {
+			static function ( $matches ) use ( $slot ) {
 				$inner = $matches[2];
 				if ( strpos( $inner, 'class="dtr-header-utility-cluster"' ) !== false ) {
 					return $matches[0];
@@ -1100,11 +1094,10 @@ if ( ! function_exists( 'navein_apple_header_utility_cluster_ob_start' ) ) {
 					return $matches[0];
 				}
 
-				$utilities = $parts[1];
 				$utilities = preg_replace(
 					'#^(<a[^>]*dtr-search-modal-trigger[\s\S]*?<a[^>]*dtr-header-btn[\s\S]*?</a>)#',
-					'<div class="dtr-header-utility-cluster">$1</div>',
-					$utilities,
+					'<div class="dtr-header-utility-cluster">$1' . $slot . '</div>',
+					$parts[1],
 					1
 				);
 				if ( ! is_string( $utilities ) ) {
@@ -1116,6 +1109,8 @@ if ( ! function_exists( 'navein_apple_header_utility_cluster_ob_start' ) ) {
 			$html,
 			1
 		);
+
+		return is_string( $wrapped ) ? $wrapped : $html;
 	}
 
 	function navein_apple_header_utility_cluster_ob_start() {
@@ -1128,50 +1123,8 @@ if ( ! function_exists( 'navein_apple_header_utility_cluster_ob_start' ) ) {
 add_action( 'template_redirect', 'navein_apple_header_utility_cluster_ob_start', 0 );
 
 /**
- * Group Search, CTA, and auth as early as possible so desktop layout never
- * overlaps Cybercrime Support before deferred auth JS runs.
- */
-if ( ! function_exists( 'navein_apple_header_utility_cluster_head' ) ) {
-	function navein_apple_header_utility_cluster_head() {
-		if ( is_admin() ) {
-			return;
-		}
-		echo '<script id="navein-apple-header-utility-cluster-head">'
-			. '(function(){'
-			. 'function ensureUtilityCluster(){'
-			. 'if(window.innerWidth<993)return;'
-			. 'var content=document.querySelector("#dtr-header-global .dtr-header-global-content");'
-			. 'if(!content)return;'
-			. 'var cluster=content.querySelector(":scope > .dtr-header-utility-cluster");'
-			. 'if(!cluster){cluster=document.createElement("div");cluster.className="dtr-header-utility-cluster";content.appendChild(cluster);}'
-			. 'var search=content.querySelector(".dtr-search-modal-trigger,a.dtr-search-modal-trigger");'
-			. 'var cta=content.querySelector("a.dtr-header-btn,.dtr-header-btn");'
-			. 'var bar=document.getElementById("pdx-auth-bar");'
-			. '[search,cta,bar].forEach(function(el){if(el&&el.parentNode!==cluster){cluster.appendChild(el);}});'
-			. '}'
-			. 'function hideLoggedInSignup(){'
-			. 'var bar=document.getElementById("pdx-auth-bar");'
-			. 'if(!bar||!bar.classList.contains("pdx-auth-bar--logged-in"))return;'
-			. 'bar.querySelectorAll(".pdx-auth-signup-btn").forEach(function(el){el.remove();});'
-			. '}'
-			. 'function tick(){ensureUtilityCluster();hideLoggedInSignup();}'
-			. 'if(document.readyState==="loading"){document.addEventListener("DOMContentLoaded",tick);}'
-			. 'else{tick();}'
-			. 'if(typeof MutationObserver!=="undefined"){'
-			. 'var obs=new MutationObserver(function(){tick();});'
-			. 'obs.observe(document.documentElement,{childList:true,subtree:true});'
-			. '}'
-			. 'window.addEventListener("resize",tick,{passive:true});'
-			. '})();'
-			. '</script>' . "\n";
-	}
-}
-add_action( 'wp_head', 'navein_apple_header_utility_cluster_head', 99998 );
-
-/**
- * Final desktop header cascade fix: legacy Customizer snippets inject CSS and JS
- * that pull #pdx-auth-bar out of the flex row (position:fixed + yellow glow).
- * This prints after those snippets and resets the rendered desktop header layout.
+ * One late cascade that beats Customizer position:fixed / yellow-glow snippets.
+ * Matches the restored flex header. No MutationObserver. No inline style writes.
  */
 if ( ! function_exists( 'navein_apple_header_desktop_cascade_footer' ) ) {
 	function navein_apple_header_desktop_cascade_footer() {
@@ -1179,6 +1132,13 @@ if ( ! function_exists( 'navein_apple_header_desktop_cascade_footer' ) ) {
 			return;
 		}
 		echo '<style id="navein-apple-header-desktop-cascade">'
+			. 'html body.dtr-apple-sticky-header #pdx-auth-bar.pdx-auth-bar--header .pdx-auth-account-btn,'
+			. 'html body.dtr-apple-sticky-header #pdx-auth-bar.pdx-auth-bar--header .pdx-header-user-name,'
+			. 'html body.dtr-apple-sticky-header #pdx-auth-bar.pdx-auth-bar--header .pdx-auth-account-label,'
+			. 'html body.dtr-apple-sticky-header #pdx-auth-bar.pdx-auth-bar--header .pdx-name-with-badge,'
+			. 'html body.dtr-apple-sticky-header header #pdx-auth-bar .pdx-auth-trigger,'
+			. 'html body.dtr-apple-sticky-header header #pdx-auth-bar .pdx-auth-trigger-label{'
+			. 'color:#000!important;text-shadow:none!important;}'
 			. '@media (min-width:993px){'
 			. 'html body.dtr-apple-sticky-header #dtr-header-global,'
 			. 'html body.dtr-apple-sticky-header #dtr-header-global.header-fixed{'
@@ -1187,124 +1147,48 @@ if ( ! function_exists( 'navein_apple_header_desktop_cascade_footer' ) ) {
 			. 'min-height:var(--dtr-apple-header-height,52px)!important;'
 			. 'max-height:var(--dtr-apple-header-height,52px)!important;'
 			. 'overflow:visible!important;}'
+			. 'html body.dtr-apple-sticky-header #dtr-header-global .container{'
+			. 'display:block!important;grid-template-columns:none!important;grid-template-areas:none!important;'
+			. 'width:100%!important;max-width:100%!important;height:var(--dtr-apple-header-height,52px)!important;}'
 			. 'html body.dtr-apple-sticky-header #dtr-header-global .dtr-header-global-content{'
-			. 'display:grid!important;grid-template-columns:auto minmax(0,1fr) minmax(var(--dtr-apple-header-util-min,320px),max-content)!important;'
-			. 'grid-template-areas:"logo nav util"!important;align-items:center!important;'
-			. 'column-gap:var(--dtr-apple-header-gap,12px)!important;min-width:0!important;'
+			. 'display:flex!important;align-items:center!important;flex-wrap:nowrap!important;'
+			. 'justify-content:flex-start!important;gap:var(--dtr-apple-header-gap,12px)!important;'
+			. 'grid-template-columns:none!important;grid-template-areas:none!important;'
+			. 'width:100%!important;min-width:0!important;'
 			. 'height:var(--dtr-apple-header-height,52px)!important;overflow:visible!important;}'
-			. 'html body.dtr-apple-sticky-header #dtr-header-global .dtr-header-left{grid-area:logo!important;}'
 			. 'html body.dtr-apple-sticky-header #dtr-header-global .main-navigation{'
-			. 'grid-area:nav!important;flex:1 1 auto!important;min-width:0!important;max-width:100%!important;'
-			. 'padding-right:var(--dtr-apple-header-nav-gap,16px)!important;overflow:visible!important;'
-			. 'margin-right:0!important;margin-left:0!important;}'
-			. 'html body.dtr-apple-sticky-header #dtr-header-global .dtr-search-modal-trigger,'
-			. 'html body.dtr-apple-sticky-header #dtr-header-global a.dtr-search-modal-trigger{'
-			. 'margin:0!important;padding:0!important;border-left:0!important;flex:0 0 auto!important;}'
-			. 'html body.dtr-apple-sticky-header #dtr-header-global a.dtr-btn.dtr-header-btn,'
-			. 'html body.dtr-apple-sticky-header #dtr-header-global .dtr-header-btn,'
-			. 'html body.dtr-apple-sticky-header #dtr-header-global #pdx-auth-bar{'
-			. 'flex:0 0 auto!important;flex-shrink:0!important;}'
+			. 'flex:1 1 auto!important;min-width:0!important;overflow:visible!important;margin-right:0!important;}'
+			. 'html body.dtr-apple-sticky-header #dtr-header-global .dtr-header-btn .dtr-btn__icon,'
+			. 'html body.dtr-apple-sticky-header #dtr-header-global .dtr-header-btn .dtr-icon{'
+			. 'display:none!important;}'
 			. 'html body.dtr-apple-sticky-header #dtr-header-global a.dtr-btn.dtr-header-btn,'
 			. 'html body.dtr-apple-sticky-header #dtr-header-global .dtr-header-btn{'
 			. 'display:inline-flex!important;align-items:center!important;justify-content:center!important;'
 			. 'height:28px!important;min-height:28px!important;max-height:28px!important;'
 			. 'margin:0!important;padding:0 12px!important;border:0!important;border-radius:980px!important;'
-			. 'background:#000!important;background-image:none!important;color:#fff!important;'
-			. 'box-shadow:none!important;font-size:12px!important;font-weight:510!important;'
-			. 'line-height:1!important;white-space:nowrap!important;transform:none!important;}'
-			. 'html body.dtr-apple-sticky-header #dtr-header-global .dtr-header-btn .dtr-btn__icon,'
-			. 'html body.dtr-apple-sticky-header #dtr-header-global .dtr-header-btn .dtr-icon{'
-			. 'display:none!important;}'
+			. 'background:#000!important;color:#fff!important;box-shadow:none!important;'
+			. 'font-size:12px!important;white-space:nowrap!important;}'
 			. 'html body.dtr-apple-sticky-header #dtr-header-global #pdx-auth-bar,'
 			. 'html body.dtr-apple-sticky-header #dtr-header-global #pdx-auth-bar.pdx-auth-bar--header,'
 			. 'html body.dtr-apple-sticky-header #dtr-header-global #pdx-auth-bar.pdx-auth-bar--menu-open{'
 			. 'position:relative!important;top:auto!important;right:auto!important;left:auto!important;'
-			. 'bottom:auto!important;z-index:2!important;display:flex!important;'
-			. 'align-items:center!important;justify-content:flex-end!important;width:auto!important;'
-			. 'min-width:0!important;max-width:none!important;height:52px!important;'
-			. 'min-height:52px!important;max-height:52px!important;margin:0!important;'
-			. 'padding:0!important;border-left:0!important;'
-			. 'overflow:visible!important;transform:none!important;opacity:1!important;'
-			. 'visibility:visible!important;}'
-			. 'html body.dtr-apple-sticky-header #dtr-header-global #pdx-auth-bar.pdx-auth-bar--logged-out .pdx-auth-signup-btn,'
-			. 'html body.dtr-apple-sticky-header #dtr-header-global #pdx-auth-bar.pdx-auth-bar--logged-in .pdx-auth-account-btn,'
-			. 'html body.dtr-apple-sticky-header #dtr-header-global #pdx-auth-bar.pdx-auth-bar--logged-in .pdx-auth-trigger,'
-			. 'html body.dtr-apple-sticky-header #dtr-header-global #pdx-auth-bar .pdx-auth-header-btn{'
-			. 'display:inline-flex!important;align-items:center!important;height:28px!important;'
-			. 'min-height:28px!important;max-height:28px!important;top:0!important;transform:none!important;'
-			. 'padding:0 12px!important;border:0!important;border-radius:980px!important;'
-			. 'background:transparent!important;background-image:none!important;'
-			. 'box-shadow:none!important;backdrop-filter:none!important;-webkit-backdrop-filter:none!important;'
-			. 'filter:none!important;color:#000!important;}'
-			. 'html body.dtr-apple-sticky-header #dtr-header-global #pdx-auth-bar .pdx-auth-account-btn,'
-			. 'html body.dtr-apple-sticky-header #dtr-header-global #pdx-auth-bar .pdx-auth-account-btn.pdx-auth-header-btn{'
-			. 'gap:8px!important;padding:0 4px 0 0!important;max-width:min(168px,22vw)!important;'
-			. 'white-space:nowrap!important;overflow:hidden!important;}'
-			. 'html body.dtr-apple-sticky-header #dtr-header-global #pdx-auth-bar .pdx-header-user-identity,'
-			. 'html body.dtr-apple-sticky-header #dtr-header-global #pdx-auth-bar .pdx-auth-account-identity,'
-			. 'html body.dtr-apple-sticky-header #dtr-header-global #pdx-auth-bar .pdx-header-user-text{'
-			. 'display:inline-flex!important;flex-direction:row!important;align-items:center!important;'
-			. 'flex-wrap:nowrap!important;gap:6px!important;min-width:0!important;}'
-			. 'html body.dtr-apple-sticky-header #dtr-header-global #pdx-auth-bar .pdx-header-user-name,'
-			. 'html body.dtr-apple-sticky-header #dtr-header-global #pdx-auth-bar .pdx-auth-account-label,'
-			. 'html body.dtr-apple-sticky-header #dtr-header-global #pdx-auth-bar .pdx-name-with-badge,'
-			. 'html body.dtr-apple-sticky-header #dtr-header-global #pdx-auth-bar .pdx-public-user-name{'
-			. 'font-size:12px!important;font-weight:510!important;line-height:1!important;'
-			. 'white-space:nowrap!important;overflow:hidden!important;text-overflow:ellipsis!important;'
-			. 'max-width:min(88px,14vw)!important;color:#000!important;text-shadow:none!important;'
-			. '-webkit-text-fill-color:currentColor!important;}'
-			. 'html body.dtr-apple-sticky-header #dtr-header-global #pdx-auth-bar .pdx-account-avatar--header{'
-			. 'width:24px!important;height:24px!important;min-width:24px!important;min-height:24px!important;'
-			. 'max-width:24px!important;max-height:24px!important;}'
-			. 'html body.dtr-apple-sticky-header #dtr-header-global #pdx-auth-bar .pdx-account-level-badge,'
-			. 'html body.dtr-apple-sticky-header #dtr-header-global #pdx-auth-bar .pdx-account-level-badge--header{'
-			. 'display:inline-flex!important;align-items:center!important;font-size:10px!important;'
-			. 'font-weight:600!important;line-height:1!important;padding:2px 7px!important;margin:0!important;'
-			. 'border-radius:999px!important;white-space:nowrap!important;color:#3a3a3c!important;'
-			. 'background:rgba(0,0,0,.06)!important;background-image:none!important;'
-			. 'border:.5px solid rgba(0,0,0,.14)!important;box-shadow:none!important;'
-			. 'max-width:min(72px,12vw)!important;overflow:hidden!important;text-overflow:ellipsis!important;}'
-			. 'html body.dtr-apple-sticky-header #dtr-header-global #pdx-auth-bar svg{'
-			. 'stroke:currentColor!important;color:currentColor!important;}'
+			. 'bottom:auto!important;transform:none!important;display:flex!important;'
+			. 'align-items:center!important;min-width:88px!important;height:52px!important;}'
 			. 'html body.dtr-apple-sticky-header #dtr-header-global #pdx-auth-bar.pdx-auth-bar--logged-out .pdx-auth-signup-btn{'
-			. 'background:#000!important;color:#fff!important;padding:0 12px!important;}'
+			. 'display:inline-flex!important;background:#000!important;color:#fff!important;'
+			. 'padding:0 12px!important;border:0!important;border-radius:980px!important;}'
 			. 'html body.dtr-apple-sticky-header #dtr-header-global #pdx-auth-bar.pdx-auth-bar--logged-in .pdx-auth-signup-btn,'
 			. 'html body.dtr-apple-sticky-header #dtr-responsive-header #pdx-auth-bar.pdx-auth-bar--logged-in .pdx-auth-signup-btn{'
 			. 'display:none!important;visibility:hidden!important;pointer-events:none!important;}'
 			. 'html body.dtr-apple-sticky-header #dtr-header-global .dtr-header-utility-cluster{'
-			. 'grid-area:util!important;display:inline-flex!important;align-items:center!important;'
-			. 'flex:0 0 auto!important;flex-shrink:0!important;gap:10px!important;'
-			. 'justify-self:end!important;margin-left:0!important;min-width:0!important;'
-			. 'width:max-content!important;padding-left:var(--dtr-apple-header-nav-gap,16px)!important;'
-			. 'border-left:.5px solid rgba(0,0,0,.18)!important;'
-			. 'height:52px!important;overflow:visible!important;isolation:isolate!important;}'
-			. 'html body.dtr-apple-sticky-header #dtr-header-global .dtr-header-global-content > .dtr-search-modal-trigger,'
-			. 'html body.dtr-apple-sticky-header #dtr-header-global .dtr-header-global-content > a.dtr-search-modal-trigger,'
-			. 'html body.dtr-apple-sticky-header #dtr-header-global .dtr-header-global-content > a.dtr-header-btn,'
-			. 'html body.dtr-apple-sticky-header #dtr-header-global .dtr-header-global-content > .dtr-header-btn,'
-			. 'html body.dtr-apple-sticky-header #dtr-header-global .dtr-header-global-content > #pdx-auth-bar{'
-			. 'display:none!important;visibility:hidden!important;pointer-events:none!important;}'
-			. 'html body.dtr-apple-sticky-header #dtr-header-global .dtr-header-utility-cluster .dtr-search-modal-trigger,'
-			. 'html body.dtr-apple-sticky-header #dtr-header-global .dtr-header-utility-cluster a.dtr-search-modal-trigger,'
-			. 'html body.dtr-apple-sticky-header #dtr-header-global .dtr-header-utility-cluster a.dtr-header-btn,'
-			. 'html body.dtr-apple-sticky-header #dtr-header-global .dtr-header-utility-cluster .dtr-header-btn,'
-			. 'html body.dtr-apple-sticky-header #dtr-header-global .dtr-header-utility-cluster #pdx-auth-bar{'
-			. 'visibility:visible!important;pointer-events:auto!important;}'
-			. 'html body.dtr-apple-sticky-header #dtr-header-global .dtr-header-utility-cluster .dtr-search-modal-trigger,'
-			. 'html body.dtr-apple-sticky-header #dtr-header-global .dtr-header-utility-cluster a.dtr-search-modal-trigger{'
-			. 'margin:0!important;padding:0!important;border-left:0!important;}'
-			. 'html body.dtr-apple-sticky-header #dtr-header-global .dtr-header-utility-cluster #pdx-auth-bar{'
-			. 'padding:0!important;border-left:0!important;margin:0!important;}'
+			. 'display:inline-flex!important;align-items:center!important;flex:0 0 auto!important;'
+			. 'flex-shrink:0!important;gap:10px!important;margin-left:auto!important;'
+			. 'width:max-content!important;height:52px!important;'
+			. 'padding-left:12px!important;border-left:.5px solid rgba(0,0,0,.18)!important;}'
 			. 'html body.dtr-apple-sticky-header #dtr-header-global #pdx-auth-bar .pdx-auth-portal-btn,'
 			. 'html body.dtr-apple-sticky-header #dtr-header-global #pdx-auth-bar.pdx-auth-bar--logged-out .pdx-auth-account-btn,'
 			. 'html body.dtr-apple-sticky-header #dtr-header-global #pdx-auth-bar.pdx-auth-bar--logged-out .pdx-auth-menu{'
 			. 'display:none!important;visibility:hidden!important;}'
-			. 'html body.dtr-apple-sticky-header #dtr-header-global #pdx-auth-bar .pdx-auth-trigger,'
-			. 'html body.dtr-apple-sticky-header #dtr-header-global #pdx-auth-bar .pdx-auth-signup-btn,'
-			. 'html body.dtr-apple-sticky-header #dtr-header-global #pdx-auth-bar .pdx-auth-account-btn{'
-			. 'top:0!important;position:relative!important;right:auto!important;left:auto!important;'
-			. 'color:#000!important;background:transparent!important;border:0!important;'
-			. 'box-shadow:none!important;text-shadow:none!important;filter:none!important;}'
 			. '}'
 			. '@media (max-width:992px){'
 			. 'html body.dtr-apple-sticky-header #dtr-main-header,'
@@ -1321,98 +1205,8 @@ if ( ! function_exists( 'navein_apple_header_desktop_cascade_footer' ) ) {
 			. 'position:relative!important;top:auto!important;right:auto!important;transform:none!important;'
 			. 'margin:0 44px 0 auto!important;}'
 			. 'html body.dtr-apple-sticky-header #dtr-main-wrapper{padding-top:0!important;margin-top:0!important;}'
-			. 'html body.dtr-apple-sticky-header #dtr-responsive-header #pdx-auth-bar .pdx-auth-portal-btn,'
-			. 'html body.dtr-apple-sticky-header #dtr-responsive-header #pdx-auth-bar.pdx-auth-bar--logged-out .pdx-auth-account-btn{'
-			. 'display:none!important;visibility:hidden!important;}'
 			. '}'
 			. '</style>' . "\n";
-		echo '<script id="navein-apple-header-desktop-cascade-js">'
-			. '(function(){'
-			. 'function ensureUtilityCluster(){'
-			. 'if(window.innerWidth<993)return;'
-			. 'var content=document.querySelector("#dtr-header-global .dtr-header-global-content");'
-			. 'if(!content)return;'
-			. 'var cluster=content.querySelector(":scope > .dtr-header-utility-cluster");'
-			. 'if(!cluster){cluster=document.createElement("div");cluster.className="dtr-header-utility-cluster";content.appendChild(cluster);}'
-			. 'var search=content.querySelector(".dtr-search-modal-trigger,a.dtr-search-modal-trigger");'
-			. 'var cta=content.querySelector("a.dtr-header-btn,.dtr-header-btn");'
-			. 'var bar=document.getElementById("pdx-auth-bar");'
-			. '[search,cta,bar].forEach(function(el){if(el&&el.parentNode!==cluster){cluster.appendChild(el);}});'
-			. '}'
-			. 'function resetMobileHeaderAuth(){'
-			. 'if(window.innerWidth>992)return;'
-			. 'var bar=document.getElementById("pdx-auth-bar");'
-			. 'if(!bar||!bar.closest("#dtr-responsive-header"))return;'
-			. 'bar.style.setProperty("position","relative","important");'
-			. 'bar.style.setProperty("top","auto","important");'
-			. 'bar.style.setProperty("right","auto","important");'
-			. 'bar.style.setProperty("transform","none","important");'
-			. 'bar.style.setProperty("margin","0 44px 0 auto","important");'
-			. '}'
-			. 'function resetDesktopHeaderAuth(){'
-			. 'if(window.innerWidth<993)return;'
-			. 'var bar=document.getElementById("pdx-auth-bar");'
-			. 'if(!bar||!bar.classList.contains("pdx-auth-bar--header"))return;'
-			. 'if(!bar.closest("#dtr-header-global"))return;'
-			. 'bar.style.setProperty("position","relative","important");'
-			. 'bar.style.setProperty("top","auto","important");'
-			. 'bar.style.setProperty("right","auto","important");'
-			. 'bar.style.setProperty("left","auto","important");'
-			. 'bar.style.setProperty("bottom","auto","important");'
-			. 'bar.style.setProperty("z-index","2","important");'
-			. 'bar.style.setProperty("transform","none","important");'
-			. 'bar.style.setProperty("opacity","1","important");'
-			. 'bar.style.setProperty("visibility","visible","important");'
-			. 'bar.querySelectorAll(".pdx-auth-trigger,.pdx-auth-account-btn,.pdx-auth-signup-btn").forEach(function(el){'
-			. 'if(el.classList.contains("pdx-auth-signup-btn")&&bar.classList.contains("pdx-auth-bar--logged-in"))return;'
-			. 'if(el.classList.contains("pdx-auth-account-btn")&&bar.classList.contains("pdx-auth-bar--logged-out"))return;'
-			. 'if(el.hidden||el.hasAttribute("hidden"))return;'
-			. 'el.style.setProperty("height","28px","important");'
-			. 'el.style.setProperty("min-height","28px","important");'
-			. 'el.style.setProperty("max-height","28px","important");'
-			. 'el.style.setProperty("top","0","important");'
-			. 'el.style.setProperty("border","0","important");'
-			. 'el.style.setProperty("background","transparent","important");'
-			. 'el.style.setProperty("box-shadow","none","important");'
-			. 'el.style.setProperty("backdrop-filter","none","important");'
-			. 'el.style.setProperty("-webkit-backdrop-filter","none","important");'
-			. 'el.style.setProperty("filter","none","important");'
-			. 'if(el.classList.contains("pdx-auth-signup-btn")){'
-			. 'el.style.setProperty("background","#000","important");'
-			. 'el.style.setProperty("color","#fff","important");'
-			. '}else{el.style.setProperty("color","#000","important");}'
-			. '});'
-			. 'bar.querySelectorAll(".pdx-account-level-badge--header,.pdx-account-level-badge").forEach(function(el){'
-			. 'el.style.setProperty("background","rgba(0,0,0,.06)","important");'
-			. 'el.style.setProperty("background-image","none","important");'
-			. 'el.style.setProperty("color","#3a3a3c","important");'
-			. 'el.style.setProperty("border","0.5px solid rgba(0,0,0,.14)","important");'
-			. 'el.style.setProperty("box-shadow","none","important");'
-			. '});'
-			. 'bar.querySelectorAll("svg").forEach(function(el){'
-			. 'el.style.setProperty("stroke","currentColor","important");'
-			. 'el.style.setProperty("color","currentColor","important");'
-			. '});'
-			. '}'
-			. 'function hideLoggedInSignup(){'
-			. 'var bar=document.getElementById("pdx-auth-bar");'
-			. 'if(!bar||!bar.classList.contains("pdx-auth-bar--logged-in"))return;'
-			. 'bar.querySelectorAll(".pdx-auth-signup-btn").forEach(function(el){el.remove();});'
-			. '}'
-			. 'function scheduleReset(){ensureUtilityCluster();hideLoggedInSignup();resetDesktopHeaderAuth();resetMobileHeaderAuth();'
-			. 'setTimeout(function(){ensureUtilityCluster();hideLoggedInSignup();resetDesktopHeaderAuth();resetMobileHeaderAuth();},0);'
-			. 'setTimeout(function(){ensureUtilityCluster();hideLoggedInSignup();resetDesktopHeaderAuth();resetMobileHeaderAuth();},50);'
-			. 'setTimeout(function(){ensureUtilityCluster();hideLoggedInSignup();resetDesktopHeaderAuth();resetMobileHeaderAuth();},250);}'
-			. 'if(document.readyState==="loading"){document.addEventListener("DOMContentLoaded",scheduleReset);}'
-			. 'else{scheduleReset();}'
-			. 'window.addEventListener("load",function(){ensureUtilityCluster();hideLoggedInSignup();resetDesktopHeaderAuth();resetMobileHeaderAuth();});'
-			. 'window.addEventListener("resize",function(){ensureUtilityCluster();hideLoggedInSignup();resetDesktopHeaderAuth();resetMobileHeaderAuth();},{passive:true});'
-			. 'if(typeof MutationObserver!=="undefined"){'
-			. 'var obs=new MutationObserver(function(){ensureUtilityCluster();hideLoggedInSignup();resetDesktopHeaderAuth();});'
-			. 'obs.observe(document.documentElement,{childList:true,subtree:true});'
-			. '}'
-			. '})();'
-			. '</script>' . "\n";
 	}
 }
 add_action( 'wp_footer', 'navein_apple_header_desktop_cascade_footer', PHP_INT_MAX );

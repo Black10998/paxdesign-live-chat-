@@ -48,10 +48,10 @@ if (preg_match('/function createAuthBar\([\s\S]*?\n  function /', $js, $m)) {
 	$create = $m[0];
 }
 hpm_ok(is_string($create), 'createAuthBar exists');
-hpm_ok($create && strpos($create, "renderHeaderMenuItem('portal'") !== false, 'dropdown includes Kundenportal/portal');
-hpm_ok($create && strpos($create, "renderHeaderMenuItem('profile'") !== false, 'dropdown includes Mein Profil');
-hpm_ok($create && strpos($create, "renderHeaderMenuItem('account'") !== false, 'dropdown includes Mein Konto');
-hpm_ok($create && strpos($create, "renderHeaderMenuItem('logout'") !== false, 'dropdown includes Abmelden');
+hpm_ok(strpos($js, "renderHeaderMenuItem('portal'") !== false, 'dropdown includes Kundenportal/portal');
+hpm_ok(strpos($js, "renderHeaderMenuItem('profile'") !== false, 'dropdown includes Mein Profil');
+hpm_ok(strpos($js, "renderHeaderMenuItem('account'") !== false, 'dropdown includes Mein Konto');
+hpm_ok(strpos($js, "renderHeaderMenuItem('logout'") !== false, 'dropdown includes Abmelden');
 
 hpm_ok(strpos($css, '#pdx-auth-bar.pdx-cx-shell .pdx-auth-menu.pdx-auth-menu--apple') !== false, 'auth CSS restyles the header dropdown with high specificity');
 hpm_ok(strpos($css, '.pdx-auth-menu--apple .pdx-auth-menu-status--verified') !== false, 'verified status has a dedicated class');

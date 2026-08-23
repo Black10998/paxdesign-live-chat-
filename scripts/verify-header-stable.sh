@@ -20,6 +20,8 @@ grep -q "cybercrime-menu" "$TMP/apple-header-stable.css" && ok "live CSS keeps C
 grep -q "a.dtr-btn.dtr-header-btn" "$TMP/apple-header-stable.css" && ok "live CSS scales Angebot anfordern" || fail "live CSS missing compact CTA"
 grep -q "pdx-header-user-name" "$TMP/apple-header-stable.css" && ok "live CSS scales the logged-in name" || fail "live CSS missing username scale"
 grep -q "min-width: 0 !important" "$TMP/apple-header-stable.css" && ok "live CSS lets nav shrink" || fail "live CSS missing nav shrink guard"
+grep -q "grid-template-columns: none" "$TMP/apple-header-stable.css" && ok "live CSS restores flex instead of a 3-column grid" || fail "live CSS still uses the collapsing header grid"
+grep -q -- "--dtr-apple-header-util-min" "$TMP/apple-header-stable.css" && fail "live CSS still reserves a 320-440px empty utility column" || ok "live CSS does not reserve an empty utility column"
 grep -q "background-image: none !important" "$TMP/apple-header-stable.css" && ok "live CSS fixes unreadable gold level badge" || fail "live CSS missing level badge contrast fix"
 grep -q "pdx-auth-bar--logged-in .pdx-auth-signup-btn" "$TMP/apple-header-stable.css" && ok "live CSS hides signup when logged in" || fail "live CSS missing logged-in signup hide"
 grep -q "pdx-auth-bar--logged-out .pdx-auth-signup-btn" "$TMP/apple-header-stable.css" && ok "live CSS styles signup only when logged out" || fail "live CSS missing logged-out signup scope"

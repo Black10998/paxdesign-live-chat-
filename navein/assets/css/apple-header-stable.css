@@ -1,16 +1,15 @@
 /**
  * Apple-stable site header.
- * Isolates Search from the nav, locks header geometry, and keeps the
- * right-side cluster (Search, Angebot anfordern, auth) from overlapping
- * navigation on desktop widths.
+ *
+ * Restores the original theme row: logo | nav | Search + CTA + account.
+ * One stylesheet owns geometry. Do not re-apply a 3-column grid to
+ * .container — that collapses the header to a single auto column.
  */
 
 :root {
   --dtr-apple-header-height: 52px;
   --dtr-apple-header-control: 28px;
   --dtr-apple-header-gap: 12px;
-  --dtr-apple-header-util-min: clamp(320px, 32vw, 440px);
-  --dtr-apple-header-nav-gap: 16px;
   --dtr-apple-header-ui: -apple-system, BlinkMacSystemFont, "SF Pro Text", Inter, "Segoe UI", Helvetica, Arial, sans-serif;
 }
 
@@ -30,28 +29,48 @@ html body.dtr-apple-sticky-header #dtr-header-global.dtr-apple-bar {
   html body.dtr-apple-sticky-header.show-onscroll #dtr-main-header {
     padding-top: var(--dtr-apple-header-height);
   }
-}
 
-html body.dtr-apple-sticky-header #dtr-header-global .dtr-header-global-content,
-html body.dtr-apple-sticky-header #dtr-header-global .container {
-  display: grid !important;
-  grid-template-columns: auto minmax(0, 1fr) minmax(var(--dtr-apple-header-util-min), max-content);
-  grid-template-areas: "logo nav util";
-  align-items: center !important;
-  column-gap: var(--dtr-apple-header-gap);
-  width: 100%;
-  min-width: 0;
-  height: var(--dtr-apple-header-height);
-  min-height: var(--dtr-apple-header-height);
-  max-height: var(--dtr-apple-header-height);
-  overflow: visible !important;
-  box-sizing: border-box;
+  html body.dtr-apple-sticky-header #dtr-header-global > .container,
+  html body.dtr-apple-sticky-header #dtr-header-global .container {
+    display: block !important;
+    grid-template-columns: none !important;
+    grid-template-areas: none !important;
+    width: 100% !important;
+    max-width: 100% !important;
+    min-width: 0 !important;
+    height: var(--dtr-apple-header-height) !important;
+    min-height: var(--dtr-apple-header-height) !important;
+    max-height: var(--dtr-apple-header-height) !important;
+    padding-left: 22px !important;
+    padding-right: 22px !important;
+    margin-left: 0 !important;
+    margin-right: 0 !important;
+    overflow: visible !important;
+    box-sizing: border-box !important;
+  }
+
+  html body.dtr-apple-sticky-header #dtr-header-global .dtr-header-global-content {
+    display: flex !important;
+    align-items: center !important;
+    flex-wrap: nowrap !important;
+    justify-content: flex-start !important;
+    gap: var(--dtr-apple-header-gap) !important;
+    grid-template-columns: none !important;
+    grid-template-areas: none !important;
+    width: 100% !important;
+    min-width: 0 !important;
+    height: var(--dtr-apple-header-height) !important;
+    min-height: var(--dtr-apple-header-height) !important;
+    max-height: var(--dtr-apple-header-height) !important;
+    overflow: visible !important;
+    box-sizing: border-box !important;
+  }
 }
 
 html body.dtr-apple-sticky-header #dtr-header-global .dtr-header-left,
 html body.dtr-apple-sticky-header #dtr-header-global .dtr-logo {
-  grid-area: logo;
   flex: 0 0 auto;
+  grid-area: auto !important;
   transform: none !important;
 }
 
@@ -61,21 +80,17 @@ html body.dtr-apple-sticky-header #dtr-header-global .dtr-logo svg {
   max-height: 28px;
 }
 
-/*
- * Navigation may shrink between logo and utilities. Never use max-content
- * here — that was forcing overlap with Search / CTA / auth on tighter widths.
- */
 html body.dtr-apple-sticky-header #dtr-header-global .main-navigation,
 html body.dtr-apple-sticky-header #dtr-header-global .main-navigation.ms-auto {
-  grid-area: nav;
   display: flex;
   align-items: center;
   flex: 1 1 auto !important;
   min-width: 0 !important;
-  max-width: 100% !important;
-  margin-left: clamp(6px, 0.8vw, 14px) !important;
+  max-width: none !important;
+  margin-left: 0 !important;
   margin-right: 0 !important;
-  padding-right: var(--dtr-apple-header-nav-gap) !important;
+  padding-right: 0 !important;
+  grid-area: auto !important;
   overflow: visible !important;
   box-sizing: border-box;
 }
@@ -86,7 +101,6 @@ html body.dtr-apple-sticky-header #dtr-header-global .main-navigation .sf-menu {
   flex-wrap: nowrap;
   margin: 0 !important;
   min-width: 0;
-  max-width: 100%;
   overflow: visible !important;
 }
 
@@ -101,13 +115,17 @@ html body.dtr-apple-sticky-header #dtr-header-global .main-navigation .sf-menu >
   align-items: center;
   min-height: var(--dtr-apple-header-height);
   height: var(--dtr-apple-header-height);
-  padding: 0 clamp(5px, 0.72vw, 12px);
+  padding: 0 clamp(8px, 0.85vw, 14px);
   box-sizing: border-box;
-  font-size: clamp(11px, 0.82vw, 13px);
+  font-size: clamp(12px, 0.86vw, 14px);
   line-height: 1.2;
   white-space: nowrap;
   overflow: visible;
   text-overflow: clip;
+}
+
+html body.dtr-apple-sticky-header #dtr-header-global .main-navigation .sf-menu > li > a > .dtr-nav-lead-icon {
+  display: none !important;
 }
 
 html body.dtr-apple-sticky-header #dtr-header-global .main-navigation .sf-menu > li.cybercrime-menu,
@@ -126,7 +144,6 @@ html body.dtr-apple-sticky-header #dtr-header-global .main-navigation .sf-menu >
   clip-path: none !important;
 }
 
-/* Utility cluster: Search, CTA, auth — never shrink or slide under the nav. */
 html body.dtr-apple-sticky-header #dtr-header-global .dtr-search-modal-trigger,
 html body.dtr-apple-sticky-header #dtr-header-global a.dtr-search-modal-trigger,
 html body.dtr-apple-sticky-header #dtr-header-global a.dtr-btn.dtr-header-btn,
@@ -152,21 +169,35 @@ html body.dtr-apple-sticky-header #dtr-header-global a.dtr-search-modal-trigger 
   margin: 0 !important;
   padding: 0 !important;
   border: 0;
-  border-left: 0;
   border-radius: 0;
   background: transparent !important;
   box-shadow: none !important;
-  line-height: 1;
+  color: #1d1d1f !important;
+  font-size: 0 !important;
+  line-height: 0;
+  text-indent: 0;
+  overflow: hidden;
   transform: none !important;
   top: auto !important;
-  flex: 0 0 auto !important;
-  flex-shrink: 0 !important;
+}
+
+html body.dtr-apple-sticky-header #dtr-header-global .dtr-search-modal-trigger::before,
+html body.dtr-apple-sticky-header #dtr-header-global a.dtr-search-modal-trigger::before {
+  content: none !important;
+  display: none !important;
 }
 
 html body.dtr-apple-sticky-header #dtr-header-global .dtr-search-modal-trigger::after,
 html body.dtr-apple-sticky-header #dtr-header-global a.dtr-search-modal-trigger::after {
-  font-size: 16px;
-  line-height: 16px;
+  content: "" !important;
+  display: block;
+  width: 16px;
+  height: 16px;
+  font-size: 0 !important;
+  line-height: 0 !important;
+  background: currentColor;
+  -webkit-mask: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24'%3E%3Cpath fill='none' stroke='black' stroke-width='2' stroke-linecap='round' d='M10.5 18a7.5 7.5 0 1 1 0-15 7.5 7.5 0 0 1 0 15zm5.8-1.7 4.4 4.4'/%3E%3C/svg%3E") center / 16px 16px no-repeat;
+  mask: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24'%3E%3Cpath fill='none' stroke='black' stroke-width='2' stroke-linecap='round' d='M10.5 18a7.5 7.5 0 1 1 0-15 7.5 7.5 0 0 1 0 15zm5.8-1.7 4.4 4.4'/%3E%3C/svg%3E") center / 16px 16px no-repeat;
 }
 
 html body.dtr-apple-sticky-header #dtr-header-global a.dtr-btn.dtr-header-btn,
@@ -218,14 +249,14 @@ html body.dtr-apple-sticky-header #dtr-header-global #pdx-auth-bar.pdx-auth-bar-
   align-items: center;
   justify-content: flex-end;
   width: auto;
-  min-width: 0;
-  max-width: none;
+  min-width: 88px;
+  max-width: 168px;
   height: var(--dtr-apple-header-height);
   min-height: var(--dtr-apple-header-height);
   max-height: var(--dtr-apple-header-height);
   margin: 0 !important;
   padding: 0 !important;
-  border-left: 0 !important;
+  border: 0 !important;
   overflow: visible !important;
   transform: none !important;
 }
@@ -255,11 +286,10 @@ html body.dtr-apple-sticky-header #dtr-header-global #pdx-auth-bar.pdx-auth-bar-
   font-size: 12px !important;
   font-weight: 510 !important;
   letter-spacing: -0.01em !important;
-}
-
-html body.dtr-apple-sticky-header #dtr-header-global #pdx-auth-bar.pdx-auth-bar--logged-out .pdx-auth-signup-btn {
   background: #000 !important;
   color: #fff !important;
+  border: 0 !important;
+  box-shadow: none !important;
 }
 
 html body.dtr-apple-sticky-header #dtr-header-global #pdx-auth-bar.pdx-auth-bar--logged-in .pdx-auth-signup-btn,
@@ -269,11 +299,6 @@ html body.dtr-apple-sticky-header #dtr-header-global #pdx-auth-bar.pdx-auth-bar-
   pointer-events: none !important;
 }
 
-/*
- * Logged-in trigger: one horizontal row (avatar + name + status).
- * Beats pdx-auth.css height:auto / stacked badge layout that overlapped
- * inside the 28px control.
- */
 html body.dtr-apple-sticky-header #dtr-header-global #pdx-auth-bar .pdx-auth-account-btn,
 html body.dtr-apple-sticky-header #dtr-header-global #pdx-auth-bar .pdx-auth-account-btn.pdx-auth-header-btn {
   gap: 8px !important;
@@ -285,6 +310,7 @@ html body.dtr-apple-sticky-header #dtr-header-global #pdx-auth-bar .pdx-auth-acc
   white-space: nowrap !important;
   overflow: hidden !important;
   text-overflow: ellipsis;
+  color: #000 !important;
 }
 
 html body.dtr-apple-sticky-header #dtr-header-global #pdx-auth-bar .pdx-header-user-identity,
@@ -303,6 +329,12 @@ html body.dtr-apple-sticky-header #dtr-header-global #pdx-auth-bar .pdx-account-
   min-height: 24px !important;
   max-width: 24px !important;
   max-height: 24px !important;
+}
+
+html body.dtr-apple-sticky-header #dtr-header-global #pdx-auth-bar .pdx-account-avatar--header ~ .pdx-account-avatar--header,
+html body.dtr-apple-sticky-header #dtr-header-global #pdx-auth-bar .pdx-header-user-name ~ .pdx-header-user-name,
+html body.dtr-apple-sticky-header #dtr-header-global #pdx-auth-bar .pdx-public-user-name ~ .pdx-public-user-name {
+  display: none !important;
 }
 
 html body.dtr-apple-sticky-header #dtr-header-global #pdx-auth-bar .pdx-header-user-text {
@@ -329,15 +361,12 @@ html body.dtr-apple-sticky-header #dtr-header-global #pdx-auth-bar .pdx-public-u
   white-space: nowrap !important;
   overflow: hidden !important;
   text-overflow: ellipsis !important;
-  max-width: min(88px, 14vw) !important;
+  max-width: min(96px, 14vw) !important;
+  color: #000 !important;
   text-shadow: none !important;
   -webkit-text-fill-color: currentColor !important;
 }
 
-/*
- * Yellow/gold level badge in the header bar — restored to readable Apple gray.
- * Full gold treatment remains on account pages; profile dropdown stays monochrome.
- */
 html body.dtr-apple-sticky-header #dtr-header-global #pdx-auth-bar .pdx-account-level-badge,
 html body.dtr-apple-sticky-header #dtr-header-global #pdx-auth-bar .pdx-account-level-badge--header {
   display: inline-flex !important;
@@ -372,8 +401,8 @@ html body.dtr-apple-sticky-header #dtr-header-global .pdx-auth-menu.pdx-auth-men
   }
 
   html body.dtr-apple-sticky-header #dtr-header-global .main-navigation .sf-menu > li > a {
-    padding: 0 5px;
-    font-size: 11px;
+    padding: 0 6px;
+    font-size: 12px;
   }
 
   html body.dtr-apple-sticky-header #dtr-header-global a.dtr-btn.dtr-header-btn,
@@ -385,16 +414,12 @@ html body.dtr-apple-sticky-header #dtr-header-global .pdx-auth-menu.pdx-auth-men
   html body.dtr-apple-sticky-header #dtr-header-global .dtr-header-btn .dtr-btn__text {
     font-size: 11px !important;
   }
-
-  html body.dtr-apple-sticky-header #dtr-header-global #pdx-auth-bar .pdx-header-user-name {
-    max-width: 72px !important;
-  }
 }
 
 @media (min-width: 1181px) and (max-width: 1320px) {
   html body.dtr-apple-sticky-header #dtr-header-global .main-navigation .sf-menu > li > a {
-    padding: 0 clamp(5px, 0.65vw, 10px);
-    font-size: 12px;
+    padding: 0 clamp(6px, 0.7vw, 12px);
+    font-size: 13px;
   }
 }
 
@@ -491,10 +516,6 @@ html body.dtr-apple-sticky-header #dtr-header-global .pdx-auth-menu.pdx-auth-men
 }
 
 @media (min-width: 993px) {
-  /*
-   * Beat legacy Customizer snippets that position #pdx-auth-bar fixed on desktop.
-   * Auth must stay inside the flex header row beside Search and the CTA.
-   */
   html body.dtr-apple-sticky-header #dtr-header-global #pdx-auth-bar,
   html body.dtr-apple-sticky-header #dtr-header-global #pdx-auth-bar.pdx-auth-bar--header,
   html body.dtr-apple-sticky-header #dtr-header-global #pdx-auth-bar.pdx-auth-bar--menu-open {
@@ -507,41 +528,8 @@ html body.dtr-apple-sticky-header #dtr-header-global .pdx-auth-menu.pdx-auth-men
     transform: none !important;
   }
 
-  html body.dtr-apple-sticky-header #dtr-header-global #pdx-auth-bar.pdx-auth-bar--logged-out .pdx-auth-signup-btn {
-    border: 0 !important;
-    background: transparent !important;
-    background-image: none !important;
-    box-shadow: none !important;
-    backdrop-filter: none !important;
-    -webkit-backdrop-filter: none !important;
-    filter: none !important;
-    color: #000 !important;
-  }
-
-  html body.dtr-apple-sticky-header #dtr-header-global #pdx-auth-bar.pdx-auth-bar--logged-out .pdx-auth-signup-btn {
-    background: #000 !important;
-    color: #fff !important;
-  }
-
-  html body.dtr-apple-sticky-header #dtr-header-global #pdx-auth-bar.pdx-auth-bar--logged-in .pdx-auth-signup-btn,
-  html body.dtr-apple-sticky-header #dtr-header-global #pdx-auth-bar.pdx-auth-bar--logged-in .pdx-auth-portal-btn {
-    display: none !important;
-    visibility: hidden !important;
-    pointer-events: none !important;
-  }
-
   html body.dtr-apple-sticky-header #dtr-header-global #pdx-auth-bar.pdx-auth-bar--logged-in .pdx-auth-account-btn {
     border: 0 !important;
-    background: transparent !important;
-    background-image: none !important;
-    box-shadow: none !important;
-    backdrop-filter: none !important;
-    -webkit-backdrop-filter: none !important;
-    filter: none !important;
-    color: #000 !important;
-  }
-
-  html body.dtr-apple-sticky-header #dtr-header-global #pdx-auth-bar.pdx-auth-bar--logged-in .pdx-auth-account-btn {
     background: transparent !important;
     background-image: none !important;
     box-shadow: none !important;
@@ -562,95 +550,37 @@ html body.dtr-apple-sticky-header #dtr-header-global .pdx-auth-menu.pdx-auth-men
     margin-top: 0;
   }
 
-  /*
-   * Right-side utility cluster: Search + Angebot anfordern + Anmelden/account.
-   * Keeps utilities grouped with explicit gap so they never overlap the nav.
-   */
   html body.dtr-apple-sticky-header #dtr-header-global .dtr-header-utility-cluster {
-    grid-area: util;
     display: inline-flex !important;
     align-items: center !important;
     flex: 0 0 auto !important;
     flex-shrink: 0 !important;
     gap: 10px !important;
-    justify-self: end !important;
-    margin-left: 0 !important;
+    margin-left: auto !important;
     min-width: 0 !important;
     max-width: none !important;
     width: max-content !important;
     height: var(--dtr-apple-header-height);
     min-height: var(--dtr-apple-header-height);
     max-height: var(--dtr-apple-header-height);
-    padding-left: var(--dtr-apple-header-nav-gap) !important;
+    padding-left: 12px !important;
     border-left: 0.5px solid rgba(0, 0, 0, 0.18);
     box-sizing: border-box;
     overflow: visible !important;
-    isolation: isolate;
-  }
-
-  /* Neutralize legacy Customizer offsets that pull auth/search out of the row. */
-  html body.dtr-apple-sticky-header #dtr-header-global #pdx-auth-bar,
-  html body.dtr-apple-sticky-header #dtr-header-global #pdx-auth-bar .pdx-auth-trigger,
-  html body.dtr-apple-sticky-header #dtr-header-global #pdx-auth-bar .pdx-auth-signup-btn,
-  html body.dtr-apple-sticky-header #dtr-header-global #pdx-auth-bar .pdx-auth-account-btn {
-    position: relative !important;
-    top: 0 !important;
-    right: auto !important;
-    left: auto !important;
-  }
-
-  /* Utilities only render inside the grouped cluster — loose copies stay hidden. */
-  html body.dtr-apple-sticky-header #dtr-header-global .dtr-header-global-content > .dtr-search-modal-trigger,
-  html body.dtr-apple-sticky-header #dtr-header-global .dtr-header-global-content > a.dtr-search-modal-trigger,
-  html body.dtr-apple-sticky-header #dtr-header-global .dtr-header-global-content > a.dtr-header-btn,
-  html body.dtr-apple-sticky-header #dtr-header-global .dtr-header-global-content > .dtr-header-btn,
-  html body.dtr-apple-sticky-header #dtr-header-global .dtr-header-global-content > #pdx-auth-bar {
-    display: none !important;
-    visibility: hidden !important;
-    pointer-events: none !important;
+    grid-area: auto !important;
   }
 
   html body.dtr-apple-sticky-header #dtr-header-global .dtr-header-utility-cluster .dtr-search-modal-trigger,
-  html body.dtr-apple-sticky-header #dtr-header-global .dtr-header-utility-cluster a.dtr-search-modal-trigger {
-    display: inline-flex !important;
-    visibility: visible !important;
-    pointer-events: auto !important;
-  }
-
+  html body.dtr-apple-sticky-header #dtr-header-global .dtr-header-utility-cluster a.dtr-search-modal-trigger,
   html body.dtr-apple-sticky-header #dtr-header-global .dtr-header-utility-cluster a.dtr-btn.dtr-header-btn,
-  html body.dtr-apple-sticky-header #dtr-header-global .dtr-header-utility-cluster .dtr-header-btn {
-    display: inline-flex !important;
-    visibility: visible !important;
-    pointer-events: auto !important;
-  }
-
+  html body.dtr-apple-sticky-header #dtr-header-global .dtr-header-utility-cluster .dtr-header-btn,
   html body.dtr-apple-sticky-header #dtr-header-global .dtr-header-utility-cluster #pdx-auth-bar {
-    display: flex !important;
+    display: inline-flex !important;
     visibility: visible !important;
     pointer-events: auto !important;
-  }
-
-  html body.dtr-apple-sticky-header #dtr-header-global .dtr-header-utility-cluster .dtr-search-modal-trigger,
-  html body.dtr-apple-sticky-header #dtr-header-global .dtr-header-utility-cluster a.dtr-search-modal-trigger {
-    margin: 0 !important;
-    padding: 0 !important;
-    border-left: 0 !important;
-  }
-
-  html body.dtr-apple-sticky-header #dtr-header-global .dtr-header-utility-cluster a.dtr-btn.dtr-header-btn,
-  html body.dtr-apple-sticky-header #dtr-header-global .dtr-header-utility-cluster .dtr-header-btn {
     margin: 0 !important;
   }
 
-  html body.dtr-apple-sticky-header #dtr-header-global .dtr-header-utility-cluster #pdx-auth-bar,
-  html body.dtr-apple-sticky-header #dtr-header-global .dtr-header-utility-cluster #pdx-auth-bar.pdx-auth-bar--header {
-    margin: 0 !important;
-    padding: 0 !important;
-    border-left: 0 !important;
-    min-width: 0 !important;
-  }
-
-  /* Before login: only Anmelden — never Customer Portal in the header bar. */
   html body.dtr-apple-sticky-header #dtr-header-global #pdx-auth-bar.pdx-auth-bar--header .pdx-auth-portal-btn,
   html body.dtr-apple-sticky-header #dtr-header-global #pdx-auth-bar.pdx-auth-bar--logged-out .pdx-auth-account-btn,
   html body.dtr-apple-sticky-header #dtr-header-global #pdx-auth-bar.pdx-auth-bar--logged-out .pdx-auth-menu {

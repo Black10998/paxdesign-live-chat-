@@ -50,24 +50,21 @@ body.dtr-apple-sticky-header.show-onscroll #dtr-main-header { display: block; }
               <li><a href="#">Webdesign</a></li>
             </ul>
           </li>
+          <li><a href="#">Kontakt</a></li>
           <li class="cybercrime-menu"><a href="#">Cybercrime Support</a></li>
         </ul>
       </div>
-      <a href="#search" class="dtr-search-modal-trigger" aria-label="Search Modal Button"></a>
-      <a href="#kontakt" class="dtr-btn dtr-header-btn">
-        <span class="dtr-btn__text">Angebot anfordern</span>
-        <span class="dtr-icon dtr-btn__icon"><i class="icon-login-circle-fill"></i></span>
-      </a>
-      <div id="pdx-auth-bar" class="pdx-auth-bar--header">
-        <button type="button" class="pdx-auth-account-btn pdx-auth-header-btn">
-          <span class="pdx-header-user-identity">
-            <span class="pdx-account-avatar pdx-account-avatar--header"></span>
-            <span class="pdx-header-user-text">
-              <span class="pdx-header-user-name">ALKHA</span>
-              <span class="pdx-account-level-badge pdx-account-level-badge--header">Verified</span>
-            </span>
-          </span>
-        </button>
+      <div class="dtr-header-utility-cluster">
+        <a href="#search" class="dtr-search-modal-trigger" aria-label="Search Modal Button"></a>
+        <a href="#kontakt" class="dtr-btn dtr-header-btn">
+          <span class="dtr-btn__text">Angebot anfordern</span>
+          <span class="dtr-icon dtr-btn__icon"><i class="icon-login-circle-fill"></i></span>
+        </a>
+        <div id="pdx-auth-bar" class="pdx-auth-bar--header pdx-auth-bar--logged-out">
+          <div class="pdx-auth-bar-inner">
+            <button type="button" class="pdx-auth-signup-btn pdx-auth-header-btn">Anmelden</button>
+          </div>
+        </div>
       </div>
     </div>
   </div>

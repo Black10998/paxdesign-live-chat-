@@ -1,6 +1,6 @@
 <?php
 /**
- * Guards for the stable Apple header and isolated Search control.
+ * Guards for the restored Apple header row.
  */
 $root = dirname(__DIR__, 2);
 $fail = 0;
@@ -28,10 +28,10 @@ $workflow = file_get_contents($root . '/.github/workflows/deploy-header-stable.y
 hs_ok(is_file($root . '/navein/assets/css/apple-header-stable.css'), 'stable header stylesheet exists');
 hs_ok(strpos($functions, 'navein-apple-header-stable') !== false, 'functions.php enqueues the stable header CSS');
 hs_ok(strpos($functions, 'apple-header-stable.css') !== false, 'stable header CSS path is registered');
-hs_ok(preg_match('/Version:\\s*1\\.4\\.(\\d+)/', $style, $v) === 1 && (int) $v[1] >= 60, 'theme version is cache-busted to 1.4.60+');
+hs_ok(preg_match('/Version:\\s*1\\.4\\.(\\d+)/', $style, $v) === 1 && (int) $v[1] >= 62, 'theme version is cache-busted to 1.4.62+');
 
 hs_ok(strpos($css, 'dtr-search-modal-trigger') !== false, 'Search trigger is restyled');
-hs_ok(strpos($css, 'border-left: 0.5px solid') !== false, 'Search is separated from the nav with a hairline');
+hs_ok(strpos($css, 'border-left: 0.5px solid') !== false, 'Search cluster is separated from the nav with a hairline');
 hs_ok(strpos($css, 'max-height: var(--dtr-apple-header-height)') !== false, 'header height is locked');
 hs_ok(strpos($css, 'flex-wrap: nowrap') !== false, 'header row cannot wrap onto a second line');
 hs_ok(strpos($css, 'pdx-auth-bar--menu-open') !== false, 'open profile menu cannot change header height');
@@ -52,21 +52,27 @@ hs_ok(strpos($css, '.pdx-account-level-badge--header') !== false && strpos($css,
 hs_ok(strpos($css, '.pdx-account-level-badge--header') !== false && strpos($css, 'color: #3a3a3c !important') !== false, 'header level badge has readable gray contrast');
 hs_ok(strpos($css, 'position: relative !important') !== false && strpos($css, '#dtr-header-global #pdx-auth-bar') !== false, 'desktop auth bar stays in the header flex row');
 
+hs_ok(strpos($css, 'display: flex !important') !== false && strpos($css, '.dtr-header-global-content') !== false, 'header content uses the original flex row');
+hs_ok(strpos($css, 'grid-template-columns: none !important') !== false, 'header container is not a 3-column grid');
+hs_ok(strpos($css, '--dtr-apple-header-util-min') === false, 'header does not reserve a 320-440px empty utility column');
+hs_ok(strpos($css, '.dtr-nav-lead-icon') !== false && strpos($css, 'display: none !important') !== false, 'top-level lead icons are hidden so names stay uncluttered');
+hs_ok(strpos($css, '-webkit-mask:') !== false, 'Search uses a single SVG mask icon');
+hs_ok(strpos($css, '.dtr-header-utility-cluster') !== false && strpos($css, 'margin-left: auto') !== false, 'desktop utility cluster keeps Search, CTA, and auth on the right');
+
 hs_ok(strpos($functions, 'navein_apple_header_desktop_cascade_footer') !== false, 'functions.php prints final desktop header cascade CSS');
 hs_ok(strpos($functions, 'navein-apple-header-desktop-cascade') !== false, 'desktop cascade style id is registered');
-hs_ok(strpos($functions, 'position:relative!important') !== false || strpos($functions, "position\",\"relative\",\"important\"") !== false, 'desktop cascade resets fixed auth positioning');
-
-hs_ok(strpos($css, '--dtr-apple-header-util-min') !== false, 'header reserves fixed width for Search, CTA, and auth');
-hs_ok(strpos($css, 'justify-self: end') !== false, 'utility cluster stays in its own grid column');
-hs_ok(strpos($css, '--dtr-apple-header-nav-gap') !== false, 'nav and utilities keep an explicit separator gap');
+hs_ok(strpos($functions, 'position:relative!important') !== false, 'desktop cascade resets fixed auth positioning');
 hs_ok(strpos($functions, 'navein_apple_header_utility_cluster_ob_start') !== false, 'header HTML wraps utilities in cluster server-side');
-hs_ok(strpos($functions, 'navein-apple-header-utility-cluster-head') !== false, 'utility cluster is grouped before deferred auth JS');
-hs_ok(strpos($css, 'dtr-header-global-content > .dtr-search-modal-trigger') !== false, 'loose utilities are hidden until clustered');
-hs_ok(strpos($css, 'grid-template-columns') !== false && strpos($css, 'grid-area: util') !== false, 'desktop header uses isolated grid columns');
+hs_ok(strpos($functions, 'navein_apple_header_reserved_auth_markup') !== false, 'header HTML reserves the Anmelden slot before JS');
+hs_ok(strpos($functions, 'data-pdx-header-slot') !== false, 'reserved auth slot is marked in the HTML');
+hs_ok(strpos($functions, 'MutationObserver') === false || strpos($functions, 'No MutationObserver') !== false, 'functions.php does not install a header MutationObserver');
+hs_ok(strpos($functions, 'setProperty') === false, 'functions.php does not write inline header styles');
+hs_ok(strpos($functions, 'navein-apple-header-utility-cluster-head') === false, 'head script that mutates the header after paint is gone');
 hs_ok(strpos($css, 'pdx-auth-bar--logged-out') !== false && strpos($css, '.pdx-auth-portal-btn') !== false, 'Customer Portal is hidden before login in the header bar');
 hs_ok(strpos($css, '@media (max-width: 992px)') !== false && strpos($css, '#dtr-main-header') !== false && strpos($css, 'padding-top: 0 !important') !== false, 'mobile removes the blank bar under the header');
 
-hs_ok(strpos($js, 'ensureHeaderUtilityCluster') !== false, 'pax-auth.js groups Search, CTA, and auth into a utility cluster');
+hs_ok(strpos($js, 'ensureHeaderUtilityCluster') !== false, 'pax-auth.js can group Search, CTA, and auth into a utility cluster');
+hs_ok(strpos($js, 'hydrateExistingAuthBar') !== false, 'pax-auth.js hydrates the reserved header auth slot');
 hs_ok(strpos($js, 'syncHeaderAuthControls') !== false, 'pax-auth.js syncs header controls to auth state');
 hs_ok(strpos($js, 'signupBtn.remove()') !== false, 'Anmelden button is removed from DOM when logged in');
 hs_ok(strpos($css, 'pdx-auth-bar--logged-in .pdx-auth-signup-btn') !== false, 'logged-in CSS never styles the signup button as visible');
@@ -74,7 +80,7 @@ hs_ok(strpos($functions, 'pdx-auth-bar--logged-in .pdx-auth-signup-btn') !== fal
 hs_ok(strpos($functions, 'pdx-auth-bar--logged-out .pdx-auth-signup-btn') !== false, 'footer cascade styles signup only when logged out');
 hs_ok(strpos($js, 'pdx-auth-portal-btn') !== false && strpos($js, "node.remove()") !== false, 'Customer Portal never appears as a header pill');
 hs_ok(strpos($functions, 'dtr-header-utility-cluster') !== false, 'footer cascade keeps the desktop utility cluster layout');
-hs_ok(strpos($js, "authBar.closest('#dtr-header-global')") !== false || strpos($js, 'authBar.closest("#dtr-header-global")') !== false, 'desktop auth reset only applies inside the glass header');
+hs_ok(strpos($js, "authBar.parentNode !== mount") !== false, 'auth bar is not remounted when it is already in the cluster');
 
 hs_ok($js === $overlay_js, 'overlay pax-auth.js matches plugin');
 hs_ok(strpos($js, '#dtr-header-global .dtr-header-global-content') !== false, 'auth bar mounts inside the glass header row');
@@ -90,6 +96,8 @@ hs_ok(is_file($root . '/.github/workflows/deploy-header-stable.yml'), 'surgical 
 hs_ok($workflow && strpos($workflow, 'rsync --delete') === false, 'header deploy does not rsync --delete');
 hs_ok($workflow && strpos($workflow, 'apple-header-stable.css') !== false, 'header deploy copies the stable header CSS');
 hs_ok($workflow && strpos($workflow, 'no iOS build') !== false, 'header deploy documents no iOS build');
+
+hs_ok(strpos($functions, 'dtr-search-modal-trigger[\s\S]*?<a[^>]*dtr-header-btn') !== false || strpos($functions, 'dtr-search-modal-trigger') !== false, 'HTML filter targets Search and the CTA');
 
 if ($fail) {
 	fwrite(STDERR, "$fail header-stable assertion(s) failed\n");
