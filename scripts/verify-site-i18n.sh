@@ -19,6 +19,7 @@ grep -q "pax-site-lang__menu" "$TMP/apple-site-rtl.css" && ok "live CSS has Appl
 js_code="$(curl -sS -A 'Mozilla/5.0' -o "$TMP/apple-site-i18n.js" -w '%{http_code}' "${BASE}/wp-content/themes/navein/assets/js/apple-site-i18n.js?n=${STAMP}")"
 [ "$js_code" = "200" ] && ok "apple-site-i18n.js HTTP 200" || fail "apple-site-i18n.js HTTP ${js_code}"
 grep -q "pax_site_lang" "$TMP/apple-site-i18n.js" && ok "live JS persists language cookie" || fail "live JS missing language cookie"
+grep -q "storedManualLang" "$TMP/apple-site-i18n.js" && ok "live JS restores a manual language choice" || fail "live JS missing manual language restore"
 
 hp_code="$(curl -sS -A 'Mozilla/5.0' -H 'Accept-Language: ar' -o "$TMP/home-ar.html" -w '%{http_code}' "${BASE}/?lang=ar&n=${STAMP}")"
 [ "$hp_code" = "200" ] && ok "Arabic homepage HTTP 200" || fail "Arabic homepage HTTP ${hp_code}"

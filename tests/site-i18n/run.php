@@ -41,6 +41,14 @@ i18n_ok(strpos($engine, 'pax_site_lang') !== false, 'language cookie is pax_site
 i18n_ok(strpos($engine, 'pax_site_lang_src') !== false, 'manual/auto source cookie exists');
 i18n_ok(strpos($engine, 'navein_site_lang_switcher_markup') !== false, 'Apple language switcher markup is server-rendered');
 i18n_ok(strpos($js, 'pax_site_lang_src') !== false && strpos($js, 'manual') !== false, 'JS remembers a manual language choice');
+i18n_ok(strpos($js, 'storedManualLang') !== false && strpos($js, 'localStorage.getItem') !== false, 'JS restores a manual language from localStorage');
+i18n_ok(strpos($js, 'maybeAutoDetect') !== false && strpos($js, "currentSource() === 'manual'") !== false, 'auto-detect does not run after a manual choice');
+i18n_ok(strpos($engine, 'navein_site_i18n_resolve_from') !== false, 'locale resolve is testable');
+i18n_ok(strpos($engine, "cookie_src === 'manual'") !== false, 'manual cookie beats query and auto-detect');
+i18n_ok(strpos($engine, 'site-i18n-pages.php') !== false, 'page phrase pack is merged into the catalog');
+i18n_ok(is_file($root . '/navein/inc/site-i18n-pages.php'), 'page phrase pack file exists');
+i18n_ok(strpos($functions, 'navein_site_i18n_phrases()') !== false, 'JS receives the full phrase catalog');
+i18n_ok($workflow && strpos($workflow, 'site-i18n-pages.php') !== false, 'i18n deploy copies the page phrase pack');
 i18n_ok(strpos($js, 'navigator.languages') !== false, 'JS auto-detects browser language');
 i18n_ok(strpos($css, 'pax-site-lang__btn') !== false, 'Apple language button styles exist');
 i18n_ok(strpos($css, 'pax-site-lang__menu') !== false, 'Apple language popover styles exist');
@@ -95,6 +103,10 @@ i18n_ok(navein_t('nav_pricing', 'Preise', 'ar') === 'الأسعار', 'navein_t 
 i18n_ok(navein_t('sign_in', 'Anmelden', 'tr') === 'Giriş yap', 'navein_t returns Turkish sign-in');
 i18n_ok(navein_t('lang_ar', 'Arabic', 'de') === 'Arabisch', 'language badge Deutsch→Arabisch');
 i18n_ok(navein_t('lang_tr', 'Turkish', 'ar') === 'التركية', 'language badge Arabic→Turkish');
+i18n_ok(navein_site_i18n_resolve_from('en', 'ar', 'manual', 'de') === array('lang' => 'ar', 'source' => 'manual'), 'manual cookie wins over ?lang= and Accept-Language');
+i18n_ok(navein_site_i18n_resolve_from('tr', '', '', 'de') === array('lang' => 'tr', 'source' => 'manual'), 'query language is stored as a manual choice when no cookie exists');
+i18n_ok(navein_site_i18n_resolve_from('', '', '', 'en') === array('lang' => 'en', 'source' => 'auto'), 'Accept-Language is used only before a stored choice');
+i18n_ok(navein_t('nav_projects_refs', 'Projekte & Referenzen', 'en') === 'Projects & work', 'page catalog translates mega-menu work label');
 
 $_GET['lang'] = 'en';
 $payload = str_repeat('<script type="application/json">{"cta":"Angebot anfordern"}</script>', 400);

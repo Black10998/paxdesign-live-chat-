@@ -118,8 +118,11 @@ hs_ok($lang_at !== false && $btn_at !== false && $lang_at < $btn_at, 'language s
 hs_ok(strpos($functions, 'dtr-search-modal-trigger--mobile') === false, 'mobile header does not inject a Search control');
 hs_ok(strpos($css, '#dtr-responsive-header .dtr-search-modal-trigger') !== false && strpos($css, 'pointer-events: none !important') !== false, 'mobile Search is hidden and cannot collide with the header');
 hs_ok(strpos($css, 'direction: ltr !important') !== false && strpos($css, 'flex-shrink: 0 !important') !== false, 'logo stays LTR and cannot shrink away in Arabic');
-hs_ok(strpos($css, 'width: var(--paxlogo-mark-w, 118px)') !== false, 'mobile wordmark uses an explicit width so it cannot collapse');
-hs_ok(strpos($functions, 'width:var(--paxlogo-mark-w,118px)') !== false, 'footer cascade keeps the mobile wordmark width explicit');
+hs_ok(strpos($css, 'width: var(--paxlogo-mark-w, clamp(118px, 44vw, 168px))') !== false, 'mobile wordmark uses an explicit width so it cannot collapse');
+hs_ok(strpos($functions, 'width:var(--paxlogo-mark-w,clamp(118px,44vw,168px))') !== false, 'footer cascade keeps the mobile wordmark width explicit');
+hs_ok(strpos($css, '--paxlogo-mark-w: clamp(118px, 44vw, 168px)') !== false, 'mobile logo restores the original mark size');
+hs_ok(strpos($css, '.paxlogo-layout') !== false && strpos($css, 'gap: 0 !important') !== false, 'logo icon stays flush against the wordmark');
+hs_ok(strpos($css, 'max-width: min(46vw, 140px)') === false, 'mobile logo is not shrunk on 360px screens');
 hs_ok(preg_match('/#dtr-responsive-header \\.dtr-logo svg,\\s*\\n\\s*html body\\.dtr-apple-sticky-header #dtr-responsive-header \\.dtr-logo \\.paxlogo-wrap/', $css) !== 1, 'mobile logo no longer shares width:auto with every inner svg');
 hs_ok(strpos($functions, '#(<div id="dtr-responsive-header"[^>]*>)#') === false, 'mobile language is not injected as a sibling of .container');
 hs_ok(strpos($css, 'margin-inline-end: auto') !== false, 'mobile logo keeps actions on the trailing edge');

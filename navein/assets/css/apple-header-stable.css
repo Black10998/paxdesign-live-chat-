@@ -508,7 +508,7 @@ html body.dtr-apple-sticky-header #dtr-header-global .pdx-auth-menu.pdx-auth-men
     flex: 0 0 auto !important;
     flex-shrink: 0 !important;
     min-width: 88px !important;
-    max-width: min(48vw, 180px) !important;
+    max-width: min(78vw, 220px) !important;
     height: var(--dtr-apple-header-height) !important;
     margin: 0 !important;
     margin-inline-end: auto !important;
@@ -522,30 +522,57 @@ html body.dtr-apple-sticky-header #dtr-header-global .pdx-auth-menu.pdx-auth-men
 
   html body.dtr-apple-sticky-header #dtr-responsive-header .dtr-logo .paxlogo-wrap,
   html body.dtr-apple-sticky-header #dtr-responsive-header .dtr-logo .pax-isolated-logo,
-  html body.dtr-apple-sticky-header #dtr-responsive-header .dtr-logo .paxlogo-layout,
+  html body.dtr-apple-sticky-header #dtr-responsive-header .dtr-logo .paxlogo-layout {
+    display: inline-flex !important;
+    align-items: center !important;
+    flex: 0 0 auto !important;
+    flex-shrink: 0 !important;
+    flex-wrap: nowrap !important;
+    gap: 0 !important;
+    width: auto !important;
+    max-width: none !important;
+    height: auto !important;
+    max-height: none !important;
+    margin: 0 !important;
+    padding: 0 !important;
+    overflow: visible !important;
+    opacity: 1 !important;
+    visibility: visible !important;
+    direction: ltr !important;
+    --paxlogo-mark-w: clamp(118px, 44vw, 168px);
+    --paxlogo-icon-size: clamp(18px, calc(var(--paxlogo-mark-w) * 0.128), 24px);
+  }
+
+  html body.dtr-apple-sticky-header #dtr-responsive-header .dtr-logo .paxlogo-code-slot {
+    display: inline-flex !important;
+    flex: 0 0 auto !important;
+    margin: 0 2px 0 0 !important;
+    padding: 0 !important;
+    opacity: 1 !important;
+    visibility: visible !important;
+  }
+
   html body.dtr-apple-sticky-header #dtr-responsive-header .dtr-logo .paxlogo-svg-wrap {
     display: inline-flex !important;
     align-items: center !important;
     flex: 0 0 auto !important;
     flex-shrink: 0 !important;
+    gap: 0 !important;
     width: auto !important;
-    min-width: 72px !important;
+    min-width: 0 !important;
     max-width: none !important;
-    max-height: none !important;
+    margin: 0 !important;
+    padding: 0 !important;
     overflow: visible !important;
-    opacity: 1 !important;
-    visibility: visible !important;
-    direction: ltr !important;
   }
 
   html body.dtr-apple-sticky-header #dtr-responsive-header .dtr-logo .paxlogo-svg,
   html body.dtr-apple-sticky-header #dtr-responsive-header .dtr-logo svg.paxlogo-svg {
     display: block !important;
-    width: var(--paxlogo-mark-w, 118px) !important;
-    min-width: 72px !important;
-    height: 24px !important;
+    width: var(--paxlogo-mark-w, clamp(118px, 44vw, 168px)) !important;
+    height: auto !important;
     max-width: none !important;
-    max-height: 28px !important;
+    max-height: none !important;
     flex-shrink: 0 !important;
     overflow: visible !important;
     opacity: 1 !important;
@@ -554,8 +581,7 @@ html body.dtr-apple-sticky-header #dtr-header-global .pdx-auth-menu.pdx-auth-men
   }
 
   html body.dtr-apple-sticky-header #dtr-responsive-header .dtr-logo .paxlogo-pax,
-  html body.dtr-apple-sticky-header #dtr-responsive-header .dtr-logo .paxlogo-design,
-  html body.dtr-apple-sticky-header #dtr-responsive-header .dtr-logo .paxlogo-code-slot {
+  html body.dtr-apple-sticky-header #dtr-responsive-header .dtr-logo .paxlogo-design {
     opacity: 1 !important;
     visibility: visible !important;
   }
@@ -698,12 +724,6 @@ html body.dtr-apple-sticky-header #dtr-header-global .pdx-auth-menu.pdx-auth-men
   html body.dtr-apple-sticky-header #dtr-responsive-header .container {
     gap: 2px !important;
     padding: 0 8px !important;
-  }
-
-  html body.dtr-apple-sticky-header #dtr-responsive-header .dtr-logo,
-  html body.dtr-apple-sticky-header #dtr-responsive-header a.dtr-logo.logo-default {
-    max-width: min(46vw, 140px) !important;
-    min-width: 80px !important;
   }
 
   html body.dtr-apple-sticky-header #dtr-responsive-header #pdx-auth-bar .pdx-auth-signup-btn,

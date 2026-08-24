@@ -44,12 +44,27 @@
     return '';
   }
 
+  function storedManualLang() {
+    try {
+      if (localStorage.getItem(COOKIE_SRC) === 'manual') {
+        return normalize(localStorage.getItem(COOKIE));
+      }
+    } catch (e) {}
+    if (readCookie(COOKIE_SRC) === 'manual') {
+      return normalize(readCookie(COOKIE));
+    }
+    return '';
+  }
+
   function currentLang() {
-    return normalize(CFG.lang) || normalize(document.documentElement.lang) || 'de';
+    return storedManualLang() || normalize(CFG.lang) || normalize(document.documentElement.lang) || 'de';
   }
 
   function currentSource() {
-    return readCookie(COOKIE_SRC) === 'manual' || CFG.source === 'manual' ? 'manual' : 'auto';
+    if (storedManualLang() || readCookie(COOKIE_SRC) === 'manual' || CFG.source === 'manual') {
+      return 'manual';
+    }
+    return 'auto';
   }
 
   function applyDocumentLocale(lang) {
@@ -118,6 +133,30 @@
       var next = phraseTarget(entry, lang);
       if (next) el.setAttribute('aria-label', next);
     });
+
+    document.querySelectorAll('[title]').forEach(function (el) {
+      if (el.closest('.pax-ccs-portal, #pdx-account-app, .paxdesign-chat-widget, .dtr-logo')) return;
+      var entry = lookup[el.getAttribute('title')];
+      if (!entry) return;
+      var next = phraseTarget(entry, lang);
+      if (next) el.setAttribute('title', next);
+    });
+
+    if (document.title) {
+      var titleEntry = lookup[document.title];
+      if (titleEntry) {
+        var titleNext = phraseTarget(titleEntry, lang);
+        if (titleNext) document.title = titleNext;
+      } else {
+        phrases.forEach(function (entry) {
+          var src = entry.de || entry.en;
+          var next = phraseTarget(entry, lang);
+          if (src && next && src.length >= 4 && document.title.indexOf(src) !== -1 && src !== next) {
+            document.title = document.title.split(src).join(next);
+          }
+        });
+      }
+    }
 
     var cta = document.querySelector('#dtr-header-global .dtr-header-btn .dtr-btn__text, #dtr-header-global a.dtr-header-btn');
     if (cta && lookup[cta.textContent.trim()]) {
@@ -243,8 +282,19 @@
     });
   }
 
+  function restoreManualChoice() {
+    var stored = storedManualLang();
+    if (!stored) return '';
+    writeCookie(COOKIE, stored);
+    writeCookie(COOKIE_SRC, 'manual');
+    CFG.lang = stored;
+    CFG.source = 'manual';
+    return stored;
+  }
+
   function maybeAutoDetect() {
-    if (readCookie(COOKIE) || currentSource() === 'manual') return;
+    if (currentSource() === 'manual' || storedManualLang() || readCookie(COOKIE_SRC) === 'manual') return;
+    if (readCookie(COOKIE)) return;
     var detected = detectBrowserLang();
     if (!detected) return;
     if (detected === currentLang()) {
@@ -256,9 +306,13 @@
   }
 
   function init() {
+    restoreManualChoice();
     var lang = currentLang();
     applyDocumentLocale(lang);
     applyPhrases(lang);
+    window.requestAnimationFrame(function () {
+      applyPhrases(currentLang());
+    });
     document.querySelectorAll('.pax-site-lang').forEach(function (root) {
       bindSwitcher(root);
       syncSwitcher(root, lang);
@@ -272,6 +326,22 @@
     window.addEventListener('resize', function () {
       document.querySelectorAll('.pax-site-lang.is-open').forEach(positionMenu);
     });
+    if (currentSource() === 'manual') {
+      var phpLang = normalize(CFG.lang);
+      if (phpLang && phpLang !== lang) {
+        var synced = false;
+        try {
+          synced = sessionStorage.getItem('pax_lang_sync') === lang;
+        } catch (e) {}
+        if (!synced) {
+          try {
+            sessionStorage.setItem('pax_lang_sync', lang);
+          } catch (e2) {}
+          setLang(lang, 'manual', true);
+          return;
+        }
+      }
+    }
     maybeAutoDetect();
   }
 

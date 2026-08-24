@@ -325,7 +325,7 @@ function navein_custom_scripts_styles() {
 				'dir'       => navein_site_dir(),
 				'source'    => navein_site_lang_source(),
 				'supported' => navein_site_i18n_supported(),
-				'phrases'   => function_exists( 'navein_site_i18n_chrome_phrases' ) ? navein_site_i18n_chrome_phrases() : navein_site_i18n_phrases(),
+				'phrases'   => function_exists( 'navein_site_i18n_phrases' ) ? navein_site_i18n_phrases() : array(),
 				'labels'    => array(
 					'language' => navein_t( 'language', 'Language' ),
 				),
@@ -731,6 +731,16 @@ if ( ! function_exists( 'navein_site_i18n_language_attributes' ) ) {
 }
 add_filter( 'language_attributes', 'navein_site_i18n_language_attributes', 20 );
 
+if ( ! function_exists( 'navein_site_i18n_vary_cookie' ) ) {
+	function navein_site_i18n_vary_cookie() {
+		if ( is_admin() ) {
+			return;
+		}
+		header( 'Vary: Cookie', false );
+	}
+}
+add_action( 'send_headers', 'navein_site_i18n_vary_cookie', 0 );
+
 if ( ! function_exists( 'navein_site_i18n_body_class' ) ) {
 	function navein_site_i18n_body_class( $classes ) {
 		if ( ! function_exists( 'navein_site_lang' ) ) {
@@ -750,6 +760,12 @@ add_filter( 'body_class', 'navein_site_i18n_body_class' );
 if ( ! function_exists( 'navein_site_i18n_persist_request' ) ) {
 	function navein_site_i18n_persist_request() {
 		if ( is_admin() || ! function_exists( 'navein_site_lang' ) ) {
+			return;
+		}
+		$cookie_lang = navein_site_i18n_cookie_lang();
+		$cookie_src  = navein_site_i18n_cookie_source();
+		if ( $cookie_lang !== '' && $cookie_src === 'manual' ) {
+			navein_site_i18n_persist( $cookie_lang, 'manual' );
 			return;
 		}
 		navein_site_i18n_persist( navein_site_lang(), navein_site_lang_source() );
@@ -1366,22 +1382,25 @@ if ( ! function_exists( 'navein_apple_header_desktop_cascade_footer' ) ) {
 			. 'html body.dtr-apple-sticky-header #dtr-responsive-header .dtr-logo,'
 			. 'html body.dtr-apple-sticky-header #dtr-responsive-header a.dtr-logo{'
 			. 'order:1;direction:ltr!important;unicode-bidi:isolate;margin-inline-end:auto!important;margin-inline-start:0!important;'
-			. 'flex:0 0 auto!important;flex-shrink:0!important;min-width:88px!important;max-width:none!important;overflow:visible!important;opacity:1!important;visibility:visible!important;}'
+			. 'flex:0 0 auto!important;flex-shrink:0!important;min-width:88px!important;max-width:min(78vw,220px)!important;overflow:visible!important;opacity:1!important;visibility:visible!important;}'
 			. 'html body.dtr-apple-sticky-header #dtr-responsive-header .dtr-logo .paxlogo-wrap,'
 			. 'html body.dtr-apple-sticky-header #dtr-responsive-header .dtr-logo .pax-isolated-logo,'
-			. 'html body.dtr-apple-sticky-header #dtr-responsive-header .dtr-logo .paxlogo-layout,'
+			. 'html body.dtr-apple-sticky-header #dtr-responsive-header .dtr-logo .paxlogo-layout{'
+			. 'display:inline-flex!important;align-items:center!important;flex-wrap:nowrap!important;gap:0!important;'
+			. 'flex:0 0 auto!important;width:auto!important;max-width:none!important;max-height:none!important;margin:0!important;padding:0!important;'
+			. 'overflow:visible!important;opacity:1!important;visibility:visible!important;direction:ltr!important;'
+			. '--paxlogo-mark-w:clamp(118px,44vw,168px);--paxlogo-icon-size:clamp(18px,calc(var(--paxlogo-mark-w)*0.128),24px);}'
+			. 'html body.dtr-apple-sticky-header #dtr-responsive-header .dtr-logo .paxlogo-code-slot{'
+			. 'flex:0 0 auto!important;margin:0 2px 0 0!important;padding:0!important;opacity:1!important;visibility:visible!important;}'
 			. 'html body.dtr-apple-sticky-header #dtr-responsive-header .dtr-logo .paxlogo-svg-wrap{'
-			. 'display:inline-flex!important;align-items:center!important;flex:0 0 auto!important;flex-shrink:0!important;'
-			. 'width:auto!important;min-width:72px!important;max-width:none!important;overflow:visible!important;'
-			. 'opacity:1!important;visibility:visible!important;direction:ltr!important;}'
+			. 'display:inline-flex!important;flex:0 0 auto!important;gap:0!important;width:auto!important;min-width:0!important;margin:0!important;padding:0!important;}'
 			. 'html body.dtr-apple-sticky-header #dtr-responsive-header .dtr-logo .paxlogo-svg,'
 			. 'html body.dtr-apple-sticky-header #dtr-responsive-header .dtr-logo svg.paxlogo-svg{'
-			. 'display:block!important;width:var(--paxlogo-mark-w,118px)!important;min-width:72px!important;'
-			. 'height:24px!important;max-width:none!important;max-height:28px!important;flex-shrink:0!important;'
+			. 'display:block!important;width:var(--paxlogo-mark-w,clamp(118px,44vw,168px))!important;height:auto!important;'
+			. 'max-width:none!important;max-height:none!important;flex-shrink:0!important;'
 			. 'opacity:1!important;visibility:visible!important;direction:ltr!important;}'
 			. 'html body.dtr-apple-sticky-header #dtr-responsive-header .dtr-logo .paxlogo-pax,'
-			. 'html body.dtr-apple-sticky-header #dtr-responsive-header .dtr-logo .paxlogo-design,'
-			. 'html body.dtr-apple-sticky-header #dtr-responsive-header .dtr-logo .paxlogo-code-slot{'
+			. 'html body.dtr-apple-sticky-header #dtr-responsive-header .dtr-logo .paxlogo-design{'
 			. 'opacity:1!important;visibility:visible!important;}'
 			. 'html body.dtr-apple-sticky-header #dtr-responsive-header #pax-site-lang-mobile{'
 			. 'order:2;display:inline-flex!important;position:relative!important;margin:0!important;flex:0 0 auto!important;}'

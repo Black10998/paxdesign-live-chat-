@@ -106,6 +106,58 @@ if ( ! function_exists( 'navein_site_i18n_query_lang' ) ) {
 	}
 }
 
+if ( ! function_exists( 'navein_site_i18n_resolve_from' ) ) {
+	/**
+	 * Manual cookie always wins. Query is an explicit choice only when no manual cookie exists.
+	 * Auto-detect runs only before the visitor has a stored language.
+	 *
+	 * @param string $query
+	 * @param string $cookie_lang
+	 * @param string $cookie_src auto|manual|''
+	 * @param string $detected
+	 * @return array{lang:string,source:string}
+	 */
+	function navein_site_i18n_resolve_from( $query, $cookie_lang, $cookie_src, $detected ) {
+		$query       = navein_site_i18n_normalize( $query );
+		$cookie_lang = navein_site_i18n_normalize( $cookie_lang );
+		$cookie_src  = ( $cookie_src === 'manual' || $cookie_src === 'auto' ) ? $cookie_src : '';
+		$detected    = navein_site_i18n_normalize( $detected );
+
+		if ( $cookie_lang !== '' && $cookie_src === 'manual' ) {
+			return array(
+				'lang'   => $cookie_lang,
+				'source' => 'manual',
+			);
+		}
+
+		if ( $query !== '' ) {
+			return array(
+				'lang'   => $query,
+				'source' => 'manual',
+			);
+		}
+
+		if ( $cookie_lang !== '' ) {
+			return array(
+				'lang'   => $cookie_lang,
+				'source' => $cookie_src === 'manual' ? 'manual' : 'auto',
+			);
+		}
+
+		if ( $detected !== '' ) {
+			return array(
+				'lang'   => $detected,
+				'source' => 'auto',
+			);
+		}
+
+		return array(
+			'lang'   => 'de',
+			'source' => 'auto',
+		);
+	}
+}
+
 if ( ! function_exists( 'navein_site_i18n_resolve' ) ) {
 	/**
 	 * @return array{lang:string,source:string}
@@ -116,37 +168,11 @@ if ( ! function_exists( 'navein_site_i18n_resolve' ) ) {
 			return $resolved;
 		}
 
-		$query = navein_site_i18n_query_lang();
-		if ( $query !== '' ) {
-			$resolved = array(
-				'lang'   => $query,
-				'source' => 'manual',
-			);
-			return $resolved;
-		}
-
-		$cookie = navein_site_i18n_cookie_lang();
-		$src    = navein_site_i18n_cookie_source();
-		if ( $cookie !== '' ) {
-			$resolved = array(
-				'lang'   => $cookie,
-				'source' => $src === 'manual' ? 'manual' : 'auto',
-			);
-			return $resolved;
-		}
-
-		$detected = navein_site_i18n_detect_accept_language();
-		if ( $detected !== '' ) {
-			$resolved = array(
-				'lang'   => $detected,
-				'source' => 'auto',
-			);
-			return $resolved;
-		}
-
-		$resolved = array(
-			'lang'   => 'de',
-			'source' => 'auto',
+		$resolved = navein_site_i18n_resolve_from(
+			navein_site_i18n_query_lang(),
+			navein_site_i18n_cookie_lang(),
+			navein_site_i18n_cookie_source(),
+			navein_site_i18n_detect_accept_language()
 		);
 		return $resolved;
 	}
@@ -236,16 +262,21 @@ if ( ! function_exists( 'navein_site_i18n_strings' ) ) {
 			return $strings;
 		}
 		$strings = array();
-		$paths   = array();
+		$files   = array( 'site-i18n-strings.php', 'site-i18n-pages.php' );
+		$bases   = array();
 		if ( function_exists( 'get_template_directory' ) ) {
-			$paths[] = get_template_directory() . '/inc/site-i18n-strings.php';
+			$bases[] = get_template_directory() . '/inc';
 		}
-		$paths[] = __DIR__ . '/site-i18n-strings.php';
-		foreach ( $paths as $path ) {
-			if ( is_readable( $path ) ) {
+		$bases[] = __DIR__;
+		foreach ( $files as $file ) {
+			foreach ( $bases as $base ) {
+				$path = $base . '/' . $file;
+				if ( ! is_readable( $path ) ) {
+					continue;
+				}
 				$loaded = include $path;
 				if ( is_array( $loaded ) ) {
-					$strings = $loaded;
+					$strings = array_merge( $strings, $loaded );
 					break;
 				}
 			}
@@ -513,9 +544,7 @@ if ( ! function_exists( 'navein_site_i18n_replace_chrome' ) ) {
 			return $original;
 		}
 
-		$phrases = function_exists( 'navein_site_i18n_chrome_phrases' )
-			? navein_site_i18n_chrome_phrases()
-			: navein_site_i18n_phrases();
+		$phrases = navein_site_i18n_phrases();
 		$pairs   = array();
 		foreach ( $phrases as $phrase ) {
 			$target = isset( $phrase[ $lang ] ) ? $phrase[ $lang ] : '';
@@ -542,6 +571,38 @@ if ( ! function_exists( 'navein_site_i18n_replace_chrome' ) ) {
 		);
 
 		$rewritten = navein_site_i18n_apply_pairs_outside_skips( $original, $pairs );
+		if ( ! is_string( $rewritten ) || $rewritten === '' ) {
+			return $original;
+		}
+		if ( strlen( $rewritten ) < (int) ( strlen( $original ) * 0.5 ) ) {
+			return $original;
+		}
+
+		$rewritten = preg_replace_callback(
+			'#(<title>)([^<]*)(</title>)#i',
+			static function ( $m ) use ( $phrases, $lang ) {
+				$title = $m[2];
+				foreach ( $phrases as $phrase ) {
+					$target = isset( $phrase[ $lang ] ) ? $phrase[ $lang ] : '';
+					if ( $target === '' ) {
+						continue;
+					}
+					foreach ( array( 'de', 'en', 'ar', 'tr' ) as $from ) {
+						$source = isset( $phrase[ $from ] ) ? $phrase[ $from ] : '';
+						if ( $source === '' || $source === $target || strlen( $source ) < 4 ) {
+							continue;
+						}
+						if ( strpos( $title, $source ) !== false ) {
+							$title = str_replace( $source, $target, $title );
+						}
+					}
+				}
+				return $m[1] . $title . $m[3];
+			},
+			$rewritten,
+			1
+		);
+
 		return is_string( $rewritten ) && $rewritten !== '' ? $rewritten : $original;
 	}
 }
