@@ -58,8 +58,17 @@ sleep 2
 svc_code="$(curl -sS -A 'Mozilla/5.0' -o "$TMP/services-en.html" -w '%{http_code}' "${BASE}/leistungen/?lang=en&n=${STAMP}")"
 [ "$svc_code" = "200" ] && ok "English services HTTP 200" || fail "English services HTTP ${svc_code}"
 grep -q "How we work with you" "$TMP/services-en.html" && ok "English services body copy is translated" || fail "English services still missing How we work with you"
-grep -q "So arbeiten wir mit Ihnen" "$TMP/services-en.html" && fail "English services still has German how-we-work heading" || ok "English services no longer has German how-we-work heading"
-grep -q "Projekte &amp; Referenzen" "$TMP/services-en.html" && fail "English services still has encoded German mega-menu label" || ok "English services mega-menu ampersand label is translated"
+python3 - "$TMP/services-en.html" <<'PY'
+import re, sys
+html = open(sys.argv[1], encoding='utf-8', errors='replace').read()
+for tag in ('script', 'style', 'textarea', 'noscript', 'svg'):
+    html = re.sub(rf'(?is)<{tag}\b.*?</{tag}>', '', html)
+open(sys.argv[1] + '.visible', 'w', encoding='utf-8').write(html)
+if 'So arbeiten wir mit Ihnen' in html:
+    sys.exit(1)
+PY
+[ $? -eq 0 ] && ok "English services visible copy has no German how-we-work heading" || fail "English services visible copy still has German how-we-work heading"
+grep -q "Projekte &amp; Referenzen" "$TMP/services-en.html.visible" && fail "English services still has encoded German mega-menu label" || ok "English services mega-menu ampersand label is translated"
 
 sleep 2
 imp_code="$(curl -sS -A 'Mozilla/5.0' -o "$TMP/imprint-en.html" -w '%{http_code}' "${BASE}/impressum/?lang=en&n=${STAMP}")"

@@ -476,22 +476,68 @@ if ( ! function_exists( 'navein_site_lang_switcher_markup' ) ) {
 	}
 }
 
+if ( ! function_exists( 'navein_site_i18n_replace_trimmed_in_chunk' ) ) {
+	/**
+	 * Replace catalog phrases in one visible HTML chunk when they are the
+	 * trimmed text of a tag, including padded header/button copy.
+	 *
+	 * @param string                $chunk
+	 * @param array<string, string> $lookup exact source => target
+	 * @return string
+	 */
+	function navein_site_i18n_replace_trimmed_in_chunk( $chunk, $lookup ) {
+		if ( ! is_string( $chunk ) || $chunk === '' || ! $lookup ) {
+			return is_string( $chunk ) ? $chunk : '';
+		}
+
+		$out = preg_replace_callback(
+			'/>([^<]+)</',
+			static function ( $m ) use ( $lookup ) {
+				$inner = $m[1];
+				$trim  = trim( $inner );
+				if ( $trim === '' ) {
+					return $m[0];
+				}
+				$decoded = html_entity_decode( $trim, ENT_QUOTES | ENT_HTML5, 'UTF-8' );
+				$target  = '';
+				if ( isset( $lookup[ $decoded ] ) ) {
+					$target = $lookup[ $decoded ];
+				} elseif ( isset( $lookup[ $trim ] ) ) {
+					$target = $lookup[ $trim ];
+				}
+				if ( $target === '' || $target === $decoded || $target === $trim ) {
+					return $m[0];
+				}
+				$lead  = strlen( $inner ) - strlen( ltrim( $inner ) );
+				$trail = strlen( $inner ) - strlen( rtrim( $inner ) );
+				$enc   = htmlspecialchars( $target, ENT_QUOTES | ENT_HTML5, 'UTF-8' );
+				$new   = substr( $inner, 0, $lead ) . $enc . ( $trail > 0 ? substr( $inner, -$trail ) : '' );
+				return '>' . $new . '<';
+			},
+			$chunk
+		);
+
+		return is_string( $out ) && $out !== '' ? $out : $chunk;
+	}
+}
+
 if ( ! function_exists( 'navein_site_i18n_apply_pairs_outside_skips' ) ) {
 	/**
 	 * str_replace visible HTML only. Never uses PCRE on the full document.
 	 *
 	 * @param string                $html
 	 * @param array<string, string> $pairs
+	 * @param array<string, string> $lookup
 	 * @return string
 	 */
-	function navein_site_i18n_apply_pairs_outside_skips( $html, $pairs ) {
-		if ( ! is_string( $html ) || $html === '' || ! $pairs ) {
+	function navein_site_i18n_apply_pairs_outside_skips( $html, $pairs, $lookup = array() ) {
+		if ( ! is_string( $html ) || $html === '' || ( ! $pairs && ! $lookup ) ) {
 			return is_string( $html ) ? $html : '';
 		}
 
-		$len = strlen( $html );
-		$pos = 0;
-		$out = '';
+		$len  = strlen( $html );
+		$pos  = 0;
+		$out  = '';
 		$tags = array( 'script', 'style', 'textarea', 'noscript', 'svg' );
 
 		while ( $pos < $len ) {
@@ -506,7 +552,13 @@ if ( ! function_exists( 'navein_site_i18n_apply_pairs_outside_skips' ) ) {
 			}
 
 			$chunk = substr( $html, $pos, $next - $pos );
-			$out  .= str_replace( array_keys( $pairs ), array_values( $pairs ), $chunk );
+			if ( $pairs ) {
+				$chunk = str_replace( array_keys( $pairs ), array_values( $pairs ), $chunk );
+			}
+			if ( $lookup ) {
+				$chunk = navein_site_i18n_replace_trimmed_in_chunk( $chunk, $lookup );
+			}
+			$out .= $chunk;
 			if ( $next >= $len ) {
 				break;
 			}
@@ -546,6 +598,7 @@ if ( ! function_exists( 'navein_site_i18n_replace_chrome' ) ) {
 
 		$phrases = navein_site_i18n_phrases();
 		$pairs   = array();
+		$lookup  = array();
 		foreach ( $phrases as $phrase ) {
 			$target = isset( $phrase[ $lang ] ) ? $phrase[ $lang ] : '';
 			if ( $target === '' ) {
@@ -556,21 +609,23 @@ if ( ! function_exists( 'navein_site_i18n_replace_chrome' ) ) {
 				if ( $source === '' || $source === $target || strlen( $source ) < 3 ) {
 					continue;
 				}
-				$pairs[ '>' . $source . '<' ] = '>' . $target . '<';
-				$enc_source                    = htmlspecialchars( $source, ENT_QUOTES | ENT_HTML5, 'UTF-8' );
-				$enc_target                    = htmlspecialchars( $target, ENT_QUOTES | ENT_HTML5, 'UTF-8' );
+				$lookup[ $source ]               = $target;
+				$pairs[ '>' . $source . '<' ]    = '>' . $target . '<';
+				$enc_source                      = htmlspecialchars( $source, ENT_QUOTES | ENT_HTML5, 'UTF-8' );
+				$enc_target                      = htmlspecialchars( $target, ENT_QUOTES | ENT_HTML5, 'UTF-8' );
 				if ( $enc_source !== $source ) {
-					$pairs[ '>' . $enc_source . '<' ] = '>' . $enc_target . '<';
+					$lookup[ $enc_source ]                 = $target;
+					$pairs[ '>' . $enc_source . '<' ]      = '>' . $enc_target . '<';
 				}
-				$pairs[ '="' . $source . '"' ]   = '="' . $enc_target . '"';
-				$pairs[ "='" . $source . "'" ]   = "='" . $enc_target . "'";
+				$pairs[ '="' . $source . '"' ] = '="' . $enc_target . '"';
+				$pairs[ "='" . $source . "'" ] = "='" . $enc_target . "'";
 				if ( $enc_source !== $source ) {
 					$pairs[ '="' . $enc_source . '"' ] = '="' . $enc_target . '"';
 					$pairs[ "='" . $enc_source . "'" ] = "='" . $enc_target . "'";
 				}
 			}
 		}
-		if ( ! $pairs ) {
+		if ( ! $pairs && ! $lookup ) {
 			return $original;
 		}
 
@@ -581,7 +636,7 @@ if ( ! function_exists( 'navein_site_i18n_replace_chrome' ) ) {
 			}
 		);
 
-		$rewritten = navein_site_i18n_apply_pairs_outside_skips( $original, $pairs );
+		$rewritten = navein_site_i18n_apply_pairs_outside_skips( $original, $pairs, $lookup );
 		if ( ! is_string( $rewritten ) || $rewritten === '' ) {
 			return $original;
 		}

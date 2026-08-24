@@ -148,11 +148,20 @@
         var titleNext = phraseTarget(titleEntry, lang);
         if (titleNext) document.title = titleNext;
       } else {
+        var titleSwaps = [];
         phrases.forEach(function (entry) {
-          var src = entry.de || entry.en;
-          var next = phraseTarget(entry, lang);
-          if (src && next && src.length >= 4 && document.title.indexOf(src) !== -1 && src !== next) {
-            document.title = document.title.split(src).join(next);
+          SUPPORTED.forEach(function (from) {
+            var src = entry[from];
+            var next = phraseTarget(entry, lang);
+            if (src && next && src.length >= 4 && src !== next) {
+              titleSwaps.push({ src: src, next: next });
+            }
+          });
+        });
+        titleSwaps.sort(function (a, b) { return b.src.length - a.src.length; });
+        titleSwaps.forEach(function (swap) {
+          if (document.title.indexOf(swap.src) !== -1) {
+            document.title = document.title.split(swap.src).join(swap.next);
           }
         });
       }

@@ -1488,4 +1488,28 @@ return array(
 		'ar' => 'عند تسجيل الدخول نضع ملفات مؤقتة لإدارة الجلسة وملفات طويلة الأمد اختيارية إذا فعّلتم «البقاء مسجّلًا».',
 		'tr' => 'Girişte oturum yönetimi için geçici çerezler ve “Oturum açık kalsın”ı açarsanız isteğe bağlı uzun süreli çerezler yerleştiririz.',
 	),
+	'title_services' => array(
+		'de' => 'Leistungen & Digitale Services - paxdesign',
+		'en' => 'Services & digital services - paxdesign',
+		'ar' => 'الخدمات والخدمات الرقمية - paxdesign',
+		'tr' => 'Hizmetler ve dijital hizmetler - paxdesign',
+	),
+	'title_pricing' => array(
+		'de' => 'Unsere Tarife & Projektpreise - paxdesign',
+		'en' => 'Our rates & project prices - paxdesign',
+		'ar' => 'أسعارنا وأسعار المشاريع - paxdesign',
+		'tr' => 'Tarifelerimiz ve proje fiyatları - paxdesign',
+	),
+	'title_references' => array(
+		'de' => 'Unsere Referenzen & Projekte - paxdesign',
+		'en' => 'Our work & projects - paxdesign',
+		'ar' => 'أعمالنا ومشاريعنا - paxdesign',
+		'tr' => 'Referanslarımız ve projelerimiz - paxdesign',
+	),
+	'title_digital_services' => array(
+		'de' => 'Digitale Services',
+		'en' => 'Digital services',
+		'ar' => 'خدمات رقمية',
+		'tr' => 'Dijital hizmetler',
+	),
 );

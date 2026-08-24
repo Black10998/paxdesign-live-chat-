@@ -142,6 +142,20 @@ $faq_html = '<h2>Wie viele Jahre Erfahrung bringen Sie mit?</h2>';
 $faq_out = navein_site_i18n_replace_chrome($faq_html);
 i18n_ok(is_string($faq_out) && strpos($faq_out, '>How many years of experience do you have?<') !== false, 'content catalog rewrites leftover service FAQ copy');
 
+$pad_cta = "<a class=\"dtr-header-btn\"><span class=\"dtr-btn__text\">\n            Angebot anfordern        </span></a>";
+$pad_out = navein_site_i18n_replace_chrome($pad_cta);
+i18n_ok(is_string($pad_out) && strpos($pad_out, 'Request a quote') !== false, 'chrome replace translates whitespace-padded header CTA');
+i18n_ok(is_string($pad_out) && strpos($pad_out, 'Angebot anfordern') === false, 'padded header CTA does not keep German source');
+
+$consent = "<label>\n                  und stimme der Verarbeitung meiner Daten zu. *\n                </label>";
+$consent_out = navein_site_i18n_replace_chrome($consent);
+i18n_ok(is_string($consent_out) && strpos($consent_out, 'and I agree to the processing of my data. *') !== false, 'chrome replace translates padded booking consent suffix');
+
+$svc_title = '<html><head><title>Leistungen &amp; Digitale Services - paxdesign</title></head><body></body></html>';
+$svc_title_out = navein_site_i18n_replace_chrome($svc_title);
+i18n_ok(is_string($svc_title_out) && strpos($svc_title_out, 'Services &amp; Digitale Services') === false, 'services title is not partially translated');
+i18n_ok(is_string($svc_title_out) && strpos($svc_title_out, 'Services &amp; digital services - paxdesign') !== false, 'full services title is translated longest-first');
+
 if ($fail) {
 	fwrite(STDERR, "$fail site-i18n assertion(s) failed\n");
 	exit(1);
