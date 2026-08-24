@@ -43,6 +43,7 @@ i18n_ok(strpos($engine, 'navein_site_lang_switcher_markup') !== false, 'Apple la
 i18n_ok(strpos($js, 'pax_site_lang_src') !== false && strpos($js, 'manual') !== false, 'JS remembers a manual language choice');
 i18n_ok(strpos($js, 'storedManualLang') !== false && strpos($js, 'localStorage.getItem') !== false, 'JS restores a manual language from localStorage');
 i18n_ok(strpos($js, 'maybeAutoDetect') !== false && strpos($js, "currentSource() === 'manual'") !== false, 'auto-detect does not run after a manual choice');
+i18n_ok(strpos($js, 'titleSwaps.sort') !== false, 'JS title rewrite prefers longer phrases');
 i18n_ok(strpos($engine, 'navein_site_i18n_resolve_from') !== false, 'locale resolve is testable');
 i18n_ok(strpos($engine, "cookie_src === 'manual'") !== false, 'manual cookie beats query and auto-detect');
 i18n_ok(strpos($engine, 'site-i18n-pages.php') !== false, 'page phrase pack is merged into the catalog');
