@@ -21,6 +21,9 @@ class PAXdesign_Cybercrime_I18n {
         if (strpos($lang, 'en') === 0) {
             return 'en';
         }
+        if (strpos($lang, 'tr') === 0) {
+            return 'tr';
+        }
         return 'de';
     }
 
@@ -60,6 +63,9 @@ class PAXdesign_Cybercrime_I18n {
         $pack = self::strings();
         if (isset($pack[$key][$lang]) && $pack[$key][$lang] !== '') {
             return $pack[$key][$lang];
+        }
+        if ($lang === 'tr' && isset($pack[$key]['en'])) {
+            return $pack[$key]['en'];
         }
         if (isset($pack[$key]['en'])) {
             return $pack[$key]['en'];

@@ -197,6 +197,7 @@ class PAXdesign_Chat {
                 'de' => PAXdesign_Language_Routing::system_notice($key, 'de'),
                 'en' => PAXdesign_Language_Routing::system_notice($key, 'en'),
                 'ar' => PAXdesign_Language_Routing::system_notice($key, 'ar'),
+                'tr' => PAXdesign_Language_Routing::system_notice($key, 'tr'),
             );
         }
         $readiness = array(
@@ -275,7 +276,47 @@ class PAXdesign_Chat {
                 'en' => 'Close',
                 'ar' => 'إغلاق',
             ),
+            'composerClosed' => array(
+                'de' => 'Chat geschlossen',
+                'en' => 'Chat closed',
+                'ar' => 'الدردشة مغلقة',
+                'tr' => 'Sohbet kapalı',
+            ),
+            'composerLive' => array(
+                'de' => 'Nachricht an Live Chat …',
+                'en' => 'Message Live Chat…',
+                'ar' => 'رسالة إلى الدردشة المباشرة…',
+                'tr' => 'Canlı sohbete mesaj…',
+            ),
+            'composerDefault' => array(
+                'de' => 'Nachricht schreiben …',
+                'en' => 'Write a message…',
+                'ar' => 'اكتب رسالة…',
+                'tr' => 'Bir mesaj yazın…',
+            ),
         );
+        $tr_readiness = array(
+            'readinessConnecting' => 'Sohbete bağlanılıyor …',
+            'readinessAuthenticating' => 'Girişiniz doğrulanıyor …',
+            'readinessSession' => 'Sohbet oturumu hazırlanıyor …',
+            'readinessHistory' => 'Konuşma geçmişi yükleniyor …',
+            'readinessRealtime' => 'Anlık bağlantı kuruluyor …',
+            'readinessSyncing' => 'Sohbet durumu eşitleniyor …',
+            'readinessAuthFailed' => 'Sohbeti kullanmak için lütfen giriş yapın.',
+            'readinessSessionFailed' => 'Sohbet oturumu başlatılamadı.',
+            'readinessNetworkFailed' => 'Sunucuya ulaşılamadı. Lütfen bağlantınızı kontrol edin.',
+            'readinessStreamFailed' => 'Anlık bağlantı kurulamadı.',
+            'readinessAiFailed' => 'KI asistanı şu anda kullanılamıyor.',
+            'readinessLiveFailed' => 'Canlı temsilci isteği onaylanamadı. Lütfen yeniden deneyin.',
+            'readinessGenericFailed' => 'Sohbet yüklenemedi.',
+            'readinessRetry' => 'Yeniden dene',
+            'readinessClose' => 'Kapat',
+        );
+        foreach ($tr_readiness as $key => $text) {
+            if (isset($readiness[$key])) {
+                $readiness[$key]['tr'] = $text;
+            }
+        }
         return array_merge($out, $readiness);
     }
 
@@ -326,7 +367,7 @@ class PAXdesign_Chat {
 
         if ($page_context === 'cybercrime-support' && class_exists('PAXdesign_Chat_Knowledge')) {
             $page_language = $this->resolve_page_language($session_id);
-            if ($page_language === '' && in_array($customer_language, array('de', 'en', 'ar'), true)) {
+            if ($page_language === '' && in_array($customer_language, array('de', 'en', 'ar', 'tr'), true)) {
                 $page_language = $customer_language;
             }
             $prompt .= "\n\n" . PAXdesign_Chat_Knowledge::build_cybercrime_support_context_block($page_language, $focus_reference);

@@ -66,11 +66,23 @@
   }
 
   function customerPortalLang() {
+    try {
+      var cookie = (document.cookie.match(/(?:^|; )pax_site_lang=([^;]*)/) || [])[1];
+      if (cookie) {
+        var c = decodeURIComponent(cookie).toLowerCase().slice(0, 2);
+        if (c === 'ar' || c === 'en' || c === 'de' || c === 'tr') return c;
+      }
+    } catch (e) {}
+    if (window.PaxSiteI18n && typeof window.PaxSiteI18n.lang === 'function') {
+      var site = window.PaxSiteI18n.lang();
+      if (site === 'ar' || site === 'en' || site === 'de' || site === 'tr') return site;
+    }
     var htmlLang = (document.documentElement.getAttribute('lang') || document.documentElement.lang || '').toLowerCase();
     var navLang = (navigator.language || navigator.userLanguage || '').toLowerCase();
     var lang = htmlLang || navLang || 'de';
     if (lang.indexOf('ar') === 0) return 'ar';
     if (lang.indexOf('en') === 0) return 'en';
+    if (lang.indexOf('tr') === 0) return 'tr';
     return 'de';
   }
 
@@ -795,6 +807,15 @@
     if (!accountMainEl || accountMainEventsBound) return;
     accountMainEventsBound = true;
     accountMainEl.addEventListener('click', function (e) {
+      var langBtn = e.target.closest('[data-pax-set-lang]');
+      if (langBtn) {
+        e.preventDefault();
+        var nextLang = langBtn.getAttribute('data-pax-set-lang');
+        if (window.PaxSiteI18n && typeof window.PaxSiteI18n.setLang === 'function') {
+          window.PaxSiteI18n.setLang(nextLang);
+        }
+        return;
+      }
       var jump = e.target.closest('[data-account-section]');
       if (!jump || jump.closest('form')) return;
       var section = jump.getAttribute('data-account-section');
@@ -808,6 +829,7 @@
     var lang = customerPortalLang();
     if (lang === 'ar') return t('language_ar', 'العربية');
     if (lang === 'en') return t('language_en', 'English');
+    if (lang === 'tr') return t('language_tr', 'Türkçe');
     return t('language_de', 'Deutsch');
   }
 
@@ -816,6 +838,7 @@
     var isLink = !!opts.href;
     var extra = '';
     if (opts.section) extra += ' data-account-section="' + escHtml(opts.section) + '"';
+    if (opts.setLang) extra += ' data-pax-set-lang="' + escHtml(opts.setLang) + '"';
     if (isLink) extra += ' href="' + escHtml(opts.href) + '"';
     else extra += ' type="button"';
     if (opts.external) extra += ' target="_blank" rel="noopener"';
@@ -1251,10 +1274,11 @@
       content.appendChild(cluster);
     }
 
+    var lang = content.querySelector('#pax-site-lang, .pax-site-lang--desktop');
     var search = content.querySelector('.dtr-search-modal-trigger, a.dtr-search-modal-trigger');
     var cta = content.querySelector('a.dtr-header-btn, .dtr-header-btn');
     var bar = document.getElementById('pdx-auth-bar');
-    [search, cta, bar].forEach(function (el) {
+    [lang, search, cta, bar].forEach(function (el) {
       if (el && el.parentNode !== cluster) {
         cluster.appendChild(el);
       }
@@ -2924,6 +2948,25 @@
     '</div>';
   }
 
+  function renderLanguageChoices() {
+    var current = customerPortalLang();
+    var langs = [
+      { code: 'de', label: t('language_de', 'Deutsch') },
+      { code: 'en', label: t('language_en', 'English') },
+      { code: 'ar', label: t('language_ar', 'العربية') },
+      { code: 'tr', label: t('language_tr', 'Türkçe') }
+    ];
+    return langs.map(function (item) {
+      return renderAppleRow({
+        label: item.label,
+        value: item.code === current ? '✓' : '',
+        chevron: false,
+        setLang: item.code,
+        className: 'pdx-apple-row--set-lang' + (item.code === current ? ' is-active' : '')
+      });
+    }).join('');
+  }
+
   function renderAccountSettingsSection() {
     var profile = accountProfileData();
     return renderAppleGroup([
@@ -2933,8 +2976,7 @@
       renderAppleRow({ icon: 'settings', label: t('nav_preferences', 'Notification Preferences'), section: 'preferences' }),
     ]) +
     renderAppleGroup([
-      renderAppleRow({ label: t('language', 'Language'), value: accountLanguageLabel(), chevron: false, className: 'pdx-apple-row--static' }),
-      renderAppleRow({ label: t('email', 'Email'), value: profile.email || user.email || '—', section: 'personal' }),
+      renderLanguageChoices()
     ], t('settings_caption', 'These controls stay on this device and follow the language of the website.')) +
     renderAppleGroup([
       renderAppleRow({ label: t('continue_website', 'Continue to website'), href: homePageUrl(), className: 'pdx-apple-row--link' }),
@@ -5551,6 +5593,15 @@
     getUser: function () { return user; },
     isRestNonceError: isRestNonceError,
   };
+
+  document.addEventListener('pax-site-lang-change', function () {
+    applyAccountLocale();
+    if (authBar) {
+      var signup = authBar.querySelector('.pdx-auth-signup-btn');
+      if (signup) signup.textContent = t('sign_in', 'Anmelden');
+    }
+    if (isAccountDashboard()) renderAccountApp();
+  });
 
   if (document.readyState === 'loading') {
     document.addEventListener('DOMContentLoaded', window.PDXAuth.init);

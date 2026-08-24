@@ -625,11 +625,13 @@ class PAXdesign_Chat_Knowledge {
         }
         switch ($lang) {
             case 'en':
-                return $prompt . "\n\n## Language\n- Detect the customer's language from their latest message and ALWAYS reply in that same language (German, English, or Arabic).\n- If they write in English, reply in English.\n- If they write in Arabic, reply in Arabic.\n- If they write in German, reply in German.\n- Match the customer's tone and keep answers concise.";
+                return $prompt . "\n\n## Language\n- Detect the customer's language from their latest message and ALWAYS reply in that same language (German, English, Arabic, or Turkish).\n- If they write in English, reply in English.\n- If they write in Arabic, reply in Arabic.\n- If they write in German, reply in German.\n- If they write in Turkish, reply in Turkish.\n- Match the customer's tone and keep answers concise.";
             case 'ar':
-                return $prompt . "\n\n## اللغة\n- حدّد لغة العميل من رسالته الأخيرة ورد دائماً بنفس اللغة (العربية أو الإنجليزية أو الألمانية).\n- إذا كتب بالعربية فأجب بالعربية.\n- إذا كتب بالإنجليزية فأجب بالإنجليزية.\n- إذا كتب بالألمانية فأجب بالألمانية.\n- استخدم أسلوباً مهنياً وواضحاً وموجزاً.";
+                return $prompt . "\n\n## اللغة\n- حدّد لغة العميل من رسالته الأخيرة ورد دائماً بنفس اللغة (العربية أو الإنجليزية أو الألمانية أو التركية).\n- إذا كتب بالعربية فأجب بالعربية.\n- إذا كتب بالإنجليزية فأجب بالإنجليزية.\n- إذا كتب بالألمانية فأجب بالألمانية.\n- إذا كتب بالتركية فأجب بالتركية.\n- استخدم أسلوباً مهنياً وواضحاً وموجزاً.";
+            case 'tr':
+                return $prompt . "\n\n## Dil\n- Müşterinin dilini son mesajından anlayın ve DAIMA aynı dilde yanıt verin (Türkçe, Almanca, İngilizce veya Arapça).\n- Türkçe yazarsa Türkçe yanıtlayın.\n- Almanca yazarsa Almanca yanıtlayın.\n- İngilizce yazarsa İngilizce yanıtlayın.\n- Arapça yazarsa Arapça yanıtlayın.\n- Profesyonel, net ve kısa olun.";
             default:
-                return $prompt . "\n\n## Sprache\n- Erkenne die Sprache des Kunden anhand der letzten Nachricht und antworte IMMER in derselben Sprache (Deutsch, Englisch oder Arabisch).\n- Schreibt der Kunde auf Deutsch, antworte auf Deutsch.\n- Schreibt der Kunde auf Englisch, antworte auf Englisch.\n- Schreibt der Kunde auf Arabisch, antworte auf Arabisch.\n- Professionell, freundlich und präzise.";
+                return $prompt . "\n\n## Sprache\n- Erkenne die Sprache des Kunden anhand der letzten Nachricht und antworte IMMER in derselben Sprache (Deutsch, Englisch, Arabisch oder Türkisch).\n- Schreibt der Kunde auf Deutsch, antworte auf Deutsch.\n- Schreibt der Kunde auf Englisch, antworte auf Englisch.\n- Schreibt der Kunde auf Arabisch, antworte auf Arabisch.\n- Schreibt der Kunde auf Türkisch, antworte auf Türkisch.\n- Professionell, freundlich und präzise.";
         }
     }
 }

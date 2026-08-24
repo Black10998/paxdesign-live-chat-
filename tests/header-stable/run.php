@@ -28,7 +28,7 @@ $workflow = file_get_contents($root . '/.github/workflows/deploy-header-stable.y
 hs_ok(is_file($root . '/navein/assets/css/apple-header-stable.css'), 'stable header stylesheet exists');
 hs_ok(strpos($functions, 'navein-apple-header-stable') !== false, 'functions.php enqueues the stable header CSS');
 hs_ok(strpos($functions, 'apple-header-stable.css') !== false, 'stable header CSS path is registered');
-hs_ok(preg_match('/Version:\\s*1\\.4\\.(\\d+)/', $style, $v) === 1 && (int) $v[1] >= 62, 'theme version is cache-busted to 1.4.62+');
+hs_ok(preg_match('/Version:\\s*1\\.4\\.(\\d+)/', $style, $v) === 1 && (int) $v[1] >= 63, 'theme version is cache-busted to 1.4.63+');
 
 hs_ok(strpos($css, 'dtr-search-modal-trigger') !== false, 'Search trigger is restyled');
 hs_ok(strpos($css, 'border-left: 0.5px solid') !== false, 'Search cluster is separated from the nav with a hairline');
@@ -58,6 +58,8 @@ hs_ok(strpos($css, '--dtr-apple-header-util-min') === false, 'header does not re
 hs_ok(strpos($css, '.dtr-nav-lead-icon') !== false && strpos($css, 'display: none !important') !== false, 'top-level lead icons are hidden so names stay uncluttered');
 hs_ok(strpos($css, '-webkit-mask:') !== false, 'Search uses a single SVG mask icon');
 hs_ok(strpos($css, '.dtr-header-utility-cluster') !== false && strpos($css, 'margin-left: auto') !== false, 'desktop utility cluster keeps Search, CTA, and auth on the right');
+hs_ok(strpos($css, '#pax-site-lang') !== false, 'language switcher is part of the stable header cluster');
+hs_ok(strpos($functions, 'navein_site_lang_switcher_markup') !== false, 'language switcher is injected server-side');
 
 hs_ok(strpos($functions, 'navein_apple_header_desktop_cascade_footer') !== false, 'functions.php prints final desktop header cascade CSS');
 hs_ok(strpos($functions, 'navein-apple-header-desktop-cascade') !== false, 'desktop cascade style id is registered');

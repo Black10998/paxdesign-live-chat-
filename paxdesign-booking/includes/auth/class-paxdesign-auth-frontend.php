@@ -102,7 +102,31 @@ class PAXdesign_Auth_Frontend {
             return array();
         }
         $strings = include $path;
-        return is_array($strings) ? $strings : array();
+        if (!is_array($strings)) {
+            return array();
+        }
+        $tr_path = PAXDESIGN_BOOKING_PLUGIN_DIR . 'includes/customer/data/account-ui-l10n-tr.php';
+        $tr = array();
+        if (is_readable($tr_path)) {
+            $loaded = include $tr_path;
+            if (is_array($loaded)) {
+                $tr = $loaded;
+            }
+        }
+        foreach ($strings as $key => $entry) {
+            if (!is_array($entry)) {
+                continue;
+            }
+            if (!isset($entry['tr']) || $entry['tr'] === '') {
+                if (isset($tr[$key]) && $tr[$key] !== '') {
+                    $entry['tr'] = $tr[$key];
+                } elseif (!empty($entry['en'])) {
+                    $entry['tr'] = $entry['en'];
+                }
+            }
+            $strings[$key] = $entry;
+        }
+        return $strings;
     }
 
     private static function js_config() {

@@ -1110,6 +1110,12 @@ return array(
 		'de' => 'Arabisch',
 		'ar' => 'العربية',
 	),
+	'language_tr' => array(
+		'en' => 'Turkish',
+		'de' => 'Türkisch',
+		'ar' => 'التركية',
+		'tr' => 'Türkçe',
+	),
 	'privacy_caption' => array(
 		'en' => 'Your email identifies this account. It is not shown publicly on the website.',
 		'de' => 'Ihre E-Mail identifiziert dieses Konto. Sie wird auf der Website nicht öffentlich angezeigt.',

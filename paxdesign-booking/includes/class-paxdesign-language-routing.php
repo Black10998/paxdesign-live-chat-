@@ -9,7 +9,7 @@ if (!defined('ABSPATH')) {
 
 class PAXdesign_Language_Routing {
 
-    const SUPPORTED = array('de', 'en', 'ar');
+    const SUPPORTED = array('de', 'en', 'ar', 'tr');
     const USER_META = 'pax_live_spoken_languages';
 
     /**
@@ -23,6 +23,10 @@ class PAXdesign_Language_Routing {
 
         if (preg_match('/[\x{0600}-\x{06FF}\x{0750}-\x{077F}\x{08A0}-\x{08FF}\x{FB50}-\x{FDFF}\x{FE70}-\x{FEFF}]/u', $text)) {
             return 'ar';
+        }
+
+        if (preg_match('/[şğışİçŞĞİÇ]/u', $text) || preg_match('/\b(ve|veya|merhaba|teşekkür|lütfen|yardım|proje|fatura|randevu|selam)\b/iu', $text)) {
+            return 'tr';
         }
 
         if (preg_match('/[äöüßÄÖÜ]/u', $text)) {
@@ -125,6 +129,8 @@ class PAXdesign_Language_Routing {
             '/(?:speak\s+(?:to|with)\s+(?:a\s+)?(?:human|person|agent|representative|support|employee|someone)|talk\s+to\s+(?:a\s+)?(?:human|person|agent|someone|support|employee)|real\s+(?:person|human|agent|employee)|human\s+(?:support|agent)|live\s+(?:agent|support|chat)|connect\s+me\s+(?:to|with)\s+(?:a\s+)?(?:human|agent|support|person|employee)|transfer\s+(?:me\s+)?(?:to\s+)?(?:a\s+)?(?:human|agent|person|representative|support)|(?:need|want)\s+(?:a\s+)?(?:human|person|agent|representative))/iu',
             // Arabic
             '/(?:موظف|موظف(?:اً|ا)?|شخص\s+حقيقي|دعم\s+بشري|تحدث\s+مع|تكلم\s+مع|أريد\s+(?:موظف|شخص|إنسان)|اريد\s+(?:موظف|شخص|إنسان)|وكيل\s+حقيقي|مساعد\s+بشري|خدمة\s+عملاء|ممثل\s+حقيقي)/u',
+            // Turkish
+            '/(?:canlı\s+(?:destek|temsilci|ajan)|gerçek\s+(?:kişi|insan)|bir\s+(?:temsilci|danışman|görevli)|insanla\s+konuş|müşteri\s+hizmetleri)/iu',
         );
 
         foreach ($patterns as $pattern) {
@@ -147,6 +153,8 @@ class PAXdesign_Language_Routing {
                 return 'Connecting you to a Live Agent...';
             case 'ar':
                 return 'جاري توصيلك بوكيل مباشر...';
+            case 'tr':
+                return 'Sizi canlı bir temsilciye bağlıyorum...';
             default:
                 return 'Ich verbinde Sie mit einem Live-Agent...';
         }
@@ -163,6 +171,8 @@ class PAXdesign_Language_Routing {
                 return 'A PAXDesign team member has been notified. Please stay in the chat for a moment.';
             case 'ar':
                 return 'تم إبلاغ أحد موظفي PAXDesign. يرجى البقاء في الدردشة لحظة.';
+            case 'tr':
+                return 'Bir PAXDesign ekip üyesi bilgilendirildi. Lütfen sohbette kısa bir süre kalın.';
             default:
                 return 'Ein PAXDesign-Mitarbeiter wurde informiert. Bitte bleiben Sie kurz im Chat.';
         }
@@ -203,6 +213,8 @@ class PAXdesign_Language_Routing {
                         return 'A team member has taken over the live chat.';
                     case 'ar':
                         return 'قام أحد موظفينا بتولي الدردشة المباشرة.';
+                    case 'tr':
+                        return 'Bir ekip üyesi canlı sohbeti devraldı.';
                     default:
                         return 'Ein Mitarbeiter hat den Live-Chat übernommen.';
                 }
@@ -212,6 +224,8 @@ class PAXdesign_Language_Routing {
                         return 'The conversation has been returned to the KI Assistant.';
                     case 'ar':
                         return 'تم إرجاع المحادثة إلى مساعد KI.';
+                    case 'tr':
+                        return 'Görüşme KI Asistanına geri verildi.';
                     default:
                         return 'Das Gespräch wurde an den KI-Assistenten zurückgegeben.';
                 }
@@ -221,6 +235,8 @@ class PAXdesign_Language_Routing {
                         return 'This chat has been closed. You can start a new conversation anytime.';
                     case 'ar':
                         return 'تم إغلاق هذه الدردشة. يمكنك بدء محادثة جديدة في أي وقت.';
+                    case 'tr':
+                        return 'Bu sohbet kapatıldı. İstediğiniz zaman yeni bir görüşme başlatabilirsiniz.';
                     default:
                         return 'Dieser Chat wurde geschlossen. Sie können jederzeit ein neues Gespräch starten.';
                 }
@@ -231,6 +247,8 @@ class PAXdesign_Language_Routing {
                         return 'The chat has been reopened. ' . $admin_name . ' is here for you.';
                     case 'ar':
                         return 'تم إعادة فتح الدردشة. ' . $admin_name . ' متاح لمساعدتك.';
+                    case 'tr':
+                        return 'Sohbet yeniden açıldı. ' . $admin_name . ' sizin için burada.';
                     default:
                         return 'Der Chat wurde wieder geöffnet. ' . $admin_name . ' ist wieder für Sie da.';
                 }
@@ -240,6 +258,8 @@ class PAXdesign_Language_Routing {
                         return 'The KI Assistant is back for you. Feel free to keep messaging anytime.';
                     case 'ar':
                         return 'مساعد KI متاح لك مجدداً. يمكنك متابعة المراسلة في أي وقت.';
+                    case 'tr':
+                        return 'KI Asistanı yeniden sizinle. İstediğiniz zaman yazmaya devam edebilirsiniz.';
                     default:
                         return 'Der KI-Assistent ist wieder für Sie da. Schreiben Sie jederzeit weiter.';
                 }

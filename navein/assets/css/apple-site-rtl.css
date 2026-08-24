@@ -1,0 +1,294 @@
+/**
+ * Site RTL + Apple language switcher.
+ * Does not change homepage display fonts (Orbitron) or LTR identity.
+ */
+
+html[dir="rtl"],
+html[lang="ar"],
+body.pax-dir-rtl {
+  direction: rtl;
+}
+
+html[lang="ar"] body,
+html[dir="rtl"] body,
+body.pax-lang-ar {
+  font-family: "SF Arabic", "Noto Naskh Arabic", "Noto Sans Arabic", "Geeza Pro", "Segoe UI", Tahoma, sans-serif;
+}
+
+html[lang="ar"] .pax-home-hero__title,
+html[lang="ar"] .pax-home-display,
+html[lang="ar"] .pax-home-brand {
+  font-family: inherit;
+}
+
+/* --- Apple language control ------------------------------------------- */
+
+.pax-site-lang {
+  position: relative;
+  display: inline-flex;
+  align-items: center;
+  flex: 0 0 auto;
+  flex-shrink: 0;
+  height: var(--dtr-apple-header-height, 52px);
+  z-index: 6;
+}
+
+.pax-site-lang__btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 5px;
+  height: 28px;
+  min-height: 28px;
+  max-height: 28px;
+  min-width: 28px;
+  padding: 0 9px;
+  margin: 0;
+  border: 0;
+  border-radius: 980px;
+  background: rgba(0, 0, 0, 0.04);
+  color: #1d1d1f;
+  font-family: -apple-system, BlinkMacSystemFont, "SF Pro Text", Inter, "Segoe UI", Helvetica, Arial, sans-serif;
+  font-size: 11px;
+  font-weight: 590;
+  letter-spacing: 0.04em;
+  line-height: 1;
+  cursor: pointer;
+  appearance: none;
+  -webkit-appearance: none;
+}
+
+.pax-site-lang__btn:hover,
+.pax-site-lang.is-open .pax-site-lang__btn {
+  background: rgba(0, 0, 0, 0.08);
+}
+
+.pax-site-lang__btn:focus-visible {
+  outline: 2px solid #0071e3;
+  outline-offset: 2px;
+}
+
+.pax-site-lang__globe,
+.pax-site-lang__globe-icon {
+  display: block;
+  width: 16px;
+  height: 16px;
+  flex: 0 0 16px;
+}
+
+.pax-site-lang__code {
+  font-variant: all-small-caps;
+  font-size: 11px;
+  letter-spacing: 0.06em;
+}
+
+.pax-site-lang__menu {
+  min-width: 220px;
+  padding: 6px;
+  border-radius: 14px;
+  background: rgba(255, 255, 255, 0.92);
+  -webkit-backdrop-filter: saturate(180%) blur(20px);
+  backdrop-filter: saturate(180%) blur(20px);
+  box-shadow: 0 12px 40px rgba(0, 0, 0, 0.18), 0 0 0 0.5px rgba(0, 0, 0, 0.08);
+  z-index: 10080;
+}
+
+.pax-site-lang__option {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  width: 100%;
+  min-height: 40px;
+  padding: 0 12px;
+  border: 0;
+  border-radius: 10px;
+  background: transparent;
+  color: #1d1d1f;
+  font-family: -apple-system, BlinkMacSystemFont, "SF Pro Text", Inter, "Segoe UI", Helvetica, Arial, sans-serif;
+  font-size: 15px;
+  font-weight: 400;
+  text-align: start;
+  cursor: pointer;
+}
+
+.pax-site-lang__option:hover,
+.pax-site-lang__option:focus-visible {
+  background: rgba(0, 0, 0, 0.05);
+  outline: none;
+}
+
+.pax-site-lang__option.is-active {
+  font-weight: 590;
+}
+
+.pax-site-lang__option.is-active .pax-site-lang__option-name::after {
+  content: "";
+  display: inline-block;
+  width: 8px;
+  height: 8px;
+  margin-inline-start: 8px;
+  border-radius: 50%;
+  background: #1d1d1f;
+  vertical-align: middle;
+}
+
+.pax-site-lang__option-code {
+  font-size: 11px;
+  font-weight: 590;
+  letter-spacing: 0.06em;
+  color: #6e6e73;
+}
+
+html[dir="rtl"] .pax-site-lang__option,
+html[lang="ar"] .pax-site-lang__option {
+  font-family: "SF Arabic", "Noto Naskh Arabic", "Noto Sans Arabic", "Geeza Pro", "Segoe UI", Tahoma, sans-serif;
+}
+
+/* Desktop: live in the utility cluster without colliding with Search/CTA/auth. */
+@media (min-width: 993px) {
+  html body.dtr-apple-sticky-header #dtr-header-global .dtr-header-utility-cluster #pax-site-lang,
+  html body.dtr-apple-sticky-header #dtr-header-global .dtr-header-utility-cluster .pax-site-lang {
+    display: inline-flex !important;
+    flex: 0 0 auto !important;
+    flex-shrink: 0 !important;
+    margin: 0 !important;
+    order: 0;
+  }
+
+  html body.dtr-apple-sticky-header #dtr-header-global #pax-site-lang-mobile {
+    display: none !important;
+  }
+}
+
+@media (min-width: 993px) and (max-width: 1280px) {
+  html body.dtr-apple-sticky-header #dtr-header-global .pax-site-lang__code {
+    display: none;
+  }
+
+  html body.dtr-apple-sticky-header #dtr-header-global .pax-site-lang__btn {
+    width: 28px;
+    min-width: 28px;
+    max-width: 28px;
+    padding: 0;
+  }
+}
+
+@media (max-width: 992px) {
+  html body.dtr-apple-sticky-header #dtr-header-global #pax-site-lang {
+    display: none !important;
+  }
+
+  html body.dtr-apple-sticky-header #dtr-responsive-header #pax-site-lang-mobile {
+    display: inline-flex !important;
+    position: relative !important;
+    margin: 0 6px 0 auto !important;
+    flex: 0 0 auto !important;
+    z-index: 3;
+  }
+
+  html body.dtr-apple-sticky-header #dtr-responsive-header .pax-site-lang__code {
+    display: none;
+  }
+
+  html body.dtr-apple-sticky-header #dtr-responsive-header .pax-site-lang__btn {
+    width: 28px;
+    min-width: 28px;
+    max-width: 28px;
+    padding: 0;
+  }
+
+  html body.dtr-apple-sticky-header #dtr-responsive-header #pdx-auth-bar {
+    margin: 0 44px 0 0 !important;
+  }
+}
+
+/* --- RTL layout mirrors ------------------------------------------------ */
+
+@media (min-width: 993px) {
+  html[dir="rtl"] body.dtr-apple-sticky-header #dtr-header-global .dtr-header-global-content,
+  html[lang="ar"] body.dtr-apple-sticky-header #dtr-header-global .dtr-header-global-content {
+    flex-direction: row !important;
+  }
+
+  html[dir="rtl"] body.dtr-apple-sticky-header #dtr-header-global .dtr-header-utility-cluster,
+  html[lang="ar"] body.dtr-apple-sticky-header #dtr-header-global .dtr-header-utility-cluster {
+    margin-left: 0 !important;
+    margin-right: auto !important;
+    padding-left: 0 !important;
+    padding-right: 12px !important;
+    border-left: 0 !important;
+    border-right: 0.5px solid rgba(0, 0, 0, 0.18) !important;
+  }
+}
+
+html[dir="rtl"] body.dtr-apple-sticky-header #dtr-header-global .main-navigation .sf-menu,
+html[lang="ar"] body.dtr-apple-sticky-header #dtr-header-global .main-navigation .sf-menu {
+  flex-direction: row;
+}
+
+html[dir="rtl"] .pax-home-actions,
+html[lang="ar"] .pax-home-actions,
+html[dir="rtl"] .pax-home-service,
+html[lang="ar"] .pax-home-service,
+html[dir="rtl"] .pax-home-pillar,
+html[lang="ar"] .pax-home-pillar,
+html[dir="rtl"] .pax-af__legal,
+html[lang="ar"] .pax-af__legal,
+html[dir="rtl"] .pax-af__contact,
+html[lang="ar"] .pax-af__contact {
+  text-align: start;
+}
+
+html[dir="rtl"] .pax-home-service__go,
+html[lang="ar"] .pax-home-service__go {
+  transform: scaleX(-1);
+}
+
+html[dir="rtl"] input,
+html[dir="rtl"] textarea,
+html[dir="rtl"] select,
+html[lang="ar"] input,
+html[lang="ar"] textarea,
+html[lang="ar"] select {
+  text-align: start;
+}
+
+html[dir="rtl"] .pax-home-signup-form__shell,
+html[lang="ar"] .pax-home-signup-form__shell {
+  flex-direction: row-reverse;
+}
+
+@media (max-width: 992px) {
+  html[dir="rtl"] body.dtr-apple-sticky-header #dtr-responsive-header #pax-site-lang-mobile,
+  html[lang="ar"] body.dtr-apple-sticky-header #dtr-responsive-header #pax-site-lang-mobile {
+    margin: 0 auto 0 6px !important;
+  }
+
+  html[dir="rtl"] body.dtr-apple-sticky-header #dtr-responsive-header #pdx-auth-bar,
+  html[lang="ar"] body.dtr-apple-sticky-header #dtr-responsive-header #pdx-auth-bar {
+    margin: 0 0 0 44px !important;
+  }
+
+  html[dir="rtl"] body.dtr-apple-sticky-header #dtr-responsive-header .dtr-search-modal-trigger,
+  html[lang="ar"] body.dtr-apple-sticky-header #dtr-responsive-header .dtr-search-modal-trigger {
+    margin: 0 0 0 48px !important;
+    padding: 0 10px 0 0 !important;
+    border-left: 0 !important;
+    border-right: 0.5px solid rgba(0, 0, 0, 0.18) !important;
+  }
+}
+
+html[dir="rtl"] #pdx-account-app,
+html[lang="ar"] #pdx-account-app,
+html[dir="rtl"] .pdx-auth-menu--apple,
+html[lang="ar"] .pdx-auth-menu--apple {
+  text-align: start;
+}
+
+html[dir="rtl"] .paxdesign-booking-widget,
+html[lang="ar"] .paxdesign-booking-widget,
+html[dir="rtl"] .paxdesign-chat-widget,
+html[lang="ar"] .paxdesign-chat-widget {
+  direction: rtl;
+  text-align: start;
+}

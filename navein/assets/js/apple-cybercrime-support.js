@@ -2020,7 +2020,7 @@
   }
 
   function setLang(lang) {
-    if (lang !== 'ar' && lang !== 'de' && lang !== 'en') {
+    if (lang !== 'ar' && lang !== 'de' && lang !== 'en' && lang !== 'tr') {
       lang = 'ar';
     }
     root.setAttribute('data-ccs-lang', lang);
@@ -2525,7 +2525,11 @@
 
   root.querySelectorAll('[data-ccs-switch]').forEach(function (btn) {
     btn.addEventListener('click', function () {
-      setLang(btn.getAttribute('data-ccs-switch'));
+      var next = btn.getAttribute('data-ccs-switch');
+      setLang(next);
+      if (window.PaxSiteI18n && typeof window.PaxSiteI18n.setLang === 'function') {
+        window.PaxSiteI18n.setLang(next);
+      }
     });
   });
 
@@ -2773,9 +2777,12 @@
 
   var saved = '';
   try {
-    saved = localStorage.getItem('pax-ccs-lang') || '';
+    saved = localStorage.getItem('pax_site_lang') || localStorage.getItem('pax-ccs-lang') || '';
   } catch (e) {}
-  setLang(saved === 'de' || saved === 'en' ? saved : 'ar');
+  if (window.PAX_SITE_I18N && window.PAX_SITE_I18N.lang) {
+    saved = window.PAX_SITE_I18N.lang;
+  }
+  setLang(saved === 'de' || saved === 'en' || saved === 'tr' || saved === 'ar' ? saved : 'ar');
   bootstrapActiveReport().then(function (shown) {
     if (!shown) {
       setPhase('welcome');

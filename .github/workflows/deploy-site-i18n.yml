@@ -1,0 +1,189 @@
+name: Deploy Site i18n
+
+# Surgical: locale engine, Apple language switcher, RTL, translations.
+# Does not rsync-delete the plugin tree. Does not copy 3.176 chat rewrite or build iOS.
+on:
+  workflow_dispatch:
+  push:
+    branches:
+      - main
+    paths:
+      - '.github/workflows/deploy-site-i18n.yml'
+      - 'navein/inc/site-i18n.php'
+      - 'navein/inc/site-i18n-strings.php'
+      - 'navein/inc/cybercrime-support-locale.php'
+      - 'navein/assets/js/apple-site-i18n.js'
+      - 'navein/assets/js/apple-cybercrime-support.js'
+      - 'navein/assets/css/apple-site-rtl.css'
+      - 'navein/assets/css/apple-header-stable.css'
+      - 'navein/functions.php'
+      - 'navein/style.css'
+      - 'navein/404.php'
+      - 'navein/template-parts/pages/homepage.php'
+      - 'navein/template-parts/pages/cybercrime-support.php'
+      - 'paxdesign-booking/assets/customer-auth/js/pax-auth.js'
+      - 'paxdesign-booking/assets/js/chat-script.js'
+      - 'paxdesign-booking/includes/class-paxdesign-language-routing.php'
+      - 'paxdesign-booking/includes/class-paxdesign-chat.php'
+      - 'paxdesign-booking/includes/class-paxdesign-chat-knowledge.php'
+      - 'paxdesign-booking/includes/class-paxdesign-cybercrime-i18n.php'
+      - 'paxdesign-booking/includes/auth/class-paxdesign-auth-frontend.php'
+      - 'paxdesign-booking/includes/customer/data/account-ui-l10n.php'
+      - 'paxdesign-booking/includes/customer/data/account-ui-l10n-tr.php'
+      - 'deploy-patches/restored-chat-human-ui/assets/customer-auth/js/pax-auth.js'
+      - 'deploy-patches/restored-chat-human-ui/assets/js/chat-script.js'
+      - 'scripts/verify-site-i18n.sh'
+      - 'tests/site-i18n/run.php'
+
+permissions:
+  contents: read
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    timeout-minutes: 8
+    steps:
+      - uses: actions/checkout@v4
+      - name: Site i18n guards
+        run: php tests/site-i18n/run.php
+      - name: Header stability guards
+        run: php tests/header-stable/run.php
+      - name: Production baseline guards
+        run: php tests/production-baseline/run.php
+      - name: Restored overlay guards
+        run: php tests/restored-chat-human-ui/run.php
+      - name: Merge-integration guards
+        run: php tests/merge-integration/run.php
+      - name: CCS baseline guards
+        run: php tests/ccs-ai/run.php
+
+  deploy:
+    needs: test
+    runs-on: ubuntu-latest
+    timeout-minutes: 14
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Validate secrets
+        run: |
+          set -euo pipefail
+          for key in WP_SSH_HOST WP_SSH_USER WP_SSH_PRIVATE_KEY WP_PATH; do
+            [ -n "${!key:-}" ] || { echo "Missing $key"; exit 1; }
+          done
+        env:
+          WP_SSH_HOST: ${{ secrets.WP_SSH_HOST }}
+          WP_SSH_USER: ${{ secrets.WP_SSH_USER }}
+          WP_SSH_PRIVATE_KEY: ${{ secrets.WP_SSH_PRIVATE_KEY }}
+          WP_PATH: ${{ secrets.WP_PATH }}
+
+      - name: Deploy site i18n surgically
+        env:
+          WP_SSH_HOST: ${{ secrets.WP_SSH_HOST }}
+          WP_SSH_PORT: ${{ secrets.WP_SSH_PORT }}
+          WP_SSH_USER: ${{ secrets.WP_SSH_USER }}
+          WP_SSH_PRIVATE_KEY: ${{ secrets.WP_SSH_PRIVATE_KEY }}
+          WP_PATH: ${{ secrets.WP_PATH }}
+        run: |
+          set -euo pipefail
+          PORT="${WP_SSH_PORT:-22}"
+          SSH_OPTS=(-i ~/.ssh/id_deploy -p "$PORT" -o StrictHostKeyChecking=yes -o BatchMode=yes)
+          install -m 600 -D /dev/null ~/.ssh/id_deploy
+          printf '%s\n' "$WP_SSH_PRIVATE_KEY" > ~/.ssh/id_deploy
+          ssh-keyscan -p "$PORT" -H "$WP_SSH_HOST" >> ~/.ssh/known_hosts 2>/dev/null || true
+
+          THEME="${WP_PATH%/}/wp-content/themes/navein"
+          PLUGIN="${WP_PATH%/}/wp-content/plugins/paxdesign-booking"
+          REMOTE="${WP_SSH_USER}@${WP_SSH_HOST}"
+
+          rsync_with_retry() {
+            local attempt=1
+            local max_attempts=4
+            local delay=4
+            while [ "$attempt" -le "$max_attempts" ]; do
+              if rsync -az -e "ssh ${SSH_OPTS[*]}" "$@"; then
+                return 0
+              fi
+              if [ "$attempt" -eq "$max_attempts" ]; then
+                return 1
+              fi
+              echo "rsync failed (attempt ${attempt}/${max_attempts}); retrying in ${delay}s..."
+              sleep "$delay"
+              attempt=$((attempt + 1))
+              delay=$((delay * 2))
+            done
+          }
+
+          ssh_with_retry() {
+            local attempt=1
+            local max_attempts=4
+            local delay=4
+            while [ "$attempt" -le "$max_attempts" ]; do
+              if ssh "${SSH_OPTS[@]}" "$@"; then
+                return 0
+              fi
+              if [ "$attempt" -eq "$max_attempts" ]; then
+                return 1
+              fi
+              echo "ssh failed (attempt ${attempt}/${max_attempts}); retrying in ${delay}s..."
+              sleep "$delay"
+              attempt=$((attempt + 1))
+              delay=$((delay * 2))
+            done
+          }
+
+          ssh_with_retry "$REMOTE" \
+            "mkdir -p \
+              $(printf '%q' "$THEME/inc") \
+              $(printf '%q' "$THEME/assets/css") \
+              $(printf '%q' "$THEME/assets/js") \
+              $(printf '%q' "$THEME/template-parts/pages") \
+              $(printf '%q' "$PLUGIN/assets/customer-auth/js") \
+              $(printf '%q' "$PLUGIN/assets/js") \
+              $(printf '%q' "$PLUGIN/includes") \
+              $(printf '%q' "$PLUGIN/includes/auth") \
+              $(printf '%q' "$PLUGIN/includes/customer/data")"
+
+          rsync_with_retry navein/inc/site-i18n.php "${REMOTE}:${THEME}/inc/site-i18n.php"
+          rsync_with_retry navein/inc/site-i18n-strings.php "${REMOTE}:${THEME}/inc/site-i18n-strings.php"
+          rsync_with_retry navein/inc/cybercrime-support-locale.php "${REMOTE}:${THEME}/inc/cybercrime-support-locale.php"
+          rsync_with_retry navein/assets/js/apple-site-i18n.js "${REMOTE}:${THEME}/assets/js/apple-site-i18n.js"
+          rsync_with_retry navein/assets/js/apple-cybercrime-support.js "${REMOTE}:${THEME}/assets/js/apple-cybercrime-support.js"
+          rsync_with_retry navein/assets/css/apple-site-rtl.css "${REMOTE}:${THEME}/assets/css/apple-site-rtl.css"
+          rsync_with_retry navein/assets/css/apple-header-stable.css "${REMOTE}:${THEME}/assets/css/apple-header-stable.css"
+          rsync_with_retry navein/functions.php "${REMOTE}:${THEME}/functions.php"
+          rsync_with_retry navein/style.css "${REMOTE}:${THEME}/style.css"
+          rsync_with_retry navein/404.php "${REMOTE}:${THEME}/404.php"
+          rsync_with_retry navein/template-parts/pages/homepage.php "${REMOTE}:${THEME}/template-parts/pages/homepage.php"
+          rsync_with_retry navein/template-parts/pages/cybercrime-support.php "${REMOTE}:${THEME}/template-parts/pages/cybercrime-support.php"
+
+          rsync_with_retry paxdesign-booking/assets/customer-auth/js/pax-auth.js "${REMOTE}:${PLUGIN}/assets/customer-auth/js/pax-auth.js"
+          rsync_with_retry paxdesign-booking/assets/js/chat-script.js "${REMOTE}:${PLUGIN}/assets/js/chat-script.js"
+          rsync_with_retry paxdesign-booking/includes/class-paxdesign-language-routing.php "${REMOTE}:${PLUGIN}/includes/class-paxdesign-language-routing.php"
+          rsync_with_retry paxdesign-booking/includes/class-paxdesign-chat.php "${REMOTE}:${PLUGIN}/includes/class-paxdesign-chat.php"
+          rsync_with_retry paxdesign-booking/includes/class-paxdesign-chat-knowledge.php "${REMOTE}:${PLUGIN}/includes/class-paxdesign-chat-knowledge.php"
+          rsync_with_retry paxdesign-booking/includes/class-paxdesign-cybercrime-i18n.php "${REMOTE}:${PLUGIN}/includes/class-paxdesign-cybercrime-i18n.php"
+          rsync_with_retry paxdesign-booking/includes/auth/class-paxdesign-auth-frontend.php "${REMOTE}:${PLUGIN}/includes/auth/class-paxdesign-auth-frontend.php"
+          rsync_with_retry paxdesign-booking/includes/customer/data/account-ui-l10n.php "${REMOTE}:${PLUGIN}/includes/customer/data/account-ui-l10n.php"
+          rsync_with_retry paxdesign-booking/includes/customer/data/account-ui-l10n-tr.php "${REMOTE}:${PLUGIN}/includes/customer/data/account-ui-l10n-tr.php"
+
+          ssh_with_retry "$REMOTE" \
+            "cd '$(printf '%q' "$WP_PATH")' && \
+             rm -f .maintenance && \
+             (command -v wp >/dev/null && wp cache flush || true) && \
+             (command -v wp >/dev/null && wp litespeed-purge all || true)"
+
+          ssh_with_retry "$REMOTE" \
+            "grep -q navein-apple-site-i18n '$(printf '%q' "$THEME")/functions.php' && \
+             grep -q pax-site-lang '$(printf '%q' "$THEME")/assets/css/apple-site-rtl.css' && \
+             grep -q \"'de', 'en', 'ar', 'tr'\" '$(printf '%q' "$PLUGIN")/includes/class-paxdesign-language-routing.php' && \
+             grep -q 'Version: 3.174.128' '$(printf '%q' "$PLUGIN")/assets/js/chat-script.js' && \
+             ! grep -q 'skipping stacked sync' '$(printf '%q' "$PLUGIN")/assets/js/chat-script.js' && \
+             echo 'OK: live site i18n deployed without 3.176 chat rewrite'"
+
+          echo "Deployed site i18n (surgical rsync, no plugin tree delete, no iOS build)"
+
+      - name: Verify live i18n
+        run: |
+          set -euo pipefail
+          chmod +x scripts/verify-site-i18n.sh
+          ./scripts/verify-site-i18n.sh

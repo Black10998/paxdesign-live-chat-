@@ -34,6 +34,65 @@ if ( ! function_exists( 'pax_ccs_merge_locale_en' ) ) {
 	}
 }
 
+if ( ! function_exists( 'pax_ccs_merge_locale_lang' ) ) {
+	/**
+	 * @param array<string, mixed> $base
+	 * @param mixed                $overlay
+	 * @param string               $lang
+	 * @return array<string, mixed>
+	 */
+	function pax_ccs_merge_locale_lang( $base, $overlay, $lang ) {
+		if ( ! is_array( $base ) ) {
+			return $base;
+		}
+		if ( isset( $base['ar'], $base['de'] ) && is_string( $overlay ) ) {
+			$base[ $lang ] = $overlay;
+			return $base;
+		}
+		if ( is_array( $overlay ) ) {
+			foreach ( $overlay as $key => $value ) {
+				if ( array_key_exists( $key, $base ) ) {
+					$base[ $key ] = pax_ccs_merge_locale_lang( $base[ $key ], $value, $lang );
+				}
+			}
+		}
+		return $base;
+	}
+}
+
+if ( ! function_exists( 'pax_ccs_ensure_lang' ) ) {
+	/**
+	 * Copy fallback locale into missing language slots.
+	 *
+	 * @param mixed  $node
+	 * @param string $lang
+	 * @param string $fallback
+	 * @return mixed
+	 */
+	function pax_ccs_ensure_lang( $node, $lang, $fallback = 'en' ) {
+		if ( is_array( $node ) && ( isset( $node['ar'] ) || isset( $node['de'] ) || isset( $node['en'] ) ) ) {
+			if ( ! isset( $node[ $lang ] ) || $node[ $lang ] === '' ) {
+				if ( isset( $node[ $fallback ] ) && $node[ $fallback ] !== '' ) {
+					$node[ $lang ] = $node[ $fallback ];
+				} elseif ( isset( $node['en'] ) ) {
+					$node[ $lang ] = $node['en'];
+				} elseif ( isset( $node['de'] ) ) {
+					$node[ $lang ] = $node['de'];
+				} elseif ( isset( $node['ar'] ) ) {
+					$node[ $lang ] = $node['ar'];
+				}
+			}
+			return $node;
+		}
+		if ( is_array( $node ) ) {
+			foreach ( $node as $key => $value ) {
+				$node[ $key ] = pax_ccs_ensure_lang( $value, $lang, $fallback );
+			}
+		}
+		return $node;
+	}
+}
+
 if ( ! function_exists( 'pax_ccs_portal_copy' ) ) {
 	/**
 	 * @return array<string, mixed>
@@ -72,6 +131,22 @@ if ( ! function_exists( 'pax_ccs_portal_copy' ) ) {
 			}
 			break;
 		}
+		$tr_paths = array(
+			get_template_directory() . '/template-parts/pages/cybercrime-support-tr.php',
+			get_stylesheet_directory() . '/template-parts/pages/cybercrime-support-tr.php',
+		);
+		foreach ( $tr_paths as $tr_path ) {
+			if ( ! is_readable( $tr_path ) ) {
+				continue;
+			}
+			$tr = include $tr_path;
+			if ( is_array( $tr ) ) {
+				$copy = pax_ccs_merge_locale_lang( $copy, $tr, 'tr' );
+			}
+			break;
+		}
+		$copy = pax_ccs_ensure_lang( $copy, 'en', 'de' );
+		$copy = pax_ccs_ensure_lang( $copy, 'tr', 'en' );
 		return $copy;
 	}
 }
@@ -180,11 +255,14 @@ if ( ! function_exists( 'pax_ccs_pick_lang' ) ) {
 	 * @return string
 	 */
 	function pax_ccs_pick_lang( $node, $lang ) {
-		if ( is_array( $node ) && isset( $node[ $lang ] ) ) {
+		if ( is_array( $node ) && isset( $node[ $lang ] ) && $node[ $lang ] !== '' ) {
 			return (string) $node[ $lang ];
 		}
 		if ( is_array( $node ) && isset( $node['en'] ) ) {
 			return (string) $node['en'];
+		}
+		if ( is_array( $node ) && isset( $node['de'] ) ) {
+			return (string) $node['de'];
 		}
 		return is_string( $node ) ? $node : '';
 	}
@@ -198,7 +276,7 @@ if ( ! function_exists( 'pax_ccs_portal_i18n' ) ) {
 	 */
 	function pax_ccs_portal_i18n() {
 		$copy = pax_ccs_portal_copy();
-		$langs = array( 'ar', 'de', 'en' );
+		$langs = array( 'ar', 'de', 'en', 'tr' );
 
 		$pick = function ( $node ) use ( $langs ) {
 			$out = array();

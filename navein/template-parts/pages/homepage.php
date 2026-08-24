@@ -9,6 +9,17 @@ if ( ! defined( 'ABSPATH' ) ) {
 	exit;
 }
 
+if ( ! function_exists( 'navein_t' ) ) {
+	/**
+	 * @param string $key
+	 * @param string $fallback
+	 * @return string
+	 */
+	function navein_t( $key, $fallback = '' ) {
+		return $fallback !== '' ? $fallback : $key;
+	}
+}
+
 $contact   = home_url( '/kontakt/' );
 $services  = home_url( '/preise/' );
 $pricing   = home_url( '/preise/' );
@@ -20,12 +31,12 @@ $hero_img  = 'https://paxdesign.at/wp-content/uploads/2026/01/code-2558220_1280.
 $award_img = 'https://paxdesign.at/wp-content/uploads/2025/02/folio-item-img6.avif';
 
 $service_links = array(
-	array( 'Webentwicklung', 'Moderne Websites & Web Apps', home_url( '/webentwicklung/' ) ),
-	array( 'App-Entwicklung', 'iOS, Android & TV', home_url( '/app-entwicklung/' ) ),
-	array( 'Softwareentwicklung', 'Individuelle Systeme', home_url( '/softwareentwicklung/' ) ),
-	array( 'Advanced Website Systems', 'Skalierbare Web-Architekturen', home_url( '/advanced-website-systems/' ) ),
-	array( 'Wartung & Support', '24/7 Betreuung & Updates', home_url( '/wartung-support/' ) ),
-	array( 'IT-Consulting', 'Technische Beratung', home_url( '/it-consulting/' ) ),
+	array( navein_t( 'service_web', 'Webentwicklung' ), navein_t( 'service_web_lede', 'Moderne Websites & Web Apps' ), home_url( '/webentwicklung/' ) ),
+	array( navein_t( 'service_app', 'App-Entwicklung' ), navein_t( 'service_app_lede', 'iOS, Android & TV' ), home_url( '/app-entwicklung/' ) ),
+	array( navein_t( 'service_software', 'Softwareentwicklung' ), navein_t( 'service_software_lede', 'Individuelle Systeme' ), home_url( '/softwareentwicklung/' ) ),
+	array( navein_t( 'service_advanced', 'Advanced Website Systems' ), navein_t( 'service_advanced_lede', 'Skalierbare Web-Architekturen' ), home_url( '/advanced-website-systems/' ) ),
+	array( navein_t( 'service_support', 'Wartung & Support' ), navein_t( 'service_support_lede', '24/7 Betreuung & Updates' ), home_url( '/wartung-support/' ) ),
+	array( navein_t( 'service_consulting', 'IT-Consulting' ), navein_t( 'service_consulting_lede', 'Technische Beratung' ), home_url( '/it-consulting/' ) ),
 );
 ?>
 <article <?php post_class( 'pax-home' ); ?>>
@@ -54,19 +65,19 @@ $service_links = array(
 		</div>
 		<div class="pax-home-hero__inner">
 			<p class="pax-home-brand">PAXdesign</p>
-			<h1 class="pax-home-hero__title">Digitale Systeme,<br>die wirklich funktionieren.</h1>
+			<h1 class="pax-home-hero__title"><?php echo esc_html( navein_t( 'home_hero_title', 'Digitale Systeme, die wirklich funktionieren.' ) ); ?></h1>
 			<p class="pax-home-hero__lede">
-				Websites, Apps, Software und sichere IT‑Systeme, individuell entwickelt, performant und bereit für Wachstum.
+				<?php echo esc_html( navein_t( 'home_hero_lede', 'Websites, Apps, Software und sichere IT‑Systeme, individuell entwickelt, performant und bereit für Wachstum.' ) ); ?>
 			</p>
 			<div class="pax-home-actions">
-				<a class="pax-home-btn pax-home-btn--light" href="<?php echo esc_url( $pricing ); ?>">Leistungen entdecken</a>
-				<a class="pax-home-btn pax-home-btn--ghost" href="<?php echo esc_url( $contact ); ?>">Jetzt starten</a>
+				<a class="pax-home-btn pax-home-btn--light" href="<?php echo esc_url( $pricing ); ?>"><?php echo esc_html( navein_t( 'home_discover_services', 'Leistungen entdecken' ) ); ?></a>
+				<a class="pax-home-btn pax-home-btn--ghost" href="<?php echo esc_url( $contact ); ?>"><?php echo esc_html( navein_t( 'home_start_now', 'Jetzt starten' ) ); ?></a>
 			</div>
 		</div>
 	</section>
 
 	<!-- Platform & partner logo marquee below hero (tech ticker above stays unchanged) -->
-	<section class="pax-sw-ribbon pax-sw-ribbon--partners" data-ph-reveal aria-label="Plattformen und Partner">
+	<section class="pax-sw-ribbon pax-sw-ribbon--partners" data-ph-reveal aria-label="<?php echo esc_attr( navein_t( 'home_partners', 'Plattformen und Partner' ) ); ?>">
 		<div class="pax-sw-ribbon__track" data-sw-marquee>
 			<?php
 			$partner_logos = array(
@@ -115,7 +126,7 @@ $service_links = array(
 	<section class="pax-home-statement" data-ph-reveal>
 		<div class="pax-home-wrap pax-home-wrap--narrow">
 			<p class="pax-home-statement__text">
-				Keine Produkte von der Stange, sondern Systeme, die klar, sicher und selbstverständlich wirken.
+				<?php echo esc_html( navein_t( 'home_statement', 'Keine Produkte von der Stange, sondern Systeme, die klar, sicher und selbstverständlich wirken.' ) ); ?>
 			</p>
 		</div>
 	</section>
@@ -123,9 +134,9 @@ $service_links = array(
 	<!-- Services -->
 	<section id="leistungen" class="pax-home-section" data-ph-reveal>
 		<div class="pax-home-wrap">
-			<p class="pax-home-eyebrow">Leistungen</p>
-			<h2 class="pax-home-display">Alles aus einer Hand.</h2>
-			<p class="pax-home-lede">Von der ersten Idee bis zum laufenden Betrieb, direkt in jede Disziplin.</p>
+			<p class="pax-home-eyebrow"><?php echo esc_html( navein_t( 'nav_services', 'Leistungen' ) ); ?></p>
+			<h2 class="pax-home-display"><?php echo esc_html( navein_t( 'home_services_display', 'Alles aus einer Hand.' ) ); ?></h2>
+			<p class="pax-home-lede"><?php echo esc_html( navein_t( 'home_services_lede', 'Von der ersten Idee bis zum laufenden Betrieb, direkt in jede Disziplin.' ) ); ?></p>
 		</div>
 		<div class="pax-home-services">
 			<?php foreach ( $service_links as $i => $item ) : ?>
@@ -140,41 +151,41 @@ $service_links = array(
 			<?php endforeach; ?>
 		</div>
 		<div class="pax-home-wrap pax-home-section__cta">
-			<a class="pax-home-btn pax-home-btn--dark" href="<?php echo esc_url( $services ); ?>">Alle Leistungen</a>
-			<a class="pax-home-btn pax-home-btn--text" href="<?php echo esc_url( $contact ); ?>">Angebot anfordern</a>
+			<a class="pax-home-btn pax-home-btn--dark" href="<?php echo esc_url( $services ); ?>"><?php echo esc_html( navein_t( 'home_all_services', 'Alle Leistungen' ) ); ?></a>
+			<a class="pax-home-btn pax-home-btn--text" href="<?php echo esc_url( $contact ); ?>"><?php echo esc_html( navein_t( 'cta_request_offer', 'Angebot anfordern' ) ); ?></a>
 		</div>
 	</section>
 
 	<!-- Capabilities: light editorial columns -->
 	<section class="pax-home-section pax-home-section--snow" data-ph-reveal>
 		<div class="pax-home-wrap">
-			<p class="pax-home-eyebrow">Expertise</p>
-			<h2 class="pax-home-display">Professionell. Präzise.<br>Bereit für Scale.</h2>
+			<p class="pax-home-eyebrow"><?php echo esc_html( navein_t( 'home_expertise', 'Expertise' ) ); ?></p>
+			<h2 class="pax-home-display"><?php echo esc_html( navein_t( 'home_expertise_display', 'Professionell. Präzise. Bereit für Scale.' ) ); ?></h2>
 		</div>
 		<div class="pax-home-pillars">
 			<div class="pax-home-pillar">
 				<span>01</span>
-				<h3>Webdesign &amp; Webentwicklung</h3>
-				<p>Moderne, performante Websites, individuell und auf Ihr Unternehmen zugeschnitten.</p>
-				<a class="pax-home-btn pax-home-btn--text" href="<?php echo esc_url( home_url( '/webentwicklung/' ) ); ?>">Mehr erfahren</a>
+				<h3><?php echo esc_html( navein_t( 'home_pillar_web', 'Webdesign & Webentwicklung' ) ); ?></h3>
+				<p><?php echo esc_html( navein_t( 'home_pillar_web_p', 'Moderne, performante Websites, individuell und auf Ihr Unternehmen zugeschnitten.' ) ); ?></p>
+				<a class="pax-home-btn pax-home-btn--text" href="<?php echo esc_url( home_url( '/webentwicklung/' ) ); ?>"><?php echo esc_html( navein_t( 'learn_more', 'Mehr erfahren' ) ); ?></a>
 			</div>
 			<div class="pax-home-pillar">
 				<span>02</span>
-				<h3>App- &amp; Softwareentwicklung</h3>
-				<p>Native und individuelle Anwendungen für komplexe Anforderungen.</p>
-				<a class="pax-home-btn pax-home-btn--text" href="<?php echo esc_url( home_url( '/app-entwicklung/' ) ); ?>">Mehr erfahren</a>
+				<h3><?php echo esc_html( navein_t( 'home_pillar_app', 'App- & Softwareentwicklung' ) ); ?></h3>
+				<p><?php echo esc_html( navein_t( 'home_pillar_app_p', 'Native und individuelle Anwendungen für komplexe Anforderungen.' ) ); ?></p>
+				<a class="pax-home-btn pax-home-btn--text" href="<?php echo esc_url( home_url( '/app-entwicklung/' ) ); ?>"><?php echo esc_html( navein_t( 'learn_more', 'Mehr erfahren' ) ); ?></a>
 			</div>
 			<div class="pax-home-pillar">
 				<span>03</span>
-				<h3>UI/UX &amp; Produkt</h3>
-				<p>Klare Interfaces mit Fokus auf Effizienz und Vertrauen.</p>
-				<a class="pax-home-btn pax-home-btn--text" href="<?php echo esc_url( home_url( '/visuelles-design/' ) ); ?>">Mehr erfahren</a>
+				<h3><?php echo esc_html( navein_t( 'home_pillar_ux', 'UI/UX & Produkt' ) ); ?></h3>
+				<p><?php echo esc_html( navein_t( 'home_pillar_ux_p', 'Klare Interfaces mit Fokus auf Effizienz und Vertrauen.' ) ); ?></p>
+				<a class="pax-home-btn pax-home-btn--text" href="<?php echo esc_url( home_url( '/visuelles-design/' ) ); ?>"><?php echo esc_html( navein_t( 'learn_more', 'Mehr erfahren' ) ); ?></a>
 			</div>
 			<div class="pax-home-pillar">
 				<span>04</span>
-				<h3>Technik &amp; Scale</h3>
-				<p>Wartbare Architektur und Systeme, die mit Ihrem Wachstum mithalten.</p>
-				<a class="pax-home-btn pax-home-btn--text" href="<?php echo esc_url( home_url( '/advanced-website-systems/' ) ); ?>">Mehr erfahren</a>
+				<h3><?php echo esc_html( navein_t( 'home_pillar_tech', 'Technik & Scale' ) ); ?></h3>
+				<p><?php echo esc_html( navein_t( 'home_pillar_tech_p', 'Wartbare Architektur und Systeme, die mit Ihrem Wachstum mithalten.' ) ); ?></p>
+				<a class="pax-home-btn pax-home-btn--text" href="<?php echo esc_url( home_url( '/advanced-website-systems/' ) ); ?>"><?php echo esc_html( navein_t( 'learn_more', 'Mehr erfahren' ) ); ?></a>
 			</div>
 		</div>
 	</section>
@@ -183,12 +194,12 @@ $service_links = array(
 	<section class="pax-home-section" data-ph-reveal>
 		<div class="pax-home-wrap pax-home-split">
 			<div class="pax-home-split__copy">
-				<p class="pax-home-eyebrow">Referenzen</p>
-				<h2 class="pax-home-display">Ausgewählte Projekte.</h2>
-				<p class="pax-home-lede">Arbeiten, die Expertise, Präzision und Kreativität zeigen.</p>
+				<p class="pax-home-eyebrow"><?php echo esc_html( navein_t( 'nav_references', 'Referenzen' ) ); ?></p>
+				<h2 class="pax-home-display"><?php echo esc_html( navein_t( 'home_projects_display', 'Ausgewählte Projekte.' ) ); ?></h2>
+				<p class="pax-home-lede"><?php echo esc_html( navein_t( 'home_projects_lede', 'Arbeiten, die Expertise, Präzision und Kreativität zeigen.' ) ); ?></p>
 				<div class="pax-home-actions">
-					<a class="pax-home-btn pax-home-btn--dark" href="<?php echo esc_url( $projects ); ?>">Alle Projekte ansehen</a>
-					<a class="pax-home-btn pax-home-btn--text" href="<?php echo esc_url( home_url( '/projekte-referenzen/' ) ); ?>">Cases entdecken</a>
+					<a class="pax-home-btn pax-home-btn--dark" href="<?php echo esc_url( $projects ); ?>"><?php echo esc_html( navein_t( 'home_all_projects', 'Alle Projekte ansehen' ) ); ?></a>
+					<a class="pax-home-btn pax-home-btn--text" href="<?php echo esc_url( home_url( '/projekte-referenzen/' ) ); ?>"><?php echo esc_html( navein_t( 'home_discover_cases', 'Cases entdecken' ) ); ?></a>
 				</div>
 			</div>
 			<div class="pax-home-split__visual" aria-hidden="true">
@@ -201,18 +212,18 @@ $service_links = array(
 	<section class="pax-home-section pax-home-section--snow" data-ph-reveal>
 		<div class="pax-home-wrap pax-home-about__grid">
 			<div>
-				<p class="pax-home-eyebrow">Über uns</p>
-				<h2 class="pax-home-display">Wir sind<br>PAXdesign.</h2>
-				<p class="pax-home-lede">Digitale Entwickler seit 2016, Technologie, Design und Strategie für leistungsstarke Websites und individuelle Software.</p>
+				<p class="pax-home-eyebrow"><?php echo esc_html( navein_t( 'home_about', 'Über uns' ) ); ?></p>
+				<h2 class="pax-home-display"><?php echo esc_html( navein_t( 'home_about_display', 'Wir sind PAXdesign.' ) ); ?></h2>
+				<p class="pax-home-lede"><?php echo esc_html( navein_t( 'home_about_lede', 'Digitale Entwickler seit 2016, Technologie, Design und Strategie für leistungsstarke Websites und individuelle Software.' ) ); ?></p>
 				<div class="pax-home-actions">
-					<a class="pax-home-btn pax-home-btn--dark" href="<?php echo esc_url( $about ); ?>">Mehr erfahren</a>
-					<a class="pax-home-btn pax-home-btn--text" href="<?php echo esc_url( home_url( '/unsere-experten/' ) ); ?>">Unsere Experten</a>
+					<a class="pax-home-btn pax-home-btn--dark" href="<?php echo esc_url( $about ); ?>"><?php echo esc_html( navein_t( 'learn_more', 'Mehr erfahren' ) ); ?></a>
+					<a class="pax-home-btn pax-home-btn--text" href="<?php echo esc_url( home_url( '/unsere-experten/' ) ); ?>"><?php echo esc_html( navein_t( 'home_experts', 'Unsere Experten' ) ); ?></a>
 				</div>
 			</div>
 			<ul class="pax-home-stats">
-				<li><strong>10+</strong><span>Jahre Erfahrung</span></li>
-				<li><strong>150+</strong><span>Abgeschlossene Projekte</span></li>
-				<li><strong>98%</strong><span>Kundenzufriedenheit</span></li>
+				<li><strong>10+</strong><span><?php echo esc_html( navein_t( 'home_years', 'Jahre Erfahrung' ) ); ?></span></li>
+				<li><strong>150+</strong><span><?php echo esc_html( navein_t( 'home_projects_stat', 'Abgeschlossene Projekte' ) ); ?></span></li>
+				<li><strong>98%</strong><span><?php echo esc_html( navein_t( 'home_satisfaction', 'Kundenzufriedenheit' ) ); ?></span></li>
 			</ul>
 		</div>
 	</section>
@@ -220,28 +231,28 @@ $service_links = array(
 	<!-- Awards: light -->
 	<section class="pax-home-section" data-ph-reveal>
 		<div class="pax-home-wrap pax-home-wrap--narrow pax-home-center">
-			<p class="pax-home-eyebrow">Awards</p>
-			<h2 class="pax-home-display">Ergebnisse, die für sich sprechen.</h2>
-			<p class="pax-home-lede pax-home-lede--center">Gewinner der German Web Awards 2021 &amp; 2022 und ausgezeichnet mit dem Deutschen Agenturpreis 2021.</p>
+			<p class="pax-home-eyebrow"><?php echo esc_html( navein_t( 'home_awards', 'Awards' ) ); ?></p>
+			<h2 class="pax-home-display"><?php echo esc_html( navein_t( 'home_awards_display', 'Ergebnisse, die für sich sprechen.' ) ); ?></h2>
+			<p class="pax-home-lede pax-home-lede--center"><?php echo esc_html( navein_t( 'home_awards_lede', 'Gewinner der German Web Awards 2021 & 2022 und ausgezeichnet mit dem Deutschen Agenturpreis 2021.' ) ); ?></p>
 		</div>
 	</section>
 
 	<!-- Testimonials -->
 	<section class="pax-home-section pax-home-section--snow" data-ph-reveal>
 		<div class="pax-home-wrap">
-			<p class="pax-home-eyebrow">Kundenstimmen</p>
-			<h2 class="pax-home-display">Was unsere Kunden sagen.</h2>
+			<p class="pax-home-eyebrow"><?php echo esc_html( navein_t( 'home_testimonials', 'Kundenstimmen' ) ); ?></p>
+			<h2 class="pax-home-display"><?php echo esc_html( navein_t( 'home_testimonials_display', 'Was unsere Kunden sagen.' ) ); ?></h2>
 			<div class="pax-home-quotes">
 				<blockquote>
-					<p>PAXdesign hat uns geholfen, dass potenzielle Kunden klarer erkennen, wer wir sind. Der Auftritt wirkt deutlich professioneller.</p>
+					<p><?php echo esc_html( navein_t( 'home_quote_1', 'PAXdesign hat uns geholfen, dass potenzielle Kunden klarer erkennen, wer wir sind. Der Auftritt wirkt deutlich professioneller.' ) ); ?></p>
 					<footer>Thomas Müller · CEO, TechStart GmbH</footer>
 				</blockquote>
 				<blockquote>
-					<p>100% zufrieden. Modern, seriös, einfach zu bedienen und dennoch besonders. Absolute Empfehlung.</p>
+					<p><?php echo esc_html( navein_t( 'home_quote_2', '100% zufrieden. Modern, seriös, einfach zu bedienen und dennoch besonders. Absolute Empfehlung.' ) ); ?></p>
 					<footer>Jannis Rettig · CEO, Rettig &amp; Partner</footer>
 				</blockquote>
 				<blockquote>
-					<p>Qualität bei dieser Geschwindigkeit habe ich so noch nicht erlebt.</p>
+					<p><?php echo esc_html( navein_t( 'home_quote_3', 'Qualität bei dieser Geschwindigkeit habe ich so noch nicht erlebt.' ) ); ?></p>
 					<footer>Gian-Marco Blum · CEO, Candidate Flow GmbH</footer>
 				</blockquote>
 			</div>
@@ -251,27 +262,27 @@ $service_links = array(
 	<!-- Process: light -->
 	<section class="pax-home-section" data-ph-reveal>
 		<div class="pax-home-wrap">
-			<p class="pax-home-eyebrow">Prozess</p>
-			<h2 class="pax-home-display">Von der Idee zur Umsetzung.</h2>
+			<p class="pax-home-eyebrow"><?php echo esc_html( navein_t( 'home_process', 'Prozess' ) ); ?></p>
+			<h2 class="pax-home-display"><?php echo esc_html( navein_t( 'home_process_display', 'Von der Idee zur Umsetzung.' ) ); ?></h2>
 			<ol class="pax-home-steps">
 				<li>
 					<span>01</span>
-					<strong>Analyse</strong>
-					<p>Anforderungen verstehen, Ziele schärfen, Potenziale finden.</p>
+					<strong><?php echo esc_html( navein_t( 'home_step_1', 'Analyse' ) ); ?></strong>
+					<p><?php echo esc_html( navein_t( 'home_step_1_p', 'Anforderungen verstehen, Ziele schärfen, Potenziale finden.' ) ); ?></p>
 				</li>
 				<li>
 					<span>02</span>
-					<strong>Konzept &amp; Design</strong>
-					<p>UI/UX, Wireframes und Prototypen für echte Nutzerpfade.</p>
+					<strong><?php echo esc_html( navein_t( 'home_step_2', 'Konzept & Design' ) ); ?></strong>
+					<p><?php echo esc_html( navein_t( 'home_step_2_p', 'UI/UX, Wireframes und Prototypen für echte Nutzerpfade.' ) ); ?></p>
 				</li>
 				<li>
 					<span>03</span>
-					<strong>Umsetzung &amp; Care</strong>
-					<p>Entwicklung, Launch und langfristige Betreuung.</p>
+					<strong><?php echo esc_html( navein_t( 'home_step_3', 'Umsetzung & Care' ) ); ?></strong>
+					<p><?php echo esc_html( navein_t( 'home_step_3_p', 'Entwicklung, Launch und langfristige Betreuung.' ) ); ?></p>
 				</li>
 			</ol>
 			<div class="pax-home-actions">
-				<a class="pax-home-btn pax-home-btn--dark" href="<?php echo esc_url( $contact ); ?>">Projekt starten</a>
+				<a class="pax-home-btn pax-home-btn--dark" href="<?php echo esc_url( $contact ); ?>"><?php echo esc_html( navein_t( 'home_start_project', 'Projekt starten' ) ); ?></a>
 				<a class="pax-home-btn pax-home-btn--text" href="tel:+4368120543638"><?php echo esc_html( $phone ); ?></a>
 			</div>
 		</div>
@@ -284,10 +295,10 @@ $service_links = array(
 			<p class="pax-home-brand pax-home-brand--dark">PAXdesign</p>
 			<h2 class="pax-home-display">Sign&nbsp;Up.</h2>
 			<p class="pax-home-lede pax-home-lede--center">
-				Erstellen Sie Ihr Konto für Live&nbsp;Chat und den Kundenbereich, klar, sicher und in wenigen Schritten.
+				<?php echo esc_html( navein_t( 'home_signup_lede', 'Erstellen Sie Ihr Konto für Live Chat und den Kundenbereich, klar, sicher und in wenigen Schritten.' ) ); ?>
 			</p>
 			<form class="pax-home-signup-form" data-pax-signup-form novalidate>
-				<label class="pax-home-sr" for="pax-home-signup-email">E-Mail-Adresse</label>
+				<label class="pax-home-sr" for="pax-home-signup-email"><?php echo esc_html( navein_t( 'home_email', 'E-Mail-Adresse' ) ); ?></label>
 				<div class="pax-home-signup-form__shell">
 					<input
 						id="pax-home-signup-email"
@@ -299,14 +310,14 @@ $service_links = array(
 						placeholder="name@email.com"
 						required
 					>
-					<button type="submit" class="pax-home-signup-form__submit">Weiter</button>
+					<button type="submit" class="pax-home-signup-form__submit"><?php echo esc_html( navein_t( 'continue', 'Weiter' ) ); ?></button>
 				</div>
 				<p class="pax-home-signup-form__note" data-pax-signup-note hidden></p>
 			</form>
 			<p class="pax-home-signup__meta">
-				<button type="button" class="pax-home-signup__link" data-pax-signup>Konto erstellen</button>
+				<button type="button" class="pax-home-signup__link" data-pax-signup><?php echo esc_html( navein_t( 'create_account', 'Konto erstellen' ) ); ?></button>
 				<span aria-hidden="true">·</span>
-				<a href="<?php echo esc_url( $contact ); ?>">Kontakt</a>
+				<a href="<?php echo esc_url( $contact ); ?>"><?php echo esc_html( navein_t( 'nav_contact', 'Kontakt' ) ); ?></a>
 			</p>
 		</div>
 	</section>
@@ -315,12 +326,12 @@ $service_links = array(
 	<section class="pax-home-final" data-ph-reveal>
 		<div class="pax-home-wrap pax-home-wrap--narrow pax-home-center">
 			<p class="pax-home-brand pax-home-brand--dark">PAXdesign</p>
-			<h2 class="pax-home-display">Bereit für Ihr<br>nächstes System?</h2>
-			<p class="pax-home-lede pax-home-lede--center">Lassen Sie uns Ihre Anforderungen in klare, skalierbare digitale Produkte übersetzen.</p>
+			<h2 class="pax-home-display"><?php echo esc_html( navein_t( 'home_final_display', 'Bereit für Ihr nächstes System?' ) ); ?></h2>
+			<p class="pax-home-lede pax-home-lede--center"><?php echo esc_html( navein_t( 'home_final_lede', 'Lassen Sie uns Ihre Anforderungen in klare, skalierbare digitale Produkte übersetzen.' ) ); ?></p>
 			<div class="pax-home-actions pax-home-actions--center">
-				<a class="pax-home-btn pax-home-btn--dark" href="<?php echo esc_url( $contact ); ?>">Kostenlose Beratung</a>
+				<a class="pax-home-btn pax-home-btn--dark" href="<?php echo esc_url( $contact ); ?>"><?php echo esc_html( navein_t( 'home_free_consult', 'Kostenlose Beratung' ) ); ?></a>
 				<a class="pax-home-btn pax-home-btn--text" href="mailto:<?php echo esc_attr( $email ); ?>"><?php echo esc_html( $email ); ?></a>
-				<a class="pax-home-btn pax-home-btn--text" href="<?php echo esc_url( home_url( '/karriere/' ) ); ?>">Karriere</a>
+				<a class="pax-home-btn pax-home-btn--text" href="<?php echo esc_url( home_url( '/karriere/' ) ); ?>"><?php echo esc_html( navein_t( 'career', 'Karriere' ) ); ?></a>
 			</div>
 		</div>
 	</section>

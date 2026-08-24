@@ -10,6 +10,24 @@ if ( ! defined( 'ABSPATH' ) ) {
 	exit;
 }
 
+if ( ! function_exists( 'navein_bootstrap_site_i18n' ) ) {
+	function navein_bootstrap_site_i18n() {
+		static $loaded = false;
+		if ( $loaded ) {
+			return;
+		}
+		foreach ( array( get_stylesheet_directory(), get_template_directory() ) as $base ) {
+			$path = $base . '/inc/site-i18n.php';
+			if ( is_readable( $path ) ) {
+				require_once $path;
+				$loaded = true;
+				return;
+			}
+		}
+	}
+}
+navein_bootstrap_site_i18n();
+
 if ( ! function_exists( 'pax_ccs_bootstrap_locale_helpers' ) ) {
 	/**
 	 * Load cybercrime locale helpers only when present (never fatal site-wide).
@@ -298,6 +316,43 @@ function navein_custom_scripts_styles() {
 		array( 'navein-style', 'navein-apple-sticky-header' ),
 		$theme_version
 	);
+	wp_enqueue_style(
+		'navein-apple-site-rtl',
+		get_template_directory_uri() . '/assets/css/apple-site-rtl.css',
+		array( 'navein-apple-header-stable' ),
+		$theme_version
+	);
+	wp_enqueue_script(
+		'navein-apple-site-i18n',
+		get_template_directory_uri() . '/assets/js/apple-site-i18n.js',
+		array(),
+		$theme_version,
+		false
+	);
+	if ( function_exists( 'navein_site_lang' ) ) {
+		wp_localize_script(
+			'navein-apple-site-i18n',
+			'PAX_SITE_I18N',
+			array(
+				'lang'      => navein_site_lang(),
+				'dir'       => navein_site_dir(),
+				'source'    => navein_site_lang_source(),
+				'supported' => navein_site_i18n_supported(),
+				'phrases'   => navein_site_i18n_phrases(),
+				'labels'    => array(
+					'language' => navein_t( 'language', 'Language' ),
+				),
+			)
+		);
+		if ( navein_site_lang() === 'ar' ) {
+			wp_enqueue_style(
+				'navein-arabic-naskh',
+				'https://fonts.googleapis.com/css2?family=Noto+Naskh+Arabic:wght@400;500;600;700&display=swap',
+				array(),
+				null
+			);
+		}
+	}
 
 	// Apple-style compact inner page titles (replaces legacy banner card).
 	wp_enqueue_style(
@@ -544,8 +599,8 @@ function navein_custom_scripts_styles() {
 		);
 	}
 
-	// RTL support
-	if ( is_rtl() ) {
+	// RTL support (WordPress locale or Arabic site language).
+	if ( is_rtl() || ( function_exists( 'navein_site_lang' ) && navein_site_lang() === 'ar' ) ) {
 		wp_enqueue_style( 'navein-rtl-style', get_template_directory_uri() . '/assets/css/rtl.css', array(), $theme_version );
 	}
 
@@ -652,6 +707,55 @@ function navein_apple_footer_body_class( $classes ) {
 	return $classes;
 }
 add_filter( 'body_class', 'navein_apple_footer_body_class' );
+
+if ( ! function_exists( 'navein_site_i18n_locale' ) ) {
+	function navein_site_i18n_locale( $locale ) {
+		if ( is_admin() || ! function_exists( 'navein_site_lang' ) ) {
+			return $locale;
+		}
+		return navein_site_i18n_wp_locale( navein_site_lang() );
+	}
+}
+add_filter( 'locale', 'navein_site_i18n_locale', 20 );
+add_filter( 'determine_locale', 'navein_site_i18n_locale', 20 );
+
+if ( ! function_exists( 'navein_site_i18n_language_attributes' ) ) {
+	function navein_site_i18n_language_attributes( $output ) {
+		if ( is_admin() || ! function_exists( 'navein_site_lang' ) ) {
+			return $output;
+		}
+		$lang = navein_site_lang();
+		$dir  = navein_site_dir();
+		return 'lang="' . esc_attr( $lang ) . '" dir="' . esc_attr( $dir ) . '"';
+	}
+}
+add_filter( 'language_attributes', 'navein_site_i18n_language_attributes', 20 );
+
+if ( ! function_exists( 'navein_site_i18n_body_class' ) ) {
+	function navein_site_i18n_body_class( $classes ) {
+		if ( ! function_exists( 'navein_site_lang' ) ) {
+			return $classes;
+		}
+		$lang = navein_site_lang();
+		$classes[] = 'pax-lang-' . $lang;
+		if ( $lang === 'ar' ) {
+			$classes[] = 'pax-dir-rtl';
+			$classes[] = 'rtl';
+		}
+		return $classes;
+	}
+}
+add_filter( 'body_class', 'navein_site_i18n_body_class' );
+
+if ( ! function_exists( 'navein_site_i18n_persist_request' ) ) {
+	function navein_site_i18n_persist_request() {
+		if ( is_admin() || ! function_exists( 'navein_site_lang' ) ) {
+			return;
+		}
+		navein_site_i18n_persist( navein_site_lang(), navein_site_lang_source() );
+	}
+}
+add_action( 'init', 'navein_site_i18n_persist_request', 0 );
 
 /**
  * Stable body class for Cybercrime Support template overrides.
@@ -1043,9 +1147,10 @@ add_filter( 'template_include', 'navein_set_default_page_template' );
  */
 if ( ! function_exists( 'navein_apple_header_reserved_auth_markup' ) ) {
 	function navein_apple_header_reserved_auth_markup() {
+		$signin = function_exists( 'navein_t' ) ? navein_t( 'sign_in', 'Anmelden' ) : 'Anmelden';
 		return '<div id="pdx-auth-bar" class="pdx-cx-shell pdx-auth-bar--header pdx-auth-bar--logged-out" data-pdx-header-slot="1">'
 			. '<div class="pdx-auth-bar-inner">'
-			. '<button type="button" class="pdx-auth-signup-btn pdx-cx-btn pdx-auth-header-btn">Anmelden</button>'
+			. '<button type="button" class="pdx-auth-signup-btn pdx-cx-btn pdx-auth-header-btn">' . esc_html( $signin ) . '</button>'
 			. '<button type="button" class="pdx-auth-account-btn pdx-cx-btn pdx-cx-btn--ghost pdx-auth-header-btn" aria-haspopup="true" aria-expanded="false" hidden>'
 			. '<span class="pdx-auth-account-identity"></span></button>'
 			. '<div class="pdx-auth-menu pdx-auth-menu--apple" hidden></div>'
@@ -1064,23 +1169,57 @@ if ( ! function_exists( 'navein_apple_header_utility_cluster_ob_start' ) ) {
 
 		$has_auth = ( strpos( $html, 'id="pdx-auth-bar"' ) !== false || strpos( $html, "id='pdx-auth-bar'" ) !== false );
 		$slot     = $has_auth ? '' : navein_apple_header_reserved_auth_markup();
+		$lang     = function_exists( 'navein_site_lang_switcher_markup' ) ? navein_site_lang_switcher_markup( 'desktop' ) : '';
+		$lang_m   = function_exists( 'navein_site_lang_switcher_markup' ) ? navein_site_lang_switcher_markup( 'mobile' ) : '';
 
-		if ( strpos( $html, 'class="dtr-header-utility-cluster"' ) !== false ) {
-			if ( $slot === '' ) {
-				return $html;
+		if ( strpos( $html, 'id="pax-site-lang"' ) === false && $lang !== '' ) {
+			if ( strpos( $html, 'class="dtr-header-utility-cluster"' ) !== false ) {
+				$with_lang = preg_replace(
+					'#<div class="dtr-header-utility-cluster">#',
+					'<div class="dtr-header-utility-cluster">' . $lang,
+					$html,
+					1
+				);
+				$html = is_string( $with_lang ) ? $with_lang : $html;
 			}
-			$with_slot = preg_replace(
-				'#(<div class="dtr-header-utility-cluster">[\s\S]*?<a[^>]*dtr-header-btn[\s\S]*?</a>)#',
-				'$1' . $slot,
+		}
+
+		if ( strpos( $html, 'id="pax-site-lang-mobile"' ) === false && $lang_m !== '' && strpos( $html, 'id="dtr-responsive-header"' ) !== false ) {
+			$with_mobile = preg_replace(
+				'#(<div id="dtr-responsive-header"[\s\S]*?<a[^>]*dtr-search-modal-trigger[\s\S]*?</a>)#',
+				'$1' . $lang_m,
 				$html,
 				1
 			);
-			return is_string( $with_slot ) ? $with_slot : $html;
+			if ( is_string( $with_mobile ) && $with_mobile !== $html ) {
+				$html = $with_mobile;
+			} else {
+				$with_mobile = preg_replace(
+					'#(<div id="dtr-responsive-header"[^>]*>)#',
+					'$1' . $lang_m,
+					$html,
+					1
+				);
+				$html = is_string( $with_mobile ) ? $with_mobile : $html;
+			}
+		}
+
+		if ( strpos( $html, 'class="dtr-header-utility-cluster"' ) !== false ) {
+			if ( $slot !== '' ) {
+				$with_slot = preg_replace(
+					'#(<div class="dtr-header-utility-cluster">[\s\S]*?<a[^>]*dtr-header-btn[\s\S]*?</a>)#',
+					'$1' . $slot,
+					$html,
+					1
+				);
+				$html = is_string( $with_slot ) ? $with_slot : $html;
+			}
+			return function_exists( 'navein_site_i18n_replace_chrome' ) ? navein_site_i18n_replace_chrome( $html ) : $html;
 		}
 
 		$wrapped = preg_replace_callback(
 			'#(<div class="dtr-header-global-content">)([\s\S]*?)(</div>\s*</div>\s*</div>\s*<div id="dtr-responsive-header")#',
-			static function ( $matches ) use ( $slot ) {
+			static function ( $matches ) use ( $slot, $lang ) {
 				$inner = $matches[2];
 				if ( strpos( $inner, 'class="dtr-header-utility-cluster"' ) !== false ) {
 					return $matches[0];
@@ -1096,7 +1235,7 @@ if ( ! function_exists( 'navein_apple_header_utility_cluster_ob_start' ) ) {
 
 				$utilities = preg_replace(
 					'#^(<a[^>]*dtr-search-modal-trigger[\s\S]*?<a[^>]*dtr-header-btn[\s\S]*?</a>)#',
-					'<div class="dtr-header-utility-cluster">$1' . $slot . '</div>',
+					'<div class="dtr-header-utility-cluster">' . $lang . '$1' . $slot . '</div>',
 					$parts[1],
 					1
 				);
@@ -1110,7 +1249,8 @@ if ( ! function_exists( 'navein_apple_header_utility_cluster_ob_start' ) ) {
 			1
 		);
 
-		return is_string( $wrapped ) ? $wrapped : $html;
+		$wrapped = is_string( $wrapped ) ? $wrapped : $html;
+		return function_exists( 'navein_site_i18n_replace_chrome' ) ? navein_site_i18n_replace_chrome( $wrapped ) : $wrapped;
 	}
 
 	function navein_apple_header_utility_cluster_ob_start() {
@@ -1185,6 +1325,13 @@ if ( ! function_exists( 'navein_apple_header_desktop_cascade_footer' ) ) {
 			. 'flex-shrink:0!important;gap:10px!important;margin-left:auto!important;'
 			. 'width:max-content!important;height:52px!important;'
 			. 'padding-left:12px!important;border-left:.5px solid rgba(0,0,0,.18)!important;}'
+			. 'html body.dtr-apple-sticky-header #dtr-header-global .dtr-header-utility-cluster #pax-site-lang,'
+			. 'html body.dtr-apple-sticky-header #dtr-header-global .pax-site-lang{'
+			. 'display:inline-flex!important;flex:0 0 auto!important;flex-shrink:0!important;margin:0!important;}'
+			. 'html[dir=rtl] body.dtr-apple-sticky-header #dtr-header-global .dtr-header-utility-cluster,'
+			. 'html[lang=ar] body.dtr-apple-sticky-header #dtr-header-global .dtr-header-utility-cluster{'
+			. 'margin-left:0!important;margin-right:auto!important;padding-left:0!important;padding-right:12px!important;'
+			. 'border-left:0!important;border-right:.5px solid rgba(0,0,0,.18)!important;}'
 			. 'html body.dtr-apple-sticky-header #dtr-header-global #pdx-auth-bar .pdx-auth-portal-btn,'
 			. 'html body.dtr-apple-sticky-header #dtr-header-global #pdx-auth-bar.pdx-auth-bar--logged-out .pdx-auth-account-btn,'
 			. 'html body.dtr-apple-sticky-header #dtr-header-global #pdx-auth-bar.pdx-auth-bar--logged-out .pdx-auth-menu{'
@@ -1203,7 +1350,9 @@ if ( ! function_exists( 'navein_apple_header_desktop_cascade_footer' ) ) {
 			. 'z-index:10050!important;}'
 			. 'html body.dtr-apple-sticky-header #dtr-responsive-header #pdx-auth-bar{'
 			. 'position:relative!important;top:auto!important;right:auto!important;transform:none!important;'
-			. 'margin:0 44px 0 auto!important;}'
+			. 'margin:0 44px 0 0!important;}'
+			. 'html body.dtr-apple-sticky-header #dtr-responsive-header #pax-site-lang-mobile{'
+			. 'display:inline-flex!important;margin:0 6px 0 auto!important;flex:0 0 auto!important;}'
 			. 'html body.dtr-apple-sticky-header #dtr-main-wrapper{padding-top:0!important;margin-top:0!important;}'
 			. '}'
 			. '</style>' . "\n";

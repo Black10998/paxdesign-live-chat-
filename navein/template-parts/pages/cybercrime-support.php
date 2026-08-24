@@ -31,11 +31,14 @@ if ( $ccs_logged_in ) {
 
 if ( ! function_exists( 'pax_ccs_text' ) ) {
 	function pax_ccs_text( $node, $lang ) {
-		if ( is_array( $node ) && isset( $node[ $lang ] ) ) {
+		if ( is_array( $node ) && isset( $node[ $lang ] ) && $node[ $lang ] !== '' ) {
 			return $node[ $lang ];
 		}
 		if ( is_array( $node ) && isset( $node['en'] ) ) {
 			return $node['en'];
+		}
+		if ( is_array( $node ) && isset( $node['de'] ) ) {
+			return $node['de'];
 		}
 		return is_string( $node ) ? $node : '';
 	}
@@ -43,14 +46,29 @@ if ( ! function_exists( 'pax_ccs_text' ) ) {
 
 if ( ! function_exists( 'pax_ccs_bilingual' ) ) {
 	function pax_ccs_bilingual( $node ) {
-		foreach ( array( 'ar', 'de', 'en' ) as $lang ) {
-			$hidden = $lang !== 'ar' ? ' hidden' : '';
+		$visible = 'ar';
+		if ( function_exists( 'navein_site_lang' ) ) {
+			$site = navein_site_lang();
+			if ( in_array( $site, array( 'ar', 'de', 'en', 'tr' ), true ) ) {
+				$visible = $site;
+			}
+		}
+		foreach ( array( 'ar', 'de', 'en', 'tr' ) as $lang ) {
+			$hidden = ( $lang !== $visible ) ? ' hidden' : '';
 			echo '<span class="pax-ccs-t" data-lang="' . esc_attr( $lang ) . '"' . $hidden . '>' . esc_html( pax_ccs_text( $node, $lang ) ) . '</span>';
 		}
 	}
 }
+$ccs_lang = 'ar';
+if ( function_exists( 'navein_site_lang' ) ) {
+	$site_lang = navein_site_lang();
+	if ( in_array( $site_lang, array( 'ar', 'de', 'en', 'tr' ), true ) ) {
+		$ccs_lang = $site_lang;
+	}
+}
+$ccs_dir = $ccs_lang === 'ar' ? 'rtl' : 'ltr';
 ?>
-<article <?php post_class( 'pax-ccs-portal' ); ?> data-ccs-lang="ar" lang="ar" dir="rtl" data-ccs-phase="welcome">
+<article <?php post_class( 'pax-ccs-portal' ); ?> data-ccs-lang="<?php echo esc_attr( $ccs_lang ); ?>" lang="<?php echo esc_attr( $ccs_lang ); ?>" dir="<?php echo esc_attr( $ccs_dir ); ?>" data-ccs-phase="welcome">
 
 	<a class="pax-ccs-portal__skip" href="#pax-ccs-main">
 		<?php pax_ccs_bilingual( $copy['portal']['skip'] ); ?>
@@ -91,9 +109,10 @@ if ( ! function_exists( 'pax_ccs_bilingual' ) ) {
 	<div class="pax-ccs-portal__langbar">
 		<div class="pax-ccs-portal__wrap pax-ccs-portal__langbar-inner">
 			<div class="pax-ccs-portal__lang-toggle" role="group" aria-label="Language">
-				<button type="button" class="pax-ccs-portal__lang-btn is-active" data-ccs-switch="ar" aria-pressed="true">العربية</button>
+				<button type="button" class="pax-ccs-portal__lang-btn" data-ccs-switch="ar" aria-pressed="false">العربية</button>
 				<button type="button" class="pax-ccs-portal__lang-btn" data-ccs-switch="de" aria-pressed="false">Deutsch</button>
 				<button type="button" class="pax-ccs-portal__lang-btn" data-ccs-switch="en" aria-pressed="false">English</button>
+				<button type="button" class="pax-ccs-portal__lang-btn" data-ccs-switch="tr" aria-pressed="false">Türkçe</button>
 			</div>
 		</div>
 	</div>

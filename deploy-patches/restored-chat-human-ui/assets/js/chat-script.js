@@ -2687,10 +2687,19 @@
     var htmlLang = (document.documentElement.getAttribute('lang') || document.documentElement.lang || '').toLowerCase();
     if (htmlLang.indexOf('ar') === 0) { return 'ar'; }
     if (htmlLang.indexOf('en') === 0) { return 'en'; }
+    if (htmlLang.indexOf('tr') === 0) { return 'tr'; }
     if (htmlLang.indexOf('de') === 0) { return 'de'; }
+    try {
+      var cookie = (document.cookie.match(/(?:^|; )pax_site_lang=([^;]*)/) || [])[1];
+      if (cookie) {
+        var c = decodeURIComponent(cookie).toLowerCase().slice(0, 2);
+        if (c === 'ar' || c === 'en' || c === 'de' || c === 'tr') { return c; }
+      }
+    } catch (e) {}
     var nav = (navigator.language || navigator.userLanguage || 'de').toLowerCase();
     if (nav.indexOf('ar') === 0) { return 'ar'; }
     if (nav.indexOf('en') === 0) { return 'en'; }
+    if (nav.indexOf('tr') === 0) { return 'tr'; }
     return 'de';
   }
 
@@ -3947,11 +3956,11 @@
     updateEndButtonUi();
     updateSendButton();
     if (closed) {
-      input.placeholder = 'Chat geschlossen';
+      input.placeholder = localizedI18n('composerClosed') || 'Chat geschlossen';
     } else if (isHumanMode()) {
-      input.placeholder = 'Nachricht an Live Chat …';
+      input.placeholder = localizedI18n('composerLive') || 'Nachricht an Live Chat …';
     } else {
-      input.placeholder = 'Nachricht schreiben …';
+      input.placeholder = localizedI18n('composerDefault') || 'Nachricht schreiben …';
     }
   }
 
