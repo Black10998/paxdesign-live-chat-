@@ -163,6 +163,8 @@ i18n_ok(is_string($career_out) && strpos($career_out, 'Jobs bei uns') === false,
 i18n_ok(is_string($career_out) && strpos($career_out, 'Careers &amp; jobs with us - paxdesign') !== false, 'full career title is translated');
 i18n_ok(is_string($career_out) && strpos($career_out, '>Careers at PAXdesign<') !== false, 'career heading is translated');
 i18n_ok(is_string($career_out) && strpos($career_out, '>Submit application<') !== false, 'career submit button is translated');
+i18n_ok(navein_t('privacy_no_user_share', '', 'en') === 'No sharing of user data', 'privacy no-share heading is in the catalog');
+i18n_ok(navein_t('terms_transfer_h', '', 'ar') === '5.3 النقل', 'AGB transfer heading has Arabic');
 
 if ($fail) {
 	fwrite(STDERR, "$fail site-i18n assertion(s) failed\n");

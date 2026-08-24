@@ -1614,4 +1614,16 @@ return array(
 		'ar' => 'تعريف المزوّد',
 		'tr' => 'Sağlayıcı bilgisi',
 	),
+	'privacy_no_user_share' => array(
+		'de' => 'Keine Weitergabe von Nutzerdaten',
+		'en' => 'No sharing of user data',
+		'ar' => 'لا نقل لبيانات المستخدمين',
+		'tr' => 'Kullanıcı verisi paylaşılmaz',
+	),
+	'terms_transfer_h' => array(
+		'de' => '5.3 Weitergabe',
+		'en' => '5.3 Transfer',
+		'ar' => '5.3 النقل',
+		'tr' => '5.3 Devretme',
+	),
 );
