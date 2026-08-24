@@ -123,7 +123,7 @@ hs_ok(strpos($css, 'margin-inline-end: auto') !== false, 'mobile logo keeps acti
 hs_ok(strpos($css, '#dtr-menu-button.dtr-hamburger') !== false && strpos($css, 'margin-top: 0 !important') !== false, 'mobile hamburger stays in the flex row');
 hs_ok(strpos($css, '#pax-site-lang-mobile') !== false && strpos($css, 'order: 2') !== false, 'mobile language control has a flex order');
 hs_ok(strpos($functions, 'margin:0 6px 0 auto') === false, 'footer cascade no longer steals margin-left auto for the language button');
-hs_ok(strpos($functions, 'margin:0 44px 0 0') === false, 'footer cascade no longer reserves a hamburger gutter that overlaps login');
+hs_ok(strpos($css, 'dtr-apple-mnav-open') !== false && strpos($functions, 'dtr-apple-mnav-open') !== false, 'open mobile nav hides Sign In so it cannot cover the close control');
 
 if ($fail) {
 	fwrite(STDERR, "$fail header-stable assertion(s) failed\n");

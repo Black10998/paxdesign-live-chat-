@@ -486,14 +486,14 @@ html body.dtr-apple-sticky-header #dtr-header-global .pdx-auth-menu.pdx-auth-men
     align-items: center !important;
     flex-wrap: nowrap !important;
     justify-content: flex-start !important;
-    gap: 4px !important;
+    gap: 8px !important;
     width: 100% !important;
     max-width: 100% !important;
     height: var(--dtr-apple-header-height) !important;
     min-height: var(--dtr-apple-header-height) !important;
     max-height: var(--dtr-apple-header-height) !important;
     min-width: 0 !important;
-    padding: 0 10px !important;
+    padding: 0 12px !important;
     margin: 0 !important;
     box-sizing: border-box !important;
     overflow: visible !important;
@@ -599,8 +599,12 @@ html body.dtr-apple-sticky-header #dtr-header-global .pdx-auth-menu.pdx-auth-men
     height: var(--dtr-apple-header-height) !important;
     min-height: var(--dtr-apple-header-height) !important;
     max-height: var(--dtr-apple-header-height) !important;
+    display: flex !important;
+    align-items: center !important;
+    align-self: center !important;
     z-index: 2 !important;
     pointer-events: auto !important;
+    float: none !important;
   }
 
   html body.dtr-apple-sticky-header #dtr-responsive-header #pdx-auth-bar .pdx-auth-signup-btn,
@@ -612,9 +616,16 @@ html body.dtr-apple-sticky-header #dtr-header-global .pdx-auth-menu.pdx-auth-men
     font-size: 12px !important;
     line-height: 1 !important;
     white-space: nowrap !important;
-    max-width: min(112px, 34vw) !important;
+    max-width: min(92px, 28vw) !important;
     overflow: hidden !important;
     text-overflow: ellipsis !important;
+  }
+
+  html body.dtr-apple-sticky-header.dtr-apple-mnav-open #dtr-responsive-header #pdx-auth-bar,
+  html body.dtr-apple-sticky-header.dtr-apple-mnav-open #dtr-responsive-header #pax-site-lang-mobile {
+    display: none !important;
+    visibility: hidden !important;
+    pointer-events: none !important;
   }
 
   html body.dtr-apple-sticky-header #dtr-responsive-header #pdx-auth-bar .pdx-auth-portal-btn,
@@ -635,14 +646,16 @@ html body.dtr-apple-sticky-header #dtr-header-global .pdx-auth-menu.pdx-auth-men
     display: flex !important;
     align-items: center !important;
     justify-content: center !important;
-    flex: 0 0 40px !important;
-    width: 40px !important;
-    min-width: 40px !important;
-    height: 40px !important;
+    flex: 0 0 44px !important;
+    width: 44px !important;
+    min-width: 44px !important;
+    height: 44px !important;
     margin: 0 !important;
     margin-top: 0 !important;
+    margin-inline-start: 4px !important;
     padding: 0 !important;
-    z-index: 6 !important;
+    align-self: center !important;
+    z-index: 8 !important;
     overflow: hidden !important;
   }
 
