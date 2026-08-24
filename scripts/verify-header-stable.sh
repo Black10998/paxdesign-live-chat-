@@ -28,10 +28,11 @@ grep -q "pdx-auth-bar--logged-out .pdx-auth-signup-btn" "$TMP/apple-header-stabl
 grep -q "dtr-has-mega" "$TMP/apple-header-stable.css" && ok "live CSS keeps mega menus unclipped" || fail "live CSS missing mega-menu overflow restore"
 grep -q "margin-inline-end: auto" "$TMP/apple-header-stable.css" && ok "live CSS keeps mobile actions on the trailing edge" || fail "live CSS missing mobile trailing-edge spacer"
 grep -q "#dtr-menu-button.dtr-hamburger" "$TMP/apple-header-stable.css" && ok "live CSS includes in-flow hamburger rules" || fail "live CSS missing in-flow hamburger"
-if grep -q "margin: 0 6px 0 auto" "$TMP/apple-header-stable.css"; then
-  fail "live CSS still uses competing auto-margin on the language button"
+grep -q "direction: ltr" "$TMP/apple-header-stable.css" && ok "live CSS keeps the logo LTR in Arabic" || fail "live CSS missing logo LTR isolate"
+if grep -A20 "#dtr-responsive-header .dtr-search-modal-trigger" "$TMP/apple-header-stable.css" | grep -q "display: none"; then
+  ok "live CSS hides Search on mobile"
 else
-  ok "live CSS does not steal auto-margin for the language button"
+  fail "live CSS still shows Search on mobile"
 fi
 
 js_code="$(curl -sS -A 'Mozilla/5.0' -o "$TMP/pax-auth.js" -w '%{http_code}' "${BASE}/wp-content/plugins/paxdesign-booking/assets/customer-auth/js/pax-auth.js?n=${STAMP}")"

@@ -461,7 +461,7 @@ if ( ! function_exists( 'navein_site_i18n_apply_pairs_outside_skips' ) ) {
 		$len = strlen( $html );
 		$pos = 0;
 		$out = '';
-		$tags = array( 'script', 'style', 'textarea', 'noscript' );
+		$tags = array( 'script', 'style', 'textarea', 'noscript', 'svg' );
 
 		while ( $pos < $len ) {
 			$next  = $len;

@@ -86,7 +86,7 @@
       acceptNode: function (node) {
         var parent = node.parentElement;
         if (!parent || skip[parent.tagName]) return NodeFilter.FILTER_REJECT;
-        if (parent.closest('.pax-site-lang, .pax-ccs-portal, #pdx-account-app, .paxdesign-chat-widget')) {
+        if (parent.closest('.pax-site-lang, .pax-ccs-portal, #pdx-account-app, .paxdesign-chat-widget, .dtr-logo, .paxlogo-wrap, svg')) {
           return NodeFilter.FILTER_REJECT;
         }
         return node.nodeValue && node.nodeValue.trim() ? NodeFilter.FILTER_ACCEPT : NodeFilter.FILTER_REJECT;

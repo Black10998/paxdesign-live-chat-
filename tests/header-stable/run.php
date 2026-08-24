@@ -103,7 +103,7 @@ $sample_mobile = '<header><div id="dtr-responsive-header"><div class="container"
 	. '<a class="dtr-logo logo-default" href="/"> </a>'
 	. '<button id="dtr-menu-button" class="dtr-hamburger" type="button"></button>'
 	. '</div></div></header>';
-$sample_actions = '<div id="pax-site-lang-mobile"></div><a href="#dtr-search-modal" role="button" class="dtr-search-modal-trigger dtr-search-modal-trigger--mobile"></a>';
+$sample_actions = '<div id="pax-site-lang-mobile"></div>';
 $sample_injected = preg_replace(
 	'#(<div id="dtr-responsive-header"[\s\S]*?<div class="container">[\s\S]*?)(<button[^>]*id="dtr-menu-button")#',
 	'$1' . $sample_actions . '$2',
@@ -114,7 +114,10 @@ hs_ok(is_string($sample_injected) && strpos($sample_injected, 'pax-site-lang-mob
 hs_ok(is_string($sample_injected) && strpos($sample_injected, 'id="dtr-responsive-header"><div id="pax-site-lang-mobile"') === false, 'injected language control stays inside .container');
 $lang_at = is_string($sample_injected) ? strpos($sample_injected, 'pax-site-lang-mobile') : false;
 $btn_at = is_string($sample_injected) ? strpos($sample_injected, 'id="dtr-menu-button"') : false;
-hs_ok($lang_at !== false && $btn_at !== false && $lang_at < $btn_at, 'language and search sit before the hamburger');
+hs_ok($lang_at !== false && $btn_at !== false && $lang_at < $btn_at, 'language sits before the hamburger');
+hs_ok(strpos($functions, 'dtr-search-modal-trigger--mobile') === false, 'mobile header does not inject a Search control');
+hs_ok(strpos($css, '#dtr-responsive-header .dtr-search-modal-trigger') !== false && strpos($css, 'pointer-events: none !important') !== false, 'mobile Search is hidden and cannot collide with the header');
+hs_ok(strpos($css, 'direction: ltr !important') !== false && strpos($css, 'flex-shrink: 0 !important') !== false, 'logo stays LTR and cannot shrink away in Arabic');
 hs_ok(strpos($functions, '#(<div id="dtr-responsive-header"[^>]*>)#') === false, 'mobile language is not injected as a sibling of .container');
 hs_ok(strpos($css, 'margin-inline-end: auto') !== false, 'mobile logo keeps actions on the trailing edge');
 hs_ok(strpos($css, '#dtr-menu-button.dtr-hamburger') !== false && strpos($css, 'margin-top: 0 !important') !== false, 'mobile hamburger stays in the flex row');

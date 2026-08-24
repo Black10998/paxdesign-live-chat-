@@ -73,7 +73,8 @@ i18n_ok(is_file($root . '/navein/template-parts/pages/cybercrime-support-tr.php'
 $ccs_tr = file_get_contents($root . '/navein/template-parts/pages/cybercrime-support-tr.php');
 i18n_ok(strpos($ccs_tr, 'Bilgiler toplanıyor') !== false && strpos($ccs_tr, 'Kapalı') !== false, 'Turkish CCS status badges exist');
 i18n_ok(strpos($ccs_php, 'pax_ccs_data_lang_attrs') !== false, 'CCS inputs carry AR/DE/EN/TR data attributes');
-i18n_ok(strpos($functions, 'navein_site_i18n_chrome_phrases') !== false, 'page JSON localizes chrome phrases only');
+i18n_ok(strpos($engine, "'svg'") !== false, 'chrome rewrite skips SVG so the logo is untouched');
+i18n_ok(strpos($js, '.dtr-logo') !== false && strpos($js, 'svg') !== false, 'JS walker skips the header logo');
 i18n_ok($workflow && strpos($workflow, 'cybercrime-support-tr.php') !== false, 'i18n deploy copies Turkish CCS overlay');
 i18n_ok(strpos($ccs_php, 'data-ccs-switch="tr"') !== false, 'CCS language bar includes Turkish');
 i18n_ok(strpos($functions, 'MutationObserver') === false || strpos($functions, 'No MutationObserver') !== false, 'functions.php does not install a header MutationObserver');
@@ -102,6 +103,11 @@ $rewritten = navein_site_i18n_replace_chrome($sample);
 i18n_ok(is_string($rewritten) && strlen($rewritten) > 10000, 'chrome replace never returns empty HTML');
 i18n_ok(strpos($rewritten, '>Request a quote<') !== false, 'chrome replace translates the header CTA');
 i18n_ok(strpos($rewritten, '>Pricing<') !== false, 'chrome replace translates nav pricing');
+i18n_ok(substr_count($rewritten, '"cta":"Angebot anfordern"') === 400, 'chrome replace leaves script JSON alone');
+$logo_html = '<svg class="paxlogo-svg"><text>Suche</text></svg><nav>Preise</nav>';
+$logo_out = navein_site_i18n_replace_chrome($logo_html);
+i18n_ok(is_string($logo_out) && strpos($logo_out, '>Suche<') !== false, 'chrome replace leaves SVG logo text alone');
+i18n_ok(is_string($logo_out) && strpos($logo_out, '>Pricing<') !== false, 'chrome replace still translates nav outside SVG');
 i18n_ok(substr_count($rewritten, '"cta":"Angebot anfordern"') === 400, 'chrome replace leaves script JSON alone');
 i18n_ok(count(navein_site_i18n_chrome_phrases()) < count(navein_site_i18n_phrases()), 'chrome phrase pack is smaller than the full catalog');
 

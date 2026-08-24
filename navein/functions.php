@@ -1185,15 +1185,9 @@ if ( ! function_exists( 'navein_apple_header_utility_cluster_ob_start' ) ) {
 		}
 
 		if ( strpos( $html, 'id="pax-site-lang-mobile"' ) === false && $lang_m !== '' && strpos( $html, 'id="dtr-responsive-header"' ) !== false ) {
-			$search_m = '';
-			if ( ! preg_match( '#id="dtr-responsive-header"[\s\S]{0,4000}dtr-search-modal-trigger#', $html ) ) {
-				$search_label = function_exists( 'navein_t' ) ? navein_t( 'search', 'Search' ) : 'Search';
-				$search_m     = '<a href="#dtr-search-modal" role="button" class="dtr-search-modal-trigger dtr-search-modal-trigger--mobile" aria-label="' . esc_attr( $search_label ) . '"></a>';
-			}
-			$actions = $lang_m . $search_m;
 			$with_mobile = preg_replace(
 				'#(<div id="dtr-responsive-header"[\s\S]*?<div class="container">[\s\S]*?)(<button[^>]*id="dtr-menu-button")#',
-				'$1' . $actions . '$2',
+				'$1' . $lang_m . '$2',
 				$html,
 				1
 			);
@@ -1202,7 +1196,7 @@ if ( ! function_exists( 'navein_apple_header_utility_cluster_ob_start' ) ) {
 			} else {
 				$with_mobile = preg_replace(
 					'#(<div id="dtr-responsive-header"[\s\S]*?<a[^>]*dtr-logo[\s\S]*?</a>)#',
-					'$1' . $actions,
+					'$1' . $lang_m,
 					$html,
 					1
 				);
@@ -1371,18 +1365,20 @@ if ( ! function_exists( 'navein_apple_header_desktop_cascade_footer' ) ) {
 			. 'gap:4px!important;width:100%!important;height:52px!important;padding:0 10px!important;margin:0!important;}'
 			. 'html body.dtr-apple-sticky-header #dtr-responsive-header .dtr-logo,'
 			. 'html body.dtr-apple-sticky-header #dtr-responsive-header a.dtr-logo{'
-			. 'order:1;margin-inline-end:auto!important;margin-inline-start:0!important;flex:0 1 auto!important;min-width:0!important;}'
+			. 'order:1;direction:ltr!important;unicode-bidi:isolate;margin-inline-end:auto!important;margin-inline-start:0!important;'
+			. 'flex:0 0 auto!important;flex-shrink:0!important;min-width:88px!important;max-width:none!important;overflow:visible!important;opacity:1!important;visibility:visible!important;}'
 			. 'html body.dtr-apple-sticky-header #dtr-responsive-header #pax-site-lang-mobile{'
 			. 'order:2;display:inline-flex!important;position:relative!important;margin:0!important;flex:0 0 auto!important;}'
-			. 'html body.dtr-apple-sticky-header #dtr-responsive-header .dtr-search-modal-trigger{'
-			. 'order:3;position:relative!important;margin:0!important;flex:0 0 36px!important;}'
+			. 'html body.dtr-apple-sticky-header #dtr-responsive-header .dtr-search-modal-trigger,'
+			. 'html body.dtr-apple-sticky-header #dtr-responsive-header a.dtr-search-modal-trigger{'
+			. 'display:none!important;width:0!important;min-width:0!important;margin:0!important;padding:0!important;overflow:hidden!important;pointer-events:none!important;}'
 			. 'html body.dtr-apple-sticky-header #dtr-responsive-header #pdx-auth-bar,'
 			. 'html body.dtr-apple-sticky-header #dtr-responsive-header #pdx-auth-bar.pdx-auth-bar--header{'
-			. 'order:4;position:relative!important;top:auto!important;right:auto!important;left:auto!important;'
+			. 'order:3;position:relative!important;top:auto!important;right:auto!important;left:auto!important;'
 			. 'bottom:auto!important;transform:none!important;margin:0!important;flex:0 0 auto!important;z-index:2!important;}'
 			. 'html body.dtr-apple-sticky-header #dtr-responsive-header #dtr-menu-button,'
 			. 'html body.dtr-apple-sticky-header #dtr-responsive-header #dtr-menu-button.dtr-hamburger{'
-			. 'order:5;position:relative!important;top:auto!important;right:auto!important;left:auto!important;'
+			. 'order:4;position:relative!important;top:auto!important;right:auto!important;left:auto!important;'
 			. 'margin:0!important;margin-top:0!important;flex:0 0 40px!important;width:40px!important;height:40px!important;z-index:6!important;}'
 			. 'html body.dtr-apple-sticky-header #dtr-main-wrapper{padding-top:0!important;margin-top:0!important;}'
 			. '}'
