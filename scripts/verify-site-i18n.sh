@@ -54,6 +54,25 @@ tr_size="$(wc -c < "$TMP/home-tr.html")"
 grep -q '>Teklif iste<' "$TMP/home-tr.html" && ok "Turkish CTA is translated in HTML" || fail "Turkish CTA not translated in HTML"
 grep -q 'Almanca' "$TMP/home-tr.html" && grep -q 'İngilizce' "$TMP/home-tr.html" && grep -q 'Arapça' "$TMP/home-tr.html" && grep -q 'Türkçe' "$TMP/home-tr.html" && ok "Turkish page shows every language badge in Turkish" || fail "Turkish page missing translated language badges"
 
+sleep 2
+svc_code="$(curl -sS -A 'Mozilla/5.0' -o "$TMP/services-en.html" -w '%{http_code}' "${BASE}/leistungen/?lang=en&n=${STAMP}")"
+[ "$svc_code" = "200" ] && ok "English services HTTP 200" || fail "English services HTTP ${svc_code}"
+grep -q "How we work with you" "$TMP/services-en.html" && ok "English services body copy is translated" || fail "English services still missing How we work with you"
+grep -q "So arbeiten wir mit Ihnen" "$TMP/services-en.html" && fail "English services still has German how-we-work heading" || ok "English services no longer has German how-we-work heading"
+grep -q "Projekte &amp; Referenzen" "$TMP/services-en.html" && fail "English services still has encoded German mega-menu label" || ok "English services mega-menu ampersand label is translated"
+
+sleep 2
+imp_code="$(curl -sS -A 'Mozilla/5.0' -o "$TMP/imprint-en.html" -w '%{http_code}' "${BASE}/impressum/?lang=en&n=${STAMP}")"
+[ "$imp_code" = "200" ] && ok "English imprint HTTP 200" || fail "English imprint HTTP ${imp_code}"
+grep -q "Managing director" "$TMP/imprint-en.html" && ok "English imprint translates Geschäftsführer" || fail "English imprint still has German Geschäftsführer"
+grep -q ">Geschäftsführer<" "$TMP/imprint-en.html" && fail "English imprint still has Geschäftsführer markup" || ok "English imprint has no Geschäftsführer markup"
+
+sleep 2
+priv_code="$(curl -sS -A 'Mozilla/5.0' -o "$TMP/privacy-ar.html" -w '%{http_code}' "${BASE}/datenschutz/?lang=ar&n=${STAMP}")"
+[ "$priv_code" = "200" ] && ok "Arabic privacy HTTP 200" || fail "Arabic privacy HTTP ${priv_code}"
+grep -q "سياسة الخصوصية" "$TMP/privacy-ar.html" && ok "Arabic privacy policy heading is translated" || fail "Arabic privacy page missing سياسة الخصوصية"
+grep -q 'dir="rtl"' "$TMP/privacy-ar.html" && ok "Arabic privacy page is RTL" || fail "Arabic privacy page is not RTL"
+
 chat_code="$(curl -sS -A 'Mozilla/5.0' -o "$TMP/chat-script.js" -w '%{http_code}' "${BASE}/wp-content/plugins/paxdesign-booking/assets/js/chat-script.js?n=${STAMP}")"
 [ "$chat_code" = "200" ] && ok "chat JS HTTP 200" || fail "chat JS HTTP ${chat_code}"
 grep -q "Version: 3.174.128" "$TMP/chat-script.js" && ok "chat remains 3.174.128" || fail "chat version changed"

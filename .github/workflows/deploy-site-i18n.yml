@@ -12,6 +12,7 @@ on:
       - 'navein/inc/site-i18n.php'
       - 'navein/inc/site-i18n-strings.php'
       - 'navein/inc/site-i18n-pages.php'
+      - 'navein/inc/site-i18n-content.php'
       - 'navein/inc/cybercrime-support-locale.php'
       - 'navein/assets/js/apple-site-i18n.js'
       - 'navein/assets/js/apple-cybercrime-support.js'
@@ -148,6 +149,7 @@ jobs:
           rsync_with_retry navein/inc/site-i18n.php "${REMOTE}:${THEME}/inc/site-i18n.php"
           rsync_with_retry navein/inc/site-i18n-strings.php "${REMOTE}:${THEME}/inc/site-i18n-strings.php"
           rsync_with_retry navein/inc/site-i18n-pages.php "${REMOTE}:${THEME}/inc/site-i18n-pages.php"
+          rsync_with_retry navein/inc/site-i18n-content.php "${REMOTE}:${THEME}/inc/site-i18n-content.php"
           rsync_with_retry navein/inc/cybercrime-support-locale.php "${REMOTE}:${THEME}/inc/cybercrime-support-locale.php"
           rsync_with_retry navein/assets/js/apple-site-i18n.js "${REMOTE}:${THEME}/assets/js/apple-site-i18n.js"
           rsync_with_retry navein/assets/js/apple-cybercrime-support.js "${REMOTE}:${THEME}/assets/js/apple-cybercrime-support.js"

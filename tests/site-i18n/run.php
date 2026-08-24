@@ -47,8 +47,11 @@ i18n_ok(strpos($engine, 'navein_site_i18n_resolve_from') !== false, 'locale reso
 i18n_ok(strpos($engine, "cookie_src === 'manual'") !== false, 'manual cookie beats query and auto-detect');
 i18n_ok(strpos($engine, 'site-i18n-pages.php') !== false, 'page phrase pack is merged into the catalog');
 i18n_ok(is_file($root . '/navein/inc/site-i18n-pages.php'), 'page phrase pack file exists');
+i18n_ok(strpos($engine, 'site-i18n-content.php') !== false, 'content phrase pack is merged into the catalog');
+i18n_ok(is_file($root . '/navein/inc/site-i18n-content.php'), 'content phrase pack file exists');
 i18n_ok(strpos($functions, 'navein_site_i18n_phrases()') !== false, 'JS receives the full phrase catalog');
 i18n_ok($workflow && strpos($workflow, 'site-i18n-pages.php') !== false, 'i18n deploy copies the page phrase pack');
+i18n_ok($workflow && strpos($workflow, 'site-i18n-content.php') !== false, 'i18n deploy copies the content phrase pack');
 i18n_ok(strpos($js, 'navigator.languages') !== false, 'JS auto-detects browser language');
 i18n_ok(strpos($css, 'pax-site-lang__btn') !== false, 'Apple language button styles exist');
 i18n_ok(strpos($css, 'pax-site-lang__menu') !== false, 'Apple language popover styles exist');
@@ -107,6 +110,8 @@ i18n_ok(navein_site_i18n_resolve_from('en', 'ar', 'manual', 'de') === array('lan
 i18n_ok(navein_site_i18n_resolve_from('tr', '', '', 'de') === array('lang' => 'tr', 'source' => 'manual'), 'query language is stored as a manual choice when no cookie exists');
 i18n_ok(navein_site_i18n_resolve_from('', '', '', 'en') === array('lang' => 'en', 'source' => 'auto'), 'Accept-Language is used only before a stored choice');
 i18n_ok(navein_t('nav_projects_refs', 'Projekte & Referenzen', 'en') === 'Projects & work', 'page catalog translates mega-menu work label');
+i18n_ok(navein_t('content_003', 'Datenschutzerklärung', 'en') === 'Privacy policy', 'content catalog translates Datenschutzerklärung');
+i18n_ok(navein_t('content_003', 'Datenschutzerklärung', 'ar') === 'سياسة الخصوصية', 'content catalog has Arabic privacy-policy label');
 
 $_GET['lang'] = 'en';
 $payload = str_repeat('<script type="application/json">{"cta":"Angebot anfordern"}</script>', 400);
@@ -122,6 +127,20 @@ i18n_ok(is_string($logo_out) && strpos($logo_out, '>Suche<') !== false, 'chrome 
 i18n_ok(is_string($logo_out) && strpos($logo_out, '>Pricing<') !== false, 'chrome replace still translates nav outside SVG');
 i18n_ok(substr_count($rewritten, '"cta":"Angebot anfordern"') === 400, 'chrome replace leaves script JSON alone');
 i18n_ok(count(navein_site_i18n_chrome_phrases()) < count(navein_site_i18n_phrases()), 'chrome phrase pack is smaller than the full catalog');
+
+$amp_html = '<nav><span>Projekte &amp; Referenzen</span></nav>';
+$amp_out = navein_site_i18n_replace_chrome($amp_html);
+i18n_ok(is_string($amp_out) && strpos($amp_out, '>Projects &amp; work<') !== false, 'chrome replace matches HTML-encoded ampersand phrases');
+
+$title_html = '<html><head><title>Datenschutzerklärung PAXdesign</title></head><body><p>Datenschutzerklärung</p></body></html>';
+$title_out = navein_site_i18n_replace_chrome($title_html);
+i18n_ok(is_string($title_out) && strpos($title_out, 'Privacyerklärung') === false, 'title rewrite does not split Datenschutz inside Datenschutzerklärung');
+i18n_ok(is_string($title_out) && strpos($title_out, 'PAXdesign privacy policy') !== false, 'full privacy-policy title is translated longest-first');
+i18n_ok(is_string($title_out) && strpos($title_out, '>Privacy policy<') !== false, 'body Datenschutzerklärung is translated');
+
+$faq_html = '<h2>Wie viele Jahre Erfahrung bringen Sie mit?</h2>';
+$faq_out = navein_site_i18n_replace_chrome($faq_html);
+i18n_ok(is_string($faq_out) && strpos($faq_out, '>How many years of experience do you have?<') !== false, 'content catalog rewrites leftover service FAQ copy');
 
 if ($fail) {
 	fwrite(STDERR, "$fail site-i18n assertion(s) failed\n");

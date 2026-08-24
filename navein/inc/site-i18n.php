@@ -262,7 +262,7 @@ if ( ! function_exists( 'navein_site_i18n_strings' ) ) {
 			return $strings;
 		}
 		$strings = array();
-		$files   = array( 'site-i18n-strings.php', 'site-i18n-pages.php' );
+		$files   = array( 'site-i18n-strings.php', 'site-i18n-pages.php', 'site-i18n-content.php' );
 		$bases   = array();
 		if ( function_exists( 'get_template_directory' ) ) {
 			$bases[] = get_template_directory() . '/inc';
@@ -557,6 +557,17 @@ if ( ! function_exists( 'navein_site_i18n_replace_chrome' ) ) {
 					continue;
 				}
 				$pairs[ '>' . $source . '<' ] = '>' . $target . '<';
+				$enc_source                    = htmlspecialchars( $source, ENT_QUOTES | ENT_HTML5, 'UTF-8' );
+				$enc_target                    = htmlspecialchars( $target, ENT_QUOTES | ENT_HTML5, 'UTF-8' );
+				if ( $enc_source !== $source ) {
+					$pairs[ '>' . $enc_source . '<' ] = '>' . $enc_target . '<';
+				}
+				$pairs[ '="' . $source . '"' ]   = '="' . $enc_target . '"';
+				$pairs[ "='" . $source . "'" ]   = "='" . $enc_target . "'";
+				if ( $enc_source !== $source ) {
+					$pairs[ '="' . $enc_source . '"' ] = '="' . $enc_target . '"';
+					$pairs[ "='" . $enc_source . "'" ] = "='" . $enc_target . "'";
+				}
 			}
 		}
 		if ( ! $pairs ) {
@@ -581,7 +592,8 @@ if ( ! function_exists( 'navein_site_i18n_replace_chrome' ) ) {
 		$rewritten = preg_replace_callback(
 			'#(<title>)([^<]*)(</title>)#i',
 			static function ( $m ) use ( $phrases, $lang ) {
-				$title = $m[2];
+				$title = html_entity_decode( $m[2], ENT_QUOTES | ENT_HTML5, 'UTF-8' );
+				$swaps = array();
 				foreach ( $phrases as $phrase ) {
 					$target = isset( $phrase[ $lang ] ) ? $phrase[ $lang ] : '';
 					if ( $target === '' ) {
@@ -592,12 +604,21 @@ if ( ! function_exists( 'navein_site_i18n_replace_chrome' ) ) {
 						if ( $source === '' || $source === $target || strlen( $source ) < 4 ) {
 							continue;
 						}
-						if ( strpos( $title, $source ) !== false ) {
-							$title = str_replace( $source, $target, $title );
-						}
+						$swaps[ $source ] = $target;
 					}
 				}
-				return $m[1] . $title . $m[3];
+				uksort(
+					$swaps,
+					static function ( $a, $b ) {
+						return strlen( $b ) - strlen( $a );
+					}
+				);
+				foreach ( $swaps as $source => $target ) {
+					if ( strpos( $title, $source ) !== false ) {
+						$title = str_replace( $source, $target, $title );
+					}
+				}
+				return $m[1] . htmlspecialchars( $title, ENT_QUOTES | ENT_HTML5, 'UTF-8' ) . $m[3];
 			},
 			$rewritten,
 			1
