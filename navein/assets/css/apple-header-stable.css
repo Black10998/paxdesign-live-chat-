@@ -520,16 +520,44 @@ html body.dtr-apple-sticky-header #dtr-header-global .pdx-auth-menu.pdx-auth-men
     unicode-bidi: isolate;
   }
 
-  html body.dtr-apple-sticky-header #dtr-responsive-header .dtr-logo img,
-  html body.dtr-apple-sticky-header #dtr-responsive-header .dtr-logo svg,
   html body.dtr-apple-sticky-header #dtr-responsive-header .dtr-logo .paxlogo-wrap,
-  html body.dtr-apple-sticky-header #dtr-responsive-header .dtr-logo .paxlogo-svg {
-    max-height: 28px !important;
+  html body.dtr-apple-sticky-header #dtr-responsive-header .dtr-logo .pax-isolated-logo,
+  html body.dtr-apple-sticky-header #dtr-responsive-header .dtr-logo .paxlogo-layout,
+  html body.dtr-apple-sticky-header #dtr-responsive-header .dtr-logo .paxlogo-svg-wrap {
+    display: inline-flex !important;
+    align-items: center !important;
+    flex: 0 0 auto !important;
+    flex-shrink: 0 !important;
     width: auto !important;
-    max-width: 100% !important;
+    min-width: 72px !important;
+    max-width: none !important;
+    max-height: none !important;
+    overflow: visible !important;
     opacity: 1 !important;
     visibility: visible !important;
     direction: ltr !important;
+  }
+
+  html body.dtr-apple-sticky-header #dtr-responsive-header .dtr-logo .paxlogo-svg,
+  html body.dtr-apple-sticky-header #dtr-responsive-header .dtr-logo svg.paxlogo-svg {
+    display: block !important;
+    width: var(--paxlogo-mark-w, 118px) !important;
+    min-width: 72px !important;
+    height: 24px !important;
+    max-width: none !important;
+    max-height: 28px !important;
+    flex-shrink: 0 !important;
+    overflow: visible !important;
+    opacity: 1 !important;
+    visibility: visible !important;
+    direction: ltr !important;
+  }
+
+  html body.dtr-apple-sticky-header #dtr-responsive-header .dtr-logo .paxlogo-pax,
+  html body.dtr-apple-sticky-header #dtr-responsive-header .dtr-logo .paxlogo-design,
+  html body.dtr-apple-sticky-header #dtr-responsive-header .dtr-logo .paxlogo-code-slot {
+    opacity: 1 !important;
+    visibility: visible !important;
   }
 
   html body.dtr-apple-sticky-header #dtr-responsive-header #pax-site-lang-mobile,

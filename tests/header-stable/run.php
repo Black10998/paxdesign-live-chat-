@@ -118,6 +118,9 @@ hs_ok($lang_at !== false && $btn_at !== false && $lang_at < $btn_at, 'language s
 hs_ok(strpos($functions, 'dtr-search-modal-trigger--mobile') === false, 'mobile header does not inject a Search control');
 hs_ok(strpos($css, '#dtr-responsive-header .dtr-search-modal-trigger') !== false && strpos($css, 'pointer-events: none !important') !== false, 'mobile Search is hidden and cannot collide with the header');
 hs_ok(strpos($css, 'direction: ltr !important') !== false && strpos($css, 'flex-shrink: 0 !important') !== false, 'logo stays LTR and cannot shrink away in Arabic');
+hs_ok(strpos($css, 'width: var(--paxlogo-mark-w, 118px)') !== false, 'mobile wordmark uses an explicit width so it cannot collapse');
+hs_ok(strpos($functions, 'width:var(--paxlogo-mark-w,118px)') !== false, 'footer cascade keeps the mobile wordmark width explicit');
+hs_ok(preg_match('/#dtr-responsive-header \\.dtr-logo svg,\\s*\\n\\s*html body\\.dtr-apple-sticky-header #dtr-responsive-header \\.dtr-logo \\.paxlogo-wrap/', $css) !== 1, 'mobile logo no longer shares width:auto with every inner svg');
 hs_ok(strpos($functions, '#(<div id="dtr-responsive-header"[^>]*>)#') === false, 'mobile language is not injected as a sibling of .container');
 hs_ok(strpos($css, 'margin-inline-end: auto') !== false, 'mobile logo keeps actions on the trailing edge');
 hs_ok(strpos($css, '#dtr-menu-button.dtr-hamburger') !== false && strpos($css, 'margin-top: 0 !important') !== false, 'mobile hamburger stays in the flex row');

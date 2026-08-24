@@ -29,6 +29,7 @@ grep -q "dtr-has-mega" "$TMP/apple-header-stable.css" && ok "live CSS keeps mega
 grep -q "margin-inline-end: auto" "$TMP/apple-header-stable.css" && ok "live CSS keeps mobile actions on the trailing edge" || fail "live CSS missing mobile trailing-edge spacer"
 grep -q "#dtr-menu-button.dtr-hamburger" "$TMP/apple-header-stable.css" && ok "live CSS includes in-flow hamburger rules" || fail "live CSS missing in-flow hamburger"
 grep -q "direction: ltr" "$TMP/apple-header-stable.css" && ok "live CSS keeps the logo LTR in Arabic" || fail "live CSS missing logo LTR isolate"
+grep -q "paxlogo-mark-w" "$TMP/apple-header-stable.css" && ok "live CSS gives the mobile wordmark an explicit width" || fail "live CSS missing mobile wordmark width"
 if grep -A20 "#dtr-responsive-header .dtr-search-modal-trigger" "$TMP/apple-header-stable.css" | grep -q "display: none"; then
   ok "live CSS hides Search on mobile"
 else
