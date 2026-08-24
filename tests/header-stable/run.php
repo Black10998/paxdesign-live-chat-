@@ -99,7 +99,28 @@ hs_ok($workflow && strpos($workflow, 'rsync --delete') === false, 'header deploy
 hs_ok($workflow && strpos($workflow, 'apple-header-stable.css') !== false, 'header deploy copies the stable header CSS');
 hs_ok($workflow && strpos($workflow, 'no iOS build') !== false, 'header deploy documents no iOS build');
 
-hs_ok(strpos($functions, 'dtr-search-modal-trigger[\s\S]*?<a[^>]*dtr-header-btn') !== false || strpos($functions, 'dtr-search-modal-trigger') !== false, 'HTML filter targets Search and the CTA');
+$sample_mobile = '<header><div id="dtr-responsive-header"><div class="container">'
+	. '<a class="dtr-logo logo-default" href="/"> </a>'
+	. '<button id="dtr-menu-button" class="dtr-hamburger" type="button"></button>'
+	. '</div></div></header>';
+$sample_actions = '<div id="pax-site-lang-mobile"></div><a href="#dtr-search-modal" role="button" class="dtr-search-modal-trigger dtr-search-modal-trigger--mobile"></a>';
+$sample_injected = preg_replace(
+	'#(<div id="dtr-responsive-header"[\s\S]*?<div class="container">[\s\S]*?)(<button[^>]*id="dtr-menu-button")#',
+	'$1' . $sample_actions . '$2',
+	$sample_mobile,
+	1
+);
+hs_ok(is_string($sample_injected) && strpos($sample_injected, 'pax-site-lang-mobile') !== false, 'mobile injection regex matches the live header skeleton');
+hs_ok(is_string($sample_injected) && strpos($sample_injected, 'id="dtr-responsive-header"><div id="pax-site-lang-mobile"') === false, 'injected language control stays inside .container');
+$lang_at = is_string($sample_injected) ? strpos($sample_injected, 'pax-site-lang-mobile') : false;
+$btn_at = is_string($sample_injected) ? strpos($sample_injected, 'id="dtr-menu-button"') : false;
+hs_ok($lang_at !== false && $btn_at !== false && $lang_at < $btn_at, 'language and search sit before the hamburger');
+hs_ok(strpos($functions, '#(<div id="dtr-responsive-header"[^>]*>)#') === false, 'mobile language is not injected as a sibling of .container');
+hs_ok(strpos($css, 'margin-inline-end: auto') !== false, 'mobile logo keeps actions on the trailing edge');
+hs_ok(strpos($css, '#dtr-menu-button.dtr-hamburger') !== false && strpos($css, 'margin-top: 0 !important') !== false, 'mobile hamburger stays in the flex row');
+hs_ok(strpos($css, '#pax-site-lang-mobile') !== false && strpos($css, 'order: 2') !== false, 'mobile language control has a flex order');
+hs_ok(strpos($functions, 'margin:0 6px 0 auto') === false, 'footer cascade no longer steals margin-left auto for the language button');
+hs_ok(strpos($functions, 'margin:0 44px 0 0') === false, 'footer cascade no longer reserves a hamburger gutter that overlaps login');
 
 if ($fail) {
 	fwrite(STDERR, "$fail header-stable assertion(s) failed\n");

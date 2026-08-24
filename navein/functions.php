@@ -309,19 +309,6 @@ function navein_custom_scripts_styles() {
 		true
 	);
 
-	// Isolate Search from the nav and lock header geometry sitewide.
-	wp_enqueue_style(
-		'navein-apple-header-stable',
-		get_template_directory_uri() . '/assets/css/apple-header-stable.css',
-		array( 'navein-style', 'navein-apple-sticky-header' ),
-		$theme_version
-	);
-	wp_enqueue_style(
-		'navein-apple-site-rtl',
-		get_template_directory_uri() . '/assets/css/apple-site-rtl.css',
-		array( 'navein-apple-header-stable' ),
-		$theme_version
-	);
 	wp_enqueue_script(
 		'navein-apple-site-i18n',
 		get_template_directory_uri() . '/assets/js/apple-site-i18n.js',
@@ -375,6 +362,19 @@ function navein_custom_scripts_styles() {
 		array( 'jquery', 'navein-custom-js', 'navein-apple-sticky-header' ),
 		$theme_version,
 		true
+	);
+
+	wp_enqueue_style(
+		'navein-apple-header-stable',
+		get_template_directory_uri() . '/assets/css/apple-header-stable.css',
+		array( 'navein-style', 'navein-apple-sticky-header', 'navein-apple-mobile-nav' ),
+		$theme_version
+	);
+	wp_enqueue_style(
+		'navein-apple-site-rtl',
+		get_template_directory_uri() . '/assets/css/apple-site-rtl.css',
+		array( 'navein-apple-header-stable' ),
+		$theme_version
 	);
 
 	// Apple-inspired sitewide footer.
@@ -1185,9 +1185,15 @@ if ( ! function_exists( 'navein_apple_header_utility_cluster_ob_start' ) ) {
 		}
 
 		if ( strpos( $html, 'id="pax-site-lang-mobile"' ) === false && $lang_m !== '' && strpos( $html, 'id="dtr-responsive-header"' ) !== false ) {
+			$search_m = '';
+			if ( ! preg_match( '#id="dtr-responsive-header"[\s\S]{0,4000}dtr-search-modal-trigger#', $html ) ) {
+				$search_label = function_exists( 'navein_t' ) ? navein_t( 'search', 'Search' ) : 'Search';
+				$search_m     = '<a href="#dtr-search-modal" role="button" class="dtr-search-modal-trigger dtr-search-modal-trigger--mobile" aria-label="' . esc_attr( $search_label ) . '"></a>';
+			}
+			$actions = $lang_m . $search_m;
 			$with_mobile = preg_replace(
-				'#(<div id="dtr-responsive-header"[\s\S]*?<a[^>]*dtr-search-modal-trigger[\s\S]*?</a>)#',
-				'$1' . $lang_m,
+				'#(<div id="dtr-responsive-header"[\s\S]*?<div class="container">[\s\S]*?)(<button[^>]*id="dtr-menu-button")#',
+				'$1' . $actions . '$2',
 				$html,
 				1
 			);
@@ -1195,8 +1201,8 @@ if ( ! function_exists( 'navein_apple_header_utility_cluster_ob_start' ) ) {
 				$html = $with_mobile;
 			} else {
 				$with_mobile = preg_replace(
-					'#(<div id="dtr-responsive-header"[^>]*>)#',
-					'$1' . $lang_m,
+					'#(<div id="dtr-responsive-header"[\s\S]*?<a[^>]*dtr-logo[\s\S]*?</a>)#',
+					'$1' . $actions,
 					$html,
 					1
 				);
@@ -1359,12 +1365,25 @@ if ( ! function_exists( 'navein_apple_header_desktop_cascade_footer' ) ) {
 			. 'html body.dtr-apple-sticky-header #dtr-responsive-header{display:block!important;'
 			. 'position:fixed!important;top:0!important;left:0!important;right:0!important;'
 			. 'height:var(--dtr-apple-header-height,52px)!important;padding:0!important;margin:0!important;'
-			. 'z-index:10050!important;}'
-			. 'html body.dtr-apple-sticky-header #dtr-responsive-header #pdx-auth-bar{'
-			. 'position:relative!important;top:auto!important;right:auto!important;transform:none!important;'
-			. 'margin:0 44px 0 0!important;}'
+			. 'overflow:visible!important;z-index:10050!important;}'
+			. 'html body.dtr-apple-sticky-header #dtr-responsive-header .container{'
+			. 'display:flex!important;align-items:center!important;flex-wrap:nowrap!important;'
+			. 'gap:4px!important;width:100%!important;height:52px!important;padding:0 10px!important;margin:0!important;}'
+			. 'html body.dtr-apple-sticky-header #dtr-responsive-header .dtr-logo,'
+			. 'html body.dtr-apple-sticky-header #dtr-responsive-header a.dtr-logo{'
+			. 'order:1;margin-inline-end:auto!important;margin-inline-start:0!important;flex:0 1 auto!important;min-width:0!important;}'
 			. 'html body.dtr-apple-sticky-header #dtr-responsive-header #pax-site-lang-mobile{'
-			. 'display:inline-flex!important;margin:0 6px 0 auto!important;flex:0 0 auto!important;}'
+			. 'order:2;display:inline-flex!important;position:relative!important;margin:0!important;flex:0 0 auto!important;}'
+			. 'html body.dtr-apple-sticky-header #dtr-responsive-header .dtr-search-modal-trigger{'
+			. 'order:3;position:relative!important;margin:0!important;flex:0 0 36px!important;}'
+			. 'html body.dtr-apple-sticky-header #dtr-responsive-header #pdx-auth-bar,'
+			. 'html body.dtr-apple-sticky-header #dtr-responsive-header #pdx-auth-bar.pdx-auth-bar--header{'
+			. 'order:4;position:relative!important;top:auto!important;right:auto!important;left:auto!important;'
+			. 'bottom:auto!important;transform:none!important;margin:0!important;flex:0 0 auto!important;z-index:2!important;}'
+			. 'html body.dtr-apple-sticky-header #dtr-responsive-header #dtr-menu-button,'
+			. 'html body.dtr-apple-sticky-header #dtr-responsive-header #dtr-menu-button.dtr-hamburger{'
+			. 'order:5;position:relative!important;top:auto!important;right:auto!important;left:auto!important;'
+			. 'margin:0!important;margin-top:0!important;flex:0 0 40px!important;width:40px!important;height:40px!important;z-index:6!important;}'
 			. 'html body.dtr-apple-sticky-header #dtr-main-wrapper{padding-top:0!important;margin-top:0!important;}'
 			. '}'
 			. '</style>' . "\n";

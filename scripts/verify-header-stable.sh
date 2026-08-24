@@ -26,10 +26,12 @@ grep -q "background-image: none !important" "$TMP/apple-header-stable.css" && ok
 grep -q "pdx-auth-bar--logged-in .pdx-auth-signup-btn" "$TMP/apple-header-stable.css" && ok "live CSS hides signup when logged in" || fail "live CSS missing logged-in signup hide"
 grep -q "pdx-auth-bar--logged-out .pdx-auth-signup-btn" "$TMP/apple-header-stable.css" && ok "live CSS styles signup only when logged out" || fail "live CSS missing logged-out signup scope"
 grep -q "dtr-has-mega" "$TMP/apple-header-stable.css" && ok "live CSS keeps mega menus unclipped" || fail "live CSS missing mega-menu overflow restore"
-if grep -A8 "#dtr-header-global .main-navigation {" "$TMP/apple-header-stable.css" | grep -q "overflow: hidden"; then
-  fail "live CSS still clips .main-navigation"
+grep -q "margin-inline-end: auto" "$TMP/apple-header-stable.css" && ok "live CSS keeps mobile actions on the trailing edge" || fail "live CSS missing mobile trailing-edge spacer"
+grep -q "#dtr-menu-button.dtr-hamburger" "$TMP/apple-header-stable.css" && ok "live CSS includes in-flow hamburger rules" || fail "live CSS missing in-flow hamburger"
+if grep -q "margin: 0 6px 0 auto" "$TMP/apple-header-stable.css"; then
+  fail "live CSS still uses competing auto-margin on the language button"
 else
-  ok "live CSS does not clip .main-navigation"
+  ok "live CSS does not steal auto-margin for the language button"
 fi
 
 js_code="$(curl -sS -A 'Mozilla/5.0' -o "$TMP/pax-auth.js" -w '%{http_code}' "${BASE}/wp-content/plugins/paxdesign-booking/assets/customer-auth/js/pax-auth.js?n=${STAMP}")"

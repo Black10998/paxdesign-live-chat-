@@ -447,6 +447,10 @@ html body.dtr-apple-sticky-header #dtr-header-global .pdx-auth-menu.pdx-auth-men
     border: 0 !important;
   }
 
+  html body.dtr-apple-sticky-header #dtr-header-global #pax-site-lang {
+    display: none !important;
+  }
+
   html body.dtr-apple-sticky-header #dtr-responsive-header {
     display: block !important;
     position: fixed !important;
@@ -468,37 +472,151 @@ html body.dtr-apple-sticky-header #dtr-header-global .pdx-auth-menu.pdx-auth-men
     display: flex !important;
     align-items: center !important;
     flex-wrap: nowrap !important;
-    gap: 8px !important;
+    justify-content: flex-start !important;
+    gap: 4px !important;
+    width: 100% !important;
+    max-width: 100% !important;
     height: var(--dtr-apple-header-height) !important;
     min-height: var(--dtr-apple-header-height) !important;
     max-height: var(--dtr-apple-header-height) !important;
     min-width: 0 !important;
+    padding: 0 10px !important;
+    margin: 0 !important;
     box-sizing: border-box !important;
+    overflow: visible !important;
+  }
+
+  html body.dtr-apple-sticky-header #dtr-responsive-header .dtr-logo,
+  html body.dtr-apple-sticky-header #dtr-responsive-header a.dtr-logo,
+  html body.dtr-apple-sticky-header #dtr-responsive-header a.dtr-logo.logo-default {
+    order: 1;
+    display: inline-flex !important;
+    align-items: center !important;
+    flex: 0 1 auto !important;
+    min-width: 0 !important;
+    max-width: min(42vw, 160px) !important;
+    height: var(--dtr-apple-header-height) !important;
+    margin: 0 !important;
+    margin-inline-end: auto !important;
+    margin-inline-start: 0 !important;
+    overflow: hidden !important;
+  }
+
+  html body.dtr-apple-sticky-header #dtr-responsive-header .dtr-logo img,
+  html body.dtr-apple-sticky-header #dtr-responsive-header .dtr-logo svg {
+    max-height: 28px !important;
+    width: auto !important;
+    max-width: 100% !important;
+  }
+
+  html body.dtr-apple-sticky-header #dtr-responsive-header #pax-site-lang-mobile,
+  html body.dtr-apple-sticky-header #dtr-responsive-header .pax-site-lang--mobile {
+    order: 2;
+    display: inline-flex !important;
+    position: relative !important;
+    align-items: center !important;
+    margin: 0 !important;
+    padding: 0 !important;
+    flex: 0 0 auto !important;
+    height: var(--dtr-apple-header-height) !important;
+    z-index: 3;
+  }
+
+  html body.dtr-apple-sticky-header #dtr-responsive-header .pax-site-lang__code {
+    display: none !important;
+  }
+
+  html body.dtr-apple-sticky-header #dtr-responsive-header .pax-site-lang__btn {
+    width: 32px !important;
+    min-width: 32px !important;
+    max-width: 32px !important;
+    height: 32px !important;
+    padding: 0 !important;
   }
 
   html body.dtr-apple-sticky-header #dtr-responsive-header .dtr-search-modal-trigger,
   html body.dtr-apple-sticky-header #dtr-responsive-header a.dtr-search-modal-trigger {
+    order: 3;
     position: relative !important;
-    margin: 0 48px 0 0 !important;
-    padding: 0 0 0 10px !important;
-    border-left: 0.5px solid rgba(0, 0, 0, 0.18) !important;
+    display: inline-flex !important;
+    align-items: center !important;
+    justify-content: center !important;
+    width: 36px !important;
+    min-width: 36px !important;
+    max-width: 36px !important;
     height: var(--dtr-apple-header-height) !important;
     min-height: var(--dtr-apple-header-height) !important;
     max-height: var(--dtr-apple-header-height) !important;
-    top: auto !important;
-    transform: none !important;
-  }
-
-  html body.dtr-apple-sticky-header #dtr-responsive-header #pdx-auth-bar,
-  html body.dtr-apple-sticky-header #dtr-responsive-header #pdx-auth-bar.pdx-auth-bar--header {
-    position: relative !important;
+    margin: 0 !important;
+    padding: 0 !important;
+    border: 0 !important;
+    background: transparent !important;
+    box-shadow: none !important;
+    color: #1d1d1f !important;
+    font-size: 0 !important;
+    line-height: 0 !important;
+    overflow: hidden !important;
     top: auto !important;
     right: auto !important;
     left: auto !important;
     transform: none !important;
-    margin: 0 44px 0 auto !important;
+    flex: 0 0 36px !important;
+  }
+
+  html body.dtr-apple-sticky-header #dtr-responsive-header .dtr-search-modal-trigger::before,
+  html body.dtr-apple-sticky-header #dtr-responsive-header a.dtr-search-modal-trigger::before {
+    content: none !important;
+    display: none !important;
+  }
+
+  html body.dtr-apple-sticky-header #dtr-responsive-header .dtr-search-modal-trigger::after,
+  html body.dtr-apple-sticky-header #dtr-responsive-header a.dtr-search-modal-trigger::after {
+    content: "" !important;
+    display: block !important;
+    width: 16px !important;
+    height: 16px !important;
+    font-size: 0 !important;
+    line-height: 0 !important;
+    background: currentColor !important;
+    -webkit-mask: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24'%3E%3Cpath fill='none' stroke='black' stroke-width='2' stroke-linecap='round' d='M10.5 18a7.5 7.5 0 1 1 0-15 7.5 7.5 0 0 1 0 15zm5.8-1.7 4.4 4.4'/%3E%3C/svg%3E") center / 16px 16px no-repeat;
+    mask: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24'%3E%3Cpath fill='none' stroke='black' stroke-width='2' stroke-linecap='round' d='M10.5 18a7.5 7.5 0 1 1 0-15 7.5 7.5 0 0 1 0 15zm5.8-1.7 4.4 4.4'/%3E%3C/svg%3E") center / 16px 16px no-repeat;
+  }
+
+  html body.dtr-apple-sticky-header #dtr-responsive-header #pdx-auth-bar,
+  html body.dtr-apple-sticky-header #dtr-responsive-header #pdx-auth-bar.pdx-auth-bar--header {
+    order: 4;
+    position: relative !important;
+    top: auto !important;
+    right: auto !important;
+    left: auto !important;
+    bottom: auto !important;
+    inset: auto !important;
+    transform: none !important;
+    margin: 0 !important;
+    padding: 0 !important;
     flex: 0 0 auto !important;
+    width: auto !important;
+    min-width: 0 !important;
+    max-width: none !important;
+    height: var(--dtr-apple-header-height) !important;
+    min-height: var(--dtr-apple-header-height) !important;
+    max-height: var(--dtr-apple-header-height) !important;
     z-index: 2 !important;
+    pointer-events: auto !important;
+  }
+
+  html body.dtr-apple-sticky-header #dtr-responsive-header #pdx-auth-bar .pdx-auth-signup-btn,
+  html body.dtr-apple-sticky-header #dtr-responsive-header #pdx-auth-bar .pdx-auth-header-btn {
+    height: 28px !important;
+    min-height: 28px !important;
+    max-height: 28px !important;
+    padding: 0 10px !important;
+    font-size: 12px !important;
+    line-height: 1 !important;
+    white-space: nowrap !important;
+    max-width: min(112px, 34vw) !important;
+    overflow: hidden !important;
+    text-overflow: ellipsis !important;
   }
 
   html body.dtr-apple-sticky-header #dtr-responsive-header #pdx-auth-bar .pdx-auth-portal-btn,
@@ -508,10 +626,50 @@ html body.dtr-apple-sticky-header #dtr-header-global .pdx-auth-menu.pdx-auth-men
     visibility: hidden !important;
   }
 
+  html body.dtr-apple-sticky-header #dtr-responsive-header #dtr-menu-button,
+  html body.dtr-apple-sticky-header #dtr-responsive-header #dtr-menu-button.dtr-hamburger,
+  html body.dtr-apple-sticky-header.dtr-apple-mobile-nav #dtr-responsive-header #dtr-menu-button.dtr-hamburger {
+    order: 5;
+    position: relative !important;
+    top: auto !important;
+    right: auto !important;
+    left: auto !important;
+    display: flex !important;
+    align-items: center !important;
+    justify-content: center !important;
+    flex: 0 0 40px !important;
+    width: 40px !important;
+    min-width: 40px !important;
+    height: 40px !important;
+    margin: 0 !important;
+    margin-top: 0 !important;
+    padding: 0 !important;
+    z-index: 6 !important;
+    overflow: hidden !important;
+  }
+
   html body.dtr-apple-sticky-header #dtr-main-wrapper,
   html body.dtr-apple-sticky-header #dtr-main-wrapper.dtr-page-wrapper {
     padding-top: 0 !important;
     margin-top: 0 !important;
+  }
+}
+
+@media (max-width: 360px) {
+  html body.dtr-apple-sticky-header #dtr-responsive-header .container {
+    gap: 2px !important;
+    padding: 0 8px !important;
+  }
+
+  html body.dtr-apple-sticky-header #dtr-responsive-header .dtr-logo,
+  html body.dtr-apple-sticky-header #dtr-responsive-header a.dtr-logo.logo-default {
+    max-width: min(34vw, 120px) !important;
+  }
+
+  html body.dtr-apple-sticky-header #dtr-responsive-header #pdx-auth-bar .pdx-auth-signup-btn,
+  html body.dtr-apple-sticky-header #dtr-responsive-header #pdx-auth-bar .pdx-auth-header-btn {
+    padding: 0 8px !important;
+    font-size: 11px !important;
   }
 }
 

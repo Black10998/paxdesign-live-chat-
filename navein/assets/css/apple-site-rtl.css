@@ -181,7 +181,7 @@ html[lang="ar"] .pax-site-lang__option {
   html body.dtr-apple-sticky-header #dtr-responsive-header #pax-site-lang-mobile {
     display: inline-flex !important;
     position: relative !important;
-    margin: 0 6px 0 auto !important;
+    margin: 0 !important;
     flex: 0 0 auto !important;
     z-index: 3;
   }
@@ -191,14 +191,10 @@ html[lang="ar"] .pax-site-lang__option {
   }
 
   html body.dtr-apple-sticky-header #dtr-responsive-header .pax-site-lang__btn {
-    width: 28px;
-    min-width: 28px;
-    max-width: 28px;
+    width: 32px;
+    min-width: 32px;
+    max-width: 32px;
     padding: 0;
-  }
-
-  html body.dtr-apple-sticky-header #dtr-responsive-header #pdx-auth-bar {
-    margin: 0 44px 0 0 !important;
   }
 }
 
@@ -256,26 +252,6 @@ html[lang="ar"] select {
 html[dir="rtl"] .pax-home-signup-form__shell,
 html[lang="ar"] .pax-home-signup-form__shell {
   flex-direction: row-reverse;
-}
-
-@media (max-width: 992px) {
-  html[dir="rtl"] body.dtr-apple-sticky-header #dtr-responsive-header #pax-site-lang-mobile,
-  html[lang="ar"] body.dtr-apple-sticky-header #dtr-responsive-header #pax-site-lang-mobile {
-    margin: 0 auto 0 6px !important;
-  }
-
-  html[dir="rtl"] body.dtr-apple-sticky-header #dtr-responsive-header #pdx-auth-bar,
-  html[lang="ar"] body.dtr-apple-sticky-header #dtr-responsive-header #pdx-auth-bar {
-    margin: 0 0 0 44px !important;
-  }
-
-  html[dir="rtl"] body.dtr-apple-sticky-header #dtr-responsive-header .dtr-search-modal-trigger,
-  html[lang="ar"] body.dtr-apple-sticky-header #dtr-responsive-header .dtr-search-modal-trigger {
-    margin: 0 0 0 48px !important;
-    padding: 0 10px 0 0 !important;
-    border-left: 0 !important;
-    border-right: 0.5px solid rgba(0, 0, 0, 0.18) !important;
-  }
 }
 
 html[dir="rtl"] #pdx-account-app,

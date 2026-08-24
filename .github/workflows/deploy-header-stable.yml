@@ -10,6 +10,7 @@ on:
     paths:
       - '.github/workflows/deploy-header-stable.yml'
       - 'navein/assets/css/apple-header-stable.css'
+      - 'navein/assets/css/apple-site-rtl.css'
       - 'navein/functions.php'
       - 'navein/style.css'
       - 'paxdesign-booking/assets/customer-auth/js/pax-auth.js'
@@ -119,6 +120,10 @@ jobs:
             "${REMOTE}:${THEME}/assets/css/apple-header-stable.css"
 
           rsync_with_retry \
+            navein/assets/css/apple-site-rtl.css \
+            "${REMOTE}:${THEME}/assets/css/apple-site-rtl.css"
+
+          rsync_with_retry \
             navein/functions.php \
             "${REMOTE}:${THEME}/functions.php"
 
@@ -137,8 +142,9 @@ jobs:
              (command -v wp >/dev/null && wp litespeed-purge all || true)"
 
           ssh_with_retry "$REMOTE" \
-            "grep -q navein-apple-header-stable '$(printf '%q' "$THEME")/functions.php' && \
+            "             grep -q navein-apple-header-stable '$(printf '%q' "$THEME")/functions.php' && \
              grep -q 'dtr-search-modal-trigger' '$(printf '%q' "$THEME")/assets/css/apple-header-stable.css' && \
+             grep -q 'margin-inline-end: auto' '$(printf '%q' "$THEME")/assets/css/apple-header-stable.css' && \
              grep -q 'pdx-auth-menu--apple' '$(printf '%q' "$PLUGIN")/assets/customer-auth/js/pax-auth.js' && \
              grep -q 'Version: 3.174.128' '$(printf '%q' "$PLUGIN")/assets/js/chat-script.js' && \
              echo 'OK: live stable header deployed without 3.176 chat rewrite'"
