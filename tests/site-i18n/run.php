@@ -157,6 +157,13 @@ $svc_title_out = navein_site_i18n_replace_chrome($svc_title);
 i18n_ok(is_string($svc_title_out) && strpos($svc_title_out, 'Services &amp; Digitale Services') === false, 'services title is not partially translated');
 i18n_ok(is_string($svc_title_out) && strpos($svc_title_out, 'Services &amp; digital services - paxdesign') !== false, 'full services title is translated longest-first');
 
+$career_title = '<html><head><title>Karriere &amp; Jobs bei uns - paxdesign</title></head><body><h1>Karriere bei PAXdesign</h1><span>Bewerbung absenden</span></body></html>';
+$career_out = navein_site_i18n_replace_chrome($career_title);
+i18n_ok(is_string($career_out) && strpos($career_out, 'Jobs bei uns') === false, 'career title is not left half-German');
+i18n_ok(is_string($career_out) && strpos($career_out, 'Careers &amp; jobs with us - paxdesign') !== false, 'full career title is translated');
+i18n_ok(is_string($career_out) && strpos($career_out, '>Careers at PAXdesign<') !== false, 'career heading is translated');
+i18n_ok(is_string($career_out) && strpos($career_out, '>Submit application<') !== false, 'career submit button is translated');
+
 if ($fail) {
 	fwrite(STDERR, "$fail site-i18n assertion(s) failed\n");
 	exit(1);
