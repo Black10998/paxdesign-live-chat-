@@ -21,6 +21,7 @@ on:
       - 'navein/404.php'
       - 'navein/template-parts/pages/homepage.php'
       - 'navein/template-parts/pages/cybercrime-support.php'
+      - 'navein/template-parts/pages/cybercrime-support-tr.php'
       - 'paxdesign-booking/assets/customer-auth/js/pax-auth.js'
       - 'paxdesign-booking/assets/js/chat-script.js'
       - 'paxdesign-booking/includes/class-paxdesign-language-routing.php'
@@ -155,6 +156,7 @@ jobs:
           rsync_with_retry navein/404.php "${REMOTE}:${THEME}/404.php"
           rsync_with_retry navein/template-parts/pages/homepage.php "${REMOTE}:${THEME}/template-parts/pages/homepage.php"
           rsync_with_retry navein/template-parts/pages/cybercrime-support.php "${REMOTE}:${THEME}/template-parts/pages/cybercrime-support.php"
+          rsync_with_retry navein/template-parts/pages/cybercrime-support-tr.php "${REMOTE}:${THEME}/template-parts/pages/cybercrime-support-tr.php"
 
           rsync_with_retry paxdesign-booking/assets/customer-auth/js/pax-auth.js "${REMOTE}:${PLUGIN}/assets/customer-auth/js/pax-auth.js"
           rsync_with_retry paxdesign-booking/assets/js/chat-script.js "${REMOTE}:${PLUGIN}/assets/js/chat-script.js"

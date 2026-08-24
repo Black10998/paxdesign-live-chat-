@@ -63,7 +63,18 @@ i18n_ok(strpos($plugin, "PAXDESIGN_BOOKING_VERSION', '3.174.128'") !== false, 'p
 i18n_ok(strpos($chat, 'Version: 3.174.128') !== false, 'chat remains 3.174.128');
 i18n_ok(strpos($chat, 'skipping stacked sync') === false, 'chat is not the 3.176 rewrite');
 i18n_ok(strpos($chat, 'Gespräch beenden') === false, 'chat has no Gespräch beenden');
-i18n_ok(strpos($ccs_js, "lang !== 'tr'") !== false, 'CCS portal accepts Turkish');
+i18n_ok(strpos($engine, 'navein_site_i18n_apply_pairs_outside_skips') !== false, 'chrome rewrite skips scripts without full-document PCRE');
+i18n_ok(strpos($engine, '$item[\'label\']') !== false, 'language badges use the current-language label');
+i18n_ok(strpos($engine, "'code'   => 'de'") !== false && strpos($engine, "'code'   => 'ar'") !== false && strpos($engine, "'code'   => 'tr'") !== false, 'switcher lists DE/EN/AR/TR badges');
+i18n_ok(strpos($js, "lang === 'tr' ? 'en'") === false, 'site i18n does not map Turkish CCS to English');
+i18n_ok(strpos($ccs_js, "lang === 'de' || lang === 'en' ? lang : 'ar'") === false, 'CCS getLang no longer maps Turkish to Arabic');
+i18n_ok(strpos($ccs_js, "lang === 'tr' || lang === 'ar'") !== false, 'CCS getLang keeps Turkish');
+i18n_ok(is_file($root . '/navein/template-parts/pages/cybercrime-support-tr.php'), 'Turkish CCS overlay exists');
+$ccs_tr = file_get_contents($root . '/navein/template-parts/pages/cybercrime-support-tr.php');
+i18n_ok(strpos($ccs_tr, 'Bilgiler toplanıyor') !== false && strpos($ccs_tr, 'Kapalı') !== false, 'Turkish CCS status badges exist');
+i18n_ok(strpos($ccs_php, 'pax_ccs_data_lang_attrs') !== false, 'CCS inputs carry AR/DE/EN/TR data attributes');
+i18n_ok(strpos($functions, 'navein_site_i18n_chrome_phrases') !== false, 'page JSON localizes chrome phrases only');
+i18n_ok($workflow && strpos($workflow, 'cybercrime-support-tr.php') !== false, 'i18n deploy copies Turkish CCS overlay');
 i18n_ok(strpos($ccs_php, 'data-ccs-switch="tr"') !== false, 'CCS language bar includes Turkish');
 i18n_ok(strpos($functions, 'MutationObserver') === false || strpos($functions, 'No MutationObserver') !== false, 'functions.php does not install a header MutationObserver');
 i18n_ok(strpos($functions, 'grid-template-columns:none') !== false, 'header cascade still disables the collapsing grid');
@@ -81,6 +92,18 @@ i18n_ok(navein_site_i18n_normalize('xx') === '', 'unsupported language codes are
 i18n_ok(navein_site_i18n_normalize('AR') === 'ar', 'AR normalizes to ar');
 i18n_ok(navein_t('nav_pricing', 'Preise', 'ar') === 'الأسعار', 'navein_t returns Arabic pricing');
 i18n_ok(navein_t('sign_in', 'Anmelden', 'tr') === 'Giriş yap', 'navein_t returns Turkish sign-in');
+i18n_ok(navein_t('lang_ar', 'Arabic', 'de') === 'Arabisch', 'language badge Deutsch→Arabisch');
+i18n_ok(navein_t('lang_tr', 'Turkish', 'ar') === 'التركية', 'language badge Arabic→Turkish');
+
+$_GET['lang'] = 'en';
+$payload = str_repeat('<script type="application/json">{"cta":"Angebot anfordern"}</script>', 400);
+$sample  = '<!doctype html><html><body><header><a class="dtr-header-btn"><span class="dtr-btn__text">Angebot anfordern</span></a><nav>Preise</nav></header>' . $payload . '<footer>Impressum</footer></body></html>';
+$rewritten = navein_site_i18n_replace_chrome($sample);
+i18n_ok(is_string($rewritten) && strlen($rewritten) > 10000, 'chrome replace never returns empty HTML');
+i18n_ok(strpos($rewritten, '>Request a quote<') !== false, 'chrome replace translates the header CTA');
+i18n_ok(strpos($rewritten, '>Pricing<') !== false, 'chrome replace translates nav pricing');
+i18n_ok(substr_count($rewritten, '"cta":"Angebot anfordern"') === 400, 'chrome replace leaves script JSON alone');
+i18n_ok(count(navein_site_i18n_chrome_phrases()) < count(navein_site_i18n_phrases()), 'chrome phrase pack is smaller than the full catalog');
 
 if ($fail) {
 	fwrite(STDERR, "$fail site-i18n assertion(s) failed\n");

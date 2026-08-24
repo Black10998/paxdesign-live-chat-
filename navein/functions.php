@@ -338,7 +338,7 @@ function navein_custom_scripts_styles() {
 				'dir'       => navein_site_dir(),
 				'source'    => navein_site_lang_source(),
 				'supported' => navein_site_i18n_supported(),
-				'phrases'   => navein_site_i18n_phrases(),
+				'phrases'   => function_exists( 'navein_site_i18n_chrome_phrases' ) ? navein_site_i18n_chrome_phrases() : navein_site_i18n_phrases(),
 				'labels'    => array(
 					'language' => navein_t( 'language', 'Language' ),
 				),
@@ -1161,7 +1161,7 @@ if ( ! function_exists( 'navein_apple_header_reserved_auth_markup' ) ) {
 if ( ! function_exists( 'navein_apple_header_utility_cluster_ob_start' ) ) {
 	function navein_apple_header_utility_cluster_ob_filter( $html ) {
 		if ( ! is_string( $html ) || $html === '' ) {
-			return $html;
+			return is_string( $html ) ? $html : '';
 		}
 		if ( strpos( $html, 'dtr-header-global-content' ) === false ) {
 			return $html;
@@ -1214,7 +1214,13 @@ if ( ! function_exists( 'navein_apple_header_utility_cluster_ob_start' ) ) {
 				);
 				$html = is_string( $with_slot ) ? $with_slot : $html;
 			}
-			return function_exists( 'navein_site_i18n_replace_chrome' ) ? navein_site_i18n_replace_chrome( $html ) : $html;
+			if ( function_exists( 'navein_site_i18n_replace_chrome' ) ) {
+				$rewritten = navein_site_i18n_replace_chrome( $html );
+				if ( is_string( $rewritten ) && $rewritten !== '' ) {
+					$html = $rewritten;
+				}
+			}
+			return $html;
 		}
 
 		$wrapped = preg_replace_callback(
@@ -1250,7 +1256,13 @@ if ( ! function_exists( 'navein_apple_header_utility_cluster_ob_start' ) ) {
 		);
 
 		$wrapped = is_string( $wrapped ) ? $wrapped : $html;
-		return function_exists( 'navein_site_i18n_replace_chrome' ) ? navein_site_i18n_replace_chrome( $wrapped ) : $wrapped;
+		if ( function_exists( 'navein_site_i18n_replace_chrome' ) ) {
+			$rewritten = navein_site_i18n_replace_chrome( $wrapped );
+			if ( is_string( $rewritten ) && $rewritten !== '' ) {
+				$wrapped = $rewritten;
+			}
+		}
+		return $wrapped;
 	}
 
 	function navein_apple_header_utility_cluster_ob_start() {

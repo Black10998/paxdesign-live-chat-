@@ -144,7 +144,7 @@
     try {
       localStorage.setItem('pax_site_lang', lang);
       localStorage.setItem('pax_site_lang_src', source);
-      localStorage.setItem('pax-ccs-lang', lang === 'tr' ? 'en' : lang);
+      localStorage.setItem('pax-ccs-lang', lang);
     } catch (e) {}
     document.dispatchEvent(new CustomEvent('pax-site-lang-change', { detail: { lang: lang, source: source } }));
     if (reload) {

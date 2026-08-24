@@ -34,13 +34,26 @@ if ( ! function_exists( 'pax_ccs_text' ) ) {
 		if ( is_array( $node ) && isset( $node[ $lang ] ) && $node[ $lang ] !== '' ) {
 			return $node[ $lang ];
 		}
-		if ( is_array( $node ) && isset( $node['en'] ) ) {
+		if ( is_array( $node ) && isset( $node['en'] ) && $node['en'] !== '' ) {
 			return $node['en'];
 		}
-		if ( is_array( $node ) && isset( $node['de'] ) ) {
+		if ( is_array( $node ) && isset( $node['de'] ) && $node['de'] !== '' ) {
 			return $node['de'];
 		}
+		if ( is_array( $node ) && isset( $node['ar'] ) && $node['ar'] !== '' ) {
+			return $node['ar'];
+		}
 		return is_string( $node ) ? $node : '';
+	}
+}
+
+if ( ! function_exists( 'pax_ccs_data_lang_attrs' ) ) {
+	function pax_ccs_data_lang_attrs( $node, $prefix = 'data-placeholder' ) {
+		$html = '';
+		foreach ( array( 'ar', 'de', 'en', 'tr' ) as $lang ) {
+			$html .= ' ' . $prefix . '-' . $lang . '="' . esc_attr( pax_ccs_text( $node, $lang ) ) . '"';
+		}
+		return $html;
 	}
 }
 
@@ -67,6 +80,12 @@ if ( function_exists( 'navein_site_lang' ) ) {
 	}
 }
 $ccs_dir = $ccs_lang === 'ar' ? 'rtl' : 'ltr';
+$ccs_dial_search = array(
+	'ar' => 'ابحث عن الدولة أو رمز الاتصال',
+	'de' => 'Land oder Vorwahl suchen',
+	'en' => 'Search country or code',
+	'tr' => 'Ülke veya alan kodu ara',
+);
 ?>
 <article <?php post_class( 'pax-ccs-portal' ); ?> data-ccs-lang="<?php echo esc_attr( $ccs_lang ); ?>" lang="<?php echo esc_attr( $ccs_lang ); ?>" dir="<?php echo esc_attr( $ccs_dir ); ?>" data-ccs-phase="welcome">
 
@@ -290,10 +309,8 @@ $ccs_dir = $ccs_lang === 'ar' ? 'rtl' : 'ltr';
 					<div id="pax-ccs-active-reply-wrap" class="pax-ccs-portal__reply-wrap pax-ccs-portal__reply-wrap--compact">
 						<label for="pax-ccs-active-reply" class="pax-ccs-portal__reply-label"><?php pax_ccs_bilingual( $copy['active_report']['reply_label'] ); ?></label>
 						<textarea id="pax-ccs-active-reply" class="pax-ccs-portal__reply-input" rows="3"
-							placeholder="<?php echo esc_attr( pax_ccs_text( $copy['active_report']['reply_placeholder'], 'ar' ) ); ?>"
-							data-placeholder-ar="<?php echo esc_attr( pax_ccs_text( $copy['active_report']['reply_placeholder'], 'ar' ) ); ?>"
-							data-placeholder-de="<?php echo esc_attr( pax_ccs_text( $copy['active_report']['reply_placeholder'], 'de' ) ); ?>"
-							data-placeholder-en="<?php echo esc_attr( pax_ccs_text( $copy['active_report']['reply_placeholder'], 'en' ) ); ?>"></textarea>
+							placeholder="<?php echo esc_attr( pax_ccs_text( $copy['active_report']['reply_placeholder'], $ccs_lang ) ); ?>"
+							<?php echo pax_ccs_data_lang_attrs( $copy['active_report']['reply_placeholder'] ); ?>></textarea>
 						<div id="pax-ccs-resubmit" class="pax-ccs-portal__resubmit" hidden>
 							<h4 class="pax-ccs-portal__resubmit-title" id="pax-ccs-resubmit-title"><?php pax_ccs_bilingual( $copy['active_report']['upload_evidence'] ); ?></h4>
 							<p class="pax-ccs-portal__hint" id="pax-ccs-resubmit-hint"><?php pax_ccs_bilingual( $copy['active_report']['resubmit_hint'] ); ?></p>
@@ -361,7 +378,7 @@ $ccs_dir = $ccs_lang === 'ar' ? 'rtl' : 'ltr';
 		</div>
 
 		<form id="pax-ccs-intake-form" class="pax-ccs-portal__form" novalidate enctype="multipart/form-data" hidden>
-			<input type="hidden" name="locale" id="pax-ccs-locale" value="ar">
+			<input type="hidden" name="locale" id="pax-ccs-locale" value="<?php echo esc_attr( $ccs_lang ); ?>">
 			<input type="text" name="website_trap" value="" tabindex="-1" autocomplete="off" class="pax-ccs-portal__trap" aria-hidden="true">
 
 			<!-- Step 1: Identity -->
@@ -378,7 +395,7 @@ $ccs_dir = $ccs_lang === 'ar' ? 'rtl' : 'ltr';
 					<div class="pax-ccs-portal__grid">
 						<div class="pax-ccs-portal__field pax-ccs-portal__field--full">
 							<label for="pax-ccs-full-name"><?php pax_ccs_bilingual( $copy['fields']['full_name']['label'] ); ?></label>
-							<input type="text" id="pax-ccs-full-name" name="full_name" required autocomplete="name" placeholder="<?php echo esc_attr( pax_ccs_text( $copy['fields']['full_name']['placeholder'], 'ar' ) ); ?>" data-placeholder-ar="<?php echo esc_attr( pax_ccs_text( $copy['fields']['full_name']['placeholder'], 'ar' ) ); ?>" data-placeholder-de="<?php echo esc_attr( pax_ccs_text( $copy['fields']['full_name']['placeholder'], 'de' ) ); ?>" data-placeholder-en="<?php echo esc_attr( pax_ccs_text( $copy['fields']['full_name']['placeholder'], 'en' ) ); ?>">
+							<input type="text" id="pax-ccs-full-name" name="full_name" required autocomplete="name" placeholder="<?php echo esc_attr( pax_ccs_text( $copy['fields']['full_name']['placeholder'], $ccs_lang ) ); ?>"<?php echo pax_ccs_data_lang_attrs( $copy['fields']['full_name']['placeholder'] ); ?>>
 						</div>
 						<div class="pax-ccs-portal__field pax-ccs-portal__field--full<?php echo $ccs_logged_in && is_email( $ccs_account_email ) ? ' pax-ccs-portal__field--account-email-locked' : ''; ?>" id="pax-ccs-email-field-wrap">
 							<label for="pax-ccs-email"><?php pax_ccs_bilingual( $copy['fields']['email']['label'] ); ?></label>
@@ -391,15 +408,13 @@ $ccs_dir = $ccs_lang === 'ar' ? 'rtl' : 'ltr';
 							<input type="email" id="pax-ccs-email" name="email" required autocomplete="email" inputmode="email"
 								value="<?php echo esc_attr( $ccs_account_email ); ?>"
 								<?php echo ( $ccs_logged_in && is_email( $ccs_account_email ) ) ? 'readonly aria-readonly="true" data-account-email-locked="1"' : ''; ?>
-								placeholder="<?php echo esc_attr( pax_ccs_text( $copy['fields']['email']['placeholder'], 'ar' ) ); ?>"
-								data-placeholder-ar="<?php echo esc_attr( pax_ccs_text( $copy['fields']['email']['placeholder'], 'ar' ) ); ?>"
-								data-placeholder-de="<?php echo esc_attr( pax_ccs_text( $copy['fields']['email']['placeholder'], 'de' ) ); ?>"
-								data-placeholder-en="<?php echo esc_attr( pax_ccs_text( $copy['fields']['email']['placeholder'], 'en' ) ); ?>">
+								placeholder="<?php echo esc_attr( pax_ccs_text( $copy['fields']['email']['placeholder'], $ccs_lang ) ); ?>"
+								<?php echo pax_ccs_data_lang_attrs( $copy['fields']['email']['placeholder'] ); ?>>
 						</div>
 						<div class="pax-ccs-portal__field pax-ccs-portal__field--full">
 							<label for="pax-ccs-phone-local"><?php pax_ccs_bilingual( $copy['fields']['phone']['label'] ); ?></label>
 							<div class="pax-ccs-portal__phone-unified" id="pax-ccs-phone-wrap">
-								<input type="tel" id="pax-ccs-phone-local" name="phone_local" required autocomplete="tel-national" inputmode="tel" placeholder="<?php echo esc_attr( pax_ccs_text( $copy['fields']['phone']['placeholder'], 'ar' ) ); ?>" data-placeholder-ar="<?php echo esc_attr( pax_ccs_text( $copy['fields']['phone']['placeholder'], 'ar' ) ); ?>" data-placeholder-de="<?php echo esc_attr( pax_ccs_text( $copy['fields']['phone']['placeholder'], 'de' ) ); ?>" data-placeholder-en="<?php echo esc_attr( pax_ccs_text( $copy['fields']['phone']['placeholder'], 'en' ) ); ?>">
+								<input type="tel" id="pax-ccs-phone-local" name="phone_local" required autocomplete="tel-national" inputmode="tel" placeholder="<?php echo esc_attr( pax_ccs_text( $copy['fields']['phone']['placeholder'], $ccs_lang ) ); ?>"<?php echo pax_ccs_data_lang_attrs( $copy['fields']['phone']['placeholder'] ); ?>>
 								<div class="pax-ccs-portal__phone-dial" id="pax-ccs-phone-dial">
 									<button type="button" class="pax-ccs-portal__phone-dial-trigger" id="pax-ccs-phone-dial-trigger" aria-haspopup="listbox" aria-expanded="false" aria-controls="pax-ccs-phone-dial-list">
 										<span class="pax-ccs-portal__phone-dial-flag" id="pax-ccs-phone-dial-flag" aria-hidden="true">🇦🇹</span>
@@ -407,7 +422,7 @@ $ccs_dir = $ccs_lang === 'ar' ? 'rtl' : 'ltr';
 										<span class="pax-ccs-portal__phone-dial-chevron" aria-hidden="true"></span>
 									</button>
 									<div class="pax-ccs-portal__phone-dial-panel" id="pax-ccs-phone-dial-panel" hidden>
-										<input type="search" id="pax-ccs-phone-dial-search" class="pax-ccs-portal__phone-dial-search" autocomplete="off" role="combobox" aria-autocomplete="list" aria-expanded="false" aria-controls="pax-ccs-phone-dial-list" placeholder="<?php echo esc_attr( pax_ccs_text( array( 'ar' => 'ابحث عن الدولة أو رمز الاتصال', 'de' => 'Land oder Vorwahl suchen', 'en' => 'Search country or code' ), 'ar' ) ); ?>" data-placeholder-ar="<?php echo esc_attr( pax_ccs_text( array( 'ar' => 'ابحث عن الدولة أو رمز الاتصال', 'de' => 'Land oder Vorwahl suchen', 'en' => 'Search country or code' ), 'ar' ) ); ?>" data-placeholder-de="<?php echo esc_attr( pax_ccs_text( array( 'ar' => 'ابحث عن الدولة أو رمز الاتصال', 'de' => 'Land oder Vorwahl suchen', 'en' => 'Search country or code' ), 'de' ) ); ?>" data-placeholder-en="<?php echo esc_attr( pax_ccs_text( array( 'ar' => 'ابحث عن الدولة أو رمز الاتصال', 'de' => 'Land oder Vorwahl suchen', 'en' => 'Search country or code' ), 'en' ) ); ?>">
+										<input type="search" id="pax-ccs-phone-dial-search" class="pax-ccs-portal__phone-dial-search" autocomplete="off" role="combobox" aria-autocomplete="list" aria-expanded="false" aria-controls="pax-ccs-phone-dial-list" placeholder="<?php echo esc_attr( pax_ccs_text( $ccs_dial_search, $ccs_lang ) ); ?>"<?php echo pax_ccs_data_lang_attrs( $ccs_dial_search ); ?>>
 										<ul id="pax-ccs-phone-dial-list" class="pax-ccs-portal__phone-dial-list" role="listbox"></ul>
 									</div>
 								</div>
@@ -419,7 +434,7 @@ $ccs_dir = $ccs_lang === 'ar' ? 'rtl' : 'ltr';
 						<div class="pax-ccs-portal__field pax-ccs-portal__field--full">
 							<label for="pax-ccs-country-search"><?php pax_ccs_bilingual( $copy['fields']['country']['label'] ); ?></label>
 							<div class="pax-ccs-portal__country-picker" id="pax-ccs-country-picker">
-								<input type="search" id="pax-ccs-country-search" class="pax-ccs-portal__country-search" autocomplete="off" role="combobox" aria-autocomplete="list" aria-expanded="false" aria-controls="pax-ccs-country-list" aria-haspopup="listbox" placeholder="<?php echo esc_attr( pax_ccs_text( $copy['fields']['country']['placeholder'], 'ar' ) ); ?>" data-placeholder-ar="<?php echo esc_attr( pax_ccs_text( $copy['fields']['country']['placeholder'], 'ar' ) ); ?>" data-placeholder-de="<?php echo esc_attr( pax_ccs_text( $copy['fields']['country']['placeholder'], 'de' ) ); ?>" data-placeholder-en="<?php echo esc_attr( pax_ccs_text( $copy['fields']['country']['placeholder'], 'en' ) ); ?>">
+								<input type="search" id="pax-ccs-country-search" class="pax-ccs-portal__country-search" autocomplete="off" role="combobox" aria-autocomplete="list" aria-expanded="false" aria-controls="pax-ccs-country-list" aria-haspopup="listbox" placeholder="<?php echo esc_attr( pax_ccs_text( $copy['fields']['country']['placeholder'], $ccs_lang ) ); ?>"<?php echo pax_ccs_data_lang_attrs( $copy['fields']['country']['placeholder'] ); ?>>
 								<input type="hidden" id="pax-ccs-country" name="country" required value="">
 								<ul id="pax-ccs-country-list" class="pax-ccs-portal__country-list" role="listbox" hidden></ul>
 							</div>
@@ -473,7 +488,7 @@ $ccs_dir = $ccs_lang === 'ar' ? 'rtl' : 'ltr';
 							<select id="pax-ccs-category" name="category" required class="pax-ccs-portal__sr-select">
 								<option value="">—</option>
 								<?php foreach ( $copy['categories'] as $key => $labels ) : ?>
-									<option value="<?php echo esc_attr( $key ); ?>" data-label-ar="<?php echo esc_attr( pax_ccs_text( $labels, 'ar' ) ); ?>" data-label-de="<?php echo esc_attr( pax_ccs_text( $labels, 'de' ) ); ?>" data-label-en="<?php echo esc_attr( pax_ccs_text( $labels, 'en' ) ); ?>"><?php echo esc_html( pax_ccs_text( $labels, 'ar' ) ); ?></option>
+									<option value="<?php echo esc_attr( $key ); ?>"<?php echo pax_ccs_data_lang_attrs( $labels, 'data-label' ); ?>><?php echo esc_html( pax_ccs_text( $labels, $ccs_lang ) ); ?></option>
 								<?php endforeach; ?>
 							</select>
 						</div>
@@ -495,7 +510,7 @@ $ccs_dir = $ccs_lang === 'ar' ? 'rtl' : 'ltr';
 									<button type="button" class="pax-ccs-portal__chip" data-ccs-platform="<?php echo esc_attr( $chip ); ?>"><?php echo esc_html( $chip ); ?></button>
 								<?php endforeach; ?>
 							</div>
-							<input type="text" id="pax-ccs-platforms" name="platforms" required placeholder="<?php echo esc_attr( pax_ccs_text( $copy['fields']['platforms']['placeholder'], 'ar' ) ); ?>" data-placeholder-ar="<?php echo esc_attr( pax_ccs_text( $copy['fields']['platforms']['placeholder'], 'ar' ) ); ?>" data-placeholder-de="<?php echo esc_attr( pax_ccs_text( $copy['fields']['platforms']['placeholder'], 'de' ) ); ?>" data-placeholder-en="<?php echo esc_attr( pax_ccs_text( $copy['fields']['platforms']['placeholder'], 'en' ) ); ?>">
+							<input type="text" id="pax-ccs-platforms" name="platforms" required placeholder="<?php echo esc_attr( pax_ccs_text( $copy['fields']['platforms']['placeholder'], $ccs_lang ) ); ?>"<?php echo pax_ccs_data_lang_attrs( $copy['fields']['platforms']['placeholder'] ); ?>>
 						</div>
 						<div class="pax-ccs-portal__field pax-ccs-portal__field--full">
 							<label for="pax-ccs-description"><?php pax_ccs_bilingual( $copy['fields']['description']['label'] ); ?></label>
@@ -518,7 +533,7 @@ $ccs_dir = $ccs_lang === 'ar' ? 'rtl' : 'ltr';
 							<label for="pax-ccs-urgency"><?php pax_ccs_bilingual( $copy['fields']['urgency']['label'] ); ?></label>
 							<select id="pax-ccs-urgency" name="urgency" required>
 								<?php foreach ( $copy['urgency'] as $key => $labels ) : ?>
-									<option value="<?php echo esc_attr( $key ); ?>" data-label-ar="<?php echo esc_attr( pax_ccs_text( $labels, 'ar' ) ); ?>" data-label-de="<?php echo esc_attr( pax_ccs_text( $labels, 'de' ) ); ?>" data-label-en="<?php echo esc_attr( pax_ccs_text( $labels, 'en' ) ); ?>"><?php echo esc_html( pax_ccs_text( $labels, 'ar' ) ); ?></option>
+									<option value="<?php echo esc_attr( $key ); ?>"<?php echo pax_ccs_data_lang_attrs( $labels, 'data-label' ); ?>><?php echo esc_html( pax_ccs_text( $labels, $ccs_lang ) ); ?></option>
 								<?php endforeach; ?>
 							</select>
 						</div>

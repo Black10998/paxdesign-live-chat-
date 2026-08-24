@@ -197,6 +197,7 @@ if ( ! function_exists( 'pax_ccs_countries_for_js' ) ) {
 					'ar' => pax_ccs_pick_lang( $country['name'] ?? array(), 'ar' ),
 					'de' => pax_ccs_pick_lang( $country['name'] ?? array(), 'de' ),
 					'en' => pax_ccs_pick_lang( $country['name'] ?? array(), 'en' ),
+					'tr' => pax_ccs_pick_lang( $country['name'] ?? array(), 'tr' ),
 				),
 			);
 		}

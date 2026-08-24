@@ -278,6 +278,27 @@ if ( ! function_exists( 'navein_t' ) ) {
 	}
 }
 
+if ( ! function_exists( 'navein_site_i18n_phrase_entry' ) ) {
+	/**
+	 * @param array<string, mixed> $entry
+	 * @return array<string, string>|null
+	 */
+	function navein_site_i18n_phrase_entry( $entry ) {
+		if ( ! is_array( $entry ) ) {
+			return null;
+		}
+		if ( empty( $entry['de'] ) && empty( $entry['en'] ) ) {
+			return null;
+		}
+		return array(
+			'de' => isset( $entry['de'] ) ? (string) $entry['de'] : '',
+			'en' => isset( $entry['en'] ) ? (string) $entry['en'] : '',
+			'ar' => isset( $entry['ar'] ) ? (string) $entry['ar'] : '',
+			'tr' => isset( $entry['tr'] ) ? (string) $entry['tr'] : '',
+		);
+	}
+}
+
 if ( ! function_exists( 'navein_site_i18n_phrases' ) ) {
 	/**
 	 * Exact UI phrases for DOM / HTML chrome replacement.
@@ -287,18 +308,75 @@ if ( ! function_exists( 'navein_site_i18n_phrases' ) ) {
 	function navein_site_i18n_phrases() {
 		$out = array();
 		foreach ( navein_site_i18n_strings() as $entry ) {
-			if ( ! is_array( $entry ) ) {
+			$phrase = navein_site_i18n_phrase_entry( $entry );
+			if ( $phrase ) {
+				$out[] = $phrase;
+			}
+		}
+		return $out;
+	}
+}
+
+if ( ! function_exists( 'navein_site_i18n_chrome_keys' ) ) {
+	/**
+	 * Header/footer/menu keys only — never dump the homepage catalog into every page.
+	 *
+	 * @return string[]
+	 */
+	function navein_site_i18n_chrome_keys() {
+		return array(
+			'nav_pricing',
+			'nav_references',
+			'nav_services',
+			'nav_contact',
+			'nav_cybercrime',
+			'cta_request_offer',
+			'sign_in',
+			'search',
+			'menu',
+			'close',
+			'imprint',
+			'privacy',
+			'terms',
+			'company',
+			'team',
+			'career',
+			'connect',
+			'newsletter',
+			'subscribe',
+			'security_quality',
+			'copyright',
+			'home',
+			'login',
+			'account',
+			'settings',
+			'github_private',
+			'github_not_oss',
+			'understood',
+			'cookie_accept',
+			'cookie_decline',
+			'read_more',
+			'language',
+			'choose_language',
+		);
+	}
+}
+
+if ( ! function_exists( 'navein_site_i18n_chrome_phrases' ) ) {
+	/**
+	 * @return array<int, array<string, string>>
+	 */
+	function navein_site_i18n_chrome_phrases() {
+		$pack = navein_site_i18n_strings();
+		$out  = array();
+		foreach ( navein_site_i18n_chrome_keys() as $key ) {
+			if ( empty( $pack[ $key ] ) || ! is_array( $pack[ $key ] ) ) {
 				continue;
 			}
-			if ( empty( $entry['de'] ) && empty( $entry['en'] ) ) {
-				continue;
+			$phrase = navein_site_i18n_phrase_entry( $pack[ $key ] );
+			if ( $phrase ) {
+				$out[] = $phrase;
 			}
-			$out[] = array(
-				'de' => isset( $entry['de'] ) ? (string) $entry['de'] : '',
-				'en' => isset( $entry['en'] ) ? (string) $entry['en'] : '',
-				'ar' => isset( $entry['ar'] ) ? (string) $entry['ar'] : '',
-				'tr' => isset( $entry['tr'] ) ? (string) $entry['tr'] : '',
-			);
 		}
 		return $out;
 	}
@@ -357,8 +435,8 @@ if ( ! function_exists( 'navein_site_lang_switcher_markup' ) ) {
 		foreach ( navein_site_i18n_languages() as $item ) {
 			$active = $item['code'] === $lang ? ' is-active' : '';
 			$pressed = $item['code'] === $lang ? 'true' : 'false';
-			$html .= '<button type="button" class="pax-site-lang__option' . $active . '" role="option" data-lang="' . esc_attr( $item['code'] ) . '" aria-selected="' . $pressed . '">';
-			$html .= '<span class="pax-site-lang__option-name">' . esc_html( $item['native'] ) . '</span>';
+			$html .= '<button type="button" class="pax-site-lang__option' . $active . '" role="option" data-lang="' . esc_attr( $item['code'] ) . '" aria-selected="' . $pressed . '" title="' . esc_attr( $item['native'] ) . '">';
+			$html .= '<span class="pax-site-lang__option-name">' . esc_html( $item['label'] ) . '</span>';
 			$html .= '<span class="pax-site-lang__option-code">' . esc_html( strtoupper( $item['code'] ) ) . '</span>';
 			$html .= '</button>';
 		}
@@ -367,53 +445,103 @@ if ( ! function_exists( 'navein_site_lang_switcher_markup' ) ) {
 	}
 }
 
+if ( ! function_exists( 'navein_site_i18n_apply_pairs_outside_skips' ) ) {
+	/**
+	 * str_replace visible HTML only. Never uses PCRE on the full document.
+	 *
+	 * @param string                $html
+	 * @param array<string, string> $pairs
+	 * @return string
+	 */
+	function navein_site_i18n_apply_pairs_outside_skips( $html, $pairs ) {
+		if ( ! is_string( $html ) || $html === '' || ! $pairs ) {
+			return is_string( $html ) ? $html : '';
+		}
+
+		$len = strlen( $html );
+		$pos = 0;
+		$out = '';
+		$tags = array( 'script', 'style', 'textarea', 'noscript' );
+
+		while ( $pos < $len ) {
+			$next  = $len;
+			$close = '';
+			foreach ( $tags as $tag ) {
+				$found = stripos( $html, '<' . $tag, $pos );
+				if ( $found !== false && $found < $next ) {
+					$next  = $found;
+					$close = '</' . $tag . '>';
+				}
+			}
+
+			$chunk = substr( $html, $pos, $next - $pos );
+			$out  .= str_replace( array_keys( $pairs ), array_values( $pairs ), $chunk );
+			if ( $next >= $len ) {
+				break;
+			}
+
+			$end = stripos( $html, $close, $next );
+			if ( $end === false ) {
+				$out .= substr( $html, $next );
+				break;
+			}
+			$end += strlen( $close );
+			$out .= substr( $html, $next, $end - $next );
+			$pos  = $end;
+		}
+
+		return $out;
+	}
+}
+
 if ( ! function_exists( 'navein_site_i18n_replace_chrome' ) ) {
 	/**
 	 * Replace known chrome phrases in HTML without touching scripts or URLs.
+	 * Always returns the original string if rewriting cannot run.
 	 *
 	 * @param string $html
 	 * @return string
 	 */
 	function navein_site_i18n_replace_chrome( $html ) {
+		$original = is_string( $html ) ? $html : '';
+		if ( $original === '' ) {
+			return $original;
+		}
+
 		$lang = navein_site_lang();
-		if ( $lang === 'de' || ! is_string( $html ) || $html === '' ) {
-			return $html;
+		if ( $lang === 'de' ) {
+			return $original;
 		}
 
-		$skip = array();
-		$html = preg_replace_callback(
-			'#<(script|style)[^>]*>[\s\S]*?</\1>#i|#<div id="pax-site-lang(?:-mobile)?"[\s\S]*?</div></div>#i',
-			static function ( $m ) use ( &$skip ) {
-				$key          = '<!--PAX_I18N_SKIP_' . count( $skip ) . '-->';
-				$skip[ $key ] = $m[0];
-				return $key;
-			},
-			$html
-		);
-		if ( ! is_string( $html ) ) {
-			return $html;
-		}
-
-		foreach ( navein_site_i18n_phrases() as $phrase ) {
+		$phrases = function_exists( 'navein_site_i18n_chrome_phrases' )
+			? navein_site_i18n_chrome_phrases()
+			: navein_site_i18n_phrases();
+		$pairs   = array();
+		foreach ( $phrases as $phrase ) {
 			$target = isset( $phrase[ $lang ] ) ? $phrase[ $lang ] : '';
 			if ( $target === '' ) {
 				continue;
 			}
 			foreach ( array( 'de', 'en', 'ar', 'tr' ) as $from ) {
 				$source = isset( $phrase[ $from ] ) ? $phrase[ $from ] : '';
-				if ( $source === '' || $source === $target ) {
+				if ( $source === '' || $source === $target || strlen( $source ) < 3 ) {
 					continue;
 				}
-				if ( strlen( $source ) < 3 ) {
-					continue;
-				}
-				$html = str_replace( '>' . $source . '<', '>' . $target . '<', $html );
+				$pairs[ '>' . $source . '<' ] = '>' . $target . '<';
 			}
 		}
-
-		if ( $skip ) {
-			$html = str_replace( array_keys( $skip ), array_values( $skip ), $html );
+		if ( ! $pairs ) {
+			return $original;
 		}
-		return $html;
+
+		uksort(
+			$pairs,
+			static function ( $a, $b ) {
+				return strlen( $b ) - strlen( $a );
+			}
+		);
+
+		$rewritten = navein_site_i18n_apply_pairs_outside_skips( $original, $pairs );
+		return is_string( $rewritten ) && $rewritten !== '' ? $rewritten : $original;
 	}
 }

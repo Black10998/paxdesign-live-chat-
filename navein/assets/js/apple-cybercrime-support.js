@@ -377,7 +377,26 @@
 
   function getLang() {
     var lang = root.getAttribute('data-ccs-lang') || 'ar';
-    return lang === 'de' || lang === 'en' ? lang : 'ar';
+    return lang === 'de' || lang === 'en' || lang === 'tr' || lang === 'ar' ? lang : 'ar';
+  }
+
+  function pickLangMap(map, fallback) {
+    if (map && typeof map === 'object') {
+      var lang = getLang();
+      if (map[lang]) {
+        return map[lang];
+      }
+      if (map.en) {
+        return map.en;
+      }
+      if (map.de) {
+        return map.de;
+      }
+      if (map.ar) {
+        return map.ar;
+      }
+    }
+    return fallback || '';
   }
 
   function appendLocale(body) {
@@ -385,18 +404,6 @@
       body.append('locale', getLang());
     }
     return body;
-  }
-
-  function pickLangMap(map, fallback) {
-    if (map && typeof map === 'object') {
-      if (map[getLang()]) {
-        return map[getLang()];
-      }
-      if (getLang() !== 'en' && map.ar) {
-        return map.ar;
-      }
-    }
-    return fallback || '';
   }
 
   function statusLabelForReport(report) {
@@ -413,10 +420,7 @@
     if (badge.label && badge.label[getLang()]) {
       return badge.label[getLang()];
     }
-    if (badge.label && badge.label.ar && getLang() !== 'en') {
-      return badge.label.ar;
-    }
-    return '';
+    return pickLangMap(badge.label, '');
   }
 
   function localizedNextAction(report) {
@@ -1520,7 +1524,7 @@
       var hint = String(orig.reporter_country).toLowerCase();
       Object.keys(countriesByCode).forEach(function (code) {
         var country = countriesByCode[code];
-        var names = country && country.name ? [country.name.en, country.name.de, country.name.ar] : [];
+        var names = country && country.name ? [country.name.en, country.name.de, country.name.ar, country.name.tr] : [];
         if (names.some(function (name) { return name && String(name).toLowerCase() === hint; })) {
           countryCode = code;
         }
