@@ -19,12 +19,24 @@ class PAXdesign_Customer_Staff_REST {
         $staff = array('permission_callback' => array('PAXdesign_Customer_Auth', 'require_staff'));
         $admin = array('permission_callback' => array('PAXdesign_Customer_Auth', 'require_admin'));
 
+        register_rest_route(self::NS, '/customer/staff/projects', array(
+            'methods'             => WP_REST_Server::READABLE,
+            'callback'            => array(__CLASS__, 'list_projects'),
+            'permission_callback' => array('PAXdesign_Customer_Auth', 'require_staff'),
+        ));
+
         register_rest_route(self::NS, '/customer/staff/projects/(?P<id>\d+)', array(
             array(
                 'methods'             => WP_REST_Server::EDITABLE,
                 'callback'            => array(__CLASS__, 'update_project'),
                 'permission_callback' => array('PAXdesign_Customer_Auth', 'require_staff'),
             ),
+        ));
+
+        register_rest_route(self::NS, '/customer/staff/projects/(?P<id>\d+)/files/(?P<file_id>\d+)/download', array(
+            'methods'             => WP_REST_Server::READABLE,
+            'callback'            => array(__CLASS__, 'download_project_file'),
+            'permission_callback' => array('PAXdesign_Customer_Auth', 'require_staff'),
         ));
 
         register_rest_route(self::NS, '/customer/staff/projects/(?P<id>\d+)/milestones', array(
@@ -86,6 +98,14 @@ class PAXdesign_Customer_Staff_REST {
             'methods'             => WP_REST_Server::CREATABLE,
             'callback'            => array(__CLASS__, 'send_notification'),
             'permission_callback' => array('PAXdesign_Customer_Auth', 'require_admin'),
+        ));
+    }
+
+    public static function list_projects(WP_REST_Request $request) {
+        $status = sanitize_key((string) ($request->get_param('status') ?? ''));
+        $limit = absint($request->get_param('limit') ?? 100);
+        return rest_ensure_response(array(
+            'projects' => PAXdesign_Customer_Projects::list_for_staff($status, $limit),
         ));
     }
 
@@ -160,6 +180,20 @@ class PAXdesign_Customer_Staff_REST {
             return new WP_Error('not_found', __('Order not found.', 'paxdesign-booking'), array('status' => 404));
         }
         return rest_ensure_response($order);
+    }
+
+    public static function download_project_file(WP_REST_Request $request) {
+        $file = PAXdesign_Customer_Projects::get_file_for_staff((int) $request['id'], (int) $request['file_id']);
+        if (!$file || empty($file['file_path']) || !file_exists($file['file_path'])) {
+            return new WP_Error('not_found', __('File not found.', 'paxdesign-booking'), array('status' => 404));
+        }
+        $mime = !empty($file['mime_type']) ? $file['mime_type'] : 'application/octet-stream';
+        $name = !empty($file['file_name']) ? $file['file_name'] : basename($file['file_path']);
+        header('Content-Type: ' . $mime);
+        header('Content-Disposition: attachment; filename="' . rawurlencode($name) . '"');
+        header('Content-Length: ' . (string) filesize($file['file_path']));
+        readfile($file['file_path']);
+        exit;
     }
 
     public static function download_order_file(WP_REST_Request $request) {

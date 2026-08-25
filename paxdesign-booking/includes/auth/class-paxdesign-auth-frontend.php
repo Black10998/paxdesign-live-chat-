@@ -161,6 +161,20 @@ class PAXdesign_Auth_Frontend {
             'isMasterAdmin' => (is_user_logged_in() && class_exists('PAXdesign_Customer_Master_Admin'))
                 ? PAXdesign_Customer_Master_Admin::is_master_admin($user_id)
                 : false,
+            'isOwner' => (is_user_logged_in() && class_exists('PAXdesign_Auth_Native'))
+                ? PAXdesign_Auth_Native::is_owner_account($user_id)
+                : false,
+            'isAdmin' => is_user_logged_in() && (
+                current_user_can('manage_options')
+                || (class_exists('PAXdesign_Auth_Native') && PAXdesign_Auth_Native::is_owner_account($user_id))
+            ),
+            'isStaff' => (is_user_logged_in() && class_exists('PAXdesign_Live_Chat_Permissions'))
+                ? (
+                    PAXdesign_Live_Chat_Permissions::has_live_chat_access($user_id)
+                    && !(class_exists('PAXdesign_Customer_Master_Admin') && PAXdesign_Customer_Master_Admin::is_master_admin($user_id))
+                    && !(class_exists('PAXdesign_Auth_Native') && PAXdesign_Auth_Native::is_owner_account($user_id))
+                )
+                : false,
             'customerLevel' => (is_user_logged_in() && class_exists('PAXdesign_Customer_Levels'))
                 ? PAXdesign_Customer_Levels::profile_fields($user_id)
                 : array(),

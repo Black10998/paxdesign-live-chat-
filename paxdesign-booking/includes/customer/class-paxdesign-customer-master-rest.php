@@ -40,6 +40,98 @@ class PAXdesign_Customer_Master_REST {
             'callback'            => array(__CLASS__, 'list_levels'),
             'permission_callback' => $guard['permission_callback'],
         ));
+
+        register_rest_route(PAXdesign_Customer_REST::NS, '/customer/master/overview', array(
+            'methods'             => WP_REST_Server::READABLE,
+            'callback'            => array(__CLASS__, 'overview'),
+            'permission_callback' => $guard['permission_callback'],
+        ));
+
+        register_rest_route(PAXdesign_Customer_REST::NS, '/customer/master/reports', array(
+            'methods'             => WP_REST_Server::READABLE,
+            'callback'            => array(__CLASS__, 'reports'),
+            'permission_callback' => $guard['permission_callback'],
+        ));
+
+        register_rest_route(PAXdesign_Customer_REST::NS, '/customer/master/projects', array(
+            'methods'             => WP_REST_Server::READABLE,
+            'callback'            => array(__CLASS__, 'list_projects'),
+            'permission_callback' => $guard['permission_callback'],
+        ));
+
+        register_rest_route(PAXdesign_Customer_REST::NS, '/customer/master/orders', array(
+            'methods'             => WP_REST_Server::READABLE,
+            'callback'            => array(__CLASS__, 'list_orders'),
+            'permission_callback' => $guard['permission_callback'],
+        ));
+
+        register_rest_route(PAXdesign_Customer_REST::NS, '/customer/master/tickets', array(
+            'methods'             => WP_REST_Server::READABLE,
+            'callback'            => array(__CLASS__, 'list_tickets'),
+            'permission_callback' => $guard['permission_callback'],
+        ));
+
+        register_rest_route(PAXdesign_Customer_REST::NS, '/customer/master/files', array(
+            'methods'             => WP_REST_Server::READABLE,
+            'callback'            => array(__CLASS__, 'list_files'),
+            'permission_callback' => $guard['permission_callback'],
+        ));
+
+        register_rest_route(PAXdesign_Customer_REST::NS, '/customer/master/services', array(
+            'methods'             => WP_REST_Server::READABLE,
+            'callback'            => array(__CLASS__, 'list_services'),
+            'permission_callback' => $guard['permission_callback'],
+        ));
+
+        register_rest_route(PAXdesign_Customer_REST::NS, '/customer/master/conversations', array(
+            'methods'             => WP_REST_Server::READABLE,
+            'callback'            => array(__CLASS__, 'list_conversations'),
+            'permission_callback' => $guard['permission_callback'],
+        ));
+
+        register_rest_route(PAXdesign_Customer_REST::NS, '/customer/master/notifications', array(
+            array(
+                'methods'             => WP_REST_Server::READABLE,
+                'callback'            => array(__CLASS__, 'list_notifications'),
+                'permission_callback' => $guard['permission_callback'],
+            ),
+            array(
+                'methods'             => WP_REST_Server::CREATABLE,
+                'callback'            => array(__CLASS__, 'send_notification'),
+                'permission_callback' => $guard['permission_callback'],
+            ),
+        ));
+
+        register_rest_route(PAXdesign_Customer_REST::NS, '/customer/master/news', array(
+            'methods'             => WP_REST_Server::READABLE,
+            'callback'            => array(__CLASS__, 'list_news'),
+            'permission_callback' => $guard['permission_callback'],
+        ));
+
+        register_rest_route(PAXdesign_Customer_REST::NS, '/customer/master/staff', array(
+            array(
+                'methods'             => WP_REST_Server::READABLE,
+                'callback'            => array(__CLASS__, 'list_staff'),
+                'permission_callback' => $guard['permission_callback'],
+            ),
+            array(
+                'methods'             => WP_REST_Server::CREATABLE,
+                'callback'            => array(__CLASS__, 'save_staff'),
+                'permission_callback' => $guard['permission_callback'],
+            ),
+        ));
+
+        register_rest_route(PAXdesign_Customer_REST::NS, '/customer/master/staff/(?P<id>\d+)', array(
+            'methods'             => WP_REST_Server::DELETABLE,
+            'callback'            => array(__CLASS__, 'remove_staff'),
+            'permission_callback' => $guard['permission_callback'],
+        ));
+
+        register_rest_route(PAXdesign_Customer_REST::NS, '/customer/master/permissions', array(
+            'methods'             => WP_REST_Server::READABLE,
+            'callback'            => array(__CLASS__, 'permission_catalog'),
+            'permission_callback' => $guard['permission_callback'],
+        ));
     }
 
     public static function list_customers(WP_REST_Request $request) {
@@ -164,6 +256,270 @@ class PAXdesign_Customer_Master_REST {
                 ? PAXdesign_Customer_Avatar_Presets::catalog()
                 : array(),
         ));
+    }
+
+    public static function overview() {
+        return rest_ensure_response(array(
+            'stats' => self::platform_stats(),
+            'role'  => 'owner',
+        ));
+    }
+
+    public static function reports() {
+        $stats = self::platform_stats();
+        $orders = class_exists('PAXdesign_Customer_Orders')
+            ? PAXdesign_Customer_Orders::list_for_staff('', 200)
+            : array();
+        $by_status = array();
+        foreach ($orders as $order) {
+            $status = sanitize_key((string) ($order['status'] ?? 'unknown'));
+            if ($status === '') {
+                $status = 'unknown';
+            }
+            if (!isset($by_status[$status])) {
+                $by_status[$status] = 0;
+            }
+            $by_status[$status]++;
+        }
+        return rest_ensure_response(array(
+            'stats'         => $stats,
+            'orders_by_status' => $by_status,
+            'recent_orders' => array_slice($orders, 0, 8),
+            'recent_projects' => class_exists('PAXdesign_Customer_Projects')
+                ? array_slice(PAXdesign_Customer_Projects::list_for_staff('', 8), 0, 8)
+                : array(),
+        ));
+    }
+
+    public static function list_projects(WP_REST_Request $request) {
+        $status = sanitize_key((string) ($request->get_param('status') ?? ''));
+        $limit = absint($request->get_param('limit') ?? 100);
+        return rest_ensure_response(array(
+            'projects' => PAXdesign_Customer_Projects::list_for_staff($status, $limit),
+        ));
+    }
+
+    public static function list_orders(WP_REST_Request $request) {
+        $status = sanitize_key((string) ($request->get_param('status') ?? ''));
+        $limit = absint($request->get_param('limit') ?? 100);
+        return rest_ensure_response(array(
+            'orders' => PAXdesign_Customer_Orders::list_for_staff($status, $limit),
+        ));
+    }
+
+    public static function list_tickets(WP_REST_Request $request) {
+        $limit = absint($request->get_param('limit') ?? 80);
+        $tickets = class_exists('PAXdesign_Cybercrime_Tickets')
+            ? PAXdesign_Cybercrime_Tickets::list_reports_for_admin($limit)
+            : array();
+        return rest_ensure_response(array('tickets' => $tickets));
+    }
+
+    public static function list_files(WP_REST_Request $request) {
+        $limit = absint($request->get_param('limit') ?? 100);
+        return rest_ensure_response(array(
+            'files' => PAXdesign_Customer_Orders::library_for_staff($limit),
+        ));
+    }
+
+    public static function list_services() {
+        $services = class_exists('PAXdesign_Customer_Services')
+            ? PAXdesign_Customer_Services::list_for_admin()
+            : array();
+        return rest_ensure_response(array('services' => $services));
+    }
+
+    public static function list_conversations() {
+        $sessions = array();
+        $live_count = 0;
+        if (class_exists('PAXdesign_Chat_Live')) {
+            $live = PAXdesign_Chat_Live::get_instance()->get_live_list_data(false);
+            if (!is_wp_error($live) && is_array($live)) {
+                $sessions = isset($live['sessions']) && is_array($live['sessions']) ? $live['sessions'] : array();
+                $live_count = (int) ($live['live_count'] ?? 0);
+            }
+        }
+        return rest_ensure_response(array(
+            'conversations' => $sessions,
+            'live_count'    => $live_count,
+        ));
+    }
+
+    public static function list_notifications(WP_REST_Request $request) {
+        $limit = absint($request->get_param('limit') ?? 80);
+        return rest_ensure_response(array(
+            'notifications' => PAXdesign_Customer_Notifications::list_recent_for_admin($limit),
+        ));
+    }
+
+    public static function send_notification(WP_REST_Request $request) {
+        $params = $request->get_json_params() ?: $request->get_params();
+        $title = sanitize_text_field((string) ($params['title'] ?? ''));
+        $body = sanitize_textarea_field((string) ($params['body'] ?? ''));
+        if ($title === '') {
+            return new WP_Error('invalid_payload', __('Title is required.', 'paxdesign-booking'), array('status' => 400));
+        }
+        $result = PAXdesign_Customer_Notifications::broadcast(
+            $title,
+            $body,
+            sanitize_key((string) ($params['category'] ?? 'general')),
+            absint($params['user_id'] ?? 0)
+        );
+        return rest_ensure_response(array_merge(array('success' => true), $result));
+    }
+
+    public static function list_news() {
+        $items = class_exists('PAXdesign_Customer_News')
+            ? PAXdesign_Customer_News::list_admin()
+            : array();
+        $out = array();
+        foreach ($items as $item) {
+            $out[] = array(
+                'id'           => (int) ($item['id'] ?? 0),
+                'title'        => (string) ($item['title'] ?? ''),
+                'slug'         => (string) ($item['slug'] ?? ''),
+                'status'       => (string) ($item['status'] ?? ''),
+                'published_at' => (string) ($item['published_at'] ?? ''),
+                'updated_at'   => (string) ($item['updated_at'] ?? ''),
+            );
+        }
+        return rest_ensure_response(array('news' => $out));
+    }
+
+    public static function list_staff() {
+        $staff = class_exists('PAXdesign_Live_Chat_Permissions')
+            ? PAXdesign_Live_Chat_Permissions::list_staff_for_api()
+            : array();
+        $catalog = class_exists('PAXdesign_Live_Chat_Permissions')
+            ? PAXdesign_Live_Chat_Permissions::permission_labels()
+            : array();
+        return rest_ensure_response(array(
+            'staff'       => $staff,
+            'permissions' => self::format_permission_catalog($catalog),
+        ));
+    }
+
+    public static function save_staff(WP_REST_Request $request) {
+        if (!class_exists('PAXdesign_Live_Chat_Permissions')) {
+            return new WP_Error('unavailable', __('Staff permissions are unavailable.', 'paxdesign-booking'), array('status' => 500));
+        }
+        $params = $request->get_json_params() ?: $request->get_params();
+        $user_id = absint($params['user_id'] ?? 0);
+        $email = sanitize_email((string) ($params['email'] ?? ''));
+        if ($user_id <= 0 && $email !== '') {
+            $found = get_user_by('email', $email);
+            if ($found instanceof WP_User) {
+                $user_id = (int) $found->ID;
+            }
+        }
+        if ($user_id <= 0) {
+            return new WP_Error('invalid_user', __('Provide an existing staff email or user id.', 'paxdesign-booking'), array('status' => 400));
+        }
+        $existing = PAXdesign_Live_Chat_Permissions::get_staff_record($user_id);
+        $permissions = isset($params['permissions']) && is_array($params['permissions'])
+            ? $params['permissions']
+            : (isset($existing['permissions']) && is_array($existing['permissions']) ? $existing['permissions'] : array());
+        $enabled = array_key_exists('enabled', $params)
+            ? rest_sanitize_boolean($params['enabled'])
+            : (empty($existing) ? true : !empty($existing['enabled']));
+        $result = PAXdesign_Live_Chat_Permissions::save_staff_record($user_id, array(
+            'enabled'     => $enabled,
+            'permissions' => $permissions,
+            'team_role'   => sanitize_key((string) ($params['team_role'] ?? ($existing['team_role'] ?? ''))),
+        ));
+        if (is_wp_error($result)) {
+            return $result;
+        }
+        return rest_ensure_response(array(
+            'success' => true,
+            'staff'   => PAXdesign_Live_Chat_Permissions::list_staff_for_api(),
+        ));
+    }
+
+    public static function remove_staff(WP_REST_Request $request) {
+        if (!class_exists('PAXdesign_Live_Chat_Permissions')) {
+            return new WP_Error('unavailable', __('Staff permissions are unavailable.', 'paxdesign-booking'), array('status' => 500));
+        }
+        $result = PAXdesign_Live_Chat_Permissions::remove_staff(absint($request->get_param('id')));
+        if (is_wp_error($result)) {
+            return $result;
+        }
+        return rest_ensure_response(array(
+            'success' => true,
+            'staff'   => PAXdesign_Live_Chat_Permissions::list_staff_for_api(),
+        ));
+    }
+
+    public static function permission_catalog() {
+        $catalog = class_exists('PAXdesign_Live_Chat_Permissions')
+            ? PAXdesign_Live_Chat_Permissions::permission_labels()
+            : array();
+        return rest_ensure_response(array(
+            'permissions' => self::format_permission_catalog($catalog),
+            'staff'       => class_exists('PAXdesign_Live_Chat_Permissions')
+                ? PAXdesign_Live_Chat_Permissions::list_staff_for_api()
+                : array(),
+        ));
+    }
+
+    /**
+     * @return array<string, int>
+     */
+    private static function platform_stats() {
+        global $wpdb;
+        $customers = PAXdesign_Customer_Registry::query_manageable_customers('', 1, 1);
+        $staff_count = class_exists('PAXdesign_Live_Chat_Permissions')
+            ? count(PAXdesign_Live_Chat_Permissions::list_staff_for_api())
+            : 0;
+        return array(
+            'customers'      => (int) ($customers['total'] ?? 0),
+            'staff'          => $staff_count,
+            'projects'       => self::count_table('projects'),
+            'orders'         => self::count_table('orders'),
+            'open_orders'    => (int) $wpdb->get_var(
+                "SELECT COUNT(1) FROM " . PAXdesign_Customer_DB::table('orders') .
+                " WHERE status NOT IN ('completed','cancelled')"
+            ),
+            'tickets'        => class_exists('PAXdesign_Cybercrime_Intake')
+                ? (int) $wpdb->get_var('SELECT COUNT(1) FROM ' . PAXdesign_Cybercrime_Intake::table_name())
+                : 0,
+            'files'          => self::count_table('project_files') + self::count_table('order_files'),
+            'services'       => self::count_table('services'),
+            'conversations'  => class_exists('PAXdesign_Chat_Log')
+                ? (int) $wpdb->get_var('SELECT COUNT(1) FROM ' . PAXdesign_Chat_Log::table_name())
+                : 0,
+            'notifications'  => self::count_table('notifications'),
+            'news'           => self::count_table('news'),
+        );
+    }
+
+    /**
+     * @param string $suffix
+     * @return int
+     */
+    private static function count_table($suffix) {
+        global $wpdb;
+        $table = PAXdesign_Customer_DB::table($suffix);
+        $exists = $wpdb->get_var($wpdb->prepare('SHOW TABLES LIKE %s', $table));
+        if ($exists !== $table) {
+            return 0;
+        }
+        return (int) $wpdb->get_var("SELECT COUNT(1) FROM $table");
+    }
+
+    /**
+     * @param array<string, string> $labels
+     * @return array<int, array<string, string>>
+     */
+    private static function format_permission_catalog($labels) {
+        $out = array();
+        foreach ($labels as $key => $label) {
+            $out[] = array(
+                'key'   => (string) $key,
+                'label' => (string) $label,
+            );
+        }
+        return $out;
     }
 
     /**

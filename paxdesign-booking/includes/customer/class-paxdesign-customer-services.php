@@ -164,6 +164,34 @@ class PAXdesign_Customer_Services {
         return $services;
     }
 
+    /**
+     * Full catalog for owner administration, including inactive rows.
+     *
+     * @return array<int, array<string, mixed>>
+     */
+    public static function list_for_admin() {
+        self::maybe_seed_catalog();
+        global $wpdb;
+        $items = array();
+        if (self::services_table_ready()) {
+            $table = PAXdesign_Customer_DB::table('services');
+            $rows = $wpdb->get_results("SELECT * FROM $table ORDER BY sort_order ASC, name ASC", ARRAY_A);
+            foreach ($rows ?: array() as $row) {
+                $item = self::format_service($row);
+                $item['is_active'] = !empty($row['is_active']);
+                $item['is_featured'] = !empty($row['is_featured']);
+                $items[] = $item;
+            }
+        }
+        if (empty($items)) {
+            foreach (self::list_services(array()) as $service) {
+                $service['is_active'] = true;
+                $items[] = $service;
+            }
+        }
+        return $items;
+    }
+
     public static function get_by_slug($slug) {
         global $wpdb;
         $slug = sanitize_key($slug);
