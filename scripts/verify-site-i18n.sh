@@ -98,6 +98,12 @@ vis_code="$(curl -sS -A 'Mozilla/5.0' -o "$TMP/visual-en.html" -w '%{http_code}'
 [ "$vis_code" = "200" ] && ok "English visual design HTTP 200" || fail "English visual design HTTP ${vis_code}"
 grep -q "Visual design with strategy and impact" "$TMP/visual-en.html" && ok "English visual design heading is translated" || fail "English visual design heading is still German"
 
+sleep 2
+docs_code="$(curl -sS -A 'Mozilla/5.0' -o "$TMP/docs-en.html" -w '%{http_code}' "${BASE}/service-dokumentation/?lang=en&n=${STAMP}")"
+[ "$docs_code" = "200" ] && ok "English service docs HTTP 200" || fail "English service docs HTTP ${docs_code}"
+grep -q "10. Our approach" "$TMP/docs-en.html" && ok "English service docs numbered TOC is translated" || fail "English service docs still has 10. Unser Ansatz"
+grep -q "data-preview-title=\"$(printf '\xc2\xa0')Webentwicklung\"" "$TMP/preise-en.html" && fail "English pricing mega-menu preview still has NBSP Webentwicklung" || ok "English pricing mega-menu preview title has no NBSP Webentwicklung"
+
 chat_code="$(curl -sS -A 'Mozilla/5.0' -o "$TMP/chat-script.js" -w '%{http_code}' "${BASE}/wp-content/plugins/paxdesign-booking/assets/js/chat-script.js?n=${STAMP}")"
 [ "$chat_code" = "200" ] && ok "chat JS HTTP 200" || fail "chat JS HTTP ${chat_code}"
 grep -q "Version: 3.174.128" "$TMP/chat-script.js" && ok "chat remains 3.174.128" || fail "chat version changed"
