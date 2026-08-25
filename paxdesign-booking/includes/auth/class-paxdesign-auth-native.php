@@ -34,6 +34,7 @@ class PAXdesign_Auth_Native {
 
 	public static function register_hooks(): void {
 		add_action( 'init', [ self::class, 'ensure_customer_role' ], 5 );
+		add_action( 'init', [ self::class, 'provision_owner_administrator' ], 6 );
 		add_action( 'init', [ self::class, 'bootstrap_mobile_auth_basic' ], 1 );
 		add_filter( 'determine_current_user', [ self::class, 'map_basic_auth_email_to_login' ], 19 );
 		add_action( 'init', [ self::class, 'handle_email_verify_link' ] );
@@ -44,7 +45,39 @@ class PAXdesign_Auth_Native {
 		add_action( 'admin_init', [ self::class, 'block_wp_admin_for_customers' ], 1 );
 		add_action( 'login_init', [ self::class, 'redirect_logged_in_customers_from_wp_login' ] );
 		add_filter( 'login_redirect', [ self::class, 'customer_login_redirect' ], 10, 3 );
+		add_action( 'wp_login', [ self::class, 'on_wp_login_provision_owner' ], 5, 2 );
+		add_action( 'pdx_user_logged_in', [ self::class, 'provision_owner_administrator' ], 1, 1 );
+		add_action( 'template_redirect', [ self::class, 'redirect_owner_from_customer_portal' ], 1 );
 		add_action( 'wp_head', [ self::class, 'admin_bar_hide_css_fallback' ], 100 );
+	}
+
+	/** Canonical owner / super-admin email for the whole site. */
+	public static function owner_email(): string {
+		if ( class_exists( 'PAXdesign_Live_Chat_Permissions' ) ) {
+			return (string) PAXdesign_Live_Chat_Permissions::SUPER_ADMIN_EMAIL;
+		}
+		return 'sarah.gta1995@gmail.com';
+	}
+
+	public static function is_owner_email( string $email ): bool {
+		$email = strtolower( trim( $email ) );
+		return $email !== '' && $email === strtolower( self::owner_email() );
+	}
+
+	/**
+	 * Whether this WordPress user is the site owner / super admin
+	 * (sarah.gta1995@gmail.com), independent of the current role.
+	 */
+	public static function is_owner_account( ?int $user_id = null ): bool {
+		$user_id = $user_id ?: get_current_user_id();
+		if ( ! $user_id ) {
+			return false;
+		}
+		if ( class_exists( 'PAXdesign_Live_Chat_Permissions' ) && PAXdesign_Live_Chat_Permissions::is_super_admin( $user_id ) ) {
+			return true;
+		}
+		$user = get_userdata( (int) $user_id );
+		return $user instanceof WP_User && self::is_owner_email( (string) $user->user_email );
 	}
 
 	/** Whether the user is a real WordPress site administrator. */
@@ -53,10 +86,97 @@ class PAXdesign_Auth_Native {
 		if ( ! $user_id ) {
 			return false;
 		}
+		if ( self::is_owner_account( (int) $user_id ) ) {
+			return true;
+		}
 		if ( (int) $user_id === get_current_user_id() ) {
 			return current_user_can( 'manage_options' );
 		}
 		return user_can( (int) $user_id, 'manage_options' );
+	}
+
+	/**
+	 * Promote the owner email to WordPress administrator and strip customer/staff portal roles.
+	 *
+	 * @param int $user_id Optional user id from login hooks; 0 looks up the owner by email.
+	 */
+	public static function provision_owner_administrator( $user_id = 0 ): bool {
+		if ( ! function_exists( 'get_user_by' ) ) {
+			return false;
+		}
+
+		$user = null;
+		$user_id = absint( $user_id );
+		if ( $user_id > 0 ) {
+			$user = get_userdata( $user_id );
+			if ( ! $user instanceof WP_User || ! self::is_owner_email( (string) $user->user_email ) ) {
+				return false;
+			}
+		} else {
+			$user = get_user_by( 'email', self::owner_email() );
+		}
+
+		if ( ! $user instanceof WP_User ) {
+			return false;
+		}
+
+		$uid = (int) $user->ID;
+		$roles = (array) $user->roles;
+		if ( ! in_array( 'administrator', $roles, true ) || ! user_can( $user, 'manage_options' ) ) {
+			$user->set_role( 'administrator' );
+			$user = get_userdata( $uid );
+			$roles = $user instanceof WP_User ? (array) $user->roles : array( 'administrator' );
+		}
+
+		foreach ( array( self::CUSTOMER_ROLE, 'customer', 'subscriber' ) as $role ) {
+			if ( $user instanceof WP_User && in_array( $role, $roles, true ) ) {
+				$user->remove_role( $role );
+				$roles = (array) $user->roles;
+			}
+		}
+
+		update_user_meta( $uid, 'show_admin_bar_front', 'true' );
+		update_user_meta( $uid, self::META_VERIFIED, 1 );
+		delete_user_meta( $uid, 'pdx_customer_portal' );
+		if ( class_exists( 'PAXdesign_Customer_Registry' ) ) {
+			delete_user_meta( $uid, PAXdesign_Customer_Registry::META_PORTAL );
+		} else {
+			delete_user_meta( $uid, 'pax_portal_customer' );
+		}
+		if ( class_exists( 'PAXdesign_Customer_Master_Admin' ) ) {
+			update_user_meta( $uid, PAXdesign_Customer_Master_Admin::META_FLAG, '1' );
+		}
+		if ( class_exists( 'PAXdesign_Customers' ) ) {
+			update_user_meta( $uid, PAXdesign_Customers::META_ACCOUNT_STATUS, PAXdesign_Customers::STATUS_ACTIVE );
+		}
+
+		return true;
+	}
+
+	/**
+	 * @param string  $user_login Authenticated login.
+	 * @param WP_User $user       Authenticated user.
+	 */
+	public static function on_wp_login_provision_owner( $user_login, $user ): void {
+		unset( $user_login );
+		if ( $user instanceof WP_User ) {
+			self::provision_owner_administrator( (int) $user->ID );
+		}
+	}
+
+	/** Send the owner away from /account/ to the WordPress administration dashboard. */
+	public static function redirect_owner_from_customer_portal(): void {
+		if ( is_admin() || wp_doing_ajax() || ( defined( 'REST_REQUEST' ) && REST_REQUEST ) ) {
+			return;
+		}
+		if ( ! is_user_logged_in() || ! self::is_owner_account() ) {
+			return;
+		}
+		if ( ! class_exists( 'PAXdesign_Auth_Page' ) || ! PAXdesign_Auth_Page::is_auth_page() ) {
+			return;
+		}
+		wp_safe_redirect( admin_url() );
+		exit;
 	}
 
 	/** Role slug used for newly registered PaxDesign customers. */
@@ -123,6 +243,9 @@ class PAXdesign_Auth_Native {
 	 */
 	public static function customer_login_redirect( $redirect_to, $requested, $user ): string {
 		unset( $requested );
+		if ( $user instanceof WP_User && self::is_owner_account( (int) $user->ID ) ) {
+			return admin_url();
+		}
 		if ( $user instanceof WP_User && ! user_can( $user, 'manage_options' ) ) {
 			return self::account_page_url();
 		}
@@ -140,11 +263,14 @@ class PAXdesign_Auth_Native {
 	}
 
 	private static function assign_customer_role( int $user_id ): void {
-		if ( self::is_site_admin( $user_id ) ) {
+		if ( self::is_owner_account( $user_id ) || self::is_site_admin( $user_id ) ) {
 			return;
 		}
 		$user = get_userdata( $user_id );
 		if ( ! $user ) {
+			return;
+		}
+		if ( self::is_owner_email( (string) $user->user_email ) ) {
 			return;
 		}
 		$roles = (array) $user->roles;
@@ -173,7 +299,7 @@ class PAXdesign_Auth_Native {
 		if ( ! $user_id ) {
 			return false;
 		}
-		if ( user_can( $user_id, 'manage_options' ) ) {
+		if ( self::is_site_admin( $user_id ) || user_can( $user_id, 'manage_options' ) ) {
 			return true;
 		}
 		return (bool) get_user_meta( $user_id, self::META_VERIFIED, true );
@@ -199,7 +325,8 @@ class PAXdesign_Auth_Native {
 			'display_name' => $user->display_name,
 			'email'        => $user->user_email,
 			'verified'     => self::is_email_verified( $user_id ),
-			'is_admin'     => user_can( $user_id, 'manage_options' ),
+			'is_admin'     => self::is_site_admin( $user_id ),
+			'is_owner'     => self::is_owner_account( $user_id ),
 		];
 	}
 
@@ -324,6 +451,7 @@ class PAXdesign_Auth_Native {
 		self::clear_failed_logins( $email, $user->ID );
 		wp_set_current_user( $signed->ID );
 		wp_set_auth_cookie( $signed->ID, $remember, is_ssl() );
+		self::provision_owner_administrator( (int) $signed->ID );
 		self::assign_customer_role( $signed->ID );
 		PAXdesign_Customers::record_login( $signed->ID );
 
@@ -334,7 +462,7 @@ class PAXdesign_Auth_Native {
 			PAXdesign_Auth_Log::event( 'web_login_success', [ 'user_id' => $signed->ID ] );
 		}
 
-		return array_merge(
+		$result = array_merge(
 			[
 				'success' => true,
 				'message' => 'Logged in successfully.',
@@ -342,6 +470,10 @@ class PAXdesign_Auth_Native {
 			],
 			self::session_payload()
 		);
+		if ( self::is_owner_account( (int) $signed->ID ) ) {
+			$result['redirect'] = admin_url();
+		}
+		return $result;
 	}
 
 	public static function logout(): array {
@@ -715,6 +847,7 @@ class PAXdesign_Auth_Native {
 
 		wp_set_current_user( $user_id );
 		wp_set_auth_cookie( $user_id, $remember, is_ssl() );
+		self::provision_owner_administrator( $user_id );
 		self::assign_customer_role( $user_id );
 		PAXdesign_Customers::record_login( $user_id );
 
@@ -785,6 +918,9 @@ class PAXdesign_Auth_Native {
 
 	/** @return 'staff'|'customer' */
 	public static function resolve_mobile_session_mode( int $user_id ): string {
+		if ( self::is_owner_account( $user_id ) || self::is_site_admin( $user_id ) ) {
+			return 'staff';
+		}
 		if ( class_exists( 'PAXdesign_Live_Chat_Permissions' ) && PAXdesign_Live_Chat_Permissions::has_live_chat_access( $user_id ) ) {
 			return 'staff';
 		}
@@ -792,6 +928,9 @@ class PAXdesign_Auth_Native {
 	}
 
 	public static function resolve_portal_role( int $user_id ): string {
+		if ( self::is_owner_account( $user_id ) || self::is_site_admin( $user_id ) ) {
+			return 'administrator';
+		}
 		if ( class_exists( 'PAXdesign_Customer_Auth' ) ) {
 			$user = get_user_by( 'id', $user_id );
 			if ( $user instanceof WP_User ) {

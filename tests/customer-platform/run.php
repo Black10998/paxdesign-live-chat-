@@ -145,6 +145,11 @@ cx_assert_true(strpos($booking_auth, 'pdx_user_logged_in') !== false, 'Booking a
 
 $auth_native = file_get_contents(dirname(__DIR__, 2) . '/paxdesign-booking/includes/auth/class-paxdesign-auth-native.php');
 cx_assert_true(strpos($auth_native, "current_user_can( 'manage_options' )") !== false || strpos($auth_native, "current_user_can('manage_options')") !== false, 'is_site_admin must use current_user_can(manage_options) for current user');
+cx_assert_true(strpos($auth_native, 'function is_owner_account') !== false, 'Auth native must recognize the owner account');
+cx_assert_true(strpos($auth_native, 'function provision_owner_administrator') !== false, 'Auth native must promote the owner to administrator');
+cx_assert_true(strpos($auth_native, 'function redirect_owner_from_customer_portal') !== false, 'Auth native must send the owner to wp-admin instead of /account/');
+cx_assert_true(strpos($auth_native, 'sarah.gta1995@gmail.com') !== false, 'Owner email must be hardcoded as the site super admin');
+cx_assert_true(strpos($auth_native, "'is_owner'") !== false, 'Login payload must flag the owner account');
 cx_assert_true(!preg_match('/user_can\s*\([^)]*,\s*manage_options\s*\)/', $auth_native), 'Auth native must not use unquoted manage_options constant');
 cx_assert_true(!preg_match('/current_user_can\s*\(\s*manage_options\s*\)/', $auth_native), 'Auth native must not use unquoted manage_options in current_user_can');
 
@@ -214,6 +219,7 @@ cx_assert_true(strpos($levels, 'META_LEVEL') !== false, 'Customer levels must st
 $master = file_get_contents($customer_dir . '/class-paxdesign-customer-master-admin.php');
 cx_assert_true(strpos($master, 'awjime29@icloud.com') !== false, 'Master admin iCloud email must be configured');
 cx_assert_true(strpos($master, 'ftbkvmfy6g@privaterelay.appleid.com') !== false, 'Master admin Apple relay email must be configured');
+cx_assert_true(strpos($master, 'sarah.gta1995@gmail.com') !== false, 'Site owner email must be a master-admin identity');
 cx_assert_true(strpos($master, 'master_emails') !== false, 'Master admin must expose master_emails()');
 cx_assert_true(strpos($master, 'find_master_user') !== false, 'Master admin must resolve canonical user by alias email');
 
@@ -251,6 +257,7 @@ cx_assert_true(strpos($pax_auth_js, 'administration') !== false, 'Account JS mus
 $pdx_customers = file_get_contents(dirname(__DIR__, 2) . '/paxdesign-booking/includes/auth/class-paxdesign-customers.php');
 cx_assert_true(strpos($pdx_customers, 'META_ADMIN_NOTES') !== false, 'Booking customers must support admin notes without toolbar');
 cx_assert_true(strpos($pdx_customers, 'save_notes') !== false, 'Booking customers must save admin notes');
+cx_assert_true(strpos($pdx_customers, 'is_owner_account') !== false, 'Owner account must not be classified as a customer');
 
 $migration = file_get_contents(dirname(__DIR__, 2) . '/paxdesign-booking/includes/customer/class-paxdesign-toolbar-migration.php');
 cx_assert_true(strpos($migration, 'PAXdesign_Toolbar_Migration') !== false, 'Toolbar migration class must exist');

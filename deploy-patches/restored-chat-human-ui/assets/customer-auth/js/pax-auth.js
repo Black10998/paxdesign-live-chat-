@@ -707,6 +707,12 @@
       user.is_master_admin = !!payload.is_master_admin;
       C.isMasterAdmin = !!payload.is_master_admin;
     }
+    if (payload.is_owner !== undefined) {
+      user.is_owner = !!payload.is_owner;
+    }
+    if (payload.is_admin !== undefined) {
+      user.is_admin = !!payload.is_admin;
+    }
   }
 
   function applyAccountProfileUpdate(profile) {
@@ -1096,9 +1102,25 @@
   function redirectAfterAuthSuccess() {
     var returnTo = getReturnToParam();
     if (!returnTo) return false;
+    if (user && user.is_owner) {
+      window.location.replace('/wp-admin/');
+      return true;
+    }
     clearStoredChatReturnTo();
     window.location.href = returnTo;
     return true;
+  }
+
+  function redirectOwnerToWpAdmin(redirectUrl) {
+    if (redirectUrl) {
+      window.location.replace(redirectUrl);
+      return true;
+    }
+    if (user && user.is_owner) {
+      window.location.replace('/wp-admin/');
+      return true;
+    }
+    return false;
   }
 
   function homePageUrl() {
@@ -2318,7 +2340,10 @@
           showFormMessage(normalizeRestMessage(data), 'error');
           return;
         }
-        applySession({ user: data.user || user, nonce: data.nonce }, { reason: 'login', broadcast: true });
+		applySession({ user: data.user || user, nonce: data.nonce }, { reason: 'login', broadcast: true });
+        if (redirectOwnerToWpAdmin(data.redirect)) {
+          return;
+        }
         var inline = finishAuthSuccess();
         if (!inline && isAuthPage()) {
           if (redirectAfterAuthSuccess()) {
@@ -3872,6 +3897,9 @@
 
   function updateAuthPagePanels() {
     if (!authPageEl) return;
+    if (redirectOwnerToWpAdmin()) {
+      return;
+    }
     isolateAuthShell();
     var guestPanel = document.getElementById('pdx-auth-page-guest');
     if (!guestPanel) return;

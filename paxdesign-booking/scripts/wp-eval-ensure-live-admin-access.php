@@ -19,6 +19,15 @@ if (!class_exists('PAXdesign_Live_Chat_Permissions')) {
 $admin_login_or_email = trim((string) getenv('PAX_ADMIN_USER'));
 $provisioned          = 0;
 
+if (class_exists('PAXdesign_Auth_Native') && method_exists('PAXdesign_Auth_Native', 'provision_owner_administrator')) {
+    if (PAXdesign_Auth_Native::provision_owner_administrator()) {
+        $owner = get_user_by('email', PAXdesign_Auth_Native::owner_email());
+        echo 'owner_admin_ok user_id=' . ($owner instanceof WP_User ? (int) $owner->ID : 0) . ' email=' . PAXdesign_Auth_Native::owner_email() . "\n";
+    } else {
+        fwrite(STDERR, 'WARN: owner account not found for ' . PAXdesign_Auth_Native::owner_email() . "\n");
+    }
+}
+
 if ($admin_login_or_email !== '') {
     $user = get_user_by('login', $admin_login_or_email);
     if (!$user instanceof WP_User) {

@@ -298,6 +298,12 @@ class PAXdesign_Customer_Registry {
      * @return bool
      */
     private static function should_exclude_from_portal($user_id) {
+        if (class_exists('PAXdesign_Auth_Native') && PAXdesign_Auth_Native::is_owner_account($user_id)) {
+            return true;
+        }
+        if (class_exists('PAXdesign_Live_Chat_Permissions') && PAXdesign_Live_Chat_Permissions::is_super_admin($user_id)) {
+            return true;
+        }
         if (user_can($user_id, 'manage_options')) {
             return true;
         }

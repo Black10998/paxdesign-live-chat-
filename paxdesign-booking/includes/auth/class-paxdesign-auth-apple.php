@@ -279,6 +279,9 @@ class PAXdesign_Auth_Apple {
 		}
 
 		self::trace( 'complete_success', array( 'user_id' => (int) $data['user_id'] ) );
+		if ( PAXdesign_Auth_Native::is_owner_account( (int) $data['user_id'] ) ) {
+			return admin_url();
+		}
 		return (string) ( $data['return_url'] ?? ( PAXdesign_Auth_Page::page_url() . '#/overview' ) );
 	}
 

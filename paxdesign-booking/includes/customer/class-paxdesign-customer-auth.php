@@ -184,6 +184,12 @@ class PAXdesign_Customer_Auth {
     }
 
     public static function resolve_portal_role(WP_User $user) {
+        if (class_exists('PAXdesign_Auth_Native') && PAXdesign_Auth_Native::is_owner_account((int) $user->ID)) {
+            return 'administrator';
+        }
+        if (class_exists('PAXdesign_Live_Chat_Permissions') && PAXdesign_Live_Chat_Permissions::is_super_admin($user)) {
+            return 'administrator';
+        }
         if (user_can($user, 'manage_options')) {
             return 'administrator';
         }

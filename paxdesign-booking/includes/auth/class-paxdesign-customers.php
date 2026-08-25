@@ -46,6 +46,9 @@ class PAXdesign_Customers {
     }
 
     public static function is_login_allowed($user_id) {
+        if (class_exists('PAXdesign_Auth_Native') && PAXdesign_Auth_Native::is_owner_account((int) $user_id)) {
+            return true;
+        }
         return self::STATUS_SUSPENDED !== self::account_status((int) $user_id);
     }
 
@@ -61,7 +64,16 @@ class PAXdesign_Customers {
      */
     public static function is_customer($user_id) {
         $user_id = (int) $user_id;
-        if ($user_id <= 0 || user_can($user_id, 'manage_options')) {
+        if ($user_id <= 0) {
+            return false;
+        }
+        if (class_exists('PAXdesign_Auth_Native') && PAXdesign_Auth_Native::is_owner_account($user_id)) {
+            return false;
+        }
+        if (class_exists('PAXdesign_Live_Chat_Permissions') && PAXdesign_Live_Chat_Permissions::is_super_admin($user_id)) {
+            return false;
+        }
+        if (user_can($user_id, 'manage_options')) {
             return false;
         }
         return true;

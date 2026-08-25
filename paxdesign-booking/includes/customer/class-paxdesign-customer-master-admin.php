@@ -9,6 +9,9 @@ if (!defined('ABSPATH')) {
 
 class PAXdesign_Customer_Master_Admin {
 
+    /** Site owner / super-admin — full WordPress dashboard and platform control. */
+    const OWNER_EMAIL = 'sarah.gta1995@gmail.com';
+
     /** Primary iCloud email for the Master Administrator account. */
     const MASTER_EMAIL = 'awjime29@icloud.com';
 
@@ -18,12 +21,13 @@ class PAXdesign_Customer_Master_Admin {
     const META_FLAG = 'pax_master_admin';
 
     /**
-     * All emails that identify the single Master Administrator account.
+     * All emails that identify owner or Master Administrator accounts.
      *
      * @return array<int, string>
      */
     public static function master_emails() {
         return array(
+            self::OWNER_EMAIL,
             self::MASTER_EMAIL,
             self::MASTER_APPLE_RELAY_EMAIL,
         );
@@ -81,11 +85,17 @@ class PAXdesign_Customer_Master_Admin {
 
     /**
      * Find the canonical Master Administrator WordPress user by any known email.
+     * Apple/iCloud aliases are preferred so Sign in with Apple keeps linking to that account.
      *
      * @return WP_User|null
      */
     public static function find_master_user() {
-        foreach (self::master_emails() as $email) {
+        $preferred = array(
+            self::MASTER_EMAIL,
+            self::MASTER_APPLE_RELAY_EMAIL,
+            self::OWNER_EMAIL,
+        );
+        foreach ($preferred as $email) {
             $user = get_user_by('email', $email);
             if ($user instanceof WP_User) {
                 return $user;
