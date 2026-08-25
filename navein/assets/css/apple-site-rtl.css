@@ -279,3 +279,8 @@ html[lang="ar"] body.dtr-apple-sticky-header .dtr-logo text,
 html[lang="ar"] body.dtr-apple-sticky-header .dtr-logo tspan {
   font-family: "SF Pro Display", "SF Pro Text", -apple-system, BlinkMacSystemFont, Inter, Helvetica, Arial, sans-serif !important;
 }
+
+/* Pricing widget has a private DE/EN/AR bar. The Apple header switcher is canonical. */
+#pax-pricing .lang-switcher {
+  display: none !important;
+}

@@ -160,8 +160,14 @@
         });
         titleSwaps.sort(function (a, b) { return b.src.length - a.src.length; });
         titleSwaps.forEach(function (swap) {
-          if (document.title.indexOf(swap.src) !== -1) {
-            document.title = document.title.split(swap.src).join(swap.next);
+          if (document.title.indexOf(swap.src) === -1) return;
+          try {
+            var re = new RegExp('(?<![\\p{L}\\p{N}])' + swap.src.replace(/[.*+?^${}()|[\]\\]/g, '\\$&') + '(?![\\p{L}\\p{N}])', 'gu');
+            document.title = document.title.replace(re, swap.next);
+          } catch (err) {
+            if (swap.src.length >= 12) {
+              document.title = document.title.split(swap.src).join(swap.next);
+            }
           }
         });
       }

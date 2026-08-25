@@ -31,6 +31,8 @@ $plugin = file_get_contents($root . '/paxdesign-booking/paxdesign-booking.php');
 $ccs_js = file_get_contents($root . '/navein/assets/js/apple-cybercrime-support.js');
 $ccs_php = file_get_contents($root . '/navein/template-parts/pages/cybercrime-support.php');
 $workflow = file_get_contents($root . '/.github/workflows/deploy-site-i18n.yml');
+$pricing = file_get_contents($root . '/navein/inc/pax-pricing-i18n.php');
+$inner = file_get_contents($root . '/navein/inc/site-i18n-inner.php');
 
 i18n_ok(is_file($root . '/navein/inc/site-i18n.php'), 'site i18n engine exists');
 i18n_ok(is_file($root . '/navein/inc/site-i18n-strings.php'), 'site i18n strings exist');
@@ -48,8 +50,18 @@ i18n_ok(strpos($engine, 'navein_site_i18n_resolve_from') !== false, 'locale reso
 i18n_ok(strpos($engine, "cookie_src === 'manual'") !== false, 'manual cookie beats query and auto-detect');
 i18n_ok(strpos($engine, 'site-i18n-pages.php') !== false, 'page phrase pack is merged into the catalog');
 i18n_ok(is_file($root . '/navein/inc/site-i18n-pages.php'), 'page phrase pack file exists');
-i18n_ok(strpos($engine, 'site-i18n-content.php') !== false, 'content phrase pack is merged into the catalog');
-i18n_ok(is_file($root . '/navein/inc/site-i18n-content.php'), 'content phrase pack file exists');
+i18n_ok(strpos($engine, 'site-i18n-inner.php') !== false, 'inner phrase pack is merged into the catalog');
+i18n_ok(is_file($root . '/navein/inc/site-i18n-inner.php'), 'inner phrase pack file exists');
+i18n_ok($inner && strpos($inner, 'inner_001') !== false && strpos($inner, 'inner_521') !== false, 'inner phrase pack covers harvested leftover pages');
+i18n_ok(is_file($root . '/navein/inc/pax-pricing-i18n.php'), 'pricing widget i18n bridge exists');
+i18n_ok($pricing && strpos($pricing, 'pax-pricing-lang') !== false, 'pricing bridge patches the widget localStorage key');
+i18n_ok($pricing && strpos($pricing, "['de', 'en', 'ar', 'tr']") !== false, 'pricing merge includes Turkish');
+i18n_ok($pricing && strpos($pricing, 'html lang owned by site switcher') !== false, 'pricing widget does not overwrite html lang');
+i18n_ok(strpos($functions, 'navein_patch_pricing_widget_i18n') !== false, 'functions.php applies the pricing widget patch');
+i18n_ok(strpos($css, '#pax-pricing .lang-switcher') !== false, 'pricing widget language bar is hidden');
+i18n_ok($workflow && strpos($workflow, 'site-i18n-inner.php') !== false, 'i18n deploy copies the inner phrase pack');
+i18n_ok($workflow && strpos($workflow, 'pax-pricing-i18n.php') !== false, 'i18n deploy copies the pricing widget bridge');
+i18n_ok(strpos($js, 'replace(re, swap.next)') !== false, 'JS title rewrite uses word boundaries');
 i18n_ok(strpos($functions, 'navein_site_i18n_phrases()') !== false, 'JS receives the full phrase catalog');
 i18n_ok($workflow && strpos($workflow, 'site-i18n-pages.php') !== false, 'i18n deploy copies the page phrase pack');
 i18n_ok($workflow && strpos($workflow, 'site-i18n-content.php') !== false, 'i18n deploy copies the content phrase pack');
@@ -165,6 +177,40 @@ i18n_ok(is_string($career_out) && strpos($career_out, '>Careers at PAXdesign<') 
 i18n_ok(is_string($career_out) && strpos($career_out, '>Submit application<') !== false, 'career submit button is translated');
 i18n_ok(navein_t('privacy_no_user_share', '', 'en') === 'No sharing of user data', 'privacy no-share heading is in the catalog');
 i18n_ok(navein_t('terms_transfer_h', '', 'ar') === '5.3 النقل', 'AGB transfer heading has Arabic');
+i18n_ok(navein_t('nav_visual_design', '', 'en') === 'Visual design', 'mega-menu visual design title is in the catalog');
+i18n_ok(navein_t('nav_all_references', '', 'en') === 'All work', 'mega-menu all-work CTA is in the catalog');
+i18n_ok(navein_t('inner_001', '', 'en') === 'Visual design with strategy and impact', 'inner pack translates visual design page heading');
+
+$nbsp_html = "<span class=\"dtr-mega-title\">\xC2\xA0Webentwicklung</span>";
+$nbsp_out = navein_site_i18n_replace_chrome($nbsp_html);
+i18n_ok(is_string($nbsp_out) && strpos($nbsp_out, 'Web development') !== false, 'chrome replace folds NBSP before matching mega-menu titles');
+
+$preview = '<a data-preview-title="Art Direction &#038; Strategie">x</a>';
+$preview_out = navein_site_i18n_replace_chrome($preview);
+i18n_ok(is_string($preview_out) && strpos($preview_out, 'Art direction') !== false && strpos($preview_out, 'Strategie') === false, 'chrome replace matches WordPress &#038; mega-menu titles');
+
+$mega = '<span class="dtr-mega-title">Visuelles Design</span><span class="dtr-mega-feature__cta">Alle Referenzen</span>';
+$mega_out = navein_site_i18n_replace_chrome($mega);
+i18n_ok(is_string($mega_out) && strpos($mega_out, '>Visual design<') !== false, 'mega-menu visual design title is translated');
+i18n_ok(is_string($mega_out) && strpos($mega_out, '>All work<') !== false, 'mega-menu all-work CTA is translated');
+
+$footer = '<p class="pax-af__copy"> &copy; 2026 PAXdesign. Alle Rechte vorbehalten. <span>Austria</span></p>';
+$footer_out = navein_site_i18n_replace_chrome($footer);
+i18n_ok(is_string($footer_out) && strpos($footer_out, 'Alle Rechte vorbehalten') === false, 'split footer copyright German is translated');
+i18n_ok(is_string($footer_out) && strpos($footer_out, 'All rights reserved.') !== false, 'split footer copyright becomes All rights reserved');
+
+$oder_title = '<html><head><title>Webentwicklung für moderne Websites - paxdesign</title></head><body></body></html>';
+$oder_out = navein_site_i18n_replace_chrome($oder_title);
+i18n_ok(is_string($oder_out) && strpos($oder_out, 'morne') === false, 'title rewrite does not let oder corrupt moderne');
+i18n_ok(is_string($oder_out) && strpos($oder_out, 'moderne') !== false, 'title still contains moderne after bounded rewrite');
+
+require $root . '/navein/inc/pax-pricing-i18n.php';
+$widget = "<script>var saved = null;\ntry { saved = localStorage.getItem('pax-pricing-lang'); } catch (e) {}\n['de', 'en', 'ar'].forEach(function (lang) {\napplyLanguage(saved && PAX_I18N[saved] ? saved : 'de');\ndocument.documentElement.lang = lang;\n</script>";
+$widget_out = navein_patch_pricing_widget_i18n($widget);
+i18n_ok(is_string($widget_out) && strpos($widget_out, "['de', 'en', 'ar', 'tr']") !== false, 'pricing patch merges Turkish card data');
+i18n_ok(is_string($widget_out) && strpos($widget_out, 'PAX_SITE_I18N') !== false, 'pricing patch reads the site language');
+i18n_ok(is_string($widget_out) && strpos($widget_out, 'document.documentElement.lang = lang') === false, 'pricing patch stops overwriting html lang');
+i18n_ok(is_string($widget_out) && strpos($widget_out, 'PAXdesign Hizmetleri') !== false, 'pricing patch adds Turkish chrome strings');
 
 if ($fail) {
 	fwrite(STDERR, "$fail site-i18n assertion(s) failed\n");

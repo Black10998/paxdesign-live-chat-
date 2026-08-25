@@ -658,4 +658,52 @@ return array(
 		'ar' => 'اسم المستخدم أو كلمة المرور غير صحيحة.',
 		'tr' => 'Geçersiz kullanıcı adı veya parola.',
 	),
+	'nav_all_references' => array(
+		'de' => 'Alle Referenzen',
+		'en' => 'All work',
+		'ar' => 'كل الأعمال',
+		'tr' => 'Tüm referanslar',
+	),
+	'nav_visual_design' => array(
+		'de' => 'Visuelles Design',
+		'en' => 'Visual design',
+		'ar' => 'التصميم البصري',
+		'tr' => 'Görsel tasarım',
+	),
+	'nav_ux_title' => array(
+		'de' => 'UX-Forschung',
+		'en' => 'UX research',
+		'ar' => 'بحث تجربة المستخدم',
+		'tr' => 'UX araştırması',
+	),
+	'nav_service_docs_full' => array(
+		'de' => 'Service-Dokumentation',
+		'en' => 'Service documentation',
+		'ar' => 'وثائق الخدمة',
+		'tr' => 'Hizmet dokümantasyonu',
+	),
+	'nav_concept' => array(
+		'de' => 'Konzept',
+		'en' => 'Concept',
+		'ar' => 'المفهوم',
+		'tr' => 'Konsept',
+	),
+	'rights_reserved' => array(
+		'de' => 'Alle Rechte vorbehalten.',
+		'en' => 'All rights reserved.',
+		'ar' => 'جميع الحقوق محفوظة.',
+		'tr' => 'Tüm hakları saklıdır.',
+	),
+	'email_address_star' => array(
+		'de' => 'E-Mail-Adresse *',
+		'en' => 'Email address *',
+		'ar' => 'البريد الإلكتروني *',
+		'tr' => 'E-posta adresi *',
+	),
+	'ai_assistant' => array(
+		'de' => 'KI-Assistent',
+		'en' => 'AI assistant',
+		'ar' => 'المساعد الذكي',
+		'tr' => 'KI asistanı',
+	),
 );

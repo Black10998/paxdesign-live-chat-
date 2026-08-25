@@ -82,6 +82,22 @@ priv_code="$(curl -sS -A 'Mozilla/5.0' -o "$TMP/privacy-ar.html" -w '%{http_code
 grep -q "سياسة الخصوصية" "$TMP/privacy-ar.html" && ok "Arabic privacy policy heading is translated" || fail "Arabic privacy page missing سياسة الخصوصية"
 grep -q 'dir="rtl"' "$TMP/privacy-ar.html" && ok "Arabic privacy page is RTL" || fail "Arabic privacy page is not RTL"
 
+sleep 2
+price_code="$(curl -sS -A 'Mozilla/5.0' -o "$TMP/preise-en.html" -w '%{http_code}' "${BASE}/preise/?lang=en&n=${STAMP}")"
+[ "$price_code" = "200" ] && ok "English pricing HTTP 200" || fail "English pricing HTTP ${price_code}"
+grep -q "PAX_SITE_I18N" "$TMP/preise-en.html" && grep -q "\['de', 'en', 'ar', 'tr'\]" "$TMP/preise-en.html" && ok "English pricing widget follows the site language" || fail "English pricing widget still ignores the site language"
+grep -q "html lang owned by site switcher" "$TMP/preise-en.html" && ok "pricing widget no longer overwrites html lang" || fail "pricing widget still overwrites html lang"
+grep -q 'class="dtr-mega-title">Visuelles Design<' "$TMP/preise-en.html" && fail "English pricing mega-menu still has Visuelles Design" || ok "English pricing mega-menu visual design title is translated"
+grep -q ">Alle Referenzen<" "$TMP/preise-en.html" && fail "English pricing mega-menu still has Alle Referenzen" || ok "English pricing mega-menu all-work CTA is translated"
+
+css_live="$(curl -sS -A 'Mozilla/5.0' -o "$TMP/apple-site-rtl-live.css" -w '%{http_code}' "${BASE}/wp-content/themes/navein/assets/css/apple-site-rtl.css?n=${STAMP}")"
+[ "$css_live" = "200" ] && grep -q "#pax-pricing .lang-switcher" "$TMP/apple-site-rtl-live.css" && ok "live CSS hides the pricing language bar" || fail "live CSS still shows the pricing language bar"
+
+sleep 2
+vis_code="$(curl -sS -A 'Mozilla/5.0' -o "$TMP/visual-en.html" -w '%{http_code}' "${BASE}/visuelles-design/?lang=en&n=${STAMP}")"
+[ "$vis_code" = "200" ] && ok "English visual design HTTP 200" || fail "English visual design HTTP ${vis_code}"
+grep -q "Visual design with strategy and impact" "$TMP/visual-en.html" && ok "English visual design heading is translated" || fail "English visual design heading is still German"
+
 chat_code="$(curl -sS -A 'Mozilla/5.0' -o "$TMP/chat-script.js" -w '%{http_code}' "${BASE}/wp-content/plugins/paxdesign-booking/assets/js/chat-script.js?n=${STAMP}")"
 [ "$chat_code" = "200" ] && ok "chat JS HTTP 200" || fail "chat JS HTTP ${chat_code}"
 grep -q "Version: 3.174.128" "$TMP/chat-script.js" && ok "chat remains 3.174.128" || fail "chat version changed"

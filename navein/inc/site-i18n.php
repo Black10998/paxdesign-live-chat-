@@ -262,7 +262,7 @@ if ( ! function_exists( 'navein_site_i18n_strings' ) ) {
 			return $strings;
 		}
 		$strings = array();
-		$files   = array( 'site-i18n-strings.php', 'site-i18n-pages.php', 'site-i18n-content.php' );
+		$files   = array( 'site-i18n-strings.php', 'site-i18n-pages.php', 'site-i18n-content.php', 'site-i18n-inner.php' );
 		$bases   = array();
 		if ( function_exists( 'get_template_directory' ) ) {
 			$bases[] = get_template_directory() . '/inc';
@@ -476,6 +476,44 @@ if ( ! function_exists( 'navein_site_lang_switcher_markup' ) ) {
 	}
 }
 
+if ( ! function_exists( 'navein_site_i18n_fold_text' ) ) {
+	/**
+	 * Normalize visible copy for catalog lookup (entities, NBSP, padding).
+	 *
+	 * @param string $s
+	 * @return string
+	 */
+	function navein_site_i18n_fold_text( $s ) {
+		$s = html_entity_decode( (string) $s, ENT_QUOTES | ENT_HTML5, 'UTF-8' );
+		$s = str_replace( "\xC2\xA0", ' ', $s );
+		$folded = preg_replace( '/\s+/u', ' ', $s );
+		return is_string( $folded ) ? trim( $folded ) : trim( $s );
+	}
+}
+
+if ( ! function_exists( 'navein_site_i18n_replace_bounded' ) ) {
+	/**
+	 * Replace $needle in $haystack only on Unicode letter/number boundaries.
+	 * Prevents "oder" from corrupting "moderne" in document titles.
+	 *
+	 * @param string $haystack
+	 * @param string $needle
+	 * @param string $replacement
+	 * @return string
+	 */
+	function navein_site_i18n_replace_bounded( $haystack, $needle, $replacement ) {
+		if ( ! is_string( $haystack ) || $haystack === '' || $needle === '' ) {
+			return is_string( $haystack ) ? $haystack : '';
+		}
+		if ( strpos( $haystack, $needle ) === false ) {
+			return $haystack;
+		}
+		$quoted = preg_quote( $needle, '/' );
+		$out    = preg_replace( '/(?<![\p{L}\p{N}])' . $quoted . '(?![\p{L}\p{N}])/u', $replacement, $haystack );
+		return is_string( $out ) ? $out : $haystack;
+	}
+}
+
 if ( ! function_exists( 'navein_site_i18n_replace_trimmed_in_chunk' ) ) {
 	/**
 	 * Replace catalog phrases in one visible HTML chunk when they are the
@@ -499,13 +537,16 @@ if ( ! function_exists( 'navein_site_i18n_replace_trimmed_in_chunk' ) ) {
 					return $m[0];
 				}
 				$decoded = html_entity_decode( $trim, ENT_QUOTES | ENT_HTML5, 'UTF-8' );
+				$folded  = function_exists( 'navein_site_i18n_fold_text' ) ? navein_site_i18n_fold_text( $inner ) : $decoded;
 				$target  = '';
-				if ( isset( $lookup[ $decoded ] ) ) {
+				if ( $folded !== '' && isset( $lookup[ $folded ] ) ) {
+					$target = $lookup[ $folded ];
+				} elseif ( isset( $lookup[ $decoded ] ) ) {
 					$target = $lookup[ $decoded ];
 				} elseif ( isset( $lookup[ $trim ] ) ) {
 					$target = $lookup[ $trim ];
 				}
-				if ( $target === '' || $target === $decoded || $target === $trim ) {
+				if ( $target === '' || $target === $decoded || $target === $trim || $target === $folded ) {
 					return $m[0];
 				}
 				$lead  = strlen( $inner ) - strlen( ltrim( $inner ) );
@@ -609,7 +650,11 @@ if ( ! function_exists( 'navein_site_i18n_replace_chrome' ) ) {
 				if ( $source === '' || $source === $target || strlen( $source ) < 3 ) {
 					continue;
 				}
+				$folded                          = navein_site_i18n_fold_text( $source );
 				$lookup[ $source ]               = $target;
+				if ( $folded !== '' ) {
+					$lookup[ $folded ] = $target;
+				}
 				$pairs[ '>' . $source . '<' ]    = '>' . $target . '<';
 				$enc_source                      = htmlspecialchars( $source, ENT_QUOTES | ENT_HTML5, 'UTF-8' );
 				$enc_target                      = htmlspecialchars( $target, ENT_QUOTES | ENT_HTML5, 'UTF-8' );
@@ -617,11 +662,25 @@ if ( ! function_exists( 'navein_site_i18n_replace_chrome' ) ) {
 					$lookup[ $enc_source ]                 = $target;
 					$pairs[ '>' . $enc_source . '<' ]      = '>' . $enc_target . '<';
 				}
+				$amp_source = str_replace( '&amp;', '&#038;', $enc_source );
+				$amp_target = str_replace( '&amp;', '&#038;', $enc_target );
 				$pairs[ '="' . $source . '"' ] = '="' . $enc_target . '"';
 				$pairs[ "='" . $source . "'" ] = "='" . $enc_target . "'";
 				if ( $enc_source !== $source ) {
 					$pairs[ '="' . $enc_source . '"' ] = '="' . $enc_target . '"';
 					$pairs[ "='" . $enc_source . "'" ] = "='" . $enc_target . "'";
+				}
+				if ( $amp_source !== $enc_source ) {
+					$pairs[ '="' . $amp_source . '"' ] = '="' . $amp_target . '"';
+					$pairs[ "='" . $amp_source . "'" ] = "='" . $amp_target . "'";
+					$pairs[ '>' . $amp_source . '<' ]  = '>' . $enc_target . '<';
+				}
+				if ( strlen( $source ) >= 18 ) {
+					$pairs[ $source ]     = $target;
+					$pairs[ $enc_source ] = $enc_target;
+					if ( $amp_source !== $enc_source ) {
+						$pairs[ $amp_source ] = $amp_target;
+					}
 				}
 			}
 		}
@@ -669,9 +728,7 @@ if ( ! function_exists( 'navein_site_i18n_replace_chrome' ) ) {
 					}
 				);
 				foreach ( $swaps as $source => $target ) {
-					if ( strpos( $title, $source ) !== false ) {
-						$title = str_replace( $source, $target, $title );
-					}
+					$title = navein_site_i18n_replace_bounded( $title, $source, $target );
 				}
 				return $m[1] . htmlspecialchars( $title, ENT_QUOTES | ENT_HTML5, 'UTF-8' ) . $m[3];
 			},

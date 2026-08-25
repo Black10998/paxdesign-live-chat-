@@ -28,6 +28,24 @@ if ( ! function_exists( 'navein_bootstrap_site_i18n' ) ) {
 }
 navein_bootstrap_site_i18n();
 
+if ( ! function_exists( 'navein_bootstrap_pricing_i18n' ) ) {
+	function navein_bootstrap_pricing_i18n() {
+		static $loaded = false;
+		if ( $loaded ) {
+			return;
+		}
+		foreach ( array( get_stylesheet_directory(), get_template_directory() ) as $base ) {
+			$path = $base . '/inc/pax-pricing-i18n.php';
+			if ( is_readable( $path ) ) {
+				require_once $path;
+				$loaded = true;
+				return;
+			}
+		}
+	}
+}
+navein_bootstrap_pricing_i18n();
+
 if ( ! function_exists( 'pax_ccs_bootstrap_locale_helpers' ) ) {
 	/**
 	 * Load cybercrime locale helpers only when present (never fatal site-wide).
@@ -1236,6 +1254,9 @@ if ( ! function_exists( 'navein_apple_header_utility_cluster_ob_start' ) ) {
 					$html = $rewritten;
 				}
 			}
+			if ( function_exists( 'navein_patch_pricing_widget_i18n' ) ) {
+				$html = navein_patch_pricing_widget_i18n( $html );
+			}
 			return $html;
 		}
 
@@ -1277,6 +1298,9 @@ if ( ! function_exists( 'navein_apple_header_utility_cluster_ob_start' ) ) {
 			if ( is_string( $rewritten ) && $rewritten !== '' ) {
 				$wrapped = $rewritten;
 			}
+		}
+		if ( function_exists( 'navein_patch_pricing_widget_i18n' ) ) {
+			$wrapped = navein_patch_pricing_widget_i18n( $wrapped );
 		}
 		return $wrapped;
 	}
