@@ -675,6 +675,18 @@ if ( ! function_exists( 'navein_site_i18n_replace_chrome' ) ) {
 					$pairs[ "='" . $amp_source . "'" ] = "='" . $amp_target . "'";
 					$pairs[ '>' . $amp_source . '<' ]  = '>' . $enc_target . '<';
 				}
+				if ( $folded !== '' && $folded !== $source ) {
+					$pairs[ '="' . $folded . '"' ] = '="' . $enc_target . '"';
+					$pairs[ "='" . $folded . "'" ] = "='" . $enc_target . "'";
+					$pairs[ '>' . $folded . '<' ]  = '>' . $enc_target . '<';
+				}
+				$nbsp_source = "\xC2\xA0" . $source;
+				$pairs[ '="' . $nbsp_source . '"' ] = '="' . $enc_target . '"';
+				$pairs[ '="' . $source . "\xC2\xA0" . '"' ] = '="' . $enc_target . '"';
+				if ( $folded !== '' ) {
+					$pairs[ "=\"\xC2\xA0" . $folded . '"' ] = '="' . $enc_target . '"';
+					$pairs[ '="' . $folded . "\xC2\xA0" . '"' ] = '="' . $enc_target . '"';
+				}
 				if ( strlen( $source ) >= 18 ) {
 					$pairs[ $source ]     = $target;
 					$pairs[ $enc_source ] = $enc_target;

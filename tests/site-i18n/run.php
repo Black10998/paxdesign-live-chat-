@@ -183,7 +183,10 @@ i18n_ok(navein_t('inner_001', '', 'en') === 'Visual design with strategy and imp
 
 $nbsp_html = "<span class=\"dtr-mega-title\">\xC2\xA0Webentwicklung</span>";
 $nbsp_out = navein_site_i18n_replace_chrome($nbsp_html);
-i18n_ok(is_string($nbsp_out) && strpos($nbsp_out, 'Web development') !== false, 'chrome replace folds NBSP before matching mega-menu titles');
+$nbsp_attr = '<a data-preview-title="' . "\xC2\xA0" . 'Webentwicklung">x</a>';
+$nbsp_attr_out = navein_site_i18n_replace_chrome($nbsp_attr);
+i18n_ok(is_string($nbsp_attr_out) && strpos($nbsp_attr_out, 'Web development') !== false, 'chrome replace folds NBSP in mega-menu preview attributes');
+i18n_ok(navein_t('docs_toc_approach', '', 'en') === '10. Our approach', 'service-docs numbered TOC approach is in the catalog');
 
 $preview = '<a data-preview-title="Art Direction &#038; Strategie">x</a>';
 $preview_out = navein_site_i18n_replace_chrome($preview);
