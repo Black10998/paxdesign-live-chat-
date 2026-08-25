@@ -187,6 +187,7 @@ $nbsp_attr = '<a data-preview-title="' . "\xC2\xA0" . 'Webentwicklung">x</a>';
 $nbsp_attr_out = navein_site_i18n_replace_chrome($nbsp_attr);
 i18n_ok(is_string($nbsp_attr_out) && strpos($nbsp_attr_out, 'Web development') !== false, 'chrome replace folds NBSP in mega-menu preview attributes');
 i18n_ok(navein_t('docs_toc_approach', '', 'en') === '10. Our approach', 'service-docs numbered TOC approach is in the catalog');
+i18n_ok(navein_t('ready_for_project', '', 'en') === 'Ready for your project?', 'projects CTA is in the catalog');
 
 $preview = '<a data-preview-title="Art Direction &#038; Strategie">x</a>';
 $preview_out = navein_site_i18n_replace_chrome($preview);
