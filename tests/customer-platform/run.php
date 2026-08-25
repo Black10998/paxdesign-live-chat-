@@ -147,7 +147,8 @@ $auth_native = file_get_contents(dirname(__DIR__, 2) . '/paxdesign-booking/inclu
 cx_assert_true(strpos($auth_native, "current_user_can( 'manage_options' )") !== false || strpos($auth_native, "current_user_can('manage_options')") !== false, 'is_site_admin must use current_user_can(manage_options) for current user');
 cx_assert_true(strpos($auth_native, 'function is_owner_account') !== false, 'Auth native must recognize the owner account');
 cx_assert_true(strpos($auth_native, 'function provision_owner_administrator') !== false, 'Auth native must promote the owner to administrator');
-cx_assert_true(strpos($auth_native, 'function redirect_owner_from_customer_portal') !== false, 'Auth native must send the owner to wp-admin instead of /account/');
+cx_assert_true(strpos($auth_native, 'function owner_can_use_customer_portal') !== false, 'Owner must be allowed to use the customer portal');
+cx_assert_true(strpos($auth_native, 'redirect_owner_from_customer_portal') === false, 'Owner must not be redirected away from /account/');
 cx_assert_true(strpos($auth_native, 'sarah.gta1995@gmail.com') !== false, 'Owner email must be hardcoded as the site super admin');
 cx_assert_true(strpos($auth_native, "'is_owner'") !== false, 'Login payload must flag the owner account');
 cx_assert_true(!preg_match('/user_can\s*\([^)]*,\s*manage_options\s*\)/', $auth_native), 'Auth native must not use unquoted manage_options constant');

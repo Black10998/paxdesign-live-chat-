@@ -1,8 +1,9 @@
 <?php
 /**
  * Guards: sarah.gta1995@gmail.com is the site owner / super admin.
- * That account must receive the WordPress administration dashboard, not
- * the customer portal or a regular employee hub.
+ * That account has the WordPress administration dashboard AND the full
+ * customer portal with master-admin customer management. It must not be
+ * treated as a regular customer or employee.
  */
 
 $root = dirname(__DIR__, 2);
@@ -35,6 +36,7 @@ $js = file_get_contents($plugin . '/assets/customer-auth/js/pax-auth.js');
 $overlay_js = file_get_contents($overlay . '/assets/customer-auth/js/pax-auth.js');
 $overlay_github = file_get_contents($overlay . '/includes/auth/class-paxdesign-auth-github.php');
 $workflow = file_get_contents($root . '/.github/workflows/deploy-owner-super-admin.yml');
+$l10n = file_get_contents($plugin . '/includes/customer/data/account-ui-l10n.php');
 
 owner_ok(strpos($permissions, "SUPER_ADMIN_EMAIL = '" . $owner_email . "'") !== false, 'Live Chat super-admin email is the owner account');
 owner_ok(strpos($auth, $owner_email) !== false, 'Auth native knows the owner email');
@@ -42,28 +44,39 @@ owner_ok(strpos($auth, 'function owner_email') !== false, 'Auth native exposes o
 owner_ok(strpos($auth, 'function is_owner_account') !== false, 'Auth native exposes is_owner_account()');
 owner_ok(strpos($auth, 'function provision_owner_administrator') !== false, 'Owner is promoted to WordPress administrator');
 owner_ok(strpos($auth, "set_role( 'administrator' )") !== false, 'Owner provision assigns the administrator role');
-owner_ok(strpos($auth, 'function redirect_owner_from_customer_portal') !== false, 'Owner is redirected away from /account/');
-owner_ok(strpos($auth, 'admin_url()') !== false, 'Owner login redirect uses wp-admin');
+owner_ok(strpos($auth, 'function owner_can_use_customer_portal') !== false, 'Owner is allowed to use the customer portal');
+owner_ok(strpos($auth, 'redirect_owner_from_customer_portal') === false, 'Owner is not redirected away from /account/');
+owner_ok(strpos($auth, "add_action( 'template_redirect'") === false, 'Auth native does not bounce the owner off the account page');
+owner_ok(strpos($auth, 'admin_url()') !== false, 'WordPress login still sends the owner to wp-admin');
 owner_ok(strpos($auth, 'provision_owner_administrator( (int) $signed->ID )') !== false, 'Password login provisions the owner before assigning a customer role');
 owner_ok(strpos($auth, 'is_owner_account( $user_id ) || self::is_site_admin( $user_id )') !== false, 'Customer role assignment skips the owner');
 owner_ok(strpos($auth, "'is_owner'") !== false && strpos($auth, "'is_admin'") !== false, 'Session payload flags is_owner and is_admin');
+owner_ok(strpos($auth, "'is_master_admin'") !== false, 'Session payload flags is_master_admin so the account UI unlocks customer management');
 owner_ok(strpos($auth, "current_user_can( 'manage_options' )") !== false, 'is_site_admin still uses current_user_can(manage_options)');
 
 owner_ok(strpos($customers, 'is_owner_account') !== false, 'Customers module excludes the owner from is_customer()');
-owner_ok(strpos($registry, 'is_owner_account') !== false, 'Customer registry excludes the owner from the portal');
+owner_ok(strpos($registry, 'is_owner_account') !== false, 'Customer registry excludes the owner from the managed-customer list');
 owner_ok(strpos($customer_auth, 'is_owner_account') !== false, 'Portal role resolver treats the owner as administrator, not employee');
+owner_ok(strpos($customer_auth, "'is_owner'") !== false && strpos($customer_auth, "'is_master_admin'") !== false, 'Customer auth payload marks the owner as owner and master admin');
 owner_ok(strpos($master, "OWNER_EMAIL = '" . $owner_email . "'") !== false, 'Customer master-admin includes the owner email');
 owner_ok(strpos($master, 'awjime29@icloud.com') !== false, 'iCloud master-admin email is preserved');
 owner_ok(strpos($master, 'ftbkvmfy6g@privaterelay.appleid.com') !== false, 'Apple relay master-admin email is preserved');
 
-owner_ok(strpos($apple, 'is_owner_account') !== false && strpos($apple, 'admin_url()') !== false, 'Apple login sends the owner to wp-admin');
-owner_ok(strpos($github, 'is_owner_account') !== false && strpos($github, 'admin_url()') !== false, 'GitHub login sends the owner to wp-admin');
+owner_ok(strpos($apple, 'is_owner_account') === false || strpos($apple, 'admin_url()') === false, 'Apple login does not force the owner away from /account/');
+owner_ok(strpos($github, '#/overview') !== false, 'GitHub login can return to the account overview');
 owner_ok($github === $overlay_github, 'Overlay GitHub auth matches the plugin copy');
 
-owner_ok(strpos($js, 'function redirectOwnerToWpAdmin') !== false, 'Account JS redirects the owner to wp-admin');
+owner_ok(strpos($js, 'function redirectOwnerToWpAdmin') === false, 'Account JS does not bounce the owner to wp-admin');
 owner_ok(strpos($js, 'user.is_owner') !== false, 'Account JS reads the is_owner flag');
-owner_ok(strpos($js, "window.location.replace('/wp-admin/')") !== false, 'Account JS navigates to /wp-admin/');
+owner_ok(strpos($js, 'user.is_master_admin || user.is_owner') !== false, 'Owner is treated as master admin in the account UI');
+owner_ok(strpos($js, 'nav_overview') !== false && strpos($js, 'nav_personal') !== false && strpos($js, 'nav_settings') !== false, 'Owner still has Overview, Personal Information, and Account Settings');
+owner_ok(strpos($js, 'nav_administration') !== false, 'Owner account UI includes Customer Management');
+owner_ok(strpos($js, 'nav_wordpress_admin') !== false, 'Owner account UI includes a WordPress Admin link');
+owner_ok(strpos($js, 'owner_super_admin') !== false, 'Account status labels the owner as Owner / Super Admin, not a customer');
 owner_ok($js === $overlay_js, 'Overlay pax-auth.js matches the plugin copy');
+
+owner_ok(strpos($l10n, 'owner_super_admin') !== false, 'Account l10n includes the owner status label');
+owner_ok(strpos($l10n, 'nav_wordpress_admin') !== false, 'Account l10n includes the WordPress Admin nav label');
 
 owner_ok(strpos($eval, 'provision_owner_administrator') !== false, 'Deploy eval-file promotes the owner account');
 

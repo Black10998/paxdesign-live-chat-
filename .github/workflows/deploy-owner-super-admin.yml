@@ -1,7 +1,7 @@
 name: Deploy Owner Super Admin
 
-# Surgical: promote sarah.gta1995@gmail.com to WordPress administrator and
-# send that account to /wp-admin/ instead of the customer or employee portal.
+# Surgical: promote sarah.gta1995@gmail.com to WordPress administrator with
+# full wp-admin access AND full owner/master-admin access to the customer portal.
 # Does not rsync-delete the plugin tree. Does not copy 3.176 chat rewrite or build iOS.
 on:
   workflow_dispatch:
@@ -17,6 +17,8 @@ on:
       - 'paxdesign-booking/includes/customer/class-paxdesign-customer-master-admin.php'
       - 'paxdesign-booking/includes/customer/class-paxdesign-customer-registry.php'
       - 'paxdesign-booking/includes/customer/class-paxdesign-customer-auth.php'
+      - 'paxdesign-booking/includes/customer/data/account-ui-l10n.php'
+      - 'paxdesign-booking/includes/customer/data/account-ui-l10n-tr.php'
       - 'paxdesign-booking/assets/customer-auth/js/pax-auth.js'
       - 'paxdesign-booking/scripts/wp-eval-ensure-live-admin-access.php'
       - 'deploy-patches/restored-chat-human-ui/assets/customer-auth/js/pax-auth.js'
@@ -123,6 +125,7 @@ jobs:
             "mkdir -p \
               $(printf '%q' "$PLUGIN/includes/auth") \
               $(printf '%q' "$PLUGIN/includes/customer") \
+              $(printf '%q' "$PLUGIN/includes/customer/data") \
               $(printf '%q' "$PLUGIN/assets/customer-auth/js") \
               $(printf '%q' "$PLUGIN/scripts")"
 
@@ -133,6 +136,8 @@ jobs:
           rsync_with_retry paxdesign-booking/includes/customer/class-paxdesign-customer-master-admin.php "${REMOTE}:${PLUGIN}/includes/customer/class-paxdesign-customer-master-admin.php"
           rsync_with_retry paxdesign-booking/includes/customer/class-paxdesign-customer-registry.php "${REMOTE}:${PLUGIN}/includes/customer/class-paxdesign-customer-registry.php"
           rsync_with_retry paxdesign-booking/includes/customer/class-paxdesign-customer-auth.php "${REMOTE}:${PLUGIN}/includes/customer/class-paxdesign-customer-auth.php"
+          rsync_with_retry paxdesign-booking/includes/customer/data/account-ui-l10n.php "${REMOTE}:${PLUGIN}/includes/customer/data/account-ui-l10n.php"
+          rsync_with_retry paxdesign-booking/includes/customer/data/account-ui-l10n-tr.php "${REMOTE}:${PLUGIN}/includes/customer/data/account-ui-l10n-tr.php"
           rsync_with_retry paxdesign-booking/assets/customer-auth/js/pax-auth.js "${REMOTE}:${PLUGIN}/assets/customer-auth/js/pax-auth.js"
           rsync_with_retry paxdesign-booking/scripts/wp-eval-ensure-live-admin-access.php "${REMOTE}:${PLUGIN}/scripts/wp-eval-ensure-live-admin-access.php"
 
@@ -146,8 +151,10 @@ jobs:
           ssh_with_retry "$REMOTE" \
             "grep -q 'sarah.gta1995@gmail.com' '$(printf '%q' "$PLUGIN")/includes/auth/class-paxdesign-auth-native.php' && \
              grep -q 'provision_owner_administrator' '$(printf '%q' "$PLUGIN")/includes/auth/class-paxdesign-auth-native.php' && \
+             grep -q 'owner_can_use_customer_portal' '$(printf '%q' "$PLUGIN")/includes/auth/class-paxdesign-auth-native.php' && \
              grep -q 'OWNER_EMAIL' '$(printf '%q' "$PLUGIN")/includes/customer/class-paxdesign-customer-master-admin.php' && \
-             grep -q 'redirectOwnerToWpAdmin' '$(printf '%q' "$PLUGIN")/assets/customer-auth/js/pax-auth.js' && \
+             grep -q 'user.is_owner' '$(printf '%q' "$PLUGIN")/assets/customer-auth/js/pax-auth.js' && \
+             grep -q 'nav_wordpress_admin' '$(printf '%q' "$PLUGIN")/assets/customer-auth/js/pax-auth.js' && \
              grep -q 'Version: 3.174.128' '$(printf '%q' "$PLUGIN")/assets/js/chat-script.js' && \
              ! grep -q 'skipping stacked sync' '$(printf '%q' "$PLUGIN")/assets/js/chat-script.js' && \
              echo 'OK: live owner super-admin deployed without 3.176 chat rewrite'"

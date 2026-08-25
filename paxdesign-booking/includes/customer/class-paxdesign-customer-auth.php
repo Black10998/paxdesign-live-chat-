@@ -160,6 +160,11 @@ class PAXdesign_Customer_Auth {
             if (class_exists('PAXdesign_Customer_Master_Admin')) {
                 $payload['is_master_admin'] = PAXdesign_Customer_Master_Admin::is_master_admin($user_id);
             }
+            if (class_exists('PAXdesign_Auth_Native') && PAXdesign_Auth_Native::is_owner_account($user_id)) {
+                $payload['is_owner'] = true;
+                $payload['is_admin'] = true;
+                $payload['is_master_admin'] = true;
+            }
             $payload['nonce'] = wp_create_nonce('wp_rest');
             return $payload;
         }
@@ -169,17 +174,19 @@ class PAXdesign_Customer_Auth {
             return array('logged_in' => false, 'verified' => false, 'id' => 0);
         }
         return array(
-            'logged_in'    => true,
-            'verified'     => self::is_email_verified($user_id),
-            'id'           => $user_id,
-            'display_name' => $user->display_name,
-            'email'        => $user->user_email,
-            'role'         => self::resolve_portal_role($user),
-            'is_admin'     => user_can($user, 'manage_options'),
-            'is_staff'     => PAXdesign_Live_Chat_Permissions::has_live_chat_access($user_id),
-            'avatar_url'   => class_exists('PAXdesign_Customer_Avatar') ? PAXdesign_Customer_Avatar::url_for_user($user_id) : '',
+            'logged_in'        => true,
+            'verified'         => self::is_email_verified($user_id),
+            'id'               => $user_id,
+            'display_name'     => $user->display_name,
+            'email'            => $user->user_email,
+            'role'             => self::resolve_portal_role($user),
+            'is_admin'         => user_can($user, 'manage_options') || (class_exists('PAXdesign_Auth_Native') && PAXdesign_Auth_Native::is_owner_account($user_id)),
+            'is_owner'         => class_exists('PAXdesign_Auth_Native') && PAXdesign_Auth_Native::is_owner_account($user_id),
+            'is_master_admin'  => class_exists('PAXdesign_Customer_Master_Admin') && PAXdesign_Customer_Master_Admin::is_master_admin($user_id),
+            'is_staff'         => PAXdesign_Live_Chat_Permissions::has_live_chat_access($user_id),
+            'avatar_url'       => class_exists('PAXdesign_Customer_Avatar') ? PAXdesign_Customer_Avatar::url_for_user($user_id) : '',
             'avatar_has_image' => class_exists('PAXdesign_Customer_Avatar') ? PAXdesign_Customer_Avatar::has_visible_avatar($user_id) : false,
-            'nonce'        => wp_create_nonce('wp_rest'),
+            'nonce'            => wp_create_nonce('wp_rest'),
         );
     }
 

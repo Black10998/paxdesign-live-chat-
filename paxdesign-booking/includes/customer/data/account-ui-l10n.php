@@ -195,6 +195,11 @@ return array(
 		'de' => 'Administrator',
 		'ar' => 'مسؤول',
 	),
+	'owner_super_admin'  => array(
+		'en' => 'Owner / Super Admin',
+		'de' => 'Inhaber / Super-Admin',
+		'ar' => 'المالك / المشرف الأعلى',
+	),
 	'verified'           => array(
 		'en' => 'Verified',
 		'de' => 'Verifiziert',
@@ -849,6 +854,11 @@ return array(
 		'en' => 'Customer Management',
 		'de' => 'Kundenverwaltung',
 		'ar' => 'إدارة العملاء',
+	),
+	'nav_wordpress_admin' => array(
+		'en' => 'WordPress Admin',
+		'de' => 'WordPress-Admin',
+		'ar' => 'إدارة ووردبريس',
 	),
 	'lead_administration' => array(
 		'en' => 'Manage registered customer profiles, levels, and permissions.',

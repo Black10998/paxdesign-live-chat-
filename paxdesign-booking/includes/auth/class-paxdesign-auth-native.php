@@ -47,7 +47,6 @@ class PAXdesign_Auth_Native {
 		add_filter( 'login_redirect', [ self::class, 'customer_login_redirect' ], 10, 3 );
 		add_action( 'wp_login', [ self::class, 'on_wp_login_provision_owner' ], 5, 2 );
 		add_action( 'pdx_user_logged_in', [ self::class, 'provision_owner_administrator' ], 1, 1 );
-		add_action( 'template_redirect', [ self::class, 'redirect_owner_from_customer_portal' ], 1 );
 		add_action( 'wp_head', [ self::class, 'admin_bar_hide_css_fallback' ], 100 );
 	}
 
@@ -164,19 +163,9 @@ class PAXdesign_Auth_Native {
 		}
 	}
 
-	/** Send the owner away from /account/ to the WordPress administration dashboard. */
-	public static function redirect_owner_from_customer_portal(): void {
-		if ( is_admin() || wp_doing_ajax() || ( defined( 'REST_REQUEST' ) && REST_REQUEST ) ) {
-			return;
-		}
-		if ( ! is_user_logged_in() || ! self::is_owner_account() ) {
-			return;
-		}
-		if ( ! class_exists( 'PAXdesign_Auth_Page' ) || ! PAXdesign_Auth_Page::is_auth_page() ) {
-			return;
-		}
-		wp_safe_redirect( admin_url() );
-		exit;
+	/** Whether the owner may use the customer portal with master-admin powers. */
+	public static function owner_can_use_customer_portal( ?int $user_id = null ): bool {
+		return self::is_owner_account( $user_id );
 	}
 
 	/** Role slug used for newly registered PaxDesign customers. */
@@ -325,8 +314,11 @@ class PAXdesign_Auth_Native {
 			'display_name' => $user->display_name,
 			'email'        => $user->user_email,
 			'verified'     => self::is_email_verified( $user_id ),
-			'is_admin'     => self::is_site_admin( $user_id ),
-			'is_owner'     => self::is_owner_account( $user_id ),
+			'is_admin'         => self::is_site_admin( $user_id ),
+			'is_owner'         => self::is_owner_account( $user_id ),
+			'is_master_admin'  => class_exists( 'PAXdesign_Customer_Master_Admin' )
+				? PAXdesign_Customer_Master_Admin::is_master_admin( $user_id )
+				: self::is_owner_account( $user_id ),
 		];
 	}
 
@@ -462,7 +454,7 @@ class PAXdesign_Auth_Native {
 			PAXdesign_Auth_Log::event( 'web_login_success', [ 'user_id' => $signed->ID ] );
 		}
 
-		$result = array_merge(
+		return array_merge(
 			[
 				'success' => true,
 				'message' => 'Logged in successfully.',
@@ -470,10 +462,6 @@ class PAXdesign_Auth_Native {
 			],
 			self::session_payload()
 		);
-		if ( self::is_owner_account( (int) $signed->ID ) ) {
-			$result['redirect'] = admin_url();
-		}
-		return $result;
 	}
 
 	public static function logout(): array {

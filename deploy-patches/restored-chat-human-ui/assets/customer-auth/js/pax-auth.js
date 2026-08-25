@@ -288,7 +288,8 @@
 
   /** Server-driven PAXDesign verified badge — only when verified === true from API. */
   function accountStatusText(verified) {
-    if (user.is_admin) return t('administrator', 'Administrator');
+    if (user.is_owner) return t('owner_super_admin', 'Owner / Super Admin');
+    if (user.is_admin || user.is_master_admin) return t('administrator', 'Administrator');
     return verified ? t('verified', 'Verified') : t('pending_verification', 'Pending verification');
   }
 
@@ -511,7 +512,7 @@
   }
 
   function isMasterAdminUser() {
-    return !!(user.is_master_admin || C.isMasterAdmin);
+    return !!(user.is_master_admin || user.is_owner || C.isMasterAdmin);
   }
 
   function accountProfileData() {
@@ -933,6 +934,8 @@
       C.userEmail = u.email || '';
       if (u.logged_in) {
         clearPendingAppleError();
+        if (u.is_master_admin !== undefined) C.isMasterAdmin = !!u.is_master_admin;
+        if (u.is_owner) C.isMasterAdmin = true;
       }
     }
     updateAuthBar();
@@ -1102,25 +1105,9 @@
   function redirectAfterAuthSuccess() {
     var returnTo = getReturnToParam();
     if (!returnTo) return false;
-    if (user && user.is_owner) {
-      window.location.replace('/wp-admin/');
-      return true;
-    }
     clearStoredChatReturnTo();
     window.location.href = returnTo;
     return true;
-  }
-
-  function redirectOwnerToWpAdmin(redirectUrl) {
-    if (redirectUrl) {
-      window.location.replace(redirectUrl);
-      return true;
-    }
-    if (user && user.is_owner) {
-      window.location.replace('/wp-admin/');
-      return true;
-    }
-    return false;
   }
 
   function homePageUrl() {
@@ -2341,9 +2328,6 @@
           return;
         }
 		applySession({ user: data.user || user, nonce: data.nonce }, { reason: 'login', broadcast: true });
-        if (redirectOwnerToWpAdmin(data.redirect)) {
-          return;
-        }
         var inline = finishAuthSuccess();
         if (!inline && isAuthPage()) {
           if (redirectAfterAuthSuccess()) {
@@ -2763,6 +2747,7 @@
         label: t('nav_group_administration', 'Administration'),
         items: [
           { id: 'administration', label: t('nav_administration', 'Customer Management'), icon: 'settings' },
+          { id: 'wordpress-admin', label: t('nav_wordpress_admin', 'WordPress Admin'), icon: 'lock', href: '/wp-admin/' },
         ],
       });
     }
@@ -2895,6 +2880,11 @@
       html += '<div class="pdx-account-nav-group"><div class="pdx-account-nav-label">' + escHtml(group.label) + '</div>';
       group.items.forEach(function (item) {
         var active = accountState.section === item.id ? ' is-active' : '';
+        if (item.href) {
+          html += '<a class="pdx-account-nav-btn' + active + '" href="' + escHtml(item.href) + '">' +
+            cxIcon(item.icon, 16) + '<span class="pdx-account-nav-text">' + escHtml(item.label) + '</span></a>';
+          return;
+        }
         html += '<button type="button" class="pdx-account-nav-btn' + active + '" data-account-section="' + item.id + '">' +
           cxIcon(item.icon, 16) + '<span class="pdx-account-nav-text">' + escHtml(item.label) + '</span></button>';
       });
@@ -3897,9 +3887,6 @@
 
   function updateAuthPagePanels() {
     if (!authPageEl) return;
-    if (redirectOwnerToWpAdmin()) {
-      return;
-    }
     isolateAuthShell();
     var guestPanel = document.getElementById('pdx-auth-page-guest');
     if (!guestPanel) return;

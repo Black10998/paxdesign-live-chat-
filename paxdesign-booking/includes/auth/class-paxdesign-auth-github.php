@@ -221,9 +221,6 @@ class PAXdesign_Auth_GitHub {
 		}
 
 		self::trace( 'complete_success', array( 'user_id' => (int) $data['user_id'] ) );
-		if ( class_exists( 'PAXdesign_Auth_Native' ) && PAXdesign_Auth_Native::is_owner_account( (int) $data['user_id'] ) ) {
-			return admin_url();
-		}
 		return (string) ( $data['return_url'] ?? ( PAXdesign_Auth_Page::page_url() . '#/overview' ) );
 	}
 
