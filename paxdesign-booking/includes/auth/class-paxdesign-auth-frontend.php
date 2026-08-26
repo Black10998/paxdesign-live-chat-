@@ -80,9 +80,22 @@ class PAXdesign_Auth_Frontend {
             $script_args
         );
         wp_enqueue_script(
+            'pax-fraud-guard',
+            PAXDESIGN_BOOKING_PLUGIN_URL . 'assets/js/pax-fraud-guard.js',
+            array(),
+            self::asset_version('assets/js/pax-fraud-guard.js'),
+            $script_args
+        );
+        wp_localize_script('pax-fraud-guard', 'paxFraudGuard', array(
+            'riskUrl'      => esc_url_raw(rest_url('pdx/v1/auth/device-risk')),
+            'challengeUrl' => esc_url_raw(rest_url('pdx/v1/auth/device-challenge')),
+            'nonce'        => is_user_logged_in() ? wp_create_nonce('wp_rest') : '',
+        ));
+
+        wp_enqueue_script(
             'pax-auth-ui',
             $url . 'js/pax-auth.js',
-            array('pax-auth-verified-badge', 'pax-auth-customer-icons'),
+            array('pax-auth-verified-badge', 'pax-auth-customer-icons', 'pax-fraud-guard'),
             self::asset_version($base . 'js/pax-auth.js'),
             $script_args
         );

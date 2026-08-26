@@ -118,8 +118,13 @@ class PAXdesign_Auth_REST {
         if ($limited) {
             return $limited;
         }
+        $email = sanitize_email((string) $request->get_param('email'));
+        $challenged = self::fraud_gate('register', $email, (string) $request->get_param('password'));
+        if ($challenged) {
+            return $challenged;
+        }
         $result = PAXdesign_Auth::register(
-            sanitize_email((string) $request->get_param('email')),
+            $email,
             (string) $request->get_param('password'),
             sanitize_text_field((string) $request->get_param('name'))
         );
@@ -131,8 +136,13 @@ class PAXdesign_Auth_REST {
         if ($limited) {
             return $limited;
         }
+        $email = sanitize_email((string) $request->get_param('email'));
+        $challenged = self::fraud_gate('login', $email, (string) $request->get_param('password'));
+        if ($challenged) {
+            return $challenged;
+        }
         $result = PAXdesign_Auth::login(
-            sanitize_email((string) $request->get_param('email')),
+            $email,
             (string) $request->get_param('password'),
             (bool) $request->get_param('remember')
         );
@@ -213,6 +223,17 @@ class PAXdesign_Auth_REST {
         $login = sanitize_text_field((string) $request->get_param('login'));
         if ($login === '') {
             $login = sanitize_email((string) $request->get_param('email'));
+        }
+        $email = sanitize_email($login);
+        if ($email === '' && function_exists('get_user_by')) {
+            $by_login = get_user_by('login', $login);
+            if ($by_login && !empty($by_login->user_email)) {
+                $email = sanitize_email((string) $by_login->user_email);
+            }
+        }
+        $challenged = self::fraud_gate('mobile_login', $email, (string) $request->get_param('password'));
+        if ($challenged) {
+            return $challenged;
         }
         $result = PAXdesign_Auth::mobile_login(
             $login,
@@ -351,5 +372,16 @@ class PAXdesign_Auth_REST {
             return new WP_Error('rest_not_logged_in', __('Authentication required.', 'paxdesign-booking'), array('status' => 401));
         }
         return true;
+    }
+
+    /**
+     * @return WP_REST_Response|null
+     */
+    private static function fraud_gate($action, $email, $password = '') {
+        if (!class_exists('PAXdesign_Fraud_Guard')) {
+            return null;
+        }
+        $response = PAXdesign_Fraud_Guard::gate_auth($action, $email, $password);
+        return $response instanceof WP_REST_Response ? $response : null;
     }
 }
