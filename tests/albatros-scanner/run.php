@@ -89,7 +89,8 @@ alb_ok(strpos($drivers, 'upsert_for_user') !== false && strpos($drivers, 'user_i
 alb_ok(is_file($device), 'handheld device illustration exists');
 $svg = (string) file_get_contents($device);
 alb_ok(strpos($svg, '<svg') !== false && stripos($svg, 'samsung') === false && stripos($svg, 'logo') === false, 'device mark is a neutral SVG without a brand logo');
-alb_ok(strpos($svg, 'viewBox="0 0 80 164"') !== false && strpos($svg, 'gradient') === false, 'scanner device is a tall handheld vector without effects');
+alb_ok(strpos($svg, 'viewBox="0 0 72 148"') !== false && strpos($svg, 'gradient') === false, 'scanner device is a tall handheld vector without effects');
+alb_ok(strpos($svg, '5c7a94') === false && strpos($svg, 'c9a227') === false, 'device mark has no fake screen UI or decorative gold');
 alb_ok(strpos($js, 'users.photo') !== false && strpos($js, '/photo') !== false, 'admin user form can upload a photo');
 alb_ok(strpos($js, 'scanner.current_holder') !== false && strpos($js, 'device-mark') !== false, 'scanner detail shows holder photo and device mark');
 alb_ok(strpos($js, 'scanner.copy_qr') !== false && strpos($scan_tpl, 'scanner.copy_qr') !== false, 'managers can copy the unique QR link');
