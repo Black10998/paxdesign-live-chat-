@@ -33,6 +33,11 @@ class Alb_Frontend {
             return;
         }
         self::nocache();
+        global $wp_query;
+        if ($wp_query) {
+            $wp_query->is_404 = false;
+        }
+        status_header(200);
         $logged_in = is_user_logged_in();
         if ($logged_in) {
             Alb_Capabilities::bootstrap_user(get_current_user_id());

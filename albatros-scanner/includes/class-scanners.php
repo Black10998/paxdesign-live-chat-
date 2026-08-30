@@ -475,10 +475,15 @@ class Alb_Scanners {
         if ($value === '') {
             return Alb_Settings::now_mysql();
         }
-        $dt = date_create($value);
+        try {
+            $dt = date_create($value, Alb_Settings::timezone());
+        } catch (Exception $e) {
+            $dt = false;
+        }
         if (!$dt) {
             return Alb_Settings::now_mysql();
         }
+        $dt->setTimezone(new DateTimeZone('UTC'));
         return $dt->format('Y-m-d H:i:s');
     }
 }

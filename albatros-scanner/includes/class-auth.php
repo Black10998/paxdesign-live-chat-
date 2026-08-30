@@ -14,6 +14,7 @@ class Alb_Auth {
         if (self::too_many_attempts()) {
             return new WP_Error('alb_limited', Alb_I18n::t('login.error.limited'), array('status' => 429));
         }
+        add_action('set_logged_in_cookie', array(__CLASS__, 'expose_login_cookie'), 10, 1);
         $user = wp_signon(array(
             'user_login' => $login,
             'user_password' => $password,
@@ -98,6 +99,10 @@ class Alb_Auth {
             Alb_I18n::set_locale($data['locale'], $user_id);
         }
         return self::current_payload();
+    }
+
+    public static function expose_login_cookie($cookie) {
+        $_COOKIE[LOGGED_IN_COOKIE] = $cookie;
     }
 
     private static function key($kind = 'login') {
