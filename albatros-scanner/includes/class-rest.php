@@ -432,48 +432,17 @@ class Alb_Rest {
     }
 
     public static function public_scan(WP_REST_Request $request) {
-        $scanner = Alb_Scanners::get_by_qr((string) $request['token']);
+        $scanner = Alb_Scanners::public_view((string) $request['token']);
         if (!$scanner) {
             return self::respond(new WP_Error('alb_not_found', Alb_I18n::t('scan.not_found'), array('status' => 404)));
         }
-        $identity = Alb_Scan::identity();
-        if (!empty($identity['identified'])) {
-            Alb_Scan::maybe_record_open($scanner);
-        }
         return rest_ensure_response(array(
-            'scanner' => self::public_scanner_payload($scanner),
-            'identity' => $identity,
-            'permissions' => self::scan_permissions(),
-            'nonce' => wp_create_nonce('wp_rest'),
+            'record' => self::public_scanner_payload($scanner),
         ));
     }
 
     public static function public_scan_action(WP_REST_Request $request) {
-        $scanner = Alb_Scanners::get_by_qr((string) $request['token']);
-        if (!$scanner) {
-            return self::respond(new WP_Error('alb_not_found', Alb_I18n::t('scan.not_found'), array('status' => 404)));
-        }
-        $params = $request->get_json_params() ?: $request->get_params();
-        $action = sanitize_key($params['alb_action'] ?? $params['action'] ?? '');
-        if ($action === 'identify') {
-            $name = Alb_Scan::set_guest_name($params['full_name'] ?? $params['name'] ?? '');
-            if (is_wp_error($name)) {
-                return self::respond($name);
-            }
-            Alb_Scan::maybe_record_open($scanner);
-            return rest_ensure_response(array(
-                'ok' => true,
-                'identity' => Alb_Scan::identity(),
-                'scanner' => self::public_scanner_payload($scanner),
-                'nonce' => wp_create_nonce('wp_rest'),
-            ));
-        }
-        if (!is_user_logged_in()) {
-            return self::respond(new WP_Error('alb_auth', Alb_I18n::t('error.auth_required'), array('status' => 401)));
-        }
-        $notes = $params['notes'] ?? '';
-        $result = self::run_scan_action($scanner, $action, $params, $notes);
-        return self::respond($result);
+        return self::respond(new WP_Error('alb_forbidden', Alb_I18n::t('error.forbidden'), array('status' => 403)));
     }
 
     public static function dispatch_scan_action($scanner, $action, $params) {
@@ -524,6 +493,7 @@ class Alb_Rest {
     }
 
     private static function public_scanner_payload($scanner) {
+        $has_driver = !empty($scanner['current_driver_id']);
         return array(
             'scanner_code' => $scanner['scanner_code'],
             'brand' => $scanner['brand'],
@@ -531,6 +501,12 @@ class Alb_Rest {
             'serial_number' => $scanner['serial_number'],
             'phone_number' => $scanner['phone_number'],
             'status' => $scanner['status'],
+            'status_label' => Alb_I18n::t('status.' . $scanner['status']),
+            'branch_label' => $has_driver ? ($scanner['driver_branch_label'] ?: $scanner['branch_label']) : $scanner['branch_label'],
+            'handover_date_display' => $scanner['handover_at_display'] ?: $scanner['handover_date_display'],
+            'driver_name' => $scanner['driver_name'] ?: '',
+            'driver_phone' => $scanner['driver_phone'] ?: '',
+            'driver_photo_url' => $has_driver ? Alb_Scanners::public_photo_url($scanner['qr_token']) : '',
         );
     }
 

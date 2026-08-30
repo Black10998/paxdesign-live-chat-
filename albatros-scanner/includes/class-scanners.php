@@ -463,6 +463,19 @@ class Alb_Scanners {
         return $row ? self::present($row, true) : null;
     }
 
+    public static function public_view($token) {
+        $scanner = self::get_by_qr($token);
+        if (!$scanner || !empty($scanner['deleted_at'])) {
+            return null;
+        }
+        return $scanner;
+    }
+
+    public static function public_photo_url($token) {
+        $token = preg_replace('/[^A-Za-z0-9]/', '', (string) $token);
+        return $token !== '' ? home_url('/s/' . $token . '/photo') : '';
+    }
+
     public static function find_by_serial($serial) {
         global $wpdb;
         return $wpdb->get_row($wpdb->prepare('SELECT id FROM ' . self::table() . ' WHERE serial_number = %s', sanitize_text_field($serial)), ARRAY_A);

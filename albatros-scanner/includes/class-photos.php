@@ -94,6 +94,24 @@ class Alb_Photos {
         self::output($filename);
     }
 
+    public static function serve_public_photo($token) {
+        $scanner = Alb_Scanners::public_view($token);
+        if (!$scanner || empty($scanner['current_driver_id'])) {
+            status_header(404);
+            exit;
+        }
+        $driver = Alb_Drivers::get((int) $scanner['current_driver_id']);
+        $filename = is_array($driver) ? (string) ($driver['photo_path'] ?? '') : '';
+        if ($filename === '' && !empty($driver['user_id'])) {
+            $filename = (string) get_user_meta((int) $driver['user_id'], 'alb_photo_path', true);
+        }
+        if ($filename === '') {
+            status_header(404);
+            exit;
+        }
+        self::output($filename);
+    }
+
     public static function serve_employee_selfie($token) {
         $employee = Alb_Employee::current();
         if (!$employee || empty($employee['photo_path'])) {

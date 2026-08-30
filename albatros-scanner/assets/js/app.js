@@ -119,6 +119,28 @@
       (s.handover_at_display || s.handover_date_display ? '<div class="holder-meta">' + esc(t('scanner.handover_date')) + ': ' + esc(s.handover_at_display || s.handover_date_display) + '</div>' : '') +
       '</div></div></div>';
   }
+  function qrCard(item) {
+    if (!item || !item.qr_url || !can('qr.view')) {
+      return '';
+    }
+    return '<div class="card"><h2>' + esc(t('scanner.qr')) + '</h2><div class="qr-box"><div id="qr"></div><div class="hint">' + esc(t('scanner.qr_hint')) + '</div><div id="qr-url">' + esc(item.qr_url) + '</div>' +
+      '<div class="action-bar qr-actions"><button type="button" class="btn" id="copy-qr">' + esc(t('scanner.copy_qr')) + '</button>' +
+      '<a class="btn btn-sec" target="_blank" rel="noopener noreferrer" href="https://wa.me/?text=' + encodeURIComponent(t('scanner.whatsapp_text') + ' ' + item.qr_url) + '">' + esc(t('scanner.whatsapp')) + '</a></div></div></div>';
+  }
+  function bindQr(item) {
+    if (!item || !item.qr_url || !window.QRCode || !document.getElementById('qr')) {
+      return;
+    }
+    new QRCode(document.getElementById('qr'), { text: item.qr_url, width: 140, height: 140 });
+    var copy = document.getElementById('copy-qr');
+    if (copy) {
+      copy.onclick = function () {
+        if (navigator.clipboard && navigator.clipboard.writeText) {
+          navigator.clipboard.writeText(item.qr_url).then(function () { copy.textContent = t('scanner.link_copied'); });
+        }
+      };
+    }
+  }
   function personMini(s) {
     if (!s.current_driver_id) {
       return '<span class="muted">' + esc(t('scanner.no_driver')) + '</span>';
@@ -553,23 +575,9 @@
         holderCard(s) +
         (can('scanners.edit') || can('scanners.identity') || can('scanners.assign') || can('scanners.status') || can('scanners.delete') ? renderScannerActions(s) : '') +
         '</div>' +
-        '<div>' +
-        (can('qr.view') ? '<div class="card"><h2>' + esc(t('scanner.qr')) + '</h2><div class="qr-box"><div id="qr"></div><div class="hint">' + esc(t('scanner.qr_hint')) + '</div><div id="qr-url">' + esc(s.qr_url) + '</div>' +
-          '<div class="action-bar" style="border:0;justify-content:center"><button type="button" class="btn" id="copy-qr">' + esc(t('scanner.copy_qr')) + '</button>' +
-          '<a class="btn btn-sec" target="_blank" rel="noopener noreferrer" href="https://wa.me/?text=' + encodeURIComponent(t('scanner.whatsapp_text') + ' ' + s.qr_url) + '">' + esc(t('scanner.whatsapp')) + '</a></div></div></div>' : '') +
-        '</div></div>' +
+        '<div>' + qrCard(s) + '</div></div>' +
         '<div class="card" style="margin-top:12px"><h2>' + esc(t('scanner.history')) + '</h2><ul class="history">' + history + '</ul></div>';
-      if (can('qr.view') && window.QRCode) {
-        new QRCode(document.getElementById('qr'), { text: s.qr_url, width: 140, height: 140 });
-      }
-      var copy = document.getElementById('copy-qr');
-      if (copy) {
-        copy.onclick = function () {
-          if (navigator.clipboard && navigator.clipboard.writeText) {
-            navigator.clipboard.writeText(s.qr_url).then(function () { copy.textContent = t('scanner.link_copied'); });
-          }
-        };
-      }
+      bindQr(s);
       bindScannerActions(s);
     }).catch(showError);
   }
@@ -748,6 +756,7 @@
       var history = (d.history || []).map(function (h) {
         return '<li>' + esc(h.at_display) + ' — ' + esc(h.scanner_code) + ' / ' + esc(h.serial_number) + ' (' + esc(h.action) + ')</li>';
       }).join('') || '<li>' + esc(t('common.empty')) + '</li>';
+      var qrItem = (d.assigned_scanners || []).find(function (s) { return s.qr_url; }) || null;
       root.innerHTML = '<div class="page-head"><h1>' + icon('drivers') + ' ' + esc(d.name) + '</h1><button class="btn btn-sec" data-go="/drivers">' + esc(t('common.back')) + '</button></div>' +
         topicMarks() +
         '<div class="detail"><div class="card"><h2>' + esc(t('driver.detail')) + '</h2>' +
@@ -764,8 +773,10 @@
           '<div class="wide"><button class="btn" type="submit">' + esc(t('common.save')) + '</button>' +
           (can('drivers.deactivate') ? ' <button type="button" class="btn btn-danger" id="toggle-driver">' + esc(d.status === 'active' ? t('driver.deactivate') : t('driver.activate')) + '</button>' : '') +
           '</div></form>' : '<div class="kv">' + kv(t('driver.phone'), d.phone) + kv(t('branch.label'), d.branch_label || branchLabel(d.branch)) + kv(t('driver.email'), d.email) + '</div>') +
-        '</div><div class="card"><h2>' + esc(t('driver.assigned')) + '</h2><table class="data"><thead><tr><th>' + esc(t('scanner.code')) + '</th><th>' + esc(t('scanner.serial')) + '</th><th>' + esc(t('scanner.phone')) + '</th><th>' + esc(t('branch.label')) + '</th><th>' + esc(t('common.status')) + '</th></tr></thead><tbody>' + assigned + '</tbody></table></div></div>' +
+        '</div>' + qrCard(qrItem) + '</div>' +
+        '<div class="card" style="margin-top:12px"><h2>' + esc(t('driver.assigned')) + '</h2><table class="data"><thead><tr><th>' + esc(t('scanner.code')) + '</th><th>' + esc(t('scanner.serial')) + '</th><th>' + esc(t('scanner.phone')) + '</th><th>' + esc(t('branch.label')) + '</th><th>' + esc(t('common.status')) + '</th></tr></thead><tbody>' + assigned + '</tbody></table></div>' +
         '<div class="card" style="margin-top:12px"><h2>' + esc(t('driver.history')) + '</h2><ul class="history">' + history + '</ul></div>';
+      bindQr(qrItem);
       var form = document.getElementById('driver-edit');
       if (form) {
         form.onsubmit = function (e) {

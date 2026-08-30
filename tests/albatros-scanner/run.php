@@ -74,11 +74,11 @@ alb_ok(is_file($plugin . '/includes/class-branches.php'), 'branch helper exists'
 alb_ok(strpos($install, 'KEY branch') !== false && strpos($install, "LIKE 'branch'") !== false, 'schema stores Wien and Graz on scanners and drivers');
 alb_ok(is_file($plugin . '/includes/class-scan.php'), 'scan workflow class exists');
 alb_ok(is_file($plugin . '/templates/scan.php'), 'mobile scan template exists');
-alb_ok(strpos($scan_tpl, 'full_name') !== false && strpos($scan_tpl, 'handover.privacy_notice') !== false, 'guest handover asks for a real name and records a privacy notice');
-alb_ok(strpos($scan_tpl, 'selfie') !== false && strpos($scan_tpl, 'handover.phone') !== false, 'handover collects selfie and mobile number');
-alb_ok(strpos($scan_tpl, 'scanner.take_over') !== false && strpos($scan_tpl, 'otp_code') !== false, 'employee must verify then explicitly accept the scanner');
-alb_ok(strpos($scan_tpl, 'driver_name') === false || strpos($scan_tpl, 'is_manager') !== false, 'employee QR page does not publish other employees by default');
-alb_ok(strpos($frontend, 'render_scan') !== false && strpos($frontend, "strpos(\$path, 's/') === 0") !== false, 'QR routes render the scanner record, not the homepage');
+alb_ok(strpos($scan_tpl, 'public-record') !== false && strpos($scan_tpl, 'scan.public_hint') !== false, 'QR page is a public read-only record');
+alb_ok(strpos($scan_tpl, 'otp_code') === false && strpos($scan_tpl, 'alb_action') === false && strpos($scan_tpl, 'method="post"') === false, 'public QR page has no OTP, login, or write forms');
+alb_ok(strpos($scan_tpl, 'driver.phone') !== false && strpos($scan_tpl, 'scanner.serial') !== false && strpos($scan_tpl, 'scanner.phone') !== false, 'public QR page shows employee and scanner fields from the live record');
+alb_ok(strpos($frontend, 'serve_public_photo') !== false && strpos($photos, 'serve_public_photo') !== false, 'QR photo is served only for the matching token');
+alb_ok(strpos($frontend, 'render_scan') !== false && strpos($frontend, "preg_match('#^s/([A-Za-z0-9]+)$#'") !== false, 'QR routes render the scanner record, not the homepage');
 alb_ok(strpos($frontend, 'can_use_admin_app') !== false && is_file($plugin . '/templates/denied.php'), 'non-managers are blocked from the admin app');
 alb_ok(strpos($denied, 'access.denied') !== false, 'denied page tells employees to use the QR link');
 alb_ok(strpos($otp, 'send_sms') !== false && strpos($otp, 'api.twilio.com') !== false, 'phone verification uses SMS OTP');
@@ -98,7 +98,9 @@ alb_ok(strpos($css, 'device-visual-slot') !== false && strpos($css, 'aspect-rati
 alb_ok(strpos($svg, '5c7a94') === false && strpos($svg, 'c9a227') === false, 'device mark has no fake screen UI or decorative gold');
 alb_ok(strpos($js, 'users.photo') !== false && strpos($js, '/photo') !== false, 'admin user form can upload a photo');
 alb_ok(strpos($js, 'holderCard') !== false && strpos($js, 'device-visual') !== false, 'scanner detail shows holder photo and device mark');
-alb_ok(strpos($js, 'scanner.copy_qr') !== false && strpos($scan_tpl, 'scanner.copy_qr') !== false, 'managers can copy the unique QR link');
+alb_ok(strpos($js, 'scanner.copy_qr') !== false && strpos($js, 'function qrCard') !== false, 'managers can copy the unique QR link from the record');
+alb_ok(strpos($rest, 'public_scan_action') !== false && strpos($rest, "status' => 403") !== false, 'public QR API rejects write actions');
+alb_ok(strpos($scanners, 'function public_view') !== false && strpos($scanners, 'deleted_at') !== false, 'deleted scanners are not exposed on the public QR page');
 alb_ok(strpos($caps, 'can_use_admin_app') !== false, 'admin app access is role-gated');
 alb_ok(strpos($caps, 'scanners.identity') !== false, 'identity permission exists');
 alb_ok(strpos($caps, "PRIMARY_EMAIL = 'sarah.gta1995@gmail.com'") !== false, 'sarah is the hardcoded primary manager');
@@ -150,6 +152,7 @@ foreach (array('scanners.assign', 'audit.view', 'users.manage', 'reports.export'
 }
 alb_ok(strpos($css, 'animation') === false && strpos($css, 'gradient') === false, 'css has no animations or gradients');
 alb_ok(strpos($css, 'box-shadow') === false, 'css has no box shadows');
+alb_ok(strpos($css, '.public-record') !== false && strpos($css, '.public-hero') !== false && strpos($css, '@media (min-width: 640px)') !== false, 'public QR page has a mobile-first layout');
 alb_ok(strpos($js, 'login.error') === false || strpos($js, 'api(') !== false, 'app talks to rest api');
 alb_ok(strpos($app_tpl, 'help-btn') !== false && strpos($app_tpl, 'page-context') !== false, 'header has page context, search, and help');
 alb_ok(strpos($js, "items.push(['/help', 'nav.help', 'help'])") !== false, 'help is in the main navigation');
@@ -178,6 +181,7 @@ alb_ok(($de['official.website'] ?? '') === 'Offizielle Unternehmenswebsite', 'ge
 alb_ok(($en['official.website'] ?? '') === 'Official Company Website', 'english official website label exists');
 alb_ok(($de['scan.full_name'] ?? '') === 'Name / Vollständiger Name', 'german scan identification label exists');
 alb_ok(($de['handover.privacy_notice'] ?? '') !== '', 'german handover privacy notice exists');
+alb_ok(($de['scan.readonly'] ?? '') === 'Nur Ansicht' && ($de['scan.assigned_scanner'] ?? '') === 'Zugewiesener Scanner', 'public QR view labels exist');
 alb_ok(($en['scanner.copy_qr'] ?? '') === 'Copy QR link', 'english copy-link label exists');
 alb_ok(strpos($install, "table('otp_challenges')") !== false, 'schema creates otp table');
 alb_ok(($en['scanner.take_over'] ?? '') === 'Take over scanner', 'english take-over action exists');
