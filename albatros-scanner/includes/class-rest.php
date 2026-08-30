@@ -329,6 +329,7 @@ class Alb_Rest {
             'can_assign_permissions' => Alb_Capabilities::can_assign_user_permissions(),
             'extra_permission_keys' => Alb_Capabilities::extra_permission_keys(),
             'is_primary' => Alb_Capabilities::is_primary(),
+            'branches' => Alb_Branches::keys(),
             'driver_options' => Alb_Capabilities::current_user_can('drivers.view') ? Alb_Drivers::options() : array(),
         ));
     }

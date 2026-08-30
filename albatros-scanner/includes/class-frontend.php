@@ -312,6 +312,7 @@ class Alb_Frontend {
             'can_assign_permissions' => Alb_Capabilities::can_assign_user_permissions(),
             'extra_permission_keys' => Alb_Capabilities::extra_permission_keys(),
             'is_primary' => Alb_Capabilities::is_primary(),
+            'branches' => Alb_Branches::keys(),
             'device_mark' => ALB_SCANNER_PLUGIN_URL . 'assets/img/handheld-device.svg?ver=' . ALB_SCANNER_VERSION,
             'path' => '/' . self::path(),
         );

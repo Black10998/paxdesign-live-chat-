@@ -54,6 +54,37 @@
       '<div class="device-visual-caption">' + deviceStateIcon(key) + '<span>' + esc(label) + '</span></div>' +
       '</div></div>';
   }
+  function branches() {
+    return A.branches || ['wien', 'graz'];
+  }
+  function branchLabel(key) {
+    return key ? t('branch.' + key) : t('branch.empty');
+  }
+  function branchSelect(name, selected) {
+    return '<div class="field"><label>' + esc(t('branch.label')) + '</label><select name="' + name + '">' +
+      '<option value="">' + esc(t('branch.empty')) + '</option>' +
+      branches().map(function (b) {
+        return '<option value="' + b + '"' + (selected === b ? ' selected' : '') + '>' + esc(t('branch.' + b)) + '</option>';
+      }).join('') + '</select></div>';
+  }
+  function branchTabs(selected) {
+    var current = selected || '';
+    return '<div class="branch-tabs" role="group" aria-label="' + esc(t('branch.label')) + '">' +
+      '<button type="button" class="branch-tab' + (current === '' ? ' is-on' : '') + '" data-branch="">' + esc(t('branch.all')) + '</button>' +
+      branches().map(function (b) {
+        return '<button type="button" class="branch-tab' + (current === b ? ' is-on' : '') + '" data-branch="' + b + '">' + esc(t('branch.' + b)) + '</button>';
+      }).join('') +
+      '</div><input type="hidden" id="f-branch" value="' + esc(current) + '">';
+  }
+  function bindBranchTabs(apply) {
+    document.querySelectorAll('.branch-tab').forEach(function (btn) {
+      btn.onclick = function () {
+        var hidden = document.getElementById('f-branch');
+        if (hidden) hidden.value = btn.getAttribute('data-branch') || '';
+        apply();
+      };
+    });
+  }
   function face(url, cls) {
     return url ? '<img class="' + (cls || 'face-thumb') + '" src="' + esc(url) + '" alt="">' : '';
   }
@@ -249,15 +280,15 @@
     var rows = (items || []).map(function (s) {
       return '<tr class="click" data-go="/scanners/' + s.id + '">' +
         '<td>' + esc(s.scanner_code) + '</td><td>' + esc(s.brand) + '</td><td>' + esc(s.model) + '</td>' +
-        '<td>' + esc(s.serial_number) + '</td><td>' + esc(s.phone_number) + '</td>' +
+        '<td>' + esc(s.serial_number) + '</td><td>' + esc(s.phone_number) + '</td><td>' + esc(s.branch_label || branchLabel(s.branch)) + '</td>' +
         '<td class="person-cell">' + face(s.driver_photo_url) + ' ' + esc(s.driver_name || t('scanner.no_driver')) + '</td>' +
         '<td>' + esc(s.handover_date_display) + '</td><td>' + badge(s.status) + '</td>' +
         (options.actions ? '<td class="row-actions" data-stop="1">' + scannerRowActions(s) + '</td>' : '') +
         '</tr>';
-    }).join('') || emptyRow(options.actions ? 9 : 8);
+    }).join('') || emptyRow(options.actions ? 10 : 9);
     return '<table class="data"><thead><tr>' +
       '<th>' + esc(t('scanner.code')) + '</th><th>' + esc(t('scanner.brand')) + '</th><th>' + esc(t('scanner.model')) + '</th>' +
-      '<th>' + esc(t('scanner.serial')) + '</th><th>' + esc(t('scanner.phone')) + '</th><th>' + esc(t('scanner.driver')) + '</th>' +
+      '<th>' + esc(t('scanner.serial')) + '</th><th>' + esc(t('scanner.phone')) + '</th><th>' + esc(t('branch.label')) + '</th><th>' + esc(t('scanner.driver')) + '</th>' +
       '<th>' + esc(t('scanner.handover_date')) + '</th><th>' + esc(t('common.status')) + '</th>' +
       (options.actions ? '<th>' + esc(t('common.actions')) + '</th>' : '') +
       '</tr></thead><tbody>' + rows + '</tbody></table>';
@@ -353,7 +384,8 @@
   }
 
   function scannerFilters(q) {
-    return '<div class="toolbar">' +
+    return branchTabs(q.branch || '') +
+      '<div class="toolbar">' +
       '<div class="field grow"><label>' + esc(t('common.search')) + '</label><input id="f-q" value="' + esc(q.q || '') + '"></div>' +
       '<div class="field"><label>' + esc(t('common.status')) + '</label><select id="f-status">' +
       '<option value="">' + esc(t('common.all')) + '</option>' +
@@ -378,7 +410,7 @@
       '</div>' + scannerFilters(query) + '<div class="card"><p class="body" style="padding:12px">' + esc(t('common.loading')) + '</p></div>';
     api('scanners?' + qs({
       q: query.q || '', status: query.status || '', brand: query.brand || '', model: query.model || '',
-      assigned: query.assigned || '', removed: query.removed || '',
+      assigned: query.assigned || '', removed: query.removed || '', branch: query.branch || '',
       sort: query.sort || 'id', dir: query.dir || 'desc', page: query.page || 1
     })).then(function (data) {
       root.innerHTML = '<div class="page-head"><h1>' + esc(t('scanner.title')) + '</h1>' +
@@ -386,16 +418,19 @@
         '</div>' + scannerFilters(query) +
         '<div class="card">' + scannerTable(data.items || [], { actions: true }) + pager(data) + '</div>';
       bindPager(function (page) { renderScanners(Object.assign({}, query, { page: page })); });
-      document.getElementById('f-apply').onclick = function () {
+      function applyScannerFilters() {
         renderScanners({
           q: document.getElementById('f-q').value,
           status: document.getElementById('f-status').value,
           assigned: document.getElementById('f-assigned').value,
           removed: document.getElementById('f-removed') ? document.getElementById('f-removed').value : '',
           brand: document.getElementById('f-brand').value,
-          model: document.getElementById('f-model').value
+          model: document.getElementById('f-model').value,
+          branch: document.getElementById('f-branch') ? document.getElementById('f-branch').value : ''
         });
-      };
+      }
+      document.getElementById('f-apply').onclick = applyScannerFilters;
+      bindBranchTabs(applyScannerFilters);
     }).catch(showError);
   }
 
@@ -413,6 +448,7 @@
       field('model', t('scanner.model'), 'text', '', false) +
       field('serial_number', t('scanner.serial'), 'text', '', false) +
       field('phone_number', t('scanner.phone'), 'text', '', false) +
+      branchSelect('branch', '') +
       '<div class="field"><label>' + esc(t('scanner.driver')) + '</label><select name="driver_id">' + driverSelect('') + '</select></div>' +
       field('handover_date', t('scanner.handover_date'), 'date', '', false) +
       '<div class="field"><label>' + esc(t('common.status')) + '</label><select name="status">' +
@@ -475,13 +511,14 @@
         kv(t('scanner.model'), s.model) +
         kv(t('scanner.serial'), s.serial_number) +
         kv(t('scanner.phone'), s.phone_number) +
+        kv(t('branch.label'), s.branch_label || branchLabel(s.branch)) +
         kv(t('common.status'), statusLabel(s.status)) +
         kv(t('common.notes'), s.notes || '') +
         '</div>' + deviceVisual(s) + '</div>' +
         '<div class="holder-box"><h2>' + esc(t('scanner.current_holder')) + '</h2>' +
         '<div class="person-row">' + face(s.driver_photo_url, 'face-lg') +
         '<div><strong>' + esc(s.driver_name || t('scanner.no_driver')) + '</strong><br>' +
-        esc(t('handover.verified_phone')) + ': ' + esc(s.driver_phone || '—') + '<br>' +
+        esc(t('driver.phone')) + ': ' + esc(s.driver_phone || '—') + '<br>' +
         esc(t('scanner.handover_date')) + ': ' + esc(s.handover_at_display || s.handover_date_display || '—') +
         '</div></div></div>' +
         (can('scanners.edit') || can('scanners.identity') || can('scanners.assign') || can('scanners.status') || can('scanners.delete') ? renderScannerActions(s) : '') +
@@ -546,6 +583,9 @@
         html += field('serial_number', t('scanner.serial'), 'text', s.serial_number, false);
         html += field('phone_number', t('scanner.phone'), 'text', s.phone_number, false);
       }
+      if (can('scanners.edit') || can('scanners.identity')) {
+        html += branchSelect('branch', s.branch || '');
+      }
       if (can('scanners.edit')) {
         html += '<div class="field wide"><label>' + esc(t('common.notes')) + '</label><textarea name="notes">' + esc(s.notes || '') + '</textarea></div>';
       }
@@ -580,6 +620,9 @@
           body.serial_number = fd.get('serial_number');
           body.phone_number = fd.get('phone_number');
         }
+        if (can('scanners.edit') || can('scanners.identity')) {
+          body.branch = fd.get('branch');
+        }
         api('scanners/' + s.id, { method: 'POST', body: body })
           .then(function () { renderScannerDetail(s.id); }).catch(showError);
       };
@@ -607,20 +650,27 @@
   function renderDrivers(query) {
     query = query || {};
     root.innerHTML = '<p>' + esc(t('common.loading')) + '</p>';
-    api('drivers?' + qs({ q: query.q || '', status: query.status || '', page: query.page || 1 })).then(function (data) {
+    api('drivers?' + qs({ q: query.q || '', status: query.status || '', branch: query.branch || '', page: query.page || 1 })).then(function (data) {
       var rows = (data.items || []).map(function (d) {
-        return '<tr class="click" data-go="/drivers/' + d.id + '"><td class="person-cell">' + face(d.photo_url) + ' ' + esc(d.name) + '</td><td>' + esc(d.phone) + '</td><td>' + esc(d.email) + '</td><td>' + esc(d.employee_code) + '</td><td>' + badge(d.status) + '</td></tr>';
-      }).join('') || emptyRow(5);
+        return '<tr class="click" data-go="/drivers/' + d.id + '"><td class="person-cell">' + face(d.photo_url) + ' ' + esc(d.name) + '</td><td>' + esc(d.phone) + '</td><td>' + esc(d.branch_label || branchLabel(d.branch)) + '</td><td>' + esc(d.email) + '</td><td>' + esc(d.employee_code) + '</td><td>' + badge(d.status) + '</td></tr>';
+      }).join('') || emptyRow(6);
       root.innerHTML = '<div class="page-head"><h1>' + icon('drivers') + ' ' + esc(t('driver.title')) + '</h1>' +
         (can('drivers.create') ? '<button class="btn" data-go="/drivers/new">' + esc(t('driver.new')) + '</button>' : '') + '</div>' +
         topicMarks() +
+        branchTabs(query.branch || '') +
         '<div class="toolbar"><div class="field grow"><label>' + esc(t('common.search')) + '</label><input id="d-q" value="' + esc(query.q || '') + '"></div>' +
         '<div class="field"><label>' + esc(t('common.status')) + '</label><select id="d-status"><option value="">' + esc(t('common.all')) + '</option><option value="active"' + (query.status === 'active' ? ' selected' : '') + '>' + esc(t('common.active')) + '</option><option value="inactive"' + (query.status === 'inactive' ? ' selected' : '') + '>' + esc(t('common.inactive')) + '</option></select></div>' +
         '<button class="btn" id="d-apply">' + esc(t('common.filter')) + '</button></div>' +
-        '<div class="card"><table class="data"><thead><tr><th>' + esc(t('users.name')) + '</th><th>' + esc(t('driver.phone')) + '</th><th>' + esc(t('driver.email')) + '</th><th>' + esc(t('driver.employee_code')) + '</th><th>' + esc(t('common.status')) + '</th></tr></thead><tbody>' + rows + '</tbody></table>' + pager(data) + '</div>';
-      document.getElementById('d-apply').onclick = function () {
-        renderDrivers({ q: document.getElementById('d-q').value, status: document.getElementById('d-status').value });
-      };
+        '<div class="card"><table class="data"><thead><tr><th>' + esc(t('users.name')) + '</th><th>' + esc(t('driver.phone')) + '</th><th>' + esc(t('branch.label')) + '</th><th>' + esc(t('driver.email')) + '</th><th>' + esc(t('driver.employee_code')) + '</th><th>' + esc(t('common.status')) + '</th></tr></thead><tbody>' + rows + '</tbody></table>' + pager(data) + '</div>';
+      function applyDriverFilters() {
+        renderDrivers({
+          q: document.getElementById('d-q').value,
+          status: document.getElementById('d-status').value,
+          branch: document.getElementById('f-branch') ? document.getElementById('f-branch').value : ''
+        });
+      }
+      document.getElementById('d-apply').onclick = applyDriverFilters;
+      bindBranchTabs(applyDriverFilters);
       bindPager(function (page) { renderDrivers(Object.assign({}, query, { page: page })); });
     }).catch(showError);
   }
@@ -632,6 +682,7 @@
       field('first_name', t('driver.first_name'), 'text', '') +
       field('last_name', t('driver.last_name'), 'text', '') +
       field('phone', t('driver.phone'), 'text', '') +
+      branchSelect('branch', '') +
       field('email', t('driver.email'), 'email', '') +
       field('employee_code', t('driver.employee_code'), 'text', '') +
       photoField('') +
@@ -659,18 +710,19 @@
       root.innerHTML = '<div class="page-head"><h1>' + icon('drivers') + ' ' + esc(d.name) + '</h1><button class="btn btn-sec" data-go="/drivers">' + esc(t('common.back')) + '</button></div>' +
         topicMarks() +
         '<div class="detail"><div class="card"><h2>' + esc(t('driver.detail')) + '</h2>' +
-        '<div class="person-row">' + face(d.photo_url, 'face-lg') + '<div><strong>' + esc(d.name) + '</strong><br>' + esc(d.phone || '—') + '</div></div>' +
+        '<div class="person-row">' + face(d.photo_url, 'face-lg') + '<div><strong>' + esc(d.name) + '</strong><br>' + esc(t('driver.phone')) + ': ' + esc(d.phone || '—') + '<br>' + esc(t('branch.label')) + ': ' + esc(d.branch_label || branchLabel(d.branch)) + '</div></div>' +
         (can('drivers.edit') ? '<form id="driver-edit" class="form-grid">' +
           field('first_name', t('driver.first_name'), 'text', d.first_name) +
           field('last_name', t('driver.last_name'), 'text', d.last_name) +
           field('phone', t('driver.phone'), 'text', d.phone) +
+          branchSelect('branch', d.branch || '') +
           field('email', t('driver.email'), 'email', d.email) +
           field('employee_code', t('driver.employee_code'), 'text', d.employee_code) +
           photoField(d.photo_url) +
           '<div class="field wide"><label>' + esc(t('common.notes')) + '</label><textarea name="notes">' + esc(d.notes || '') + '</textarea></div>' +
           '<div class="wide"><button class="btn" type="submit">' + esc(t('common.save')) + '</button>' +
           (can('drivers.deactivate') ? ' <button type="button" class="btn btn-danger" id="toggle-driver">' + esc(d.status === 'active' ? t('driver.deactivate') : t('driver.activate')) + '</button>' : '') +
-          '</div></form>' : '<div class="kv">' + kv(t('driver.phone'), d.phone) + kv(t('driver.email'), d.email) + '</div>') +
+          '</div></form>' : '<div class="kv">' + kv(t('driver.phone'), d.phone) + kv(t('branch.label'), d.branch_label || branchLabel(d.branch)) + kv(t('driver.email'), d.email) + '</div>') +
         '</div><div class="card"><h2>' + esc(t('driver.assigned')) + '</h2><table class="data"><thead><tr><th>' + esc(t('scanner.code')) + '</th><th>' + esc(t('scanner.serial')) + '</th><th>' + esc(t('common.status')) + '</th></tr></thead><tbody>' + assigned + '</tbody></table></div></div>' +
         '<div class="card" style="margin-top:12px"><h2>' + esc(t('driver.history')) + '</h2><ul class="history">' + history + '</ul></div>';
       var form = document.getElementById('driver-edit');
@@ -747,32 +799,41 @@
     }
     return body;
   }
-  function renderUsers() {
+  function renderUsers(query) {
+    query = query || {};
     root.innerHTML = '<p>' + esc(t('common.loading')) + '</p>';
-    api('users').then(function (data) {
+    api('users?' + qs({ q: query.q || '', branch: query.branch || '' })).then(function (data) {
       var rows = (data.items || []).map(function (u) {
         var role = (u.is_primary ? t('users.primary') + ' · ' : '') + t('role.' + u.role);
-        return '<tr class="click" data-go="/users/' + u.id + '"><td class="person-cell">' + face(u.photo_url) + ' ' + esc(u.name) + '</td><td>' + esc(u.username) + '</td><td>' + esc(u.email) + '</td><td>' + esc(role) + '</td><td>' + esc(t('users.status.' + (u.status || 'active'))) + '</td><td>' + esc(u.last_login_display || '—') + '</td></tr>';
-      }).join('') || emptyRow(6);
+        return '<tr class="click" data-go="/users/' + u.id + '"><td class="person-cell">' + face(u.photo_url) + ' ' + esc(u.name) + '</td><td>' + esc(u.username) + '</td><td>' + esc(u.email) + '</td><td>' + esc(u.branch_label || branchLabel(u.branch)) + '</td><td>' + esc(role) + '</td><td>' + esc(t('users.status.' + (u.status || 'active'))) + '</td><td>' + esc(u.last_login_display || '—') + '</td></tr>';
+      }).join('') || emptyRow(7);
       var form = can('users.manage') ? '<form id="user-form" class="card form-grid"><div class="wide"><h2>' + esc(t('users.new')) + '</h2></div>' +
         field('name', t('users.name'), 'text', '') +
         field('username', t('users.username'), 'text', '') +
         field('email', t('driver.email'), 'email', '') +
         field('phone', t('users.phone'), 'tel', '') +
+        branchSelect('branch', '') +
         field('password', t('users.password'), 'password', '') +
         roleCards('staff') +
         photoField('') +
         '<label class="row-check wide"><input type="checkbox" name="create_as_employee" value="1" checked><span>' + esc(t('users.create_employee')) + '</span></label>' +
         '<div class="wide"><button class="btn" type="submit">' + esc(t('common.create')) + '</button></div></form>' : '';
-      root.innerHTML = '<div class="page-head"><h1>' + esc(t('users.title')) + '</h1></div>' + form +
-        '<div class="card"><table class="data"><thead><tr><th>' + esc(t('users.name')) + '</th><th>' + esc(t('users.username')) + '</th><th>' + esc(t('driver.email')) + '</th><th>' + esc(t('users.role')) + '</th><th>' + esc(t('users.status')) + '</th><th>' + esc(t('users.last_login')) + '</th></tr></thead><tbody>' + rows + '</tbody></table></div>';
+      root.innerHTML = '<div class="page-head"><h1>' + esc(t('users.title')) + '</h1></div>' +
+        branchTabs(query.branch || '') + form +
+        '<div class="card"><table class="data"><thead><tr><th>' + esc(t('users.name')) + '</th><th>' + esc(t('users.username')) + '</th><th>' + esc(t('driver.email')) + '</th><th>' + esc(t('branch.label')) + '</th><th>' + esc(t('users.role')) + '</th><th>' + esc(t('users.status')) + '</th><th>' + esc(t('users.last_login')) + '</th></tr></thead><tbody>' + rows + '</tbody></table></div>';
+      bindBranchTabs(function () {
+        renderUsers({
+          q: query.q || '',
+          branch: document.getElementById('f-branch') ? document.getElementById('f-branch').value : ''
+        });
+      });
       var uf = document.getElementById('user-form');
       if (uf) {
         uf.onsubmit = function (e) {
           e.preventDefault();
           api('users', { method: 'POST', body: collectUserBody(uf, false) }).then(function (created) {
             return maybeUpload('users/' + created.id + '/photo', uf);
-          }).then(function () { renderUsers(); }).catch(showError);
+          }).then(function () { renderUsers(query); }).catch(showError);
         };
       }
     }).catch(showError);
@@ -791,6 +852,7 @@
         field('name', t('users.name'), 'text', u.name) +
         field('email', t('driver.email'), 'email', u.email) +
         field('phone', t('users.phone'), 'tel', u.phone || '') +
+        branchSelect('branch', u.branch || '') +
         field('password', t('users.password'), 'password', '') +
         roleCards(u.role) +
         '<div class="field"><label>' + esc(t('users.status')) + '</label><select name="status"' + (u.is_primary ? ' disabled' : '') + '>' +
@@ -802,7 +864,7 @@
         '<label class="row-check wide"><input type="checkbox" name="create_as_employee" value="1"' + (u.driver_id ? ' checked' : '') + '><span>' + esc(t('users.create_employee')) + '</span></label>' +
         extraPermBoxes(u.permissions || {}) +
         '<div class="wide"><button class="btn" type="submit">' + esc(t('common.save')) + '</button></div></form>' :
-        '<div class="card"><div class="person-row">' + face(u.photo_url, 'face-lg') + '<div><strong>' + esc(u.name) + '</strong></div></div><div class="kv">' + kv(t('users.name'), u.name) + kv(t('users.username'), u.username) + kv(t('driver.email'), u.email) + kv(t('users.phone'), u.phone || '—') + kv(t('users.role'), (u.is_primary ? t('users.primary') + ' · ' : '') + t('role.' + u.role)) + kv(t('users.status'), t('users.status.' + (u.status || 'active'))) + kv(t('users.last_login'), u.last_login_display || '—') + '</div></div>';
+        '<div class="card"><div class="person-row">' + face(u.photo_url, 'face-lg') + '<div><strong>' + esc(u.name) + '</strong></div></div><div class="kv">' + kv(t('users.name'), u.name) + kv(t('users.username'), u.username) + kv(t('driver.email'), u.email) + kv(t('users.phone'), u.phone || '—') + kv(t('branch.label'), u.branch_label || branchLabel(u.branch)) + kv(t('users.role'), (u.is_primary ? t('users.primary') + ' · ' : '') + t('role.' + u.role)) + kv(t('users.status'), t('users.status.' + (u.status || 'active'))) + kv(t('users.last_login'), u.last_login_display || '—') + '</div></div>';
       root.innerHTML = '<div class="page-head"><h1>' + esc(u.name || u.username) + '</h1><button class="btn btn-sec" data-go="/users">' + esc(t('common.back')) + '</button></div>' + form;
       var uf = document.getElementById('user-edit');
       if (uf) {

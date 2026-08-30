@@ -35,6 +35,7 @@ class Alb_Scanners {
             'model' => $model,
             'serial_number' => $serial,
             'phone_number' => sanitize_text_field($data['phone_number'] ?? ''),
+            'branch' => Alb_Branches::normalize($data['branch'] ?? ''),
             'status' => $status,
             'current_driver_id' => null,
             'current_handover_id' => null,
@@ -115,7 +116,14 @@ class Alb_Scanners {
                 $changes['phone_number'] = array($current['phone_number'], $value);
             }
         }
-        if (array_key_exists('notes', $data)) {
+        if (array_key_exists('branch', $data)) {
+            $value = Alb_Branches::normalize($data['branch']);
+            if ($value !== (string) ($current['branch'] ?? '')) {
+                $fields['branch'] = $value;
+                $changes['branch'] = array($current['branch'] ?? '', $value);
+            }
+        }
+        if (array_key_exists('notes', $data) && Alb_Capabilities::user_can((int) $user_id, 'scanners.edit')) {
             $value = sanitize_textarea_field($data['notes']);
             if ($value !== (string) $current['notes']) {
                 $fields['notes'] = $value;
@@ -184,6 +192,7 @@ class Alb_Scanners {
             'notes' => sanitize_textarea_field($notes),
         ));
         $handover_id = (int) $wpdb->insert_id;
+        // Device SIM (phone_number) stays on the scanner row. Assignment only stores the employee's personal number in the handover snapshot.
         $wpdb->update(self::table(), array(
             'current_driver_id' => $driver_id ?: null,
             'current_handover_id' => $handover_id,
@@ -471,6 +480,10 @@ class Alb_Scanners {
             $where[] = 's.model LIKE %s';
             $params[] = '%' . $wpdb->esc_like($args['model']) . '%';
         }
+        if (!empty($args['branch'])) {
+            $where[] = 's.branch = %s';
+            $params[] = Alb_Branches::normalize($args['branch']);
+        }
         $sortable = array(
             'id' => 's.id',
             'scanner_code' => 's.scanner_code',
@@ -478,6 +491,7 @@ class Alb_Scanners {
             'model' => 's.model',
             'serial_number' => 's.serial_number',
             'phone_number' => 's.phone_number',
+            'branch' => 's.branch',
             'status' => 's.status',
             'handover_date' => 's.handover_date',
             'driver' => 'd.last_name',
@@ -666,6 +680,8 @@ class Alb_Scanners {
             'model' => $row['model'],
             'serial_number' => $serial,
             'phone_number' => $row['phone_number'],
+            'branch' => Alb_Branches::normalize($row['branch'] ?? ''),
+            'branch_label' => Alb_Branches::label($row['branch'] ?? ''),
             'status' => $row['status'],
             'current_driver_id' => $row['current_driver_id'] ? (int) $row['current_driver_id'] : null,
             'driver_name' => $driver_name,

@@ -39,6 +39,7 @@ $public_status = $scanner ? ($i18n['status.' . $scanner['status']] ?? $scanner['
                     <div class="k"><?php echo esc_html($i18n['scanner.model']); ?></div><div><?php echo esc_html($scanner['model']); ?></div>
                     <div class="k"><?php echo esc_html($i18n['scanner.serial']); ?></div><div><?php echo esc_html($scanner['serial_number']); ?></div>
                     <div class="k"><?php echo esc_html($i18n['scanner.phone']); ?></div><div><?php echo esc_html($scanner['phone_number']); ?></div>
+                    <div class="k"><?php echo esc_html($i18n['branch.label']); ?></div><div><?php echo esc_html($scanner['branch_label'] ?? ($i18n['branch.empty'] ?? '—')); ?></div>
                     <div class="k"><?php echo esc_html($i18n['common.status']); ?></div><div><?php echo esc_html($public_status); ?></div>
                     <div class="k"><?php echo esc_html($i18n['scanner.driver']); ?></div>
                     <div>
@@ -84,6 +85,7 @@ $public_status = $scanner ? ($i18n['status.' . $scanner['status']] ?? $scanner['
                     <div class="k"><?php echo esc_html($i18n['scanner.model']); ?></div><div><?php echo esc_html($scanner['model']); ?></div>
                     <div class="k"><?php echo esc_html($i18n['scanner.serial']); ?></div><div><?php echo esc_html($scanner['serial_number']); ?></div>
                     <div class="k"><?php echo esc_html($i18n['scanner.phone']); ?></div><div><?php echo esc_html($scanner['phone_number']); ?></div>
+                    <div class="k"><?php echo esc_html($i18n['branch.label']); ?></div><div><?php echo esc_html($scanner['branch_label'] ?? ($i18n['branch.empty'] ?? '—')); ?></div>
                     <div class="k"><?php echo esc_html($i18n['common.status']); ?></div><div><?php echo esc_html($public_status); ?></div>
                 </div>
             </div>
@@ -124,6 +126,7 @@ $public_status = $scanner ? ($i18n['status.' . $scanner['status']] ?? $scanner['
                     <div class="k"><?php echo esc_html($i18n['scanner.model']); ?></div><div><?php echo esc_html($scanner['model']); ?></div>
                     <div class="k"><?php echo esc_html($i18n['scanner.serial']); ?></div><div><?php echo esc_html($scanner['serial_number']); ?></div>
                     <div class="k"><?php echo esc_html($i18n['scanner.phone']); ?></div><div><?php echo esc_html($scanner['phone_number']); ?></div>
+                    <div class="k"><?php echo esc_html($i18n['branch.label']); ?></div><div><?php echo esc_html($scanner['branch_label'] ?? ($i18n['branch.empty'] ?? '—')); ?></div>
                     <div class="k"><?php echo esc_html($i18n['common.status']); ?></div><div><?php echo esc_html($public_status); ?></div>
                 </div>
             </div>

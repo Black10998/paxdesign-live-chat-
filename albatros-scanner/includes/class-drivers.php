@@ -23,6 +23,7 @@ class Alb_Drivers {
             'phone' => sanitize_text_field($data['phone'] ?? ''),
             'email' => sanitize_email($data['email'] ?? ''),
             'employee_code' => sanitize_text_field($data['employee_code'] ?? ''),
+            'branch' => Alb_Branches::normalize($data['branch'] ?? ''),
             'status' => !empty($data['status']) && $data['status'] === 'inactive' ? 'inactive' : 'active',
             'notes' => sanitize_textarea_field($data['notes'] ?? ''),
             'user_id' => !empty($data['user_id']) ? (int) $data['user_id'] : null,
@@ -75,6 +76,13 @@ class Alb_Drivers {
             if ($value !== (string) $current['email']) {
                 $fields['email'] = $value;
                 $changes['email'] = array($current['email'], $value);
+            }
+        }
+        if (array_key_exists('branch', $data)) {
+            $value = Alb_Branches::normalize($data['branch']);
+            if ($value !== (string) ($current['branch'] ?? '')) {
+                $fields['branch'] = $value;
+                $changes['branch'] = array($current['branch'] ?? '', $value);
             }
         }
         if (array_key_exists('user_id', $data)) {
@@ -140,6 +148,7 @@ class Alb_Drivers {
         $last = isset($parts[1]) && $parts[1] !== '' ? $parts[1] : $parts[0];
         $phone = (string) get_user_meta($user->ID, 'alb_phone', true);
         $photo = Alb_Users::photo_path($user->ID);
+        $branch = Alb_Branches::normalize(get_user_meta($user->ID, 'alb_branch', true));
         $existing = self::find_by_user($user->ID);
         $now = Alb_Settings::now_mysql();
         $fields = array(
@@ -153,6 +162,9 @@ class Alb_Drivers {
             'updated_at' => $now,
             'updated_by' => get_current_user_id(),
         );
+        if ($branch !== '') {
+            $fields['branch'] = $branch;
+        }
         global $wpdb;
         if ($existing) {
             $wpdb->update(self::table(), $fields, array('id' => (int) $existing['id']));
@@ -278,6 +290,10 @@ class Alb_Drivers {
             $where[] = 'status = %s';
             $params[] = $args['status'] === 'inactive' ? 'inactive' : 'active';
         }
+        if (!empty($args['branch'])) {
+            $where[] = 'branch = %s';
+            $params[] = Alb_Branches::normalize($args['branch']);
+        }
         $page = max(1, (int) ($args['page'] ?? 1));
         $per_page = max(10, min(200, (int) ($args['per_page'] ?? Alb_Settings::get()['items_per_page'])));
         $offset = ($page - 1) * $per_page;
@@ -374,6 +390,8 @@ class Alb_Drivers {
             'photo_url' => $photo_url,
             'email' => $row['email'],
             'employee_code' => $row['employee_code'],
+            'branch' => Alb_Branches::normalize($row['branch'] ?? ''),
+            'branch_label' => Alb_Branches::label($row['branch'] ?? ''),
             'status' => $row['status'],
             'notes' => $row['notes'],
             'created_at' => $row['created_at'],

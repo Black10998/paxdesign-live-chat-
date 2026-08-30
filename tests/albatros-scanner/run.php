@@ -70,6 +70,8 @@ alb_ok(strpos($install, "table('audit_logs')") !== false, 'schema creates audit 
 alb_ok(strpos($install, "table('scan_events')") !== false, 'schema creates scan events table');
 alb_ok(strpos($install, 'schema_ready') !== false, 'schema upgrade repairs missing scan tables');
 alb_ok(strpos($install, 'deleted_at') !== false, 'schema supports soft-delete');
+alb_ok(is_file($plugin . '/includes/class-branches.php'), 'branch helper exists');
+alb_ok(strpos($install, 'KEY branch') !== false && strpos($install, "LIKE 'branch'") !== false, 'schema stores Wien and Graz on scanners and drivers');
 alb_ok(is_file($plugin . '/includes/class-scan.php'), 'scan workflow class exists');
 alb_ok(is_file($plugin . '/templates/scan.php'), 'mobile scan template exists');
 alb_ok(strpos($scan_tpl, 'full_name') !== false && strpos($scan_tpl, 'handover.privacy_notice') !== false, 'guest handover asks for a real name and records a privacy notice');
@@ -85,6 +87,7 @@ alb_ok(strpos($employee, 'employee_accept') !== false, 'employee accept uses the
 alb_ok(strpos($photos, 'albatros-private') !== false && strpos($photos, 'Require all denied') !== false, 'employee photos are stored privately');
 alb_ok(strpos($photos, 'alb-photo/(driver|handover|user)') !== false, 'user photos are served privately');
 alb_ok(strpos($users_php, 'set_photo') !== false && strpos($users_php, 'alb_photo_path') !== false, 'user accounts store a profile photo');
+alb_ok(strpos($users_php, 'alb_branch') !== false && strpos($users_php, "['meta_key'] = 'alb_branch'") !== false, 'user accounts store and filter by Standort');
 alb_ok(strpos($drivers, 'upsert_for_user') !== false && strpos($drivers, 'user_id') !== false, 'user photos can sync to employee/driver records');
 alb_ok(is_file($device), 'handheld device illustration exists');
 $svg = (string) file_get_contents($device);
@@ -113,6 +116,9 @@ alb_ok(strpos($auth, "'action' => 'login'") === false, 'login does not append au
 alb_ok(strpos($plugin_class, 'users_can_register') !== false, 'public self-registration is disabled');
 alb_ok(strpos($scanners, 'scanners.identity') !== false, 'identity field changes are permission-checked');
 alb_ok(strpos($scanners, 'scanner.error.phone_protected') !== false, 'scanner phone number is identity-protected');
+alb_ok(preg_match('/function assign\(.+?function change_status/s', $scanners, $assign_fn) === 1 && strpos($assign_fn[0], "'phone_number'") === false, 'assignment does not overwrite the scanner SIM number');
+alb_ok(strpos($js, 'branch-tabs') !== false && strpos($js, "['wien', 'graz']") !== false && strpos($js, "t('branch.'") !== false, 'scanner and driver lists can filter by Wien or Graz');
+alb_ok(strpos($js, "esc(t('driver.phone'))") !== false && strpos($js, "kv(t('scanner.phone')") !== false, 'employee personal phone and scanner SIM are shown as separate fields');
 alb_ok(strpos($frontend, "wp_safe_redirect(home_url('/scanners/'") === false, 'QR scan is not redirected away from the scanner token');
 alb_ok(strpos($scan_class, 'maybe_record_open') !== false && strpos($scan_class, 'actor_name') !== false, 'scans store person, scanner and time');
 alb_ok(strpos($scanners, 'soft_delete') !== false && strpos($scanners, 'restore') !== false, 'scanners can be removed without erasing history');
@@ -173,6 +179,8 @@ alb_ok(($en['nav.help'] ?? '') === 'Help' && ($de['nav.help'] ?? '') === 'Hilfe'
 alb_ok(($en['about.developer'] ?? '') !== '', 'about developer label exists');
 alb_ok(($de['driver.vehicle'] ?? '') === 'Lieferfahrzeug' && ($en['driver.package'] ?? '') === 'Package', 'driver vehicle and package labels exist');
 alb_ok(($de['status.assigned'] ?? '') === 'Zugewiesen' && ($en['status.assigned'] ?? '') === 'Assigned', 'assigned device state is translated');
+alb_ok(($de['scanner.phone'] ?? '') === 'Scanner-Telefonnummer' && ($de['driver.phone'] ?? '') === 'Persönliche Telefonnummer', 'scanner SIM and personal phone labels are distinct');
+alb_ok(($de['branch.wien'] ?? '') === 'Wien' && ($de['branch.graz'] ?? '') === 'Graz', 'Wien and Graz branch labels exist');
 
 foreach (glob($plugin . '/includes/*.php') as $file) {
     $out = array();

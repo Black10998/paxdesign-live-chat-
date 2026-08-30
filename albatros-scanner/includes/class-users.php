@@ -17,6 +17,11 @@ class Alb_Users {
             $query['search'] = '*' . $q . '*';
             $query['search_columns'] = array('user_login', 'user_email', 'display_name');
         }
+        $branch = Alb_Branches::normalize($args['branch'] ?? '');
+        if ($branch !== '') {
+            $query['meta_key'] = 'alb_branch';
+            $query['meta_value'] = $branch;
+        }
         $users = get_users($query);
         $total_q = $query;
         unset($total_q['number'], $total_q['offset']);
@@ -75,6 +80,9 @@ class Alb_Users {
         Alb_Capabilities::set_status($user_id, 'active');
         if (isset($data['phone'])) {
             update_user_meta($user_id, 'alb_phone', sanitize_text_field($data['phone']));
+        }
+        if (isset($data['branch'])) {
+            update_user_meta($user_id, 'alb_branch', Alb_Branches::normalize($data['branch']));
         }
         if (Alb_Capabilities::can_assign_user_permissions($actor) && isset($data['permissions'])) {
             Alb_Capabilities::set_user_permissions($user_id, $data['permissions']);
@@ -156,6 +164,9 @@ class Alb_Users {
         if (array_key_exists('phone', $data)) {
             update_user_meta((int) $id, 'alb_phone', sanitize_text_field($data['phone']));
         }
+        if (array_key_exists('branch', $data)) {
+            update_user_meta((int) $id, 'alb_branch', Alb_Branches::normalize($data['branch']));
+        }
         if (array_key_exists('permissions', $data)) {
             if (!Alb_Capabilities::can_assign_user_permissions($actor)) {
                 return new WP_Error('alb_forbidden', Alb_I18n::t('users.error.primary_protected'), array('status' => 403));
@@ -217,6 +228,8 @@ class Alb_Users {
             'email' => $user->user_email,
             'name' => $user->display_name,
             'phone' => (string) get_user_meta($user->ID, 'alb_phone', true),
+            'branch' => Alb_Branches::normalize(get_user_meta($user->ID, 'alb_branch', true)),
+            'branch_label' => Alb_Branches::label(get_user_meta($user->ID, 'alb_branch', true)),
             'role' => Alb_Capabilities::role_of($user),
             'status' => Alb_Capabilities::status_of($user),
             'is_primary' => Alb_Capabilities::is_primary($user),

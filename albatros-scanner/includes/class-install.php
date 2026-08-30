@@ -54,7 +54,9 @@ class Alb_Install {
         $photo = $wpdb->get_var('SHOW COLUMNS FROM ' . self::table('drivers') . " LIKE 'photo_path'");
         $user_id = $wpdb->get_var('SHOW COLUMNS FROM ' . self::table('drivers') . " LIKE 'user_id'");
         $deleted = $wpdb->get_var('SHOW COLUMNS FROM ' . self::table('scanners') . " LIKE 'deleted_at'");
-        return $otp_found === $otp && $photo === 'photo_path' && $user_id === 'user_id' && $deleted === 'deleted_at';
+        $sbranch = $wpdb->get_var('SHOW COLUMNS FROM ' . self::table('scanners') . " LIKE 'branch'");
+        $dbranch = $wpdb->get_var('SHOW COLUMNS FROM ' . self::table('drivers') . " LIKE 'branch'");
+        return $otp_found === $otp && $photo === 'photo_path' && $user_id === 'user_id' && $deleted === 'deleted_at' && $sbranch === 'branch' && $dbranch === 'branch';
     }
 
     public static function table($name) {
@@ -82,6 +84,7 @@ class Alb_Install {
             model varchar(120) NOT NULL,
             serial_number varchar(120) NOT NULL,
             phone_number varchar(60) NOT NULL DEFAULT '',
+            branch varchar(20) NOT NULL DEFAULT '',
             status varchar(32) NOT NULL DEFAULT 'active',
             current_driver_id bigint(20) unsigned DEFAULT NULL,
             current_handover_id bigint(20) unsigned DEFAULT NULL,
@@ -101,6 +104,7 @@ class Alb_Install {
             KEY status (status),
             KEY current_driver_id (current_driver_id),
             KEY phone_number (phone_number),
+            KEY branch (branch),
             KEY deleted_at (deleted_at)
         ) $charset;");
 
@@ -111,6 +115,7 @@ class Alb_Install {
             phone varchar(60) NOT NULL DEFAULT '',
             email varchar(190) NOT NULL DEFAULT '',
             employee_code varchar(60) NOT NULL DEFAULT '',
+            branch varchar(20) NOT NULL DEFAULT '',
             status varchar(20) NOT NULL DEFAULT 'active',
             photo_path varchar(190) NOT NULL DEFAULT '',
             user_id bigint(20) unsigned DEFAULT NULL,
@@ -125,6 +130,7 @@ class Alb_Install {
             KEY status (status),
             KEY last_name (last_name),
             KEY employee_code (employee_code),
+            KEY branch (branch),
             KEY phone (phone),
             KEY user_id (user_id)
         ) $charset;");

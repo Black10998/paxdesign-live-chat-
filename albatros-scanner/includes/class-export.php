@@ -28,10 +28,10 @@ class Alb_Export {
     private static function rows($type) {
         if ($type === 'drivers') {
             $data = Alb_Drivers::query(array('per_page' => 200, 'page' => 1));
-            $headers = array('ID', Alb_I18n::t('driver.first_name'), Alb_I18n::t('driver.last_name'), Alb_I18n::t('driver.phone'), Alb_I18n::t('driver.email'), Alb_I18n::t('driver.employee_code'), Alb_I18n::t('common.status'));
+            $headers = array('ID', Alb_I18n::t('driver.first_name'), Alb_I18n::t('driver.last_name'), Alb_I18n::t('driver.phone'), Alb_I18n::t('driver.email'), Alb_I18n::t('driver.employee_code'), Alb_I18n::t('branch.label'), Alb_I18n::t('common.status'));
             $rows = array();
             foreach ($data['items'] as $item) {
-                $rows[] = array($item['id'], $item['first_name'], $item['last_name'], $item['phone'], $item['email'], $item['employee_code'], $item['status']);
+                $rows[] = array($item['id'], $item['first_name'], $item['last_name'], $item['phone'], $item['email'], $item['employee_code'], $item['branch_label'], $item['status']);
             }
             return array('title' => Alb_I18n::t('reports.drivers'), 'headers' => $headers, 'rows' => $rows);
         }
@@ -56,6 +56,7 @@ class Alb_Export {
             Alb_I18n::t('scanner.model'),
             Alb_I18n::t('scanner.serial'),
             Alb_I18n::t('scanner.phone'),
+            Alb_I18n::t('branch.label'),
             Alb_I18n::t('scanner.driver'),
             Alb_I18n::t('scanner.handover_date'),
             Alb_I18n::t('common.status'),
@@ -69,6 +70,7 @@ class Alb_Export {
                 $item['model'],
                 $item['serial_number'],
                 $item['phone_number'],
+                $item['branch_label'],
                 $item['driver_name'],
                 $item['handover_date_display'],
                 $item['status'],
