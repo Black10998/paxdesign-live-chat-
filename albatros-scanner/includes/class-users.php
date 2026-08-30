@@ -30,12 +30,24 @@ class Alb_Users {
         );
     }
 
+    public static function get($id) {
+        $user = get_userdata((int) $id);
+        return $user ? self::present($user) : null;
+    }
+
     public static function create($data) {
+        $actor = wp_get_current_user();
+        if (!Alb_Capabilities::user_can($actor, 'users.manage')) {
+            return new WP_Error('alb_forbidden', Alb_I18n::t('error.forbidden'), array('status' => 403));
+        }
         $username = sanitize_user($data['username'] ?? '', true);
         $email = sanitize_email($data['email'] ?? '');
         $name = sanitize_text_field($data['name'] ?? '');
         $password = (string) ($data['password'] ?? '');
-        $role = sanitize_key($data['role'] ?? Alb_Capabilities::STAFF);
+        $role = self::normalize_assignable_role($data['role'] ?? Alb_Capabilities::STAFF, $actor);
+        if (is_wp_error($role)) {
+            return $role;
+        }
         $min = (int) Alb_Settings::get()['min_password_length'];
         if ($username === '' || $email === '' || $password === '') {
             return new WP_Error('alb_invalid', Alb_I18n::t('users.error.required'), array('status' => 400));
@@ -45,9 +57,6 @@ class Alb_Users {
         }
         if (strlen($password) < $min) {
             return new WP_Error('alb_invalid', Alb_I18n::t('users.error.password_length', array('min' => $min)), array('status' => 400));
-        }
-        if (!in_array($role, Alb_Capabilities::roles(), true)) {
-            $role = Alb_Capabilities::STAFF;
         }
         if (username_exists($username) || email_exists($email)) {
             return new WP_Error('alb_conflict', Alb_I18n::t('users.error.exists'), array('status' => 409));
@@ -63,6 +72,9 @@ class Alb_Users {
             return $user_id;
         }
         Alb_Capabilities::set_role($user_id, $role);
+        if (Alb_Capabilities::can_assign_user_permissions($actor) && isset($data['permissions'])) {
+            Alb_Capabilities::set_user_permissions($user_id, $data['permissions']);
+        }
         Alb_Audit::record(array(
             'action' => 'user_create',
             'entity_type' => 'user',
@@ -74,9 +86,17 @@ class Alb_Users {
     }
 
     public static function update($id, $data) {
+        $actor = wp_get_current_user();
+        if (!Alb_Capabilities::user_can($actor, 'users.manage')) {
+            return new WP_Error('alb_forbidden', Alb_I18n::t('error.forbidden'), array('status' => 403));
+        }
         $user = get_userdata((int) $id);
         if (!$user) {
             return new WP_Error('alb_not_found', Alb_I18n::t('users.error.not_found'), array('status' => 404));
+        }
+        $target_role = Alb_Capabilities::role_of($user);
+        if ($target_role === Alb_Capabilities::SUPER_ADMIN && Alb_Capabilities::role_of($actor) !== Alb_Capabilities::SUPER_ADMIN) {
+            return new WP_Error('alb_forbidden', Alb_I18n::t('users.error.role_forbidden'), array('status' => 403));
         }
         $update = array('ID' => (int) $id);
         if (isset($data['name'])) {
@@ -101,21 +121,27 @@ class Alb_Users {
             return $result;
         }
         if (isset($data['role'])) {
-            $role = sanitize_key($data['role']);
-            if (in_array($role, Alb_Capabilities::roles(), true)) {
-                $old = Alb_Capabilities::role_of($user);
-                Alb_Capabilities::set_role($id, $role);
-                if ($old !== $role) {
-                    Alb_Audit::record(array(
-                        'action' => 'user_role',
-                        'entity_type' => 'user',
-                        'entity_id' => (int) $id,
-                        'field' => 'role',
-                        'old' => $old,
-                        'new' => $role,
-                    ));
-                }
+            $role = self::normalize_assignable_role($data['role'], $actor);
+            if (is_wp_error($role)) {
+                return $role;
             }
+            if ($target_role === Alb_Capabilities::SUPER_ADMIN && $role !== Alb_Capabilities::SUPER_ADMIN && self::super_admin_count() <= 1) {
+                return new WP_Error('alb_forbidden', Alb_I18n::t('users.error.last_super'), array('status' => 403));
+            }
+            if ($target_role !== $role) {
+                Alb_Capabilities::set_role($id, $role);
+                Alb_Audit::record(array(
+                    'action' => 'user_role',
+                    'entity_type' => 'user',
+                    'entity_id' => (int) $id,
+                    'field' => 'role',
+                    'old' => $target_role,
+                    'new' => $role,
+                ));
+            }
+        }
+        if (Alb_Capabilities::can_assign_user_permissions($actor) && array_key_exists('permissions', $data)) {
+            Alb_Capabilities::set_user_permissions($id, $data['permissions']);
         }
         return self::present(get_userdata((int) $id));
     }
@@ -127,6 +153,29 @@ class Alb_Users {
             'email' => $user->user_email,
             'name' => $user->display_name,
             'role' => Alb_Capabilities::role_of($user),
+            'last_login' => Alb_Auth::last_login($user->ID),
+            'last_login_display' => Alb_Auth::last_login_display($user->ID),
+            'permissions' => Alb_Capabilities::user_permissions($user),
         );
+    }
+
+    private static function normalize_assignable_role($role, $actor) {
+        $role = sanitize_key($role);
+        if (!in_array($role, Alb_Capabilities::roles(), true)) {
+            $role = Alb_Capabilities::STAFF;
+        }
+        if (!in_array($role, Alb_Capabilities::assignable_roles($actor), true)) {
+            return new WP_Error('alb_forbidden', Alb_I18n::t('users.error.role_forbidden'), array('status' => 403));
+        }
+        return $role;
+    }
+
+    private static function super_admin_count() {
+        $users = get_users(array(
+            'meta_key' => Alb_Capabilities::ROLE_META,
+            'meta_value' => Alb_Capabilities::SUPER_ADMIN,
+            'fields' => 'ID',
+        ));
+        return count($users);
     }
 }

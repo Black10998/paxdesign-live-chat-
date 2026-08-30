@@ -174,9 +174,16 @@ class Alb_Rest {
             ),
         ));
         register_rest_route(self::NS, '/users/(?P<id>\d+)', array(
-            'methods' => 'POST',
-            'callback' => array(__CLASS__, 'update_user'),
-            'permission_callback' => array(__CLASS__, 'can_users_manage'),
+            array(
+                'methods' => 'GET',
+                'callback' => array(__CLASS__, 'get_user'),
+                'permission_callback' => array(__CLASS__, 'can_users_view'),
+            ),
+            array(
+                'methods' => 'POST',
+                'callback' => array(__CLASS__, 'update_user'),
+                'permission_callback' => array(__CLASS__, 'can_users_manage'),
+            ),
         ));
         register_rest_route(self::NS, '/settings', array(
             array(
@@ -219,7 +226,8 @@ class Alb_Rest {
         return Alb_Capabilities::current_user_can('scanners.create');
     }
     public static function can_scanners_edit() {
-        return Alb_Capabilities::current_user_can('scanners.edit');
+        return Alb_Capabilities::current_user_can('scanners.edit')
+            || Alb_Capabilities::current_user_can('scanners.identity');
     }
     public static function can_scanners_assign() {
         return Alb_Capabilities::current_user_can('scanners.assign');
@@ -250,7 +258,7 @@ class Alb_Rest {
         return Alb_Capabilities::current_user_can('audit.view');
     }
     public static function can_users_view() {
-        return Alb_Capabilities::current_user_can('users.view');
+        return Alb_Capabilities::current_user_can('users.view') || Alb_Capabilities::current_user_can('users.manage');
     }
     public static function can_users_manage() {
         return Alb_Capabilities::current_user_can('users.manage');
@@ -307,6 +315,8 @@ class Alb_Rest {
             'statuses' => Alb_Scanners::statuses(),
             'roles' => Alb_Capabilities::roles(),
             'permission_keys' => Alb_Capabilities::permission_keys(),
+            'assignable_roles' => Alb_Capabilities::assignable_roles(),
+            'can_assign_permissions' => Alb_Capabilities::can_assign_user_permissions(),
             'driver_options' => Alb_Capabilities::current_user_can('drivers.view') ? Alb_Drivers::options() : array(),
         ));
     }
@@ -316,7 +326,7 @@ class Alb_Rest {
             'counts' => Alb_Scanners::counts(),
             'recent_handovers' => Alb_Scanners::recent_handovers(8),
             'recent_activity' => Alb_Capabilities::current_user_can('audit.view')
-                ? Alb_Audit::query(array('per_page' => 8, 'page' => 1))['items']
+                ? Alb_Audit::query(array('per_page' => 8, 'page' => 1, 'exclude_actions' => array('login', 'logout')))['items']
                 : array(),
         ));
     }
@@ -545,6 +555,14 @@ class Alb_Rest {
 
     public static function list_users(WP_REST_Request $request) {
         return rest_ensure_response(Alb_Users::list_users($request->get_params()));
+    }
+
+    public static function get_user(WP_REST_Request $request) {
+        $item = Alb_Users::get((int) $request['id']);
+        if (!$item) {
+            return self::respond(new WP_Error('alb_not_found', Alb_I18n::t('users.error.not_found'), array('status' => 404)));
+        }
+        return rest_ensure_response($item);
     }
 
     public static function create_user(WP_REST_Request $request) {

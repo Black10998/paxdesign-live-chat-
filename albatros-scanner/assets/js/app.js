@@ -107,7 +107,9 @@
   }
   function header() {
     document.getElementById('global-search').placeholder = t('header.search');
-    document.getElementById('current-user').textContent = user.name || user.username || '';
+    var who = document.getElementById('current-user');
+    who.textContent = user.name || user.username || '';
+    who.title = user.last_login_display ? (t('users.last_login') + ': ' + user.last_login_display) : '';
     document.getElementById('logout-btn').textContent = t('nav.logout');
     var sel = document.getElementById('lang-switch');
     sel.innerHTML = (A.locales || ['de', 'en', 'tr']).map(function (loc) {
@@ -362,7 +364,7 @@
         kv(t('common.status'), statusLabel(s.status)) +
         kv(t('common.notes'), s.notes || '') +
         '</div>' +
-        (can('scanners.edit') || can('scanners.assign') || can('scanners.status') || can('scanners.delete') ? renderScannerActions(s) : '') +
+        (can('scanners.edit') || can('scanners.identity') || can('scanners.assign') || can('scanners.status') || can('scanners.delete') ? renderScannerActions(s) : '') +
         '</div>' +
         '<div>' +
         (can('qr.view') ? '<div class="card"><h2>' + esc(t('scanner.qr')) + '</h2><div class="qr-box"><div id="qr"></div><div class="hint">' + esc(t('scanner.qr_hint')) + '</div><div id="qr-url">' + esc(s.qr_url) + '</div>' +
@@ -417,9 +419,16 @@
     }
     html += '</div>';
     html += '<form id="scanner-edit" class="form-grid">';
-    if (can('scanners.edit')) {
-      html += field('phone_number', t('scanner.phone'), 'text', s.phone_number, false);
-      html += '<div class="field wide"><label>' + esc(t('common.notes')) + '</label><textarea name="notes">' + esc(s.notes || '') + '</textarea></div>';
+    if (can('scanners.edit') || can('scanners.identity')) {
+      if (can('scanners.identity')) {
+        html += field('brand', t('scanner.brand'), 'text', s.brand, false);
+        html += field('model', t('scanner.model'), 'text', s.model, false);
+        html += field('serial_number', t('scanner.serial'), 'text', s.serial_number, false);
+      }
+      if (can('scanners.edit')) {
+        html += field('phone_number', t('scanner.phone'), 'text', s.phone_number, false);
+        html += '<div class="field wide"><label>' + esc(t('common.notes')) + '</label><textarea name="notes">' + esc(s.notes || '') + '</textarea></div>';
+      }
       html += '<div class="wide"><button class="btn" type="submit">' + esc(t('common.save')) + '</button></div>';
     }
     html += '</form>';
@@ -444,7 +453,13 @@
       edit.onsubmit = function (e) {
         e.preventDefault();
         var fd = new FormData(edit);
-        api('scanners/' + s.id, { method: 'POST', body: { phone_number: fd.get('phone_number'), notes: fd.get('notes') } })
+        var body = { phone_number: fd.get('phone_number'), notes: fd.get('notes') };
+        if (can('scanners.identity')) {
+          body.brand = fd.get('brand');
+          body.model = fd.get('model');
+          body.serial_number = fd.get('serial_number');
+        }
+        api('scanners/' + s.id, { method: 'POST', body: body })
           .then(function () { renderScannerDetail(s.id); }).catch(showError);
       };
     }
@@ -563,29 +578,83 @@
     }).catch(showError);
   }
 
+  function roleOptions(selected) {
+    var roles = A.assignable_roles || A.roles || [];
+    return roles.map(function (r) {
+      return '<option value="' + r + '"' + (selected === r ? ' selected' : '') + '>' + esc(t('role.' + r)) + '</option>';
+    }).join('');
+  }
+  function userPermBoxes(selected) {
+    selected = selected || {};
+    return '<div class="wide"><h2>' + esc(t('users.permissions')) + '</h2><p class="hint">' + esc(t('users.permissions_hint')) + '</p></div>' +
+      '<div class="wide perm-user">' + (A.permission_keys || []).map(function (key) {
+        return '<label class="row-check"><input type="checkbox" name="perm_' + key + '" value="1"' + (selected[key] ? ' checked' : '') + '><span>' + esc(t('perm.' + key)) + '</span></label>';
+      }).join('') + '</div>';
+  }
+  function collectUserBody(form) {
+    var body = {};
+    var perms = {};
+    var hasPerm = false;
+    new FormData(form).forEach(function (v, k) {
+      if (k.indexOf('perm_') === 0) {
+        perms[k.slice(5)] = true;
+        hasPerm = true;
+      } else {
+        body[k] = v;
+      }
+    });
+    if (A.can_assign_permissions) {
+      body.permissions = perms;
+    }
+    return body;
+  }
   function renderUsers() {
     root.innerHTML = '<p>' + esc(t('common.loading')) + '</p>';
     api('users').then(function (data) {
       var rows = (data.items || []).map(function (u) {
-        return '<tr><td>' + esc(u.name) + '</td><td>' + esc(u.username) + '</td><td>' + esc(u.email) + '</td><td>' + esc(t('role.' + u.role)) + '</td></tr>';
-      }).join('') || emptyRow(4);
+        return '<tr class="click" data-go="/users/' + u.id + '"><td>' + esc(u.name) + '</td><td>' + esc(u.username) + '</td><td>' + esc(u.email) + '</td><td>' + esc(t('role.' + u.role)) + '</td><td>' + esc(u.last_login_display || '—') + '</td></tr>';
+      }).join('') || emptyRow(5);
       var form = can('users.manage') ? '<form id="user-form" class="card form-grid"><div class="wide"><h2>' + esc(t('users.new')) + '</h2></div>' +
         field('name', t('users.name'), 'text', '') +
         field('username', t('users.username'), 'text', '') +
         field('email', t('driver.email'), 'email', '') +
         field('password', t('users.password'), 'password', '') +
-        '<div class="field"><label>' + esc(t('users.role')) + '</label><select name="role">' +
-        (A.roles || []).map(function (r) { return '<option value="' + r + '">' + esc(t('role.' + r)) + '</option>'; }).join('') +
-        '</select></div><div class="wide"><button class="btn" type="submit">' + esc(t('common.create')) + '</button></div></form>' : '';
+        '<div class="field"><label>' + esc(t('users.role')) + '</label><select name="role">' + roleOptions('staff') + '</select></div>' +
+        (A.can_assign_permissions ? userPermBoxes({}) : '') +
+        '<div class="wide"><button class="btn" type="submit">' + esc(t('common.create')) + '</button></div></form>' : '';
       root.innerHTML = '<div class="page-head"><h1>' + esc(t('users.title')) + '</h1></div>' + form +
-        '<div class="card"><table class="data"><thead><tr><th>' + esc(t('users.name')) + '</th><th>' + esc(t('users.username')) + '</th><th>' + esc(t('driver.email')) + '</th><th>' + esc(t('users.role')) + '</th></tr></thead><tbody>' + rows + '</tbody></table></div>';
+        '<div class="card"><table class="data"><thead><tr><th>' + esc(t('users.name')) + '</th><th>' + esc(t('users.username')) + '</th><th>' + esc(t('driver.email')) + '</th><th>' + esc(t('users.role')) + '</th><th>' + esc(t('users.last_login')) + '</th></tr></thead><tbody>' + rows + '</tbody></table></div>';
       var uf = document.getElementById('user-form');
       if (uf) {
         uf.onsubmit = function (e) {
           e.preventDefault();
-          var body = {};
-          new FormData(uf).forEach(function (v, k) { body[k] = v; });
-          api('users', { method: 'POST', body: body }).then(function () { renderUsers(); }).catch(showError);
+          api('users', { method: 'POST', body: collectUserBody(uf) }).then(function () { renderUsers(); }).catch(showError);
+        };
+      }
+    }).catch(showError);
+  }
+  function renderUserDetail(id) {
+    if (!can('users.manage') && !can('users.view')) {
+      root.innerHTML = '<div class="msg msg-error">' + esc(t('error.forbidden')) + '</div>';
+      return;
+    }
+    root.innerHTML = '<p>' + esc(t('common.loading')) + '</p>';
+    api('users/' + id).then(function (u) {
+      var form = can('users.manage') ? '<form id="user-edit" class="card form-grid"><div class="wide"><h2>' + esc(t('users.edit')) + '</h2></div>' +
+        field('name', t('users.name'), 'text', u.name) +
+        field('email', t('driver.email'), 'email', u.email) +
+        field('password', t('users.password'), 'password', '') +
+        '<div class="field"><label>' + esc(t('users.role')) + '</label><select name="role">' + roleOptions(u.role) + '</select></div>' +
+        '<div class="field"><label>' + esc(t('users.last_login')) + '</label><input type="text" value="' + esc(u.last_login_display || '—') + '" readonly class="readonly"></div>' +
+        (A.can_assign_permissions ? userPermBoxes(u.permissions || {}) : '') +
+        '<div class="wide"><button class="btn" type="submit">' + esc(t('common.save')) + '</button></div></form>' :
+        '<div class="card"><div class="kv">' + kv(t('users.name'), u.name) + kv(t('users.username'), u.username) + kv(t('driver.email'), u.email) + kv(t('users.role'), t('role.' + u.role)) + kv(t('users.last_login'), u.last_login_display || '—') + '</div></div>';
+      root.innerHTML = '<div class="page-head"><h1>' + esc(u.name || u.username) + '</h1><button class="btn btn-sec" data-go="/users">' + esc(t('common.back')) + '</button></div>' + form;
+      var uf = document.getElementById('user-edit');
+      if (uf) {
+        uf.onsubmit = function (e) {
+          e.preventDefault();
+          api('users/' + id, { method: 'POST', body: collectUserBody(uf) }).then(function () { renderUserDetail(id); }).catch(showError);
         };
       }
     }).catch(showError);
@@ -631,7 +700,7 @@
           p.roles.map(function (r) { return '<th>' + esc(t('role.' + r)) + '</th>'; }).join('') + '</tr></thead><tbody>' +
           p.keys.map(function (key) {
             return '<tr><td>' + esc(t('perm.' + key)) + '</td>' + p.roles.map(function (r) {
-              var locked = r === 'super_admin' || r === 'staff';
+              var locked = r === 'super_admin';
               return '<td><input type="checkbox" data-role="' + r + '" data-key="' + key + '"' + (p.map[r][key] ? ' checked' : '') + (locked ? ' disabled' : '') + '></td>';
             }).join('') + '</tr>';
           }).join('') + '</tbody></table><div style="padding:12px"><button class="btn" type="submit">' + esc(t('common.save')) + '</button></div></form>';
@@ -711,6 +780,7 @@
     if (p[0] === 'drivers' && p[1]) return renderDriverDetail(p[1]);
     if (p[0] === 'drivers') return renderDrivers({});
     if (p[0] === 'audit') return renderAudit({});
+    if (p[0] === 'users' && p[1]) return renderUserDetail(p[1]);
     if (p[0] === 'users') return renderUsers();
     if (p[0] === 'settings') return renderSettings();
     if (p[0] === 'reports') return renderReports();
@@ -779,6 +849,9 @@
     if (boot.user) user = boot.user;
     if (boot.i18n) i18n = boot.i18n;
     A.locale = boot.locale || A.locale;
+    if (boot.assignable_roles) A.assignable_roles = boot.assignable_roles;
+    if (typeof boot.can_assign_permissions !== 'undefined') A.can_assign_permissions = boot.can_assign_permissions;
+    if (boot.permission_keys) A.permission_keys = boot.permission_keys;
     state.drivers = boot.driver_options || [];
     render();
   }).catch(function () {

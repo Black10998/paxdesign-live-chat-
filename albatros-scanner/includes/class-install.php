@@ -37,7 +37,8 @@ class Alb_Install {
             self::create_tables();
             update_option('alb_scanner_db_version', ALB_SCANNER_DB_VERSION, false);
         }
-        Alb_Capabilities::lock_staff();
+        Alb_Capabilities::sync_stored_map();
+        update_option('users_can_register', 0, false);
         Alb_Photos::dir();
     }
 

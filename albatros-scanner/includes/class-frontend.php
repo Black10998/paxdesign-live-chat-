@@ -303,6 +303,8 @@ class Alb_Frontend {
             'statuses' => Alb_Scanners::statuses(),
             'roles' => Alb_Capabilities::roles(),
             'permission_keys' => Alb_Capabilities::permission_keys(),
+            'assignable_roles' => Alb_Capabilities::assignable_roles(),
+            'can_assign_permissions' => Alb_Capabilities::can_assign_user_permissions(),
             'path' => '/' . self::path(),
         );
         include ALB_SCANNER_PLUGIN_DIR . 'templates/app.php';

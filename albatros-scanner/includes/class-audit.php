@@ -58,6 +58,15 @@ class Alb_Audit {
             $where[] = 'driver_id = %d';
             $params[] = (int) $args['driver_id'];
         }
+        $exclude = isset($args['exclude_actions']) ? (array) $args['exclude_actions'] : array('login', 'logout');
+        $exclude = array_values(array_filter(array_map('sanitize_key', $exclude)));
+        if ($exclude) {
+            $placeholders = implode(',', array_fill(0, count($exclude), '%s'));
+            $where[] = "action NOT IN ($placeholders)";
+            foreach ($exclude as $action) {
+                $params[] = $action;
+            }
+        }
         $page = max(1, (int) ($args['page'] ?? 1));
         $per_page = max(10, min(200, (int) ($args['per_page'] ?? Alb_Settings::get()['items_per_page'])));
         $offset = ($page - 1) * $per_page;

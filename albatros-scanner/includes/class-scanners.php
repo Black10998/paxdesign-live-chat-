@@ -79,13 +79,32 @@ class Alb_Scanners {
         if (!empty($current['deleted_at'])) {
             return new WP_Error('alb_deleted', Alb_I18n::t('scanner.error.deleted'), array('status' => 400));
         }
+        $can_identity = Alb_Capabilities::user_can((int) $user_id, 'scanners.identity');
         foreach (self::IMMUTABLE as $field) {
-            if (array_key_exists($field, $data) && (string) $data[$field] !== (string) $current[$field]) {
-                return new WP_Error('alb_immutable', Alb_I18n::t('scanner.error.immutable'), array('status' => 400));
+            if (array_key_exists($field, $data) && (string) $data[$field] !== (string) $current[$field] && !$can_identity) {
+                return new WP_Error('alb_immutable', Alb_I18n::t('scanner.error.immutable'), array('status' => 403));
             }
         }
         $fields = array();
         $changes = array();
+        if ($can_identity) {
+            foreach (self::IMMUTABLE as $field) {
+                if (!array_key_exists($field, $data)) {
+                    continue;
+                }
+                $value = sanitize_text_field($data[$field]);
+                if ($value === '') {
+                    return new WP_Error('alb_invalid', Alb_I18n::t('scanner.error.identity_required'), array('status' => 400));
+                }
+                if ($field === 'serial_number' && $value !== (string) $current['serial_number'] && self::find_by_serial($value)) {
+                    return new WP_Error('alb_conflict', Alb_I18n::t('scanner.error.serial_exists'), array('status' => 409));
+                }
+                if ($value !== (string) $current[$field]) {
+                    $fields[$field] = $value;
+                    $changes[$field] = array($current[$field], $value);
+                }
+            }
+        }
         if (array_key_exists('phone_number', $data)) {
             $value = sanitize_text_field($data['phone_number']);
             if ($value !== (string) $current['phone_number']) {

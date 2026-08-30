@@ -7,6 +7,7 @@ if (!defined('ABSPATH')) {
 class Alb_Capabilities {
     const ROLE_META = 'alb_role';
     const PERMS_OPTION = 'alb_role_permissions';
+    const USER_PERMS = 'alb_permissions';
 
     const SUPER_ADMIN = 'super_admin';
     const ADMINISTRATOR = 'administrator';
@@ -22,6 +23,7 @@ class Alb_Capabilities {
             'scanners.view',
             'scanners.create',
             'scanners.edit',
+            'scanners.identity',
             'scanners.assign',
             'scanners.status',
             'scanners.delete',
@@ -50,6 +52,7 @@ class Alb_Capabilities {
         $admin['settings.manage'] = false;
         $admin['audit.view'] = false;
         $admin['scanners.delete'] = false;
+        $admin['scanners.identity'] = false;
         $staff = array_fill_keys(self::permission_keys(), false);
         return array(
             self::SUPER_ADMIN => $all,
@@ -69,7 +72,6 @@ class Alb_Capabilities {
             $stored[$role] = array_merge($perms, array_intersect_key($stored[$role], $perms));
         }
         $stored[self::SUPER_ADMIN] = array_fill_keys(self::permission_keys(), true);
-        $stored[self::STAFF] = array_fill_keys(self::permission_keys(), false);
         return $stored;
     }
 
@@ -112,6 +114,32 @@ class Alb_Capabilities {
         return $role;
     }
 
+    public static function user_permissions($user) {
+        $user = self::resolve_user($user);
+        if (!$user) {
+            return array();
+        }
+        $stored = get_user_meta($user->ID, self::USER_PERMS, true);
+        return is_array($stored) ? $stored : array();
+    }
+
+    public static function set_user_permissions($user_id, $permissions) {
+        $clean = array();
+        if (is_array($permissions)) {
+            foreach (self::permission_keys() as $key) {
+                if (array_key_exists($key, $permissions)) {
+                    $clean[$key] = !empty($permissions[$key]);
+                }
+            }
+        }
+        if ($clean) {
+            update_user_meta((int) $user_id, self::USER_PERMS, $clean);
+        } else {
+            delete_user_meta((int) $user_id, self::USER_PERMS);
+        }
+        return $clean;
+    }
+
     public static function user_can($user, $permission) {
         $user = self::resolve_user($user);
         if (!$user) {
@@ -121,6 +149,10 @@ class Alb_Capabilities {
         if ($role === self::SUPER_ADMIN) {
             return true;
         }
+        $overrides = self::user_permissions($user);
+        if (array_key_exists($permission, $overrides)) {
+            return !empty($overrides[$permission]);
+        }
         $map = self::map();
         return !empty($map[$role][$permission]);
     }
@@ -129,15 +161,48 @@ class Alb_Capabilities {
         return self::user_can(wp_get_current_user(), $permission);
     }
 
+    public static function has_any_permission($user = null) {
+        $user = self::resolve_user($user === null ? wp_get_current_user() : $user);
+        if (!$user) {
+            return false;
+        }
+        foreach (self::permission_keys() as $key) {
+            if (self::user_can($user, $key)) {
+                return true;
+            }
+        }
+        return false;
+    }
+
     public static function can_use_admin_app($user = null) {
-        $role = self::role_of($user === null ? wp_get_current_user() : $user);
-        return in_array($role, array(self::SUPER_ADMIN, self::ADMINISTRATOR), true);
+        $user = $user === null ? wp_get_current_user() : $user;
+        $role = self::role_of($user);
+        if ($role === self::SUPER_ADMIN || $role === self::ADMINISTRATOR) {
+            return true;
+        }
+        return self::has_any_permission($user);
+    }
+
+    public static function assignable_roles($actor = null) {
+        $actor = self::resolve_user($actor === null ? wp_get_current_user() : $actor);
+        if (self::role_of($actor) === self::SUPER_ADMIN) {
+            return self::roles();
+        }
+        return array(self::STAFF);
+    }
+
+    public static function can_assign_user_permissions($actor = null) {
+        $actor = $actor === null ? wp_get_current_user() : $actor;
+        return self::role_of($actor) === self::SUPER_ADMIN || self::user_can($actor, 'roles.manage');
+    }
+
+    public static function sync_stored_map() {
+        update_option(self::PERMS_OPTION, self::map(), false);
+        return self::map();
     }
 
     public static function lock_staff() {
-        $map = self::map();
-        update_option(self::PERMS_OPTION, $map, false);
-        return $map;
+        return self::sync_stored_map();
     }
 
     public static function require_login() {

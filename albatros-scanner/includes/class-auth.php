@@ -27,27 +27,11 @@ class Alb_Auth {
         wp_set_current_user($user->ID);
         Alb_Capabilities::bootstrap_user($user->ID);
         self::clear_failures();
-        Alb_Audit::record(array(
-            'action' => 'login',
-            'entity_type' => 'user',
-            'entity_id' => (int) $user->ID,
-            'field' => 'session',
-            'new' => 'login',
-        ));
+        update_user_meta((int) $user->ID, 'alb_last_login', Alb_Settings::now_mysql());
         return self::current_payload();
     }
 
     public static function logout() {
-        $user_id = get_current_user_id();
-        if ($user_id) {
-            Alb_Audit::record(array(
-                'action' => 'logout',
-                'entity_type' => 'user',
-                'entity_id' => $user_id,
-                'field' => 'session',
-                'new' => 'logout',
-            ));
-        }
         wp_logout();
         return array('ok' => true);
     }
@@ -85,6 +69,8 @@ class Alb_Auth {
             'name' => $user->display_name,
             'role' => $role,
             'locale' => Alb_I18n::current(),
+            'last_login' => self::last_login($user->ID),
+            'last_login_display' => self::last_login_display($user->ID),
             'permissions' => $perms,
             'nonce' => wp_create_nonce('wp_rest'),
         );
@@ -99,6 +85,16 @@ class Alb_Auth {
             Alb_I18n::set_locale($data['locale'], $user_id);
         }
         return self::current_payload();
+    }
+
+    public static function last_login($user_id) {
+        $value = (string) get_user_meta((int) $user_id, 'alb_last_login', true);
+        return $value !== '' ? $value : '';
+    }
+
+    public static function last_login_display($user_id) {
+        $value = self::last_login($user_id);
+        return $value !== '' ? Alb_Settings::format_datetime($value) : '';
     }
 
     public static function expose_login_cookie($cookie) {
