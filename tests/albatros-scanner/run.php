@@ -96,6 +96,7 @@ alb_ok(strpos($caps, 'scanners.identity') !== false, 'identity permission exists
 alb_ok(strpos($caps, "PRIMARY_EMAIL = 'sarah.gta1995@gmail.com'") !== false, 'sarah is the hardcoded primary manager');
 alb_ok(strpos($caps, 'SCANNER_ADMIN') !== false && strpos($caps, 'scanner_admin') !== false, 'scanner administrator role exists');
 alb_ok(strpos($caps, 'privileged_keys') !== false && strpos($caps, 'ensure_primary') !== false, 'primary manager lock and privileged keys exist');
+alb_ok(strpos($caps, 'SCHEMA_VERSION') !== false && strpos($caps, 'unset($overrides[$key])') !== false, 'schema upgrade strips leftover privileged overrides');
 alb_ok(strpos($caps, 'extra_permission_keys') !== false, 'optional extra rights stay small');
 alb_ok(strpos($caps, 'USER_PERMS') !== false, 'per-user permissions exist');
 alb_ok(strpos($caps, 'assignable_roles') !== false, 'user creation roles are restricted');

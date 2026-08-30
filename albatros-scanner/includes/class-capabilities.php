@@ -10,7 +10,7 @@ class Alb_Capabilities {
     const USER_PERMS = 'alb_permissions';
     const PRIMARY_EMAIL = 'sarah.gta1995@gmail.com';
     const SCHEMA_OPTION = 'alb_role_schema';
-    const SCHEMA_VERSION = 3;
+    const SCHEMA_VERSION = 4;
 
     const SUPER_ADMIN = 'super_admin';
     const ADMINISTRATOR = 'administrator';
@@ -162,6 +162,7 @@ class Alb_Capabilities {
             delete_user_meta($primary->ID, self::USER_PERMS);
             update_user_meta($primary->ID, 'alb_status', 'active');
         }
+        $reset = (int) get_option(self::SCHEMA_OPTION, 0) < self::SCHEMA_VERSION;
         foreach (get_users(array('fields' => 'all')) as $user) {
             if (self::is_primary($user)) {
                 continue;
@@ -170,9 +171,31 @@ class Alb_Capabilities {
             if ($role === self::SUPER_ADMIN || ($role === '' && user_can($user, 'manage_options'))) {
                 self::set_role($user->ID, self::ADMINISTRATOR);
                 delete_user_meta($user->ID, self::USER_PERMS);
+                continue;
+            }
+            if (!$reset) {
+                continue;
+            }
+            $overrides = self::user_permissions($user);
+            if (!$overrides) {
+                continue;
+            }
+            $changed = false;
+            foreach (self::privileged_keys() as $key) {
+                if (!empty($overrides[$key])) {
+                    unset($overrides[$key]);
+                    $changed = true;
+                }
+            }
+            if ($changed) {
+                if ($overrides) {
+                    update_user_meta($user->ID, self::USER_PERMS, $overrides);
+                } else {
+                    delete_user_meta($user->ID, self::USER_PERMS);
+                }
             }
         }
-        if ((int) get_option(self::SCHEMA_OPTION, 0) < self::SCHEMA_VERSION) {
+        if ($reset) {
             update_option(self::PERMS_OPTION, self::defaults(), false);
             update_option(self::SCHEMA_OPTION, self::SCHEMA_VERSION, false);
         }
