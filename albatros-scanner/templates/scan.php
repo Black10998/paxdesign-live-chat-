@@ -10,7 +10,6 @@ $otp = $config['otp'] ?? null;
 $accepted = !empty($config['accepted']);
 $sms_ready = !empty($config['sms_ready']);
 $perms = $config['permissions'] ?? array();
-$history = $history ?? array();
 $public_status = $scanner ? ($i18n['status.' . $scanner['status']] ?? $scanner['status']) : '';
 ?><!doctype html>
 <html lang="<?php echo esc_attr($locale); ?>">
