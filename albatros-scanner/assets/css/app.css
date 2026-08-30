@@ -149,7 +149,7 @@ input:focus, select:focus, textarea:focus { outline: 1px solid var(--focus); bor
 }
 .brand strong { display: block; color: #fff; font-size: 14px; }
 .brand span { font-size: 11px; color: #93a0ad; }
-.nav { padding: 10px 0; flex: 1; }
+.nav { padding: 8px 0; flex: 1; }
 .sidebar-foot {
   padding: 12px 16px 16px;
   border-top: 1px solid var(--sidebar-line);
@@ -160,13 +160,15 @@ input:focus, select:focus, textarea:focus { outline: 1px solid var(--focus); bor
 .sidebar-foot span { display: block; }
 .sidebar-foot a { color: #8aa4b8; }
 .nav a, .nav button.nav-link {
-  display: block;
+  display: flex;
+  align-items: center;
+  gap: 10px;
   width: 100%;
   text-align: left;
   background: none;
   border: 0;
   color: var(--sidebar-text);
-  padding: 8px 16px;
+  padding: 8px 14px;
   border-left: 3px solid transparent;
 }
 .nav a.active, .nav button.nav-link.active {
@@ -175,10 +177,17 @@ input:focus, select:focus, textarea:focus { outline: 1px solid var(--focus); bor
   border-left-color: #8aa4b8;
 }
 .nav a:hover, .nav button.nav-link:hover { color: #fff; }
+.nav-icon {
+  width: 18px;
+  height: 18px;
+  flex: 0 0 18px;
+  display: block;
+}
+.nav-label { min-width: 0; }
 
 .main { flex: 1; min-width: 0; display: flex; flex-direction: column; }
 .topbar {
-  height: 48px;
+  min-height: 48px;
   background: #fff;
   border-bottom: 1px solid var(--line);
   display: flex;
@@ -186,14 +195,57 @@ input:focus, select:focus, textarea:focus { outline: 1px solid var(--focus); bor
   gap: 12px;
   padding: 0 16px;
 }
-.topbar .search { flex: 1; max-width: 420px; }
-.top-user { margin-left: auto; display: flex; align-items: center; gap: 12px; color: var(--muted); }
+.page-context {
+  flex: 0 1 220px;
+  min-width: 0;
+  font-weight: 600;
+  color: var(--text);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.topbar .search {
+  flex: 1 1 160px;
+  min-width: 120px;
+  max-width: 360px;
+}
+.header-help {
+  flex: 0 0 auto;
+  gap: 6px;
+  height: 32px;
+  white-space: nowrap;
+}
+.ui-icon { display: block; flex: 0 0 auto; }
+.top-user { margin-left: auto; display: flex; align-items: center; gap: 12px; color: var(--muted); flex: 0 0 auto; }
 .top-user select { width: auto; height: 28px; }
 .header-logo {
   height: 28px;
   width: auto;
   display: block;
+  flex: 0 0 auto;
 }
+.visually-hidden {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  padding: 0;
+  margin: -1px;
+  overflow: hidden;
+  clip: rect(0, 0, 0, 0);
+  border: 0;
+}
+.help-block {
+  padding: 14px 16px;
+  border-bottom: 1px solid var(--line);
+}
+.help-block:last-child { border-bottom: 0; }
+.help-block h2 { padding: 0; border: 0; background: none; margin: 0 0 8px; }
+.help-block p, .help-block li { margin: 0 0 8px; color: var(--text); }
+.help-block ul { margin: 0; padding: 0 0 0 18px; }
+.help-faq dt { font-weight: 600; margin: 10px 0 4px; }
+.help-faq dd { margin: 0 0 8px; color: var(--muted); }
+.about-block { color: var(--muted); }
+.about-block a { color: var(--accent); }
 
 .content { padding: 16px; }
 
@@ -375,9 +427,32 @@ table.data tbody tr.click { cursor: pointer; }
   .kpis { grid-template-columns: repeat(3, minmax(0, 1fr)); }
   .grid-2, .detail, .form-grid { grid-template-columns: 1fr; }
 }
+@media (max-width: 900px) {
+  .app { flex-direction: column; }
+  .sidebar { width: 100%; }
+  .brand { display: none; }
+  .nav {
+    display: flex;
+    overflow-x: auto;
+    padding: 0;
+  }
+  .nav a, .nav button.nav-link {
+    flex: 0 0 auto;
+    border-left: 0;
+    border-bottom: 3px solid transparent;
+    padding: 8px 12px;
+  }
+  .nav a.active, .nav button.nav-link.active {
+    border-left-color: transparent;
+    border-bottom-color: #8aa4b8;
+  }
+  .sidebar-foot { display: none; }
+}
 @media (max-width: 700px) {
   .kpis { grid-template-columns: repeat(2, minmax(0, 1fr)); }
   .topbar { height: auto; padding: 8px 12px; flex-wrap: wrap; }
+  .page-context { flex: 1 1 100%; order: -1; }
+  .topbar .search { max-width: none; flex: 1 1 140px; }
   .content { padding: 12px; }
   table.data { display: block; overflow-x: auto; }
 }

@@ -123,31 +123,74 @@
   function emptyRow(cols) {
     return '<tr><td colspan="' + cols + '">' + esc(t('common.empty')) + '</td></tr>';
   }
+  function icon(name) {
+    var paths = {
+      dashboard: '<path d="M4 4h7v7H4zM13 4h7v4h-7zM13 10h7v10h-7zM4 13h7v7H4z"/>',
+      scanners: '<rect x="6" y="3" width="12" height="18" rx="1"/><path d="M9 7h6M9 10h6M9 13h4M10 17h4"/>',
+      drivers: '<circle cx="9" cy="8" r="2.5"/><path d="M4.5 18c.4-3 2.3-4.5 4.5-4.5S13.1 15 13.5 18"/><circle cx="16" cy="8.5" r="2"/><path d="M15 13.6c1.8.2 3.3 1.5 3.6 4.4"/>',
+      audit: '<path d="M7 3h8l3 3v15H7z"/><path d="M15 3v4h4M9 12h6M9 15h6"/>',
+      reports: '<path d="M5 19V9M10 19V5M15 19v-7M20 19H4"/>',
+      users: '<circle cx="12" cy="8" r="3"/><path d="M5.5 19c.7-3.4 3-5 6.5-5s5.8 1.6 6.5 5"/>',
+      settings: '<circle cx="12" cy="12" r="3"/><path d="M12 4v2.2M12 17.8V20M4 12h2.2M17.8 12H20M6.4 6.4l1.6 1.6M16 16l1.6 1.6M17.6 6.4 16 8M8 16l-1.6 1.6"/>',
+      help: '<circle cx="12" cy="12" r="9"/><path d="M9.6 9.2a2.4 2.4 0 1 1 3.3 2.2c-.8.4-1.3 1-1.3 1.8V14M12 17h.01"/>'
+    };
+    return '<svg class="nav-icon" viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="square" stroke-linejoin="miter" aria-hidden="true">' +
+      (paths[name] || paths.help) + '</svg>';
+  }
   function navItems() {
     var items = [];
-    if (can('dashboard.view')) items.push(['/', 'nav.dashboard']);
-    if (can('scanners.view')) items.push(['/scanners', 'nav.scanners']);
-    if (can('drivers.view')) items.push(['/drivers', 'nav.drivers']);
-    if (can('audit.view')) items.push(['/audit', 'nav.audit']);
-    if (can('reports.export')) items.push(['/reports', 'nav.reports']);
-    if (can('users.view') || can('users.manage')) items.push(['/users', 'nav.users']);
-    if (can('settings.view') || can('roles.manage')) items.push(['/settings', 'nav.settings']);
+    if (can('dashboard.view')) items.push(['/', 'nav.dashboard', 'dashboard']);
+    if (can('scanners.view')) items.push(['/scanners', 'nav.scanners', 'scanners']);
+    if (can('drivers.view')) items.push(['/drivers', 'nav.drivers', 'drivers']);
+    if (can('audit.view')) items.push(['/audit', 'nav.audit', 'audit']);
+    if (can('reports.export')) items.push(['/reports', 'nav.reports', 'reports']);
+    if (can('users.view') || can('users.manage')) items.push(['/users', 'nav.users', 'users']);
+    if (can('settings.view') || can('roles.manage')) items.push(['/settings', 'nav.settings', 'settings']);
+    items.push(['/help', 'nav.help', 'help']);
     return items;
+  }
+  function contextLabel() {
+    var p = parseRoute().parts;
+    if (!p.length) return t('nav.dashboard');
+    if (p[0] === 'scanners') return t('nav.scanners');
+    if (p[0] === 'drivers') return t('nav.drivers');
+    if (p[0] === 'audit') return t('nav.audit');
+    if (p[0] === 'reports') return t('nav.reports');
+    if (p[0] === 'users') return t('nav.users');
+    if (p[0] === 'settings') return t('nav.settings');
+    if (p[0] === 'help') return t('nav.help');
+    return t('nav.dashboard');
   }
   function renderNav() {
     var p = path();
-    nav.innerHTML = navItems().map(function (item) {
-      var active = item[0] === '/' ? p === '/' : p.indexOf(item[0]) === 0;
-      return '<a href="' + item[0] + '" class="' + (active ? 'active' : '') + '">' + esc(t(item[1])) + '</a>';
-    }).join('');
+    if (nav) {
+      nav.setAttribute('aria-label', t('nav.menu'));
+      nav.innerHTML = navItems().map(function (item) {
+        var active = item[0] === '/' ? p === '/' : p.indexOf(item[0]) === 0;
+        return '<a href="' + item[0] + '" class="' + (active ? 'active' : '') + '"' +
+          (active ? ' aria-current="page"' : '') + '>' +
+          icon(item[2]) + '<span class="nav-label">' + esc(t(item[1])) + '</span></a>';
+      }).join('');
+    }
   }
   function header() {
-    document.getElementById('global-search').placeholder = t('header.search');
+    var search = document.getElementById('global-search');
+    search.placeholder = t('header.search');
+    search.setAttribute('aria-label', t('header.search'));
+    var ctx = document.getElementById('page-context');
+    if (ctx) ctx.textContent = contextLabel();
+    var helpBtn = document.getElementById('help-btn');
+    var helpLabel = document.getElementById('help-btn-label');
+    if (helpLabel) helpLabel.textContent = t('header.help');
+    if (helpBtn) helpBtn.setAttribute('aria-label', t('header.help'));
     var who = document.getElementById('current-user');
     who.textContent = user.name || user.username || '';
     who.title = user.last_login_display ? (t('users.last_login') + ': ' + user.last_login_display) : '';
     document.getElementById('logout-btn').textContent = t('nav.logout');
+    var langLabel = document.querySelector('label[for="lang-switch"]');
+    if (langLabel) langLabel.textContent = t('login.language');
     var sel = document.getElementById('lang-switch');
+    sel.setAttribute('aria-label', t('login.language'));
     sel.innerHTML = (A.locales || ['de', 'en', 'tr']).map(function (loc) {
       return '<option value="' + loc + '"' + (A.locale === loc ? ' selected' : '') + '>' + esc(t('lang.' + loc)) + '</option>';
     }).join('');
@@ -864,8 +907,39 @@
     if (p[0] === 'users') { setPageTitle(t('users.title')); return renderUsers(); }
     if (p[0] === 'settings') { setPageTitle(t('settings.title')); return renderSettings(); }
     if (p[0] === 'reports') { setPageTitle(t('reports.title')); return renderReports(); }
+    if (p[0] === 'help') { setPageTitle(t('help.title')); return renderHelp(); }
     setPageTitle(t('dash.title'));
     renderDashboard();
+  }
+
+  function helpBlock(titleKey, bodyKey) {
+    return '<section class="help-block"><h2>' + esc(t(titleKey)) + '</h2><p>' + esc(t(bodyKey)) + '</p></section>';
+  }
+  function renderHelp() {
+    var aboutUrl = A.developer_url || 'https://paxdesign.at/';
+    root.innerHTML = '<div class="page-head"><h1>' + esc(t('help.title')) + '</h1></div>' +
+      '<div class="card">' +
+      helpBlock('help.using', 'help.using_body') +
+      helpBlock('help.scanners', 'help.scanners_body') +
+      helpBlock('help.handover', 'help.handover_body') +
+      helpBlock('help.qr', 'help.qr_body') +
+      helpBlock('help.drivers', 'help.drivers_body') +
+      helpBlock('help.permissions', 'help.permissions_body') +
+      helpBlock('help.reports', 'help.reports_body') +
+      '<section class="help-block"><h2>' + esc(t('help.faq')) + '</h2><dl class="help-faq">' +
+        '<dt>' + esc(t('help.faq_q1')) + '</dt><dd>' + esc(t('help.faq_a1')) + '</dd>' +
+        '<dt>' + esc(t('help.faq_q2')) + '</dt><dd>' + esc(t('help.faq_a2')) + '</dd>' +
+      '</dl></section>' +
+      helpBlock('help.support', 'help.support_body') +
+      '<section class="help-block about-block"><h2>' + esc(t('about.title')) + '</h2>' +
+        '<div class="kv">' +
+          kv(t('about.developer'), A.developer_name || 'Ahmad Al Khalaf') +
+          kv(t('about.role'), A.developer_role || 'IT / Software Development') +
+          '<div class="k">' + esc(t('about.website')) + '</div><div><a href="' + esc(aboutUrl) + '" target="_blank" rel="noopener noreferrer">paxdesign.at</a></div>' +
+        '</div>' +
+        '<p class="hint">' + esc(t('about.note')) + '</p>' +
+      '</section>' +
+      '</div>';
   }
 
   document.addEventListener('click', function (e) {

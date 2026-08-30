@@ -59,8 +59,9 @@ $users_php = is_file($plugin . '/includes/class-users.php') ? file_get_contents(
 $drivers = file_get_contents($plugin . '/includes/class-drivers.php');
 $device = $plugin . '/assets/img/handheld-device.svg';
 
-alb_ok(strpos($boot, 'paxdesign.at') === false, 'plugin does not reference paxdesign.at');
-alb_ok(strpos($frontend, 'paxdesign.at') === false, 'frontend does not reference paxdesign.at');
+alb_ok(strpos($boot, "ALB_SCANNER_DEVELOPER_URL', 'https://paxdesign.at/'") !== false, 'developer website is attributed once');
+alb_ok(substr_count($boot, 'paxdesign.at') === 1, 'plugin mentions paxdesign.at only as the developer site');
+alb_ok(strpos($frontend, 'paxdesign-booking') === false, 'scanner frontend does not load the booking plugin');
 alb_ok(strpos($install, "table('scanners')") !== false && strpos($install, 'serial_number') !== false, 'schema creates scanners table');
 alb_ok(strpos($install, "table('drivers')") !== false, 'schema creates drivers table');
 alb_ok(strpos($install, "table('handovers')") !== false, 'schema creates handovers table');
@@ -133,6 +134,11 @@ foreach (array('scanners.assign', 'audit.view', 'users.manage', 'reports.export'
 alb_ok(strpos($css, 'animation') === false && strpos($css, 'gradient') === false, 'css has no animations or gradients');
 alb_ok(strpos($css, 'box-shadow') === false, 'css has no box shadows');
 alb_ok(strpos($js, 'login.error') === false || strpos($js, 'api(') !== false, 'app talks to rest api');
+alb_ok(strpos($app_tpl, 'help-btn') !== false && strpos($app_tpl, 'page-context') !== false, 'header has page context, search, and help');
+alb_ok(strpos($js, "items.push(['/help', 'nav.help', 'help'])") !== false, 'help is in the main navigation');
+alb_ok(strpos($js, 'function icon(') !== false && strpos($js, 'nav-icon') !== false, 'navigation uses consistent SVG icons');
+alb_ok(strpos($js, 'renderHelp') !== false && strpos($js, 'about.title') !== false, 'help page includes about and system information');
+alb_ok(strpos($js, 'stroke="currentColor"') !== false && strpos($js, 'stroke-width="1.75"') !== false, 'icons are stroke SVGs without decorative fills');
 alb_ok(strpos($js, 'role-card') !== false && strpos($js, 'roleCards') !== false, 'user creation uses simple role cards');
 alb_ok(strpos($js, 'userPermBoxes') === false, 'create-user screen does not show a full permission grid');
 alb_ok(strpos($js, 'extraPermBoxes') !== false && strpos($js, 'users.extras') !== false, 'optional extra rights are collapsed');
@@ -156,6 +162,8 @@ alb_ok(($en['scanner.copy_qr'] ?? '') === 'Copy QR link', 'english copy-link lab
 alb_ok(strpos($install, "table('otp_challenges')") !== false, 'schema creates otp table');
 alb_ok(($en['scanner.take_over'] ?? '') === 'Take over scanner', 'english take-over action exists');
 alb_ok(($de['dash.click_hint'] ?? '') !== ($en['dash.click_hint'] ?? ''), 'dashboard hint is translated');
+alb_ok(($en['nav.help'] ?? '') === 'Help' && ($de['nav.help'] ?? '') === 'Hilfe', 'help labels exist');
+alb_ok(($en['about.developer'] ?? '') !== '', 'about developer label exists');
 
 foreach (glob($plugin . '/includes/*.php') as $file) {
     $out = array();
