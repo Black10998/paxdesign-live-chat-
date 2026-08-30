@@ -61,7 +61,10 @@ class Alb_Scanners {
             'field' => 'serial_number',
             'new' => $serial,
         ));
-        $driver_id = isset($data['driver_id']) ? (int) $data['driver_id'] : 0;
+        $driver_id = self::person_id_from_request($data, $user_id);
+        if (is_wp_error($driver_id)) {
+            return $driver_id;
+        }
         $handover_date = sanitize_text_field($data['handover_date'] ?? '');
         if ($driver_id > 0) {
             $assigned = self::assign($id, $driver_id, $handover_date, '', $user_id);
@@ -70,6 +73,27 @@ class Alb_Scanners {
             }
         }
         return self::get($id);
+    }
+
+    public static function person_id_from_request($data, $user_id) {
+        if (!is_array($data)) {
+            $data = array();
+        }
+        $name = trim(sanitize_text_field($data['employee_name'] ?? ''));
+        $phone = sanitize_text_field($data['employee_phone'] ?? '');
+        $branch = $data['employee_branch'] ?? '';
+        if ($name !== '' || $phone !== '') {
+            $person = Alb_Drivers::upsert_from_entry(array(
+                'name' => $name,
+                'phone' => $phone,
+                'branch' => $branch,
+            ), $user_id);
+            if (is_wp_error($person)) {
+                return $person;
+            }
+            return (int) $person['id'];
+        }
+        return (int) ($data['driver_id'] ?? 0);
     }
 
     public static function update($id, $data, $user_id) {

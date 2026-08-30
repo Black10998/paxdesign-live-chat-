@@ -330,10 +330,11 @@ button.kpi.is-on { background: #eef2f5; border-color: var(--accent); }
   color: var(--accent-text);
 }
 
+.table-scroll { width: 100%; overflow-x: auto; }
 table.data { width: 100%; border-collapse: collapse; }
 table.data th, table.data td {
   border-bottom: 1px solid var(--line);
-  padding: 7px 10px;
+  padding: 4px 6px;
   text-align: left;
   vertical-align: middle;
   white-space: nowrap;
@@ -343,17 +344,108 @@ table.data th {
   font-weight: 600;
   color: #3d4751;
 }
+table.data.scanner-table {
+  width: 100%;
+  table-layout: auto;
+  font-size: 12px;
+  line-height: 1.15;
+  border: 1px solid var(--line);
+}
+table.data.scanner-table th,
+table.data.scanner-table td {
+  padding: 2px 6px;
+  border-right: 1px solid var(--line);
+  height: auto;
+  width: 1%;
+  white-space: nowrap;
+  vertical-align: middle;
+}
+table.data.scanner-table th:last-child,
+table.data.scanner-table td:last-child { border-right: 0; }
+table.data.scanner-table .c-id,
+table.data.scanner-table .c-model,
+table.data.scanner-table .c-sim,
+table.data.scanner-table .c-status {
+  background: #f3f5f7;
+}
+table.data.scanner-table .c-brand,
+table.data.scanner-table .c-serial,
+table.data.scanner-table .c-branch,
+table.data.scanner-table .c-date {
+  background: var(--panel);
+}
+table.data.scanner-table .person-col,
+table.data.scanner-table .person-cell {
+  background: var(--bg);
+}
+table.data.scanner-table .c-act,
+table.data.scanner-table td.row-actions {
+  width: auto;
+  background: var(--panel);
+}
+table.data.scanner-table tbody tr:nth-child(even) {
+  background: transparent;
+}
+table.data.scanner-table tbody tr:nth-child(even) .c-id,
+table.data.scanner-table tbody tr:nth-child(even) .c-model,
+table.data.scanner-table tbody tr:nth-child(even) .c-sim,
+table.data.scanner-table tbody tr:nth-child(even) .c-status {
+  background: var(--bg);
+}
+table.data.scanner-table tbody tr:nth-child(even) .c-brand,
+table.data.scanner-table tbody tr:nth-child(even) .c-serial,
+table.data.scanner-table tbody tr:nth-child(even) .c-branch,
+table.data.scanner-table tbody tr:nth-child(even) .c-date,
+table.data.scanner-table tbody tr:nth-child(even) .c-act,
+table.data.scanner-table tbody tr:nth-child(even) td.row-actions {
+  background: var(--row);
+}
+table.data.scanner-table tbody tr:nth-child(even) .person-col,
+table.data.scanner-table tbody tr:nth-child(even) .person-cell {
+  background: #e8edf2;
+}
+table.data.scanner-table tbody tr:hover td {
+  background: #e8edf2;
+}
+.person-mini {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  line-height: 1.15;
+  max-width: 160px;
+}
+.person-mini .face-thumb {
+  width: 20px;
+  height: 20px;
+  margin: 0;
+  flex: 0 0 auto;
+}
+.person-mini-text {
+  display: flex;
+  flex-direction: column;
+  gap: 0;
+  min-width: 0;
+}
+.person-mini .n {
+  font-weight: 600;
+  font-size: 12px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.person-mini .p { color: var(--muted); font-size: 11px; }
+.muted { color: var(--muted); }
 table.data tbody tr:nth-child(even) { background: var(--row); }
 table.data tbody tr:hover { background: #e8edf2; }
 table.data tbody tr.click { cursor: pointer; }
 
 .badge {
   display: inline-block;
-  min-width: 88px;
+  min-width: 0;
   text-align: center;
   border: 1px solid var(--line);
-  padding: 1px 6px;
+  padding: 0 5px;
   background: #f3f4f6;
+  font-size: 12px;
 }
 .badge-active { background: #e8f2ea; border-color: #b7cbbb; color: var(--ok); }
 .badge-lost { background: #f6eaea; border-color: #d3b4b4; color: var(--danger); }
@@ -407,8 +499,8 @@ table.data tbody tr.click { cursor: pointer; }
   padding: 12px;
   border-top: 1px solid var(--line);
 }
-.row-actions { display: flex; flex-wrap: wrap; gap: 4px; }
-.row-actions .btn { height: 26px; padding: 0 8px; }
+.row-actions { display: flex; flex-wrap: nowrap; gap: 4px; white-space: nowrap; }
+.row-actions .btn { height: 24px; padding: 0 7px; font-size: 12px; }
 
 .scan-body {
   min-height: 100%;
@@ -430,8 +522,8 @@ table.data tbody tr.click { cursor: pointer; }
 .scan-page .lang-inline a { color: var(--muted); }
 .scan-page .lang-inline a.active { color: var(--text); font-weight: 600; }
 .face-thumb {
-  width: 36px;
-  height: 36px;
+  width: 28px;
+  height: 28px;
   object-fit: cover;
   border: 1px solid var(--line);
   vertical-align: middle;
@@ -444,7 +536,7 @@ table.data tbody tr.click { cursor: pointer; }
   border: 1px solid var(--line);
 }
 .person-row { display: flex; align-items: center; gap: 10px; padding: 12px 0; }
-.person-cell { white-space: nowrap; }
+.person-cell { white-space: normal; }
 .device-status-row {
   display: grid;
   grid-template-columns: 1fr 1fr;

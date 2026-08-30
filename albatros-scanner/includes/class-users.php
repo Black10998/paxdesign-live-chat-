@@ -87,7 +87,7 @@ class Alb_Users {
         if (Alb_Capabilities::can_assign_user_permissions($actor) && isset($data['permissions'])) {
             Alb_Capabilities::set_user_permissions($user_id, $data['permissions']);
         }
-        if (!empty($data['create_as_employee']) || $role === Alb_Capabilities::STAFF) {
+        if (!empty($data['create_as_employee'])) {
             Alb_Drivers::upsert_for_user((int) $user_id);
         }
         Alb_Audit::record(array(

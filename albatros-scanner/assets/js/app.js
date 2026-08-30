@@ -85,90 +85,48 @@
       };
     });
   }
-  function rememberDriver(d) {
-    if (!d || !d.id) return;
-    var item = {
-      id: d.id,
-      name: d.name,
-      phone: d.phone || '',
-      branch: d.branch || '',
-      branch_label: d.branch_label || branchLabel(d.branch),
-      status: d.status || 'active'
+  function employeeEntryFields(values) {
+    values = values || {};
+    return '<div class="wide"><h2>' + esc(t('scanner.driver')) + '</h2><p class="hint">' + esc(t('scanner.assign_hint')) + '</p></div>' +
+      field('employee_name', t('driver.full_name'), 'text', values.name || '', false) +
+      field('employee_phone', t('driver.phone'), 'text', values.phone || '', false) +
+      branchSelect('employee_branch', values.branch || '') +
+      photoField(values.photo_url || '');
+  }
+  function employeePayload(fd) {
+    return {
+      employee_name: String(fd.get('employee_name') || '').trim(),
+      employee_phone: String(fd.get('employee_phone') || '').trim(),
+      employee_branch: fd.get('employee_branch') || ''
     };
-    var found = false;
-    state.drivers = (state.drivers || []).map(function (x) {
-      if (String(x.id) === String(d.id)) {
-        found = true;
-        return item;
-      }
-      return x;
-    });
-    if (!found) state.drivers.push(item);
   }
-  function refreshDrivers() {
-    if (!can('drivers.view')) return Promise.resolve();
-    return api('drivers?' + qs({ per_page: 200, page: 1 })).then(function (data) {
-      state.drivers = (data.items || []).map(function (d) {
-        return {
-          id: d.id,
-          name: d.name,
-          phone: d.phone || '',
-          branch: d.branch || '',
-          branch_label: d.branch_label || branchLabel(d.branch),
-          status: d.status
-        };
-      });
-    }).catch(function () { return null; });
-  }
-  function driverOptionLabel(d) {
-    var parts = [d.name || ''];
-    if (d.phone) parts.push(d.phone);
-    if (d.branch) parts.push(d.branch_label || branchLabel(d.branch));
-    return parts.join(' · ');
-  }
-  function employeeCreateFields() {
-    return '<details class="wide emp-create"><summary>' + esc(t('scanner.employee_new')) + '</summary>' +
-      '<p class="hint">' + esc(t('scanner.employee_new_hint')) + '</p>' +
-      field('emp_first_name', t('driver.first_name'), 'text', '', false) +
-      field('emp_last_name', t('driver.last_name'), 'text', '', false) +
-      field('emp_phone', t('driver.phone'), 'text', '', false) +
-      branchSelect('emp_branch', '') +
-      '</details>';
-  }
-  function createEmployeeFromForm(fd) {
-    var first = String(fd.get('emp_first_name') || '').trim();
-    var last = String(fd.get('emp_last_name') || '').trim();
-    if (!first && !last) return Promise.resolve(null);
-    if (!first || !last) return Promise.reject(new Error(t('driver.error.name_required')));
-    return api('drivers', {
-      method: 'POST',
-      body: {
-        first_name: first,
-        last_name: last,
-        phone: fd.get('emp_phone') || '',
-        branch: fd.get('emp_branch') || ''
-      }
-    }).then(function (d) {
-      rememberDriver(d);
-      return d;
-    });
+  function attachEmployeePhoto(driverId, form) {
+    if (!driverId) return Promise.resolve();
+    return maybeUpload('drivers/' + driverId + '/photo', form);
   }
   function holderCard(s) {
     if (!s.current_driver_id) {
-      return '<div class="holder-box"><h2>' + esc(t('scanner.current_holder')) + '</h2>' +
+      return '<div class="holder-box"><h2>' + esc(t('scanner.driver')) + '</h2>' +
         '<p class="holder-empty">' + esc(t('scanner.no_driver')) + '</p></div>';
     }
     return '<div class="holder-box">' +
-      '<h2>' + esc(t('scanner.current_holder')) + '</h2>' +
+      '<h2>' + esc(t('scanner.driver')) + '</h2>' +
       '<div class="person-row holder-person" data-go="/drivers/' + s.current_driver_id + '">' +
       face(s.driver_photo_url, 'face-lg') +
       '<div><strong>' + esc(s.driver_name || t('scanner.no_driver')) + '</strong>' +
       '<div class="holder-meta">' + esc(t('driver.phone')) + ': ' + esc(s.driver_phone || '—') + '</div>' +
       '<div class="holder-meta">' + esc(t('branch.label')) + ': ' + esc(s.driver_branch_label || branchLabel(s.driver_branch)) + '</div>' +
       (s.handover_at_display || s.handover_date_display ? '<div class="holder-meta">' + esc(t('scanner.handover_date')) + ': ' + esc(s.handover_at_display || s.handover_date_display) + '</div>' : '') +
-      '</div></div>' +
-      '<button type="button" class="btn btn-sec holder-link" data-go="/drivers/' + s.current_driver_id + '">' + esc(t('scanner.open_employee')) + '</button>' +
-      '</div>';
+      '</div></div></div>';
+  }
+  function personMini(s) {
+    if (!s.current_driver_id) {
+      return '<span class="muted">' + esc(t('scanner.no_driver')) + '</span>';
+    }
+    return '<div class="person-mini">' + face(s.driver_photo_url) +
+      '<span class="person-mini-text"><span class="n">' + esc(s.driver_name || '') + '</span>' +
+      (s.driver_phone ? '<span class="p">' + esc(s.driver_phone) + '</span>' : '') +
+      '</span></div>';
   }
   function face(url, cls) {
     return url ? '<img class="' + (cls || 'face-thumb') + '" src="' + esc(url) + '" alt="">' : '';
@@ -364,40 +322,28 @@
     options = options || {};
     var rows = (items || []).map(function (s) {
       return '<tr class="click" data-go="/scanners/' + s.id + '">' +
-        '<td>' + esc(s.scanner_code) + '</td><td>' + esc(s.brand) + '</td><td>' + esc(s.model) + '</td>' +
-        '<td>' + esc(s.serial_number) + '</td><td>' + esc(s.phone_number) + '</td><td>' + esc(s.branch_label || branchLabel(s.branch)) + '</td>' +
-        '<td class="person-cell">' + face(s.driver_photo_url) + ' ' + esc(s.driver_name || t('scanner.no_driver')) + '</td>' +
-        '<td>' + esc(s.handover_date_display) + '</td><td>' + badge(s.status) + '</td>' +
-        (options.actions ? '<td class="row-actions" data-stop="1">' + scannerRowActions(s) + '</td>' : '') +
+        '<td class="c-id">' + esc(s.scanner_code) + '</td><td class="c-brand">' + esc(s.brand) + '</td><td class="c-model">' + esc(s.model) + '</td>' +
+        '<td class="c-serial">' + esc(s.serial_number) + '</td><td class="c-sim">' + esc(s.phone_number) + '</td><td class="c-branch">' + esc(s.branch_label || branchLabel(s.branch)) + '</td>' +
+        '<td class="person-cell">' + personMini(s) + '</td>' +
+        '<td class="c-date">' + esc(s.handover_date_display) + '</td><td class="c-status">' + badge(s.status) + '</td>' +
+        (options.actions ? '<td class="c-act row-actions" data-stop="1">' + scannerRowActions(s) + '</td>' : '') +
         '</tr>';
     }).join('') || emptyRow(options.actions ? 10 : 9);
-    return '<table class="data"><thead><tr>' +
-      '<th>' + esc(t('scanner.code')) + '</th><th>' + esc(t('scanner.brand')) + '</th><th>' + esc(t('scanner.model')) + '</th>' +
-      '<th>' + esc(t('scanner.serial')) + '</th><th>' + esc(t('scanner.phone')) + '</th><th>' + esc(t('branch.label')) + '</th><th>' + esc(t('scanner.driver')) + '</th>' +
-      '<th>' + esc(t('scanner.handover_date')) + '</th><th>' + esc(t('common.status')) + '</th>' +
-      (options.actions ? '<th>' + esc(t('common.actions')) + '</th>' : '') +
-      '</tr></thead><tbody>' + rows + '</tbody></table>';
+    return '<div class="table-scroll"><table class="data scanner-table"><thead><tr>' +
+      '<th class="c-id">' + esc(t('scanner.code')) + '</th><th class="c-brand">' + esc(t('scanner.brand')) + '</th><th class="c-model">' + esc(t('scanner.model')) + '</th>' +
+      '<th class="c-serial">' + esc(t('scanner.serial')) + '</th><th class="c-sim">' + esc(t('scanner.phone')) + '</th><th class="c-branch">' + esc(t('branch.label')) + '</th><th class="person-col">' + esc(t('scanner.driver')) + '</th>' +
+      '<th class="c-date">' + esc(t('scanner.handover_date')) + '</th><th class="c-status">' + esc(t('common.status')) + '</th>' +
+      (options.actions ? '<th class="c-act">' + esc(t('common.actions')) + '</th>' : '') +
+      '</tr></thead><tbody>' + rows + '</tbody></table></div>';
   }
   function scannerRowActions(s) {
-    var html = '';
     if (s.deleted_at) {
       if (can('scanners.delete')) {
-        html += '<button type="button" class="btn btn-sec" data-act="restore" data-id="' + s.id + '">' + esc(t('scanner.restore')) + '</button>';
+        return '<button type="button" class="btn btn-sec" data-act="restore" data-id="' + s.id + '">' + esc(t('scanner.restore')) + '</button>';
       }
-      return html;
+      return '';
     }
-    html += '<button type="button" class="btn btn-sec" data-go="/scanners/' + s.id + '">' + esc(t('common.details')) + '</button>';
-    if (can('scanners.status')) {
-      if (s.status !== 'lost') html += '<button type="button" class="btn btn-sec" data-act="lost" data-id="' + s.id + '">' + esc(t('scanner.mark_lost')) + '</button>';
-      if (s.status !== 'defective') html += '<button type="button" class="btn btn-sec" data-act="defective" data-id="' + s.id + '">' + esc(t('scanner.mark_defective')) + '</button>';
-      if (s.status !== 'returned') html += '<button type="button" class="btn btn-sec" data-act="returned" data-id="' + s.id + '">' + esc(t('scanner.mark_returned')) + '</button>';
-      if (s.status !== 'inactive') html += '<button type="button" class="btn btn-sec" data-act="deactivate" data-id="' + s.id + '">' + esc(t('scanner.deactivate')) + '</button>';
-      if (s.status !== 'active') html += '<button type="button" class="btn btn-sec" data-act="restore" data-id="' + s.id + '">' + esc(t('scanner.reactivate')) + '</button>';
-    }
-    if (can('scanners.delete')) {
-      html += '<button type="button" class="btn btn-danger" data-act="delete" data-id="' + s.id + '">' + esc(t('scanner.delete')) + '</button>';
-    }
-    return html;
+    return '<button type="button" class="btn btn-sec" data-go="/scanners/' + s.id + '">' + esc(t('common.details')) + '</button>';
   }
   function runScannerAction(act, id, extra) {
     extra = extra || {};
@@ -519,13 +465,6 @@
     }).catch(showError);
   }
 
-  function driverSelect(selected, includeEmpty) {
-    var html = includeEmpty !== false ? '<option value="">' + esc(t('scanner.no_driver')) + '</option>' : '';
-    return html + state.drivers.map(function (d) {
-      return '<option value="' + d.id + '"' + (String(selected) === String(d.id) ? ' selected' : '') + (d.status !== 'active' ? ' disabled' : '') + '>' + esc(driverOptionLabel(d)) + '</option>';
-    }).join('');
-  }
-
   function renderScannerForm() {
     root.innerHTML = '<div class="page-head"><h1>' + esc(t('scanner.new')) + '</h1><button class="btn btn-sec" data-go="/scanners">' + esc(t('common.back')) + '</button></div>' +
       '<form id="scanner-form" class="card form-grid">' +
@@ -539,30 +478,27 @@
       (A.statuses || []).map(function (s) { return '<option value="' + s + '">' + esc(statusLabel(s)) + '</option>'; }).join('') +
       '</select></div>' +
       '<div class="field wide"><label>' + esc(t('common.notes')) + '</label><textarea name="notes"></textarea></div>' +
-      '<div class="wide"><h2>' + esc(t('scanner.driver')) + '</h2><p class="hint">' + esc(t('scanner.assign_hint')) + '</p></div>' +
-      '<div class="field wide"><label>' + esc(t('scanner.driver')) + '</label><select name="driver_id">' + driverSelect('') + '</select></div>' +
+      employeeEntryFields({}) +
       field('handover_date', t('scanner.handover_date'), 'date', '', false) +
-      (can('drivers.create') ? employeeCreateFields() : '') +
       '<div class="wide"><p class="hint">' + esc(t('scanner.immutable')) + '</p><button class="btn" type="submit">' + esc(t('common.create')) + '</button></div>' +
       '</form>';
     document.getElementById('scanner-form').onsubmit = function (e) {
       e.preventDefault();
-      var fd = new FormData(e.target);
-      createEmployeeFromForm(fd).then(function (created) {
-        var body = {
-          brand: fd.get('brand'),
-          model: fd.get('model'),
-          serial_number: fd.get('serial_number'),
-          phone_number: fd.get('phone_number'),
-          branch: fd.get('branch'),
-          status: fd.get('status'),
-          notes: fd.get('notes'),
-          driver_id: created ? created.id : fd.get('driver_id'),
-          handover_date: fd.get('handover_date')
-        };
-        return api('scanners', { method: 'POST', body: body });
-      }).then(function (item) {
-        go('/scanners/' + item.id);
+      var form = e.target;
+      var fd = new FormData(form);
+      var body = {
+        brand: fd.get('brand'),
+        model: fd.get('model'),
+        serial_number: fd.get('serial_number'),
+        phone_number: fd.get('phone_number'),
+        branch: fd.get('branch'),
+        status: fd.get('status'),
+        notes: fd.get('notes'),
+        handover_date: fd.get('handover_date')
+      };
+      Object.assign(body, employeePayload(fd));
+      api('scanners', { method: 'POST', body: body }).then(function (item) {
+        return attachEmployeePhoto(item.current_driver_id, form).then(function () { go('/scanners/' + item.id); });
       }).catch(showError);
     };
   }
@@ -687,11 +623,15 @@
     }
     html += '</form>';
     if (can('scanners.assign')) {
-      html += '<form id="assign-form" class="form-grid"><div class="wide"><h2>' + esc(t('scanner.reassign')) + '</h2><p class="hint">' + esc(t('scanner.assign_hint')) + '</p></div>' +
-        '<div class="field wide"><label>' + esc(t('scanner.driver')) + '</label><select name="driver_id">' + driverSelect(s.current_driver_id) + '</select></div>' +
+      html += '<form id="assign-form" class="form-grid">' +
+        employeeEntryFields({
+          name: s.driver_name || '',
+          phone: s.driver_phone || '',
+          branch: s.driver_branch || '',
+          photo_url: s.driver_photo_url || ''
+        }) +
         field('handover_date', t('scanner.handover_date'), 'date', s.handover_date || '', false) +
         '<div class="field wide"><label>' + esc(t('common.notes')) + '</label><input name="notes"></div>' +
-        (can('drivers.create') ? employeeCreateFields() : '') +
         '<div class="wide"><button class="btn" type="submit">' + esc(t('scanner.assign')) + '</button></div></form>';
     }
     if (can('scanners.status')) {
@@ -728,15 +668,12 @@
       assign.onsubmit = function (e) {
         e.preventDefault();
         var fd = new FormData(assign);
-        createEmployeeFromForm(fd).then(function (created) {
-          return api('scanners/' + s.id + '/assign', {
-            method: 'POST',
-            body: {
-              driver_id: created ? created.id : fd.get('driver_id'),
-              handover_date: fd.get('handover_date'),
-              notes: fd.get('notes')
-            }
-          });
+        var body = Object.assign({
+          handover_date: fd.get('handover_date'),
+          notes: fd.get('notes')
+        }, employeePayload(fd));
+        api('scanners/' + s.id + '/assign', { method: 'POST', body: body }).then(function (item) {
+          return attachEmployeePhoto(item && item.current_driver_id, assign);
         }).then(function () { renderScannerDetail(s.id); }).catch(showError);
       };
     }
@@ -779,28 +716,6 @@
     }).catch(showError);
   }
 
-  function scannerAssignBlock() {
-    if (!can('scanners.assign') || !can('scanners.view')) return '';
-    return '<div class="wide"><h2>' + esc(t('driver.assign_scanner')) + '</h2><p class="hint">' + esc(t('driver.assign_hint')) + '</p></div>' +
-      '<div class="field wide"><label>' + esc(t('scanner.title')) + '</label><select name="scanner_id" id="assign-scanner"><option value="">' + esc(t('common.loading')) + '</option></select></div>';
-  }
-  function fillUnassignedScanners(select) {
-    if (!select) return Promise.resolve();
-    return api('scanners?' + qs({ unassigned: 1, per_page: 200, sort: 'scanner_code', dir: 'asc' })).then(function (data) {
-      var html = '<option value="">' + esc(t('scanner.unassigned')) + '</option>';
-      (data.items || []).forEach(function (s) {
-        html += '<option value="' + s.id + '">' + esc(s.scanner_code + ' / ' + s.serial_number + (s.phone_number ? ' · ' + s.phone_number : '')) + '</option>';
-      });
-      select.innerHTML = html;
-    }).catch(function () {
-      select.innerHTML = '<option value="">' + esc(t('scanner.unassigned')) + '</option>';
-    });
-  }
-  function maybeAssignScanner(driverId, scannerId) {
-    if (!scannerId || !can('scanners.assign')) return Promise.resolve();
-    return api('scanners/' + scannerId + '/assign', { method: 'POST', body: { driver_id: driverId } });
-  }
-
   function renderDriverForm() {
     root.innerHTML = '<div class="page-head"><h1>' + icon('drivers') + ' ' + esc(t('driver.new')) + '</h1><button class="btn btn-sec" data-go="/drivers">' + esc(t('common.back')) + '</button></div>' +
       topicMarks() +
@@ -813,20 +728,13 @@
       field('employee_code', t('driver.employee_code'), 'text', '') +
       photoField('') +
       '<div class="field wide"><label>' + esc(t('common.notes')) + '</label><textarea name="notes"></textarea></div>' +
-      scannerAssignBlock() +
       '<div class="wide"><button class="btn" type="submit">' + esc(t('common.create')) + '</button></div></form>';
-    fillUnassignedScanners(document.getElementById('assign-scanner'));
     document.getElementById('driver-form').onsubmit = function (e) {
       e.preventDefault();
-      var fd = new FormData(e.target);
-      var scannerId = fd.get('scanner_id');
       var body = {};
-      fd.forEach(function (v, k) { if (k !== 'photo' && k !== 'scanner_id') body[k] = v; });
+      new FormData(e.target).forEach(function (v, k) { if (k !== 'photo') body[k] = v; });
       api('drivers', { method: 'POST', body: body }).then(function (d) {
-        rememberDriver(d);
-        return maybeUpload('drivers/' + d.id + '/photo', e.target).then(function () {
-          return maybeAssignScanner(d.id, scannerId);
-        }).then(function () { go('/drivers/' + d.id); });
+        return maybeUpload('drivers/' + d.id + '/photo', e.target).then(function () { go('/drivers/' + d.id); });
       }).catch(showError);
     };
   }
@@ -853,26 +761,19 @@
           field('employee_code', t('driver.employee_code'), 'text', d.employee_code) +
           photoField(d.photo_url) +
           '<div class="field wide"><label>' + esc(t('common.notes')) + '</label><textarea name="notes">' + esc(d.notes || '') + '</textarea></div>' +
-          scannerAssignBlock() +
           '<div class="wide"><button class="btn" type="submit">' + esc(t('common.save')) + '</button>' +
           (can('drivers.deactivate') ? ' <button type="button" class="btn btn-danger" id="toggle-driver">' + esc(d.status === 'active' ? t('driver.deactivate') : t('driver.activate')) + '</button>' : '') +
           '</div></form>' : '<div class="kv">' + kv(t('driver.phone'), d.phone) + kv(t('branch.label'), d.branch_label || branchLabel(d.branch)) + kv(t('driver.email'), d.email) + '</div>') +
         '</div><div class="card"><h2>' + esc(t('driver.assigned')) + '</h2><table class="data"><thead><tr><th>' + esc(t('scanner.code')) + '</th><th>' + esc(t('scanner.serial')) + '</th><th>' + esc(t('scanner.phone')) + '</th><th>' + esc(t('branch.label')) + '</th><th>' + esc(t('common.status')) + '</th></tr></thead><tbody>' + assigned + '</tbody></table></div></div>' +
         '<div class="card" style="margin-top:12px"><h2>' + esc(t('driver.history')) + '</h2><ul class="history">' + history + '</ul></div>';
-      fillUnassignedScanners(document.getElementById('assign-scanner'));
       var form = document.getElementById('driver-edit');
       if (form) {
         form.onsubmit = function (e) {
           e.preventDefault();
-          var fd = new FormData(form);
-          var scannerId = fd.get('scanner_id');
           var body = {};
-          fd.forEach(function (v, k) { if (k !== 'photo' && k !== 'scanner_id') body[k] = v; });
-          api('drivers/' + d.id, { method: 'POST', body: body }).then(function (updated) {
-            rememberDriver(updated || d);
-            return maybeUpload('drivers/' + d.id + '/photo', form).then(function () {
-              return maybeAssignScanner(d.id, scannerId);
-            });
+          new FormData(form).forEach(function (v, k) { if (k !== 'photo') body[k] = v; });
+          api('drivers/' + d.id, { method: 'POST', body: body }).then(function () {
+            return maybeUpload('drivers/' + d.id + '/photo', form);
           }).then(function () { renderDriverDetail(d.id); }).catch(showError);
         };
       }
@@ -928,8 +829,6 @@
       if (k === 'photo') return;
       if (k.indexOf('perm_') === 0) {
         perms[k.slice(5)] = true;
-      } else if (k === 'create_as_employee') {
-        body[k] = true;
       } else {
         body[k] = v;
       }
@@ -956,7 +855,6 @@
         field('password', t('users.password'), 'password', '') +
         roleCards('staff') +
         photoField('') +
-        '<label class="row-check wide"><input type="checkbox" name="create_as_employee" value="1" checked><span>' + esc(t('users.create_employee')) + '</span></label>' +
         '<div class="wide"><button class="btn" type="submit">' + esc(t('common.create')) + '</button></div></form>' : '';
       root.innerHTML = '<div class="page-head"><h1>' + esc(t('users.title')) + '</h1></div>' +
         branchTabs(query.branch || '') + form +
@@ -972,7 +870,7 @@
         uf.onsubmit = function (e) {
           e.preventDefault();
           api('users', { method: 'POST', body: collectUserBody(uf, false) }).then(function (created) {
-            return maybeUpload('users/' + created.id + '/photo', uf).then(function () { return refreshDrivers(); });
+            return maybeUpload('users/' + created.id + '/photo', uf);
           }).then(function () { renderUsers(query); }).catch(showError);
         };
       }
@@ -1001,7 +899,6 @@
         '</select></div>' +
         '<div class="field"><label>' + esc(t('users.last_login')) + '</label><input type="text" value="' + esc(u.last_login_display || '—') + '" readonly class="readonly"></div>' +
         photoField(u.photo_url) +
-        '<label class="row-check wide"><input type="checkbox" name="create_as_employee" value="1"' + (u.driver_id ? ' checked' : '') + '><span>' + esc(t('users.create_employee')) + '</span></label>' +
         extraPermBoxes(u.permissions || {}) +
         '<div class="wide"><button class="btn" type="submit">' + esc(t('common.save')) + '</button></div></form>' :
         '<div class="card"><div class="person-row">' + face(u.photo_url, 'face-lg') + '<div><strong>' + esc(u.name) + '</strong></div></div><div class="kv">' + kv(t('users.name'), u.name) + kv(t('users.username'), u.username) + kv(t('driver.email'), u.email) + kv(t('users.phone'), u.phone || '—') + kv(t('branch.label'), u.branch_label || branchLabel(u.branch)) + kv(t('users.role'), (u.is_primary ? t('users.primary') + ' · ' : '') + t('role.' + u.role)) + kv(t('users.status'), t('users.status.' + (u.status || 'active'))) + kv(t('users.last_login'), u.last_login_display || '—') + '</div></div>';
@@ -1011,7 +908,7 @@
         uf.onsubmit = function (e) {
           e.preventDefault();
           api('users/' + id, { method: 'POST', body: collectUserBody(uf, true) }).then(function () {
-            return maybeUpload('users/' + id + '/photo', uf).then(function () { return refreshDrivers(); });
+            return maybeUpload('users/' + id + '/photo', uf);
           }).then(function () { renderUserDetail(id); }).catch(showError);
         };
       }
@@ -1201,10 +1098,14 @@
       var act = actEl.getAttribute('data-act');
       var extra = {};
       if (act === 'take_over') {
-        var sel = document.querySelector('#assign-form select[name="driver_id"]');
-        extra.driver_id = sel ? sel.value : '';
-        if (!extra.driver_id) {
-          showError(new Error(t('driver.error.not_found')));
+        var assignForm = document.getElementById('assign-form');
+        var extraPerson = assignForm ? employeePayload(new FormData(assignForm)) : {};
+        extra.employee_name = extraPerson.employee_name || '';
+        extra.employee_phone = extraPerson.employee_phone || '';
+        extra.employee_branch = extraPerson.employee_branch || '';
+        extra.notes = assignForm && assignForm.notes ? assignForm.notes.value : '';
+        if (!extra.employee_name && !extra.employee_phone) {
+          showError(new Error(t('driver.error.name_required')));
           return;
         }
       }

@@ -120,10 +120,93 @@ class Alb_Drivers {
         return self::get($id);
     }
 
+    public static function digits($phone) {
+        return preg_replace('/\D+/', '', (string) $phone);
+    }
+
+    public static function split_name($name) {
+        $name = trim(sanitize_text_field($name));
+        if ($name === '') {
+            return array('', '');
+        }
+        $parts = preg_split('/\s+/', $name, 2);
+        $first = $parts[0];
+        $last = isset($parts[1]) && $parts[1] !== '' ? $parts[1] : $parts[0];
+        return array($first, $last);
+    }
+
     public static function find_by_phone($phone) {
         global $wpdb;
-        $row = $wpdb->get_row($wpdb->prepare('SELECT * FROM ' . self::table() . ' WHERE phone = %s ORDER BY id ASC LIMIT 1', sanitize_text_field($phone)), ARRAY_A);
+        $raw = sanitize_text_field($phone);
+        if ($raw === '') {
+            return null;
+        }
+        $row = $wpdb->get_row($wpdb->prepare('SELECT * FROM ' . self::table() . ' WHERE phone = %s ORDER BY id ASC LIMIT 1', $raw), ARRAY_A);
+        if ($row) {
+            return self::present($row);
+        }
+        $digits = self::digits($raw);
+        if ($digits === '') {
+            return null;
+        }
+        $rows = $wpdb->get_results('SELECT * FROM ' . self::table() . ' ORDER BY id ASC', ARRAY_A);
+        foreach ($rows ?: array() as $candidate) {
+            if (self::digits($candidate['phone'] ?? '') === $digits) {
+                return self::present($candidate);
+            }
+        }
+        return null;
+    }
+
+    public static function find_by_name($name) {
+        list($first, $last) = self::split_name($name);
+        if ($first === '') {
+            return null;
+        }
+        global $wpdb;
+        $row = $wpdb->get_row($wpdb->prepare(
+            'SELECT * FROM ' . self::table() . ' WHERE first_name = %s AND last_name = %s ORDER BY id ASC LIMIT 1',
+            $first,
+            $last
+        ), ARRAY_A);
         return $row ? self::present($row) : null;
+    }
+
+    public static function upsert_from_entry($data, $user_id) {
+        $name = trim(sanitize_text_field($data['name'] ?? $data['full_name'] ?? ''));
+        if ($name === '') {
+            $name = trim(sanitize_text_field(($data['first_name'] ?? '') . ' ' . ($data['last_name'] ?? '')));
+        }
+        $phone = sanitize_text_field($data['phone'] ?? '');
+        $branch = Alb_Branches::normalize($data['branch'] ?? '');
+        $existing = $phone !== '' ? self::find_by_phone($phone) : null;
+        if (!$existing && $name !== '') {
+            $existing = self::find_by_name($name);
+        }
+        list($first, $last) = self::split_name($name);
+        if ($existing) {
+            $update = array();
+            if ($first !== '') {
+                $update['first_name'] = $first;
+                $update['last_name'] = $last;
+            }
+            if ($phone !== '') {
+                $update['phone'] = $phone;
+            }
+            if (array_key_exists('branch', $data)) {
+                $update['branch'] = $branch;
+            }
+            return $update ? self::update((int) $existing['id'], $update, $user_id) : $existing;
+        }
+        if ($first === '') {
+            return new WP_Error('alb_invalid', Alb_I18n::t('driver.error.name_required'), array('status' => 400));
+        }
+        return self::create(array(
+            'first_name' => $first,
+            'last_name' => $last,
+            'phone' => $phone,
+            'branch' => $branch,
+        ), $user_id);
     }
 
     public static function find_by_user($user_id) {

@@ -159,7 +159,7 @@ class Alb_Rest {
         register_rest_route(self::NS, '/drivers/(?P<id>\d+)/photo', array(
             'methods' => 'POST',
             'callback' => array(__CLASS__, 'driver_photo'),
-            'permission_callback' => array(__CLASS__, 'can_drivers_edit'),
+            'permission_callback' => array(__CLASS__, 'can_driver_photo'),
         ));
         register_rest_route(self::NS, '/audit', array(
             'methods' => 'GET',
@@ -260,6 +260,9 @@ class Alb_Rest {
     }
     public static function can_drivers_edit() {
         return Alb_Capabilities::current_user_can('drivers.edit') || Alb_Capabilities::current_user_can('drivers.deactivate');
+    }
+    public static function can_driver_photo() {
+        return self::can_drivers_edit() || self::can_scanners_assign();
     }
     public static function can_history() {
         return Alb_Capabilities::current_user_can('history.view');
@@ -367,9 +370,13 @@ class Alb_Rest {
 
     public static function assign_scanner(WP_REST_Request $request) {
         $params = $request->get_json_params() ?: $request->get_params();
+        $driver_id = Alb_Scanners::person_id_from_request($params, get_current_user_id());
+        if (is_wp_error($driver_id)) {
+            return self::respond($driver_id);
+        }
         return self::respond(Alb_Scanners::assign(
             (int) $request['id'],
-            (int) ($params['driver_id'] ?? 0),
+            $driver_id,
             $params['handover_date'] ?? '',
             $params['notes'] ?? '',
             get_current_user_id()
@@ -412,9 +419,13 @@ class Alb_Rest {
 
     public static function take_over_scanner(WP_REST_Request $request) {
         $params = $request->get_json_params() ?: $request->get_params();
+        $driver_id = Alb_Scanners::person_id_from_request($params, get_current_user_id());
+        if (is_wp_error($driver_id)) {
+            return self::respond($driver_id);
+        }
         return self::respond(Alb_Scanners::take_over(
             (int) $request['id'],
-            (int) ($params['driver_id'] ?? 0),
+            $driver_id,
             $params['notes'] ?? '',
             get_current_user_id()
         ));
