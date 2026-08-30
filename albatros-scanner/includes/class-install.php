@@ -33,10 +33,21 @@ class Alb_Install {
 
     public static function maybe_upgrade() {
         $installed = get_option('alb_scanner_db_version');
-        if ($installed !== ALB_SCANNER_DB_VERSION) {
+        if ($installed !== ALB_SCANNER_DB_VERSION || !self::schema_ready()) {
             self::create_tables();
             update_option('alb_scanner_db_version', ALB_SCANNER_DB_VERSION, false);
         }
+    }
+
+    private static function schema_ready() {
+        global $wpdb;
+        $scans = self::table('scan_events');
+        $found = $wpdb->get_var($wpdb->prepare('SHOW TABLES LIKE %s', $scans));
+        if ($found !== $scans) {
+            return false;
+        }
+        $column = $wpdb->get_var('SHOW COLUMNS FROM ' . self::table('scanners') . " LIKE 'deleted_at'");
+        return $column === 'deleted_at';
     }
 
     public static function table($name) {

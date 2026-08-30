@@ -57,6 +57,7 @@ alb_ok(strpos($install, "table('handovers')") !== false, 'schema creates handove
 alb_ok(strpos($install, "table('status_events')") !== false, 'schema creates status events table');
 alb_ok(strpos($install, "table('audit_logs')") !== false, 'schema creates audit table');
 alb_ok(strpos($install, "table('scan_events')") !== false, 'schema creates scan events table');
+alb_ok(strpos($install, 'schema_ready') !== false, 'schema upgrade repairs missing scan tables');
 alb_ok(strpos($install, 'deleted_at') !== false, 'schema supports soft-delete');
 alb_ok(is_file($plugin . '/includes/class-scan.php'), 'scan workflow class exists');
 alb_ok(is_file($plugin . '/templates/scan.php'), 'mobile scan template exists');
