@@ -100,6 +100,7 @@ class Alb_Frontend {
         nocache_headers();
         header('X-LiteSpeed-Cache-Control: no-cache');
         header('Cache-Control: no-store, no-cache, must-revalidate, max-age=0');
+        header('Vary: Cookie');
     }
 
     private static function handle_login_post() {
