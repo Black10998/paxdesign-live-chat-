@@ -266,7 +266,6 @@ class Alb_Drivers {
             'email' => $user->user_email,
             'phone' => $phone,
             'user_id' => (int) $user->ID,
-            'status' => 'active',
             'updated_at' => $now,
             'updated_by' => get_current_user_id(),
         );
@@ -281,6 +280,7 @@ class Alb_Drivers {
             $wpdb->update(self::table(), $fields, array('id' => (int) $existing['id']));
             return self::get((int) $existing['id']);
         }
+        $fields['status'] = 'active';
         $fields['employee_code'] = '';
         $fields['notes'] = '';
         $fields['created_at'] = $now;

@@ -717,7 +717,7 @@
       html += '<button type="button" class="btn btn-danger" data-act="delete" data-id="' + s.id + '">' + esc(t('scanner.delete')) + '</button>';
     }
     html += '</div>';
-    html += '<form id="scanner-edit" class="form-grid">';
+    html += '<form id="scanner-edit" class="form-grid" method="post" action="#" novalidate>';
     if (can('scanners.edit') || can('scanners.identity')) {
       if (can('scanners.identity')) {
         html += field('brand', t('scanner.brand'), 'text', s.brand, false);
@@ -735,7 +735,7 @@
     }
     html += '</form>';
     if (can('scanners.assign')) {
-      html += '<form id="assign-form" class="form-grid">' +
+      html += '<form id="assign-form" class="form-grid" method="post" action="#" novalidate>' +
         employeeEntryFields({
           name: s.driver_name || '',
           phone: s.driver_phone || '',
@@ -747,7 +747,7 @@
         '<div class="wide"><button class="btn" type="submit">' + esc(t('scanner.assign')) + '</button></div></form>';
     }
     if (can('scanners.status')) {
-      html += '<form id="status-form" class="form-grid"><div class="field"><label>' + esc(t('common.status')) + '</label><select name="status">' +
+      html += '<form id="status-form" class="form-grid" method="post" action="#" novalidate><div class="field"><label>' + esc(t('common.status')) + '</label><select name="status">' +
         (A.statuses || []).map(function (st) { return '<option value="' + st + '"' + (s.status === st ? ' selected' : '') + '>' + esc(statusLabel(st)) + '</option>'; }).join('') +
         '</select></div><div class="field"><label>' + esc(t('common.notes')) + '</label><input name="notes"></div>' +
         '<div class="wide"><button class="btn" type="submit">' + esc(t('scanner.change_status')) + '</button></div></form>';
@@ -758,22 +758,10 @@
   function bindScannerActions(s) {
     var edit = document.getElementById('scanner-edit');
     if (edit) {
-      edit.onsubmit = function (e) {
-        e.preventDefault();
-        var fd = new FormData(edit);
-        var body = { notes: fd.get('notes') };
-        if (can('scanners.identity')) {
-          body.brand = fd.get('brand');
-          body.model = fd.get('model');
-          body.serial_number = fd.get('serial_number');
-          body.phone_number = fd.get('phone_number');
-        }
-        if (can('scanners.edit') || can('scanners.identity')) {
-          body.branch = fd.get('branch');
-        }
-        api('scanners/' + s.id, { method: 'POST', body: body })
-          .then(function () { renderScannerDetail(s.id); }).catch(showError);
-      };
+      bindAjaxForm(edit, function () {
+        var refresh = function () { renderScannerDetail(s.id); };
+        return api('scanners/' + s.id, { method: 'POST', body: collectScannerEditBody(edit) }).then(refresh, refresh);
+      });
     }
     var assign = document.getElementById('assign-form');
     if (assign) {
@@ -786,28 +774,30 @@
           }
         });
       }
-      assign.onsubmit = function (e) {
-        e.preventDefault();
+      bindAjaxForm(assign, function () {
         var fd = new FormData(assign);
         var body = Object.assign({
           handover_date: fd.get('handover_date'),
-          notes: fd.get('notes')
+          notes: String(fd.get('notes') || '').trim()
         }, employeePayload(fd));
-        api('scanners/' + s.id + '/assign', { method: 'POST', body: body }).then(function (item) {
+        var refresh = function () { renderScannerDetail(s.id); };
+        return api('scanners/' + s.id + '/assign', { method: 'POST', body: body }).then(function (item) {
           return attachEmployeePhoto(item && item.current_driver_id, assign);
-        }).then(function () { renderScannerDetail(s.id); }).catch(showError);
-      };
+        }).then(refresh, refresh);
+      });
     }
-      var status = document.getElementById('status-form');
-      if (status) {
-        status.onsubmit = function (e) {
-          e.preventDefault();
-          var fd = new FormData(status);
-          api('scanners/' + s.id + '/status', { method: 'POST', body: { status: fd.get('status'), notes: fd.get('notes') } })
-            .then(function () { renderScannerDetail(s.id); }).catch(showError);
-        };
-      }
+    var status = document.getElementById('status-form');
+    if (status) {
+      bindAjaxForm(status, function () {
+        var fd = new FormData(status);
+        var refresh = function () { renderScannerDetail(s.id); };
+        return api('scanners/' + s.id + '/status', { method: 'POST', body: {
+          status: fd.get('status'),
+          notes: String(fd.get('notes') || '').trim()
+        } }).then(refresh, refresh);
+      });
     }
+  }
 
   function renderDrivers(query) {
     query = query || {};
@@ -957,19 +947,57 @@
         return '<label class="row-check"><input type="checkbox" name="perm_' + key + '" value="1"' + (selected[key] ? ' checked' : '') + '><span>' + esc(t('perm.' + key)) + '</span></label>';
       }).join('') + '</details>';
   }
-  function collectUserBody(form, includeExtras) {
+  function collectFormValues(form, options) {
+    options = options || {};
     var body = {};
-    var perms = {};
     new FormData(form).forEach(function (v, k) {
       if (k === 'photo') return;
-      if (k.indexOf('perm_') === 0) {
-        perms[k.slice(5)] = true;
-      } else {
-        body[k] = v;
-      }
+      if (options.skipEmptyPassword && k === 'password' && String(v).trim() === '') return;
+      body[k] = typeof v === 'string' ? v.trim() : v;
+    });
+    return body;
+  }
+  function collectUserBody(form, includeExtras) {
+    var body = collectFormValues(form, { skipEmptyPassword: true });
+    var perms = {};
+    var extraKeys = A.extra_permission_keys || ['scanners.identity'];
+    Object.keys(body).forEach(function (k) {
+      if (k.indexOf('perm_') !== 0) return;
+      perms[k.slice(5)] = true;
+      delete body[k];
     });
     if (includeExtras && A.can_assign_permissions) {
+      extraKeys.forEach(function (key) {
+        if (!Object.prototype.hasOwnProperty.call(perms, key)) {
+          perms[key] = false;
+        }
+      });
       body.permissions = perms;
+    }
+    return body;
+  }
+  function collectScannerEditBody(form) {
+    var values = collectFormValues(form);
+    var body = {};
+    if (can('scanners.edit')) {
+      body.notes = values.notes || '';
+    }
+    if (can('scanners.edit') || can('scanners.identity')) {
+      body.branch = values.branch || '';
+    }
+    if (can('scanners.identity')) {
+      body.brand = values.brand || '';
+      body.model = values.model || '';
+      body.serial_number = values.serial_number || '';
+      body.phone_number = values.phone_number || '';
+    }
+    return body;
+  }
+  function collectSettingsBody(form) {
+    var body = collectFormValues(form);
+    if (!isPrimary()) {
+      delete body.company_name;
+      delete body.owner_name;
     }
     return body;
   }
@@ -1073,7 +1101,7 @@
         : '<div class="field"><label>' + esc(t('settings.company_name')) + '</label><input type="text" value="' + esc(s.company_name || '') + '" readonly class="readonly"></div>' +
           '<div class="field"><label>' + esc(t('settings.owner_name')) + '</label><input type="text" value="' + esc(s.owner_name || '') + '" readonly class="readonly"></div>' +
           '<p class="hint wide">' + esc(t('settings.owner_locked')) + '</p>';
-      var general = needSettings ? '<form id="settings-form" class="card form-grid">' +
+      var general = needSettings ? '<form id="settings-form" class="card form-grid" method="post" action="#" novalidate>' +
         ownerFields +
         '<div class="field wide"><label>' + esc(t('official.website')) + '</label>' +
         '<a href="' + esc(A.official_url || 'https://www.albatros-express.at/') + '" target="_blank" rel="noopener noreferrer">www.albatros-express.at</a></div>' +
@@ -1094,7 +1122,7 @@
         '</form>' : '';
       var roles = '';
       if (p) {
-        roles = '<form id="perm-form" class="card" hidden><div class="table-scroll"><table class="data perm-table"><thead><tr><th></th>' +
+        roles = '<form id="perm-form" class="card" method="post" action="#" novalidate hidden><div class="table-scroll"><table class="data perm-table"><thead><tr><th></th>' +
           p.roles.map(function (r) { return '<th>' + esc(t('role.' + r)) + '</th>'; }).join('') + '</tr></thead><tbody>' +
           p.keys.map(function (key) {
             return '<tr><td>' + esc(t('perm.' + key)) + '</td>' + p.roles.map(function (r) {
@@ -1117,21 +1145,15 @@
       });
       var sf = document.getElementById('settings-form');
       if (sf && can('settings.manage')) {
-        sf.onsubmit = function (e) {
-          e.preventDefault();
-          var body = {};
-          new FormData(sf).forEach(function (v, k) { body[k] = v; });
-          if (!isPrimary()) {
-            delete body.company_name;
-            delete body.owner_name;
-          }
-          api('settings', { method: 'POST', body: body }).then(function () { root.insertAdjacentHTML('afterbegin', '<div class="msg msg-ok">' + esc(t('settings.saved')) + '</div>'); }).catch(showError);
-        };
+        bindAjaxForm(sf, function () {
+          return api('settings', { method: 'POST', body: collectSettingsBody(sf) }).then(function () {
+            showSuccess(t('settings.saved'));
+          });
+        });
       }
       var pf = document.getElementById('perm-form');
       if (pf) {
-        pf.onsubmit = function (e) {
-          e.preventDefault();
+        bindAjaxForm(pf, function () {
           var map = {};
           pf.querySelectorAll('input[type=checkbox]').forEach(function (box) {
             var role = box.getAttribute('data-role');
@@ -1139,8 +1161,10 @@
             map[role] = map[role] || {};
             map[role][key] = box.checked || role === 'super_admin';
           });
-          api('permissions', { method: 'POST', body: { map: map } }).then(function () { root.insertAdjacentHTML('afterbegin', '<div class="msg msg-ok">' + esc(t('settings.saved')) + '</div>'); }).catch(showError);
-        };
+          return api('permissions', { method: 'POST', body: { map: map } }).then(function () {
+            showSuccess(t('settings.saved'));
+          });
+        });
       }
     }).catch(showError);
   }

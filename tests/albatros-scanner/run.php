@@ -184,7 +184,7 @@ alb_ok(strpos($js, 'topicMarks') !== false && strpos($js, 'vehicle:') !== false 
 alb_ok(strpos($js, 'role-card') !== false && strpos($js, 'roleCards') !== false, 'user creation uses simple role cards');
 alb_ok(strpos($js, 'userPermBoxes') === false, 'create-user screen does not show a full permission grid');
 alb_ok(strpos($js, 'extraPermBoxes') !== false && strpos($js, 'users.extras') !== false, 'optional extra rights are collapsed');
-alb_ok(strpos($js, "body.phone_number = fd.get('phone_number')") !== false, 'phone edits are sent only with identity permission');
+alb_ok(strpos($js, 'collectScannerEditBody') !== false && strpos($js, "body.phone_number = values.phone_number") !== false, 'phone edits are sent only with identity permission');
 alb_ok(strpos(file_get_contents($plugin . '/includes/class-settings.php'), 'settings.owner_locked') !== false, 'owner settings are primary-only');
 alb_ok(strpos($auth, 'users.error.inactive') !== false, 'inactive users cannot sign in');
 
@@ -224,6 +224,14 @@ alb_ok(strpos($js, 'function updatePhotoPreview') !== false, 'photo replace upda
 alb_ok(strpos($js, 'input.value = \'\'') !== false, 'photo input is cleared after upload so save does not re-upload');
 preg_match('/bindPhotoReplace\(form, \'drivers\/\' \+ d\.id \+ \'\/photo\'.+?bindAjaxForm/s', $js, $driver_edit_photo);
 alb_ok(!empty($driver_edit_photo[0]) && strpos($driver_edit_photo[0], 'renderDriverDetail(d.id)') === false, 'driver photo replace does not reload the edit form');
+alb_ok(strpos($js, 'function collectFormValues') !== false, 'forms share trimmed field collection');
+alb_ok(strpos($js, 'function collectScannerEditBody') !== false, 'scanner edit sends only permitted fields');
+alb_ok(strpos($js, 'bindAjaxForm(edit, function') !== false, 'scanner edit uses ajax save');
+alb_ok(strpos($js, 'bindAjaxForm(sf, function') !== false, 'settings use ajax save');
+alb_ok(strpos($js, 'bindAjaxForm(pf, function') !== false, 'role permissions use ajax save');
+alb_ok(strpos($js, 'skipEmptyPassword') !== false, 'empty password is omitted on user save');
+preg_match('/function upsert_for_user\(.+?function sync_user_profile/s', $drivers, $upsert_fn);
+alb_ok(!empty($upsert_fn[0]) && strpos($upsert_fn[0], "if (\$existing)") !== false && strpos($upsert_fn[0], "\$fields['status'] = 'active'") !== false && strpos($upsert_fn[0], "\$wpdb->update(self::table(), \$fields") !== false, 'user sync preserves existing driver status on update');
 alb_ok(strpos($js, "var refresh = function () { renderDriverDetail(d.id); }") !== false && strpos($js, '.then(refresh, refresh)') !== false, 'driver edit save refreshes even when photo upload fails');
 alb_ok(strpos($js, "addEventListener('submit'") !== false, 'app forms cannot fall back to a native page reload');
 alb_ok(strpos($drivers, 'function person_names') !== false, 'driver create splits or copies a single filled name');
