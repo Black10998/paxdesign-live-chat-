@@ -48,10 +48,11 @@
     if (!A.device_mark) return '';
     var key = deviceVisualKey(s || {});
     var label = key === 'assigned' ? t('status.assigned') : statusLabel(key);
-    return '<div class="device-visual device-visual--' + esc(key) + '">' +
+    return '<div class="device-visual-slot device-visual--' + esc(key) + '">' +
+      '<div class="device-visual">' +
       '<img src="' + esc(A.device_mark) + '" alt="' + esc(t('scanner.device')) + '">' +
       '<div class="device-visual-caption">' + deviceStateIcon(key) + '<span>' + esc(label) + '</span></div>' +
-      '</div>';
+      '</div></div>';
   }
   function face(url, cls) {
     return url ? '<img class="' + (cls || 'face-thumb') + '" src="' + esc(url) + '" alt="">' : '';

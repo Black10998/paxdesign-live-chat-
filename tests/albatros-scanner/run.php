@@ -91,7 +91,7 @@ $svg = (string) file_get_contents($device);
 alb_ok(strpos($svg, '<svg') !== false && stripos(substr($svg, 0, 400), 'samsung') === false && stripos(substr($svg, 0, 400), 'logo') === false, 'device mark is a neutral SVG without a brand logo');
 alb_ok(strpos($svg, 'viewBox="0 0 181 366"') !== false && strpos($svg, 'image/png;base64,') !== false && strpos($svg, 'gradient') === false, 'scanner device is the cleaned product photo in SVG');
 alb_ok(strpos($css, 'device-visual--lost') !== false && strpos($css, 'device-visual--inactive') !== false && strpos($css, 'device-visual--assigned') !== false, 'device visual has distinct status states');
-alb_ok(strpos($css, 'device-status-row') !== false && strpos($js, 'deviceVisual(') !== false, 'scanner detail shows the device on the right of the status area');
+alb_ok(strpos($css, 'device-visual-slot') !== false && strpos($css, 'aspect-ratio: 181 / 366') !== false, 'device is centered in the right half with native proportions');
 alb_ok(strpos($svg, '5c7a94') === false && strpos($svg, 'c9a227') === false, 'device mark has no fake screen UI or decorative gold');
 alb_ok(strpos($js, 'users.photo') !== false && strpos($js, '/photo') !== false, 'admin user form can upload a photo');
 alb_ok(strpos($js, 'scanner.current_holder') !== false && strpos($js, 'device-visual') !== false, 'scanner detail shows holder photo and device mark');
