@@ -18,11 +18,16 @@ if (!defined('ABSPATH')) {
                 <span>Scanner Management</span>
             </div>
             <nav class="nav" id="app-nav"></nav>
+            <div class="sidebar-foot">
+                <span><?php echo esc_html($config['i18n']['official.website']); ?></span>
+                <a href="<?php echo esc_url($config['official_url']); ?>" target="_blank" rel="noopener noreferrer">www.albatros-express.at</a>
+            </div>
         </aside>
         <section class="main">
             <header class="topbar">
                 <input class="search" id="global-search" type="search" placeholder="">
                 <div class="top-user">
+                    <img class="header-logo" src="<?php echo esc_url($config['logo']); ?>" alt="Albatros" width="200" height="70">
                     <select id="lang-switch"></select>
                     <span id="current-user"></span>
                     <button type="button" class="btn btn-sec" id="logout-btn"></button>

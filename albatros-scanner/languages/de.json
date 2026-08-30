@@ -164,6 +164,7 @@
   "settings.audit": "Protokoll",
   "settings.company_name": "Systemname",
   "settings.owner_name": "Verantwortlicher",
+  "official.website": "Offizielle Unternehmenswebsite",
   "settings.default_language": "Standardsprache",
   "settings.timezone": "Zeitzone",
   "settings.date_format": "Datumsformat",

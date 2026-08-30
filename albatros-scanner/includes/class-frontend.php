@@ -149,6 +149,8 @@ class Alb_Frontend {
             'locales' => Alb_I18n::supported(),
             'i18n' => $i18n,
             'company' => $settings['company_name'],
+            'logo' => Alb_Settings::logo_url(),
+            'official_url' => Alb_Settings::official_url(),
             'next' => isset($_GET['next']) ? esc_url_raw(wp_unslash($_GET['next'])) : '/',
         );
         include ALB_SCANNER_PLUGIN_DIR . 'templates/login.php';
@@ -165,6 +167,8 @@ class Alb_Frontend {
             'locales' => Alb_I18n::supported(),
             'i18n' => Alb_I18n::catalog($locale),
             'company' => $settings['company_name'],
+            'logo' => Alb_Settings::logo_url(),
+            'official_url' => Alb_Settings::official_url(),
             'user' => Alb_Auth::current_payload(),
             'statuses' => Alb_Scanners::statuses(),
             'roles' => Alb_Capabilities::roles(),

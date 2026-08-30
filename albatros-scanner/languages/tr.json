@@ -164,6 +164,7 @@
   "settings.audit": "Denetim kaydı",
   "settings.company_name": "Sistem adı",
   "settings.owner_name": "Sorumlu kişi",
+  "official.website": "Resmi şirket web sitesi",
   "settings.default_language": "Varsayılan dil",
   "settings.timezone": "Saat dilimi",
   "settings.date_format": "Tarih biçimi",

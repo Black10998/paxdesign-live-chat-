@@ -28,6 +28,15 @@ alb_ok(is_file($plugin . '/includes/class-rest.php'), 'rest class exists');
 alb_ok(is_file($plugin . '/assets/css/app.css'), 'app css exists');
 alb_ok(is_file($plugin . '/assets/js/app.js'), 'app js exists');
 alb_ok(is_file($plugin . '/templates/login.php'), 'login template exists');
+$logo = $plugin . '/assets/img/albatros-logo.jpeg';
+alb_ok(is_file($logo), 'official logo file is stored in the plugin');
+alb_ok(is_readable($logo) && substr((string) file_get_contents($logo, false, null, 0, 3), 0, 2) === "\xFF\xD8", 'logo is the original JPEG file');
+$login_tpl = file_get_contents($plugin . '/templates/login.php');
+$app_tpl = file_get_contents($plugin . '/templates/app.php');
+alb_ok(strpos($login_tpl, 'login-brand') !== false, 'login screen includes the logo');
+alb_ok(strpos($app_tpl, 'header-logo') !== false, 'application header includes the logo');
+alb_ok(strpos($login_tpl, 'albatros-express.at') !== false && strpos($app_tpl, 'albatros-express.at') !== false, 'official company website is linked');
+alb_ok(strpos($login_tpl, 'target="_blank"') !== false && strpos($app_tpl, 'rel="noopener noreferrer"') !== false, 'official website opens in a new tab');
 
 $boot = file_get_contents($plugin . '/albatros-scanner.php');
 $install = file_get_contents($plugin . '/includes/class-install.php');
@@ -69,6 +78,8 @@ alb_ok(array_keys($de) === array_keys($en), 'english keys match german');
 alb_ok(array_keys($de) === array_keys($tr), 'turkish keys match german');
 alb_ok(($de['login.title'] ?? '') !== ($en['login.title'] ?? ''), 'german and english login titles differ');
 alb_ok(($de['nav.scanners'] ?? '') !== ($tr['nav.scanners'] ?? ''), 'german and turkish nav labels differ');
+alb_ok(($de['official.website'] ?? '') === 'Offizielle Unternehmenswebsite', 'german official website label exists');
+alb_ok(($en['official.website'] ?? '') === 'Official Company Website', 'english official website label exists');
 
 foreach (glob($plugin . '/includes/*.php') as $file) {
     $out = array();

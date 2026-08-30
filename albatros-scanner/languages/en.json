@@ -164,6 +164,7 @@
   "settings.audit": "Audit log",
   "settings.company_name": "System name",
   "settings.owner_name": "Responsible person",
+  "official.website": "Official Company Website",
   "settings.default_language": "Default language",
   "settings.timezone": "Time zone",
   "settings.date_format": "Date format",

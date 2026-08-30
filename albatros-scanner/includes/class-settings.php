@@ -7,6 +7,14 @@ if (!defined('ABSPATH')) {
 class Alb_Settings {
     const OPTION = 'alb_scanner_settings';
 
+    public static function logo_url() {
+        return ALB_SCANNER_PLUGIN_URL . ALB_SCANNER_LOGO_FILE;
+    }
+
+    public static function official_url() {
+        return ALB_SCANNER_OFFICIAL_URL;
+    }
+
     public static function defaults() {
         return array(
             'company_name' => 'Albatros Scannerverwaltung',

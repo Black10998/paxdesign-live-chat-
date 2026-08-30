@@ -16,6 +16,9 @@ $show_reset = isset($_POST['alb_action']) && $_POST['alb_action'] === 'reset';
 </head>
 <body class="login-body">
     <div class="login-box">
+        <div class="login-brand">
+            <img src="<?php echo esc_url($config['logo']); ?>" alt="Albatros" width="200" height="70">
+        </div>
         <h1><?php echo esc_html($config['company']); ?></h1>
         <div class="login-sub"><?php echo esc_html($i18n['login.subtitle']); ?></div>
         <?php if ($login_error) : ?>
@@ -58,6 +61,10 @@ $show_reset = isset($_POST['alb_action']) && $_POST['alb_action'] === 'reset';
             <button type="button" data-locale="en" class="<?php echo $locale === 'en' ? 'active' : ''; ?>">English</button>
             <button type="button" data-locale="tr" class="<?php echo $locale === 'tr' ? 'active' : ''; ?>">Türkçe</button>
         </div>
+        <p class="login-official">
+            <span><?php echo esc_html($i18n['official.website']); ?></span>
+            <a href="<?php echo esc_url($config['official_url']); ?>" target="_blank" rel="noopener noreferrer">www.albatros-express.at</a>
+        </p>
     </div>
     <script>window.ALB_LOGIN = <?php echo wp_json_encode($config); ?>;</script>
     <script src="<?php echo esc_url(ALB_SCANNER_PLUGIN_URL . 'assets/js/login.js?ver=' . ALB_SCANNER_VERSION); ?>"></script>

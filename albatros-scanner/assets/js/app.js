@@ -478,6 +478,8 @@
       var general = needSettings ? '<form id="settings-form" class="card form-grid">' +
         field('company_name', t('settings.company_name'), 'text', s.company_name) +
         field('owner_name', t('settings.owner_name'), 'text', s.owner_name) +
+        '<div class="field wide"><label>' + esc(t('official.website')) + '</label>' +
+        '<a href="' + esc(A.official_url || 'https://www.albatros-express.at/') + '" target="_blank" rel="noopener noreferrer">www.albatros-express.at</a></div>' +
         '<div class="field"><label>' + esc(t('settings.default_language')) + '</label><select name="default_language">' +
         (A.locales || []).map(function (l) { return '<option value="' + l + '"' + (s.default_language === l ? ' selected' : '') + '>' + esc(t('lang.' + l)) + '</option>'; }).join('') +
         '</select></div>' +
