@@ -354,11 +354,14 @@ class Alb_Drivers {
 
     public static function options() {
         global $wpdb;
-        $rows = $wpdb->get_results("SELECT id, first_name, last_name, status FROM " . self::table() . " ORDER BY last_name ASC, first_name ASC", ARRAY_A);
+        $rows = $wpdb->get_results("SELECT id, first_name, last_name, phone, branch, status FROM " . self::table() . " ORDER BY last_name ASC, first_name ASC", ARRAY_A);
         return array_map(function ($row) {
             return array(
                 'id' => (int) $row['id'],
                 'name' => trim($row['first_name'] . ' ' . $row['last_name']),
+                'phone' => $row['phone'],
+                'branch' => Alb_Branches::normalize($row['branch'] ?? ''),
+                'branch_label' => Alb_Branches::label($row['branch'] ?? ''),
                 'status' => $row['status'],
             );
         }, $rows ?: array());

@@ -41,14 +41,14 @@ $public_status = $scanner ? ($i18n['status.' . $scanner['status']] ?? $scanner['
                     <div class="k"><?php echo esc_html($i18n['scanner.phone']); ?></div><div><?php echo esc_html($scanner['phone_number']); ?></div>
                     <div class="k"><?php echo esc_html($i18n['branch.label']); ?></div><div><?php echo esc_html($scanner['branch_label'] ?? ($i18n['branch.empty'] ?? '—')); ?></div>
                     <div class="k"><?php echo esc_html($i18n['common.status']); ?></div><div><?php echo esc_html($public_status); ?></div>
-                    <div class="k"><?php echo esc_html($i18n['scanner.driver']); ?></div>
+                    <div class="k"><?php echo esc_html($i18n['scanner.current_holder']); ?></div>
                     <div>
                         <?php if (!empty($scanner['driver_photo_url'])) : ?>
                             <img class="face-thumb" src="<?php echo esc_url($scanner['driver_photo_url']); ?>" alt="">
                         <?php endif; ?>
                         <?php echo esc_html($scanner['driver_name'] ?: $i18n['scanner.no_driver']); ?>
                     </div>
-                    <div class="k"><?php echo esc_html($i18n['handover.verified_phone']); ?></div><div><?php echo esc_html($scanner['driver_phone'] ?: '—'); ?></div>
+                    <div class="k"><?php echo esc_html($i18n['driver.phone']); ?></div><div><?php echo esc_html($scanner['driver_phone'] ?: '—'); ?></div>
                     <div class="k"><?php echo esc_html($i18n['scanner.handover_date']); ?></div><div><?php echo esc_html($scanner['handover_at_display'] ?: $scanner['handover_date_display']); ?></div>
                 </div>
                 <div class="scan-action-pad">

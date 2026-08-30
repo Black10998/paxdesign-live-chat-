@@ -118,7 +118,12 @@ alb_ok(strpos($scanners, 'scanners.identity') !== false, 'identity field changes
 alb_ok(strpos($scanners, 'scanner.error.phone_protected') !== false, 'scanner phone number is identity-protected');
 alb_ok(preg_match('/function assign\(.+?function change_status/s', $scanners, $assign_fn) === 1 && strpos($assign_fn[0], "'phone_number'") === false, 'assignment does not overwrite the scanner SIM number');
 alb_ok(strpos($js, 'branch-tabs') !== false && strpos($js, "['wien', 'graz']") !== false && strpos($js, "t('branch.'") !== false, 'scanner and driver lists can filter by Wien or Graz');
-alb_ok(strpos($js, "esc(t('driver.phone'))") !== false && strpos($js, "kv(t('scanner.phone')") !== false, 'employee personal phone and scanner SIM are shown as separate fields');
+alb_ok(strpos($js, 'holderCard') !== false && strpos($js, 'scanner.open_employee') !== false, 'scanner detail shows live assigned employee card');
+alb_ok(strpos($js, "kv(t('scanner.phone')") !== false && strpos($js, "t('driver.phone')") !== false, 'employee personal phone and scanner SIM are shown as separate fields');
+alb_ok(strpos($js, 'createEmployeeFromForm') !== false && strpos($js, 'emp_first_name') !== false, 'new employees created from assignment are stored under drivers');
+alb_ok(strpos($js, 'maybeAssignScanner') !== false && strpos($js, 'unassigned: 1') !== false, 'employees can be linked to a free scanner without re-entering device data');
+alb_ok(strpos($scanners, 'Alb_Drivers::get') !== false && strpos($scanners, 'driver_branch') !== false, 'scanner records load live employee name, photo, personal phone and branch');
+alb_ok(strpos($scanners, "s.current_driver_id IS NULL") !== false, 'unassigned scanners can be queried for automatic linking');
 alb_ok(strpos($frontend, "wp_safe_redirect(home_url('/scanners/'") === false, 'QR scan is not redirected away from the scanner token');
 alb_ok(strpos($scan_class, 'maybe_record_open') !== false && strpos($scan_class, 'actor_name') !== false, 'scans store person, scanner and time');
 alb_ok(strpos($scanners, 'soft_delete') !== false && strpos($scanners, 'restore') !== false, 'scanners can be removed without erasing history');
@@ -179,7 +184,7 @@ alb_ok(($en['nav.help'] ?? '') === 'Help' && ($de['nav.help'] ?? '') === 'Hilfe'
 alb_ok(($en['about.developer'] ?? '') !== '', 'about developer label exists');
 alb_ok(($de['driver.vehicle'] ?? '') === 'Lieferfahrzeug' && ($en['driver.package'] ?? '') === 'Package', 'driver vehicle and package labels exist');
 alb_ok(($de['status.assigned'] ?? '') === 'Zugewiesen' && ($en['status.assigned'] ?? '') === 'Assigned', 'assigned device state is translated');
-alb_ok(($de['scanner.phone'] ?? '') === 'Scanner-Telefonnummer' && ($de['driver.phone'] ?? '') === 'Persönliche Telefonnummer', 'scanner SIM and personal phone labels are distinct');
+alb_ok(($de['scanner.phone'] ?? '') === 'Scanner-Telefonnummer / SIM' && ($de['driver.phone'] ?? '') === 'Persönliche Telefonnummer', 'scanner SIM and personal phone labels are distinct');
 alb_ok(($de['branch.wien'] ?? '') === 'Wien' && ($de['branch.graz'] ?? '') === 'Graz', 'Wien and Graz branch labels exist');
 
 foreach (glob($plugin . '/includes/*.php') as $file) {

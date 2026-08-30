@@ -468,6 +468,9 @@ class Alb_Scanners {
         if (!empty($args['assigned']) && $args['assigned'] !== '0' && $args['assigned'] !== 'false') {
             $where[] = "s.current_driver_id IS NOT NULL AND s.status != 'returned'";
         }
+        if (!empty($args['unassigned']) && $args['unassigned'] !== '0' && $args['unassigned'] !== 'false') {
+            $where[] = 's.current_driver_id IS NULL';
+        }
         if (!empty($args['driver_id'])) {
             $where[] = 's.current_driver_id = %d';
             $params[] = (int) $args['driver_id'];
@@ -504,7 +507,7 @@ class Alb_Scanners {
         $where_sql = implode(' AND ', $where);
         $count_sql = "SELECT COUNT(*) FROM $scanners s LEFT JOIN $drivers d ON d.id = s.current_driver_id WHERE $where_sql";
         $total = (int) ($params ? $wpdb->get_var($wpdb->prepare($count_sql, $params)) : $wpdb->get_var($count_sql));
-        $sql = "SELECT s.*, CONCAT(d.first_name, ' ', d.last_name) AS _driver_name, d.phone AS _driver_phone, d.photo_path AS _driver_photo, d.phone_verified AS _driver_phone_verified FROM $scanners s LEFT JOIN $drivers d ON d.id = s.current_driver_id WHERE $where_sql ORDER BY $sort $dir LIMIT %d OFFSET %d";
+        $sql = "SELECT s.*, CONCAT(d.first_name, ' ', d.last_name) AS _driver_name, d.phone AS _driver_phone, d.photo_path AS _driver_photo, d.phone_verified AS _driver_phone_verified, d.branch AS _driver_branch, d.user_id AS _driver_user_id FROM $scanners s LEFT JOIN $drivers d ON d.id = s.current_driver_id WHERE $where_sql ORDER BY $sort $dir LIMIT %d OFFSET %d";
         $params[] = $per_page;
         $params[] = $offset;
         $rows = $wpdb->get_results($wpdb->prepare($sql, $params), ARRAY_A);
@@ -644,20 +647,30 @@ class Alb_Scanners {
         $driver = null;
         $driver_name = '';
         $driver_phone = '';
-        $driver_photo = '';
+        $driver_photo_url = '';
         $driver_verified = false;
-        if (isset($row['_driver_name'])) {
+        $driver_branch = '';
+        $driver_branch_label = Alb_Branches::label('');
+        if ($detail && !empty($row['current_driver_id'])) {
+            $driver = Alb_Drivers::get((int) $row['current_driver_id']);
+        }
+        if ($driver) {
+            $driver_name = $driver['name'];
+            $driver_phone = $driver['phone'];
+            $driver_photo_url = $driver['photo_url'];
+            $driver_verified = !empty($driver['phone_verified']);
+            $driver_branch = $driver['branch'];
+            $driver_branch_label = $driver['branch_label'];
+        } elseif (isset($row['_driver_name'])) {
             $driver_name = trim((string) $row['_driver_name']);
             $driver_phone = (string) ($row['_driver_phone'] ?? '');
-            $driver_photo = (string) ($row['_driver_photo'] ?? '');
             $driver_verified = !empty($row['_driver_phone_verified']);
-        } elseif ($detail && !empty($row['current_driver_id'])) {
-            $driver = Alb_Drivers::get((int) $row['current_driver_id']);
-            if ($driver) {
-                $driver_name = $driver['name'];
-                $driver_phone = $driver['phone'];
-                $driver_photo = $driver['photo_path'];
-                $driver_verified = !empty($driver['phone_verified']);
+            $driver_branch = Alb_Branches::normalize($row['_driver_branch'] ?? '');
+            $driver_branch_label = Alb_Branches::label($row['_driver_branch'] ?? '');
+            if (!empty($row['_driver_photo']) && !empty($row['current_driver_id'])) {
+                $driver_photo_url = Alb_Photos::admin_url('driver', (int) $row['current_driver_id']);
+            } elseif (!empty($row['_driver_user_id']) && Alb_Users::photo_path((int) $row['_driver_user_id']) !== '') {
+                $driver_photo_url = Alb_Photos::admin_url('user', (int) $row['_driver_user_id']);
             }
         }
         $handover_at = '';
@@ -687,7 +700,9 @@ class Alb_Scanners {
             'driver_name' => $driver_name,
             'driver_phone' => $driver_phone,
             'driver_phone_verified' => $driver_verified,
-            'driver_photo_url' => $driver_photo !== '' && !empty($row['current_driver_id']) ? Alb_Photos::admin_url('driver', (int) $row['current_driver_id']) : '',
+            'driver_photo_url' => $driver_photo_url,
+            'driver_branch' => $driver_branch,
+            'driver_branch_label' => $driver_branch_label,
             'handover_date' => $row['handover_date'],
             'handover_date_display' => Alb_Settings::format_date($row['handover_date']),
             'handover_at' => $handover_at,

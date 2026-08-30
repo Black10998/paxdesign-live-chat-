@@ -514,7 +514,19 @@ table.data tbody tr.click { cursor: pointer; }
 .device-visual--lost { background: #f6eaea; border-left-color: #d3b4b4; }
 .device-visual--lost img { filter: grayscale(0.75) brightness(0.7); }
 .device-visual--lost .device-visual-caption { color: var(--danger); }
-.holder-box { margin-top: 16px; padding-top: 12px; border-top: 1px solid var(--line); }
+.holder-box {
+  margin-top: 16px;
+  padding: 12px;
+  border: 1px solid var(--line);
+  background: #f6f7f9;
+}
+.holder-box h2 { margin: 0 0 8px; font-size: 15px; }
+.holder-empty { margin: 0; color: var(--muted); }
+.holder-meta { color: var(--muted); font-size: 13px; line-height: 1.45; }
+.holder-person { cursor: pointer; padding: 8px 0; }
+.holder-link { margin-top: 8px; }
+.emp-create { margin-top: 4px; }
+.emp-create summary { cursor: pointer; font-weight: 600; }
 
 .settings-nav { display: flex; gap: 0; border-bottom: 1px solid var(--line); margin-bottom: 12px; }
 .settings-nav button {
