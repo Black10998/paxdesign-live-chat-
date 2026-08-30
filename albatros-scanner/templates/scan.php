@@ -39,15 +39,18 @@ $title = $scanner
         <?php else : ?>
             <p class="hint public-hint"><?php echo esc_html($i18n['scan.public_hint']); ?></p>
             <section class="card public-card">
-                <div class="public-hero">
-                    <?php if ($photo_url) : ?>
-                        <img class="face-public" src="<?php echo esc_url($photo_url); ?>" alt="">
-                    <?php else : ?>
-                        <div class="face-public face-public-empty" aria-hidden="true"></div>
-                    <?php endif; ?>
-                    <div class="public-hero-text">
-                        <h2><?php echo esc_html($i18n['scanner.driver']); ?></h2>
-                        <strong><?php echo esc_html($driver_name); ?></strong>
+                <div class="public-hero-row">
+                    <?php echo Alb_Frontend::device_visual_html($scanner, $i18n); ?>
+                    <div class="public-hero">
+                        <?php if ($photo_url) : ?>
+                            <img class="face-public" src="<?php echo esc_url($photo_url); ?>" alt="">
+                        <?php else : ?>
+                            <div class="face-public face-public-empty" aria-hidden="true"></div>
+                        <?php endif; ?>
+                        <div class="public-hero-text">
+                            <h2><?php echo esc_html($i18n['scanner.driver']); ?></h2>
+                            <strong><?php echo esc_html($driver_name); ?></strong>
+                        </div>
                     </div>
                 </div>
                 <div class="public-kv">

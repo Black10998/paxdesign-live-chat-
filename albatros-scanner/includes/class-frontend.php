@@ -158,6 +158,39 @@ class Alb_Frontend {
         exit;
     }
 
+    public static function device_mark_url() {
+        return ALB_SCANNER_PLUGIN_URL . 'assets/img/handheld-device.svg?ver=' . ALB_SCANNER_VERSION;
+    }
+
+    public static function device_state_icon($key) {
+        $paths = array(
+            'active' => '<path d="M5 13l4 4 10-10"/>',
+            'assigned' => '<circle cx="12" cy="8" r="3"/><path d="M5.5 19c.7-3.4 3-5 6.5-5s5.8 1.6 6.5 5"/>',
+            'inactive' => '<rect x="7" y="4" width="10" height="16" rx="1"/><path d="M9 8h6"/>',
+            'defective' => '<path d="M12 4l9 16H3z"/><path d="M12 10v4M12 16.5h.01"/>',
+            'repair' => '<path d="M15 7a3.5 3.5 0 0 0-5 5L5 17l2 2 5-5a3.5 3.5 0 0 0 5-5L15 11l-2-2 2-2z"/>',
+            'returned' => '<path d="M9 11H4V6"/><path d="M4 11a8 8 0 1 0 2.4-5.7"/>',
+            'lost' => '<circle cx="11" cy="11" r="6"/><path d="M16 16l4 4"/>',
+        );
+        $d = $paths[$key] ?? $paths['active'];
+        return '<svg class="device-visual-ico" viewBox="0 0 24 24" width="12" height="12" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="square" stroke-linejoin="miter" aria-hidden="true">' . $d . '</svg>';
+    }
+
+    public static function device_visual_html($scanner, $i18n) {
+        if (!$scanner) {
+            return '';
+        }
+        $key = Alb_Scanners::visual_state($scanner);
+        $label = $key === 'assigned'
+            ? ($i18n['status.assigned'] ?? '')
+            : ($i18n['status.' . $key] ?? $key);
+        return '<div class="device-visual-slot public-device device-visual--' . esc_attr($key) . '">'
+            . '<div class="device-visual">'
+            . '<img src="' . esc_url(self::device_mark_url()) . '" alt="' . esc_attr($i18n['scanner.device'] ?? '') . '">'
+            . '<div class="device-visual-caption">' . self::device_state_icon($key) . '<span>' . esc_html($label) . '</span></div>'
+            . '</div></div>';
+    }
+
     private static function render_scan($token) {
         $token = preg_replace('/[^A-Za-z0-9]/', '', (string) $token);
         if (isset($_GET['alb_lang'])) {
@@ -241,7 +274,7 @@ class Alb_Frontend {
             'extra_permission_keys' => Alb_Capabilities::extra_permission_keys(),
             'is_primary' => Alb_Capabilities::is_primary(),
             'branches' => Alb_Branches::keys(),
-            'device_mark' => ALB_SCANNER_PLUGIN_URL . 'assets/img/handheld-device.svg?ver=' . ALB_SCANNER_VERSION,
+            'device_mark' => self::device_mark_url(),
             'path' => '/' . self::path(),
         );
         include ALB_SCANNER_PLUGIN_DIR . 'templates/app.php';

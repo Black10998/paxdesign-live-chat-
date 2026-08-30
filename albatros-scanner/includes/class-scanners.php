@@ -16,6 +16,17 @@ class Alb_Scanners {
         return self::STATUSES;
     }
 
+    public static function visual_state($scanner) {
+        $status = is_array($scanner) ? (string) ($scanner['status'] ?? 'active') : 'active';
+        if (in_array($status, array('lost', 'defective', 'repair', 'returned', 'inactive'), true)) {
+            return $status;
+        }
+        if (is_array($scanner) && !empty($scanner['current_driver_id'])) {
+            return 'assigned';
+        }
+        return 'active';
+    }
+
     public static function create($data, $user_id) {
         global $wpdb;
         $brand = sanitize_text_field($data['brand'] ?? '');
