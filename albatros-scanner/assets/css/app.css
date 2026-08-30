@@ -256,6 +256,23 @@ input:focus, select:focus, textarea:focus { outline: 1px solid var(--focus); bor
   gap: 12px;
   margin-bottom: 12px;
 }
+.page-head h1 {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+.topic-marks {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 12px 16px;
+  margin: 0 0 12px;
+  color: var(--muted);
+}
+.topic-mark {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+}
 .page-head .actions { display: flex; gap: 8px; flex-wrap: wrap; }
 
 .kpis { display: grid; grid-template-columns: repeat(6, minmax(0, 1fr)); gap: 8px; margin-bottom: 16px; }
@@ -409,8 +426,8 @@ table.data tbody tr.click { cursor: pointer; }
 .person-row { display: flex; align-items: center; gap: 10px; padding: 12px 0; }
 .person-cell { white-space: nowrap; }
 .device-head { display: flex; align-items: flex-start; gap: 16px; }
-.device-mark { width: 56px; height: 88px; flex: 0 0 auto; display: block; }
-.device-mark-sm { width: 16px; height: 26px; vertical-align: middle; margin-right: 6px; display: inline-block; }
+.device-mark { width: 40px; height: 82px; flex: 0 0 auto; display: block; }
+.device-mark-sm { width: 12px; height: 24px; vertical-align: middle; margin-right: 6px; display: inline-block; }
 .holder-box { margin-top: 16px; padding-top: 12px; border-top: 1px solid var(--line); }
 
 .settings-nav { display: flex; gap: 0; border-bottom: 1px solid var(--line); margin-bottom: 12px; }

@@ -89,6 +89,7 @@ alb_ok(strpos($drivers, 'upsert_for_user') !== false && strpos($drivers, 'user_i
 alb_ok(is_file($device), 'handheld device illustration exists');
 $svg = (string) file_get_contents($device);
 alb_ok(strpos($svg, '<svg') !== false && stripos($svg, 'samsung') === false && stripos($svg, 'logo') === false, 'device mark is a neutral SVG without a brand logo');
+alb_ok(strpos($svg, 'viewBox="0 0 80 164"') !== false && strpos($svg, 'gradient') === false, 'scanner device is a tall handheld vector without effects');
 alb_ok(strpos($js, 'users.photo') !== false && strpos($js, '/photo') !== false, 'admin user form can upload a photo');
 alb_ok(strpos($js, 'scanner.current_holder') !== false && strpos($js, 'device-mark') !== false, 'scanner detail shows holder photo and device mark');
 alb_ok(strpos($js, 'scanner.copy_qr') !== false && strpos($scan_tpl, 'scanner.copy_qr') !== false, 'managers can copy the unique QR link');
@@ -139,6 +140,9 @@ alb_ok(strpos($js, "items.push(['/help', 'nav.help', 'help'])") !== false, 'help
 alb_ok(strpos($js, 'function icon(') !== false && strpos($js, 'nav-icon') !== false, 'navigation uses consistent SVG icons');
 alb_ok(strpos($js, 'renderHelp') !== false && strpos($js, 'about.title') !== false, 'help page includes about and system information');
 alb_ok(strpos($js, 'stroke="currentColor"') !== false && strpos($js, 'stroke-width="1.75"') !== false, 'icons are stroke SVGs without decorative fills');
+alb_ok(strpos($frontend, "home_url('/scanners')") !== false && strpos($js, "replaceState({}, '', '/scanners')") !== false, 'login and app root open the scanner page');
+alb_ok(strpos($js, "items.push(['/dashboard', 'nav.dashboard', 'dashboard'])") !== false, 'overview stays available at /dashboard');
+alb_ok(strpos($js, 'topicMarks') !== false && strpos($js, 'vehicle:') !== false && strpos($js, 'package:') !== false, 'driver section has vehicle and package icons');
 alb_ok(strpos($js, 'role-card') !== false && strpos($js, 'roleCards') !== false, 'user creation uses simple role cards');
 alb_ok(strpos($js, 'userPermBoxes') === false, 'create-user screen does not show a full permission grid');
 alb_ok(strpos($js, 'extraPermBoxes') !== false && strpos($js, 'users.extras') !== false, 'optional extra rights are collapsed');
@@ -164,6 +168,7 @@ alb_ok(($en['scanner.take_over'] ?? '') === 'Take over scanner', 'english take-o
 alb_ok(($de['dash.click_hint'] ?? '') !== ($en['dash.click_hint'] ?? ''), 'dashboard hint is translated');
 alb_ok(($en['nav.help'] ?? '') === 'Help' && ($de['nav.help'] ?? '') === 'Hilfe', 'help labels exist');
 alb_ok(($en['about.developer'] ?? '') !== '', 'about developer label exists');
+alb_ok(($de['driver.vehicle'] ?? '') === 'Lieferfahrzeug' && ($en['driver.package'] ?? '') === 'Package', 'driver vehicle and package labels exist');
 
 foreach (glob($plugin . '/includes/*.php') as $file) {
     $out = array();

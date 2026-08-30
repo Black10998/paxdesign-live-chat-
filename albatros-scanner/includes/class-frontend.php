@@ -74,11 +74,15 @@ class Alb_Frontend {
             exit;
         }
         if ($path === 'login') {
-            wp_safe_redirect(Alb_Capabilities::can_use_admin_app() ? home_url('/') : home_url('/no-access'));
+            wp_safe_redirect(Alb_Capabilities::can_use_admin_app() ? home_url('/scanners') : home_url('/no-access'));
             exit;
         }
         if (!Alb_Capabilities::can_use_admin_app()) {
             self::print_denied();
+            exit;
+        }
+        if ($path === '') {
+            wp_safe_redirect(home_url('/scanners'));
             exit;
         }
         self::print_app();
@@ -146,9 +150,7 @@ class Alb_Frontend {
             wp_safe_redirect(home_url('/no-access'));
             exit;
         }
-        $next = isset($_GET['next']) ? wp_unslash($_GET['next']) : '/';
-        $next = wp_validate_redirect($next, home_url('/'));
-        wp_safe_redirect($next);
+        wp_safe_redirect(home_url('/scanners'));
         exit;
     }
 

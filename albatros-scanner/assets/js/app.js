@@ -128,6 +128,8 @@
       dashboard: '<path d="M4 4h7v7H4zM13 4h7v4h-7zM13 10h7v10h-7zM4 13h7v7H4z"/>',
       scanners: '<rect x="6" y="3" width="12" height="18" rx="1"/><path d="M9 7h6M9 10h6M9 13h4M10 17h4"/>',
       drivers: '<circle cx="9" cy="8" r="2.5"/><path d="M4.5 18c.4-3 2.3-4.5 4.5-4.5S13.1 15 13.5 18"/><circle cx="16" cy="8.5" r="2"/><path d="M15 13.6c1.8.2 3.3 1.5 3.6 4.4"/>',
+      vehicle: '<path d="M3 16V9h11l5 4v3H3z"/><path d="M14 9v4h5"/><circle cx="7.5" cy="17.5" r="1.6"/><circle cx="16.5" cy="17.5" r="1.6"/>',
+      package: '<path d="M4 8l8-4 8 4v11l-8 4-8-4z"/><path d="M4 8l8 4 8-4M12 12v11M8 6l8 4"/>',
       audit: '<path d="M7 3h8l3 3v15H7z"/><path d="M15 3v4h4M9 12h6M9 15h6"/>',
       reports: '<path d="M5 19V9M10 19V5M15 19v-7M20 19H4"/>',
       users: '<circle cx="12" cy="8" r="3"/><path d="M5.5 19c.7-3.4 3-5 6.5-5s5.8 1.6 6.5 5"/>',
@@ -137,9 +139,16 @@
     return '<svg class="nav-icon" viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="square" stroke-linejoin="miter" aria-hidden="true">' +
       (paths[name] || paths.help) + '</svg>';
   }
+  function topicMarks() {
+    return '<div class="topic-marks">' +
+      '<span class="topic-mark">' + icon('drivers') + '<span>' + esc(t('nav.drivers')) + '</span></span>' +
+      '<span class="topic-mark">' + icon('vehicle') + '<span>' + esc(t('driver.vehicle')) + '</span></span>' +
+      '<span class="topic-mark">' + icon('package') + '<span>' + esc(t('driver.package')) + '</span></span>' +
+      '</div>';
+  }
   function navItems() {
     var items = [];
-    if (can('dashboard.view')) items.push(['/', 'nav.dashboard', 'dashboard']);
+    if (can('dashboard.view')) items.push(['/dashboard', 'nav.dashboard', 'dashboard']);
     if (can('scanners.view')) items.push(['/scanners', 'nav.scanners', 'scanners']);
     if (can('drivers.view')) items.push(['/drivers', 'nav.drivers', 'drivers']);
     if (can('audit.view')) items.push(['/audit', 'nav.audit', 'audit']);
@@ -151,7 +160,7 @@
   }
   function contextLabel() {
     var p = parseRoute().parts;
-    if (!p.length) return t('nav.dashboard');
+    if (!p.length || p[0] === 'dashboard') return t('nav.dashboard');
     if (p[0] === 'scanners') return t('nav.scanners');
     if (p[0] === 'drivers') return t('nav.drivers');
     if (p[0] === 'audit') return t('nav.audit');
@@ -292,7 +301,7 @@
         '</div>';
       root.querySelectorAll('[data-view]').forEach(function (btn) {
         btn.onclick = function () {
-          go('/?view=' + btn.getAttribute('data-view'));
+          go('/dashboard?view=' + btn.getAttribute('data-view'));
         };
       });
       if (view) {
@@ -335,7 +344,7 @@
 
   function renderScanners(query) {
     query = query || {};
-    root.innerHTML = '<div class="page-head"><h1>' + esc(t('scanner.title')) + '</h1>' +
+    root.innerHTML = '<div class="page-head"><h1>' + deviceMark() + '<span>' + esc(t('scanner.title')) + '</span></h1>' +
       (can('scanners.create') ? '<div class="actions"><button class="btn" data-go="/scanners/new">' + esc(t('scanner.new')) + '</button></div>' : '') +
       '</div>' + scannerFilters(query) + '<div class="card"><p class="body" style="padding:12px">' + esc(t('common.loading')) + '</p></div>';
     api('scanners?' + qs({
@@ -343,7 +352,7 @@
       assigned: query.assigned || '', removed: query.removed || '',
       sort: query.sort || 'id', dir: query.dir || 'desc', page: query.page || 1
     })).then(function (data) {
-      root.innerHTML = '<div class="page-head"><h1>' + esc(t('scanner.title')) + '</h1>' +
+      root.innerHTML = '<div class="page-head"><h1>' + deviceMark() + '<span>' + esc(t('scanner.title')) + '</span></h1>' +
         (can('scanners.create') ? '<div class="actions"><button class="btn" data-go="/scanners/new">' + esc(t('scanner.new')) + '</button></div>' : '') +
         '</div>' + scannerFilters(query) +
         '<div class="card">' + scannerTable(data.items || [], { actions: true }) + pager(data) + '</div>';
@@ -572,8 +581,9 @@
       var rows = (data.items || []).map(function (d) {
         return '<tr class="click" data-go="/drivers/' + d.id + '"><td class="person-cell">' + face(d.photo_url) + ' ' + esc(d.name) + '</td><td>' + esc(d.phone) + '</td><td>' + esc(d.email) + '</td><td>' + esc(d.employee_code) + '</td><td>' + badge(d.status) + '</td></tr>';
       }).join('') || emptyRow(5);
-      root.innerHTML = '<div class="page-head"><h1>' + esc(t('driver.title')) + '</h1>' +
+      root.innerHTML = '<div class="page-head"><h1>' + icon('drivers') + ' ' + esc(t('driver.title')) + '</h1>' +
         (can('drivers.create') ? '<button class="btn" data-go="/drivers/new">' + esc(t('driver.new')) + '</button>' : '') + '</div>' +
+        topicMarks() +
         '<div class="toolbar"><div class="field grow"><label>' + esc(t('common.search')) + '</label><input id="d-q" value="' + esc(query.q || '') + '"></div>' +
         '<div class="field"><label>' + esc(t('common.status')) + '</label><select id="d-status"><option value="">' + esc(t('common.all')) + '</option><option value="active"' + (query.status === 'active' ? ' selected' : '') + '>' + esc(t('common.active')) + '</option><option value="inactive"' + (query.status === 'inactive' ? ' selected' : '') + '>' + esc(t('common.inactive')) + '</option></select></div>' +
         '<button class="btn" id="d-apply">' + esc(t('common.filter')) + '</button></div>' +
@@ -586,7 +596,8 @@
   }
 
   function renderDriverForm() {
-    root.innerHTML = '<div class="page-head"><h1>' + esc(t('driver.new')) + '</h1><button class="btn btn-sec" data-go="/drivers">' + esc(t('common.back')) + '</button></div>' +
+    root.innerHTML = '<div class="page-head"><h1>' + icon('drivers') + ' ' + esc(t('driver.new')) + '</h1><button class="btn btn-sec" data-go="/drivers">' + esc(t('common.back')) + '</button></div>' +
+      topicMarks() +
       '<form id="driver-form" class="card form-grid">' +
       field('first_name', t('driver.first_name'), 'text', '') +
       field('last_name', t('driver.last_name'), 'text', '') +
@@ -615,7 +626,8 @@
       var history = (d.history || []).map(function (h) {
         return '<li>' + esc(h.at_display) + ' — ' + esc(h.scanner_code) + ' / ' + esc(h.serial_number) + ' (' + esc(h.action) + ')</li>';
       }).join('') || '<li>' + esc(t('common.empty')) + '</li>';
-      root.innerHTML = '<div class="page-head"><h1>' + esc(d.name) + '</h1><button class="btn btn-sec" data-go="/drivers">' + esc(t('common.back')) + '</button></div>' +
+      root.innerHTML = '<div class="page-head"><h1>' + icon('drivers') + ' ' + esc(d.name) + '</h1><button class="btn btn-sec" data-go="/drivers">' + esc(t('common.back')) + '</button></div>' +
+        topicMarks() +
         '<div class="detail"><div class="card"><h2>' + esc(t('driver.detail')) + '</h2>' +
         '<div class="person-row">' + face(d.photo_url, 'face-lg') + '<div><strong>' + esc(d.name) + '</strong><br>' + esc(d.phone || '—') + '</div></div>' +
         (can('drivers.edit') ? '<form id="driver-edit" class="form-grid">' +
@@ -895,7 +907,12 @@
     renderNav();
     var route = parseRoute();
     var p = route.parts;
-    if (p.length === 0) { setPageTitle(t('dash.title')); return renderDashboard(); }
+    if (p.length === 0) {
+      history.replaceState({}, '', '/scanners');
+      setPageTitle(t('scanner.title'));
+      return renderScanners({});
+    }
+    if (p[0] === 'dashboard') { setPageTitle(t('dash.title')); return renderDashboard(); }
     if (p[0] === 'scanners' && p[1] === 'new') { setPageTitle(t('scanner.new')); return renderScannerForm(); }
     if (p[0] === 'scanners' && p[1]) { setPageTitle(t('scanner.detail')); return renderScannerDetail(p[1]); }
     if (p[0] === 'scanners') { setPageTitle(t('scanner.title')); return renderScanners(Object.fromEntries(new URLSearchParams(window.location.search))); }
@@ -908,8 +925,9 @@
     if (p[0] === 'settings') { setPageTitle(t('settings.title')); return renderSettings(); }
     if (p[0] === 'reports') { setPageTitle(t('reports.title')); return renderReports(); }
     if (p[0] === 'help') { setPageTitle(t('help.title')); return renderHelp(); }
-    setPageTitle(t('dash.title'));
-    renderDashboard();
+    history.replaceState({}, '', '/scanners');
+    setPageTitle(t('scanner.title'));
+    renderScanners({});
   }
 
   function helpBlock(titleKey, bodyKey) {
@@ -959,7 +977,7 @@
         }
       }
       runScannerAction(act, id, extra).then(function () {
-        if (path() === '/' || path() === '') {
+        if (path().indexOf('/dashboard') === 0) {
           renderDashboard();
         } else if (path().indexOf('/scanners/') === 0) {
           renderScannerDetail(id);
