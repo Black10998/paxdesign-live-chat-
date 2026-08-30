@@ -88,12 +88,13 @@ alb_ok(strpos($users_php, 'set_photo') !== false && strpos($users_php, 'alb_phot
 alb_ok(strpos($drivers, 'upsert_for_user') !== false && strpos($drivers, 'user_id') !== false, 'user photos can sync to employee/driver records');
 alb_ok(is_file($device), 'handheld device illustration exists');
 $svg = (string) file_get_contents($device);
-alb_ok(strpos($svg, '<svg') !== false && stripos($svg, 'samsung') === false && stripos($svg, 'logo') === false, 'device mark is a neutral SVG without a brand logo');
-alb_ok(strpos($svg, 'viewBox="0 0 24 24"') !== false && strpos($svg, 'heroicons') !== false && strpos($svg, 'gradient') === false, 'scanner device uses the Heroicons smartphone SVG');
-alb_ok(strpos($css, 'width: 32px; height: 32px') !== false && strpos($css, 'height: 74px') === false, 'device mark uses a compact square icon size, not a long narrow frame');
+alb_ok(strpos($svg, '<svg') !== false && stripos(substr($svg, 0, 400), 'samsung') === false && stripos(substr($svg, 0, 400), 'logo') === false, 'device mark is a neutral SVG without a brand logo');
+alb_ok(strpos($svg, 'viewBox="0 0 181 366"') !== false && strpos($svg, 'image/png;base64,') !== false && strpos($svg, 'gradient') === false, 'scanner device is the cleaned product photo in SVG');
+alb_ok(strpos($css, 'device-visual--lost') !== false && strpos($css, 'device-visual--inactive') !== false && strpos($css, 'device-visual--assigned') !== false, 'device visual has distinct status states');
+alb_ok(strpos($css, 'device-status-row') !== false && strpos($js, 'deviceVisual(') !== false, 'scanner detail shows the device on the right of the status area');
 alb_ok(strpos($svg, '5c7a94') === false && strpos($svg, 'c9a227') === false, 'device mark has no fake screen UI or decorative gold');
 alb_ok(strpos($js, 'users.photo') !== false && strpos($js, '/photo') !== false, 'admin user form can upload a photo');
-alb_ok(strpos($js, 'scanner.current_holder') !== false && strpos($js, 'device-mark') !== false, 'scanner detail shows holder photo and device mark');
+alb_ok(strpos($js, 'scanner.current_holder') !== false && strpos($js, 'device-visual') !== false, 'scanner detail shows holder photo and device mark');
 alb_ok(strpos($js, 'scanner.copy_qr') !== false && strpos($scan_tpl, 'scanner.copy_qr') !== false, 'managers can copy the unique QR link');
 alb_ok(strpos($caps, 'can_use_admin_app') !== false, 'admin app access is role-gated');
 alb_ok(strpos($caps, 'scanners.identity') !== false, 'identity permission exists');
@@ -171,6 +172,7 @@ alb_ok(($de['dash.click_hint'] ?? '') !== ($en['dash.click_hint'] ?? ''), 'dashb
 alb_ok(($en['nav.help'] ?? '') === 'Help' && ($de['nav.help'] ?? '') === 'Hilfe', 'help labels exist');
 alb_ok(($en['about.developer'] ?? '') !== '', 'about developer label exists');
 alb_ok(($de['driver.vehicle'] ?? '') === 'Lieferfahrzeug' && ($en['driver.package'] ?? '') === 'Package', 'driver vehicle and package labels exist');
+alb_ok(($de['status.assigned'] ?? '') === 'Zugewiesen' && ($en['status.assigned'] ?? '') === 'Assigned', 'assigned device state is translated');
 
 foreach (glob($plugin . '/includes/*.php') as $file) {
     $out = array();

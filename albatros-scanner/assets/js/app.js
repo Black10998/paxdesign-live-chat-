@@ -21,9 +21,37 @@
   function setPageTitle(name) {
     document.title = (name ? name + ' — ' : '') + (A.company || 'Albatros');
   }
-  function deviceMark(size) {
+  function deviceVisualKey(s) {
+    var st = s && s.status ? s.status : 'active';
+    if (st === 'lost' || st === 'defective' || st === 'repair' || st === 'returned' || st === 'inactive') {
+      return st;
+    }
+    if (s && s.current_driver_id) {
+      return 'assigned';
+    }
+    return 'active';
+  }
+  function deviceStateIcon(key) {
+    var paths = {
+      active: '<path d="M5 13l4 4 10-10"/>',
+      assigned: '<circle cx="12" cy="8" r="3"/><path d="M5.5 19c.7-3.4 3-5 6.5-5s5.8 1.6 6.5 5"/>',
+      inactive: '<rect x="7" y="4" width="10" height="16" rx="1"/><path d="M9 8h6"/>',
+      defective: '<path d="M12 4l9 16H3z"/><path d="M12 10v4M12 16.5h.01"/>',
+      repair: '<path d="M15 7a3.5 3.5 0 0 0-5 5L5 17l2 2 5-5a3.5 3.5 0 0 0 5-5L15 11l-2-2 2-2z"/>',
+      returned: '<path d="M9 11H4V6"/><path d="M4 11a8 8 0 1 0 2.4-5.7"/>',
+      lost: '<circle cx="11" cy="11" r="6"/><path d="M16 16l4 4"/>'
+    };
+    return '<svg class="device-visual-ico" viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="square" stroke-linejoin="miter" aria-hidden="true">' +
+      (paths[key] || paths.active) + '</svg>';
+  }
+  function deviceVisual(s) {
     if (!A.device_mark) return '';
-    return '<img class="device-mark' + (size === 'sm' ? ' device-mark-sm' : '') + '" src="' + esc(A.device_mark) + '" alt="' + esc(t('scanner.device')) + '">';
+    var key = deviceVisualKey(s || {});
+    var label = key === 'assigned' ? t('status.assigned') : statusLabel(key);
+    return '<div class="device-visual device-visual--' + esc(key) + '">' +
+      '<img src="' + esc(A.device_mark) + '" alt="' + esc(t('scanner.device')) + '">' +
+      '<div class="device-visual-caption">' + deviceStateIcon(key) + '<span>' + esc(label) + '</span></div>' +
+      '</div>';
   }
   function face(url, cls) {
     return url ? '<img class="' + (cls || 'face-thumb') + '" src="' + esc(url) + '" alt="">' : '';
@@ -219,7 +247,7 @@
     options = options || {};
     var rows = (items || []).map(function (s) {
       return '<tr class="click" data-go="/scanners/' + s.id + '">' +
-        '<td>' + deviceMark('sm') + esc(s.scanner_code) + '</td><td>' + esc(s.brand) + '</td><td>' + esc(s.model) + '</td>' +
+        '<td>' + esc(s.scanner_code) + '</td><td>' + esc(s.brand) + '</td><td>' + esc(s.model) + '</td>' +
         '<td>' + esc(s.serial_number) + '</td><td>' + esc(s.phone_number) + '</td>' +
         '<td class="person-cell">' + face(s.driver_photo_url) + ' ' + esc(s.driver_name || t('scanner.no_driver')) + '</td>' +
         '<td>' + esc(s.handover_date_display) + '</td><td>' + badge(s.status) + '</td>' +
@@ -344,7 +372,7 @@
 
   function renderScanners(query) {
     query = query || {};
-    root.innerHTML = '<div class="page-head"><h1>' + deviceMark() + '<span>' + esc(t('scanner.title')) + '</span></h1>' +
+    root.innerHTML = '<div class="page-head"><h1>' + esc(t('scanner.title')) + '</h1>' +
       (can('scanners.create') ? '<div class="actions"><button class="btn" data-go="/scanners/new">' + esc(t('scanner.new')) + '</button></div>' : '') +
       '</div>' + scannerFilters(query) + '<div class="card"><p class="body" style="padding:12px">' + esc(t('common.loading')) + '</p></div>';
     api('scanners?' + qs({
@@ -352,7 +380,7 @@
       assigned: query.assigned || '', removed: query.removed || '',
       sort: query.sort || 'id', dir: query.dir || 'desc', page: query.page || 1
     })).then(function (data) {
-      root.innerHTML = '<div class="page-head"><h1>' + deviceMark() + '<span>' + esc(t('scanner.title')) + '</span></h1>' +
+      root.innerHTML = '<div class="page-head"><h1>' + esc(t('scanner.title')) + '</h1>' +
         (can('scanners.create') ? '<div class="actions"><button class="btn" data-go="/scanners/new">' + esc(t('scanner.new')) + '</button></div>' : '') +
         '</div>' + scannerFilters(query) +
         '<div class="card">' + scannerTable(data.items || [], { actions: true }) + pager(data) + '</div>';
@@ -378,7 +406,7 @@
   }
 
   function renderScannerForm() {
-    root.innerHTML = '<div class="page-head"><h1>' + deviceMark('sm') + ' ' + esc(t('scanner.new')) + '</h1><button class="btn btn-sec" data-go="/scanners">' + esc(t('common.back')) + '</button></div>' +
+    root.innerHTML = '<div class="page-head"><h1>' + esc(t('scanner.new')) + '</h1><button class="btn btn-sec" data-go="/scanners">' + esc(t('common.back')) + '</button></div>' +
       '<form id="scanner-form" class="card form-grid">' +
       field('brand', t('scanner.brand'), 'text', '', false) +
       field('model', t('scanner.model'), 'text', '', false) +
@@ -439,7 +467,8 @@
         '<div class="detail">' +
         '<div class="card">' +
         '<h2>' + esc(t('scanner.detail')) + '</h2>' +
-        '<div class="device-head">' + deviceMark() + '<div class="kv">' +
+        '<div class="device-status-row">' +
+        '<div class="kv">' +
         kv(t('scanner.code'), s.scanner_code) +
         kv(t('scanner.brand'), s.brand) +
         kv(t('scanner.model'), s.model) +
@@ -447,7 +476,7 @@
         kv(t('scanner.phone'), s.phone_number) +
         kv(t('common.status'), statusLabel(s.status)) +
         kv(t('common.notes'), s.notes || '') +
-        '</div></div>' +
+        '</div>' + deviceVisual(s) + '</div>' +
         '<div class="holder-box"><h2>' + esc(t('scanner.current_holder')) + '</h2>' +
         '<div class="person-row">' + face(s.driver_photo_url, 'face-lg') +
         '<div><strong>' + esc(s.driver_name || t('scanner.no_driver')) + '</strong><br>' +

@@ -131,6 +131,7 @@
   "status.defective": "Defective",
   "status.returned": "Returned",
   "status.repair": "In repair",
+  "status.assigned": "Assigned",
   "driver.title": "Drivers / Employees",
   "driver.vehicle": "Delivery vehicle",
   "driver.package": "Package",

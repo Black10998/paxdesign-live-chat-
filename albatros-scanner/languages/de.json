@@ -131,6 +131,7 @@
   "status.defective": "Defekt",
   "status.returned": "Zurückgegeben",
   "status.repair": "In Reparatur",
+  "status.assigned": "Zugewiesen",
   "driver.title": "Fahrer / Mitarbeiter",
   "driver.vehicle": "Lieferfahrzeug",
   "driver.package": "Paket",

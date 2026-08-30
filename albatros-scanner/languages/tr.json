@@ -131,6 +131,7 @@
   "status.defective": "Arızalı",
   "status.returned": "İade edildi",
   "status.repair": "Onarımda",
+  "status.assigned": "Atanmış",
   "driver.title": "Sürücüler / Çalışanlar",
   "driver.vehicle": "Teslimat aracı",
   "driver.package": "Paket",
