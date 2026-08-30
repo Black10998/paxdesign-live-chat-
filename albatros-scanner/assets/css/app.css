@@ -551,21 +551,23 @@ table.data tbody tr.click { cursor: pointer; }
   flex: 1 1 auto;
 }
 .public-device.device-visual-slot {
-  flex: 0 0 72px;
-  width: 72px;
-  max-width: 72px;
-  padding: 8px 6px 6px;
+  flex: 0 0 auto;
+  width: auto;
+  max-width: 52px;
+  padding: 6px 7px 5px;
   border: 1px solid var(--line);
   border-left-width: 3px;
   align-self: center;
 }
 .public-device .device-visual {
-  width: 100%;
+  width: auto;
   max-width: none;
 }
 .public-device .device-visual img {
-  width: 100%;
-  height: auto;
+  display: block;
+  width: auto;
+  height: 84px;
+  max-height: 84px;
   aspect-ratio: 181 / 366;
   object-fit: contain;
   object-position: center;
@@ -643,12 +645,14 @@ table.data tbody tr.click { cursor: pointer; }
   }
   .face-public { width: 88px; height: 88px; }
   .public-device.device-visual-slot {
-    flex-basis: 68px;
-    width: 68px;
-    max-width: 68px;
+    max-width: 48px;
+  }
+  .public-device .device-visual img {
+    height: 76px;
+    max-height: 76px;
   }
 }
-@media (max-width: 419px) {
+@media (max-width: 339px) {
   .public-hero-row {
     flex-direction: column;
     align-items: center;

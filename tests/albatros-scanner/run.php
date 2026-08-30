@@ -78,9 +78,9 @@ alb_ok(strpos($scan_tpl, 'public-record') !== false && strpos($scan_tpl, 'scan.p
 alb_ok(strpos($scan_tpl, 'public-hero-row') !== false && strpos($scan_tpl, 'device_visual_html') !== false, 'public QR page places the scanner device left of the employee profile');
 alb_ok(strpos($frontend, 'function device_visual_html') !== false && strpos($frontend, 'handheld-device.svg') !== false, 'public device visual uses the approved handheld mark');
 alb_ok(strpos($scanners, 'function visual_state') !== false && strpos($scanners, "'assigned'") !== false, 'scanner visual state maps assigned plus exception statuses');
-alb_ok(strpos($css, '.public-device.device-visual-slot') !== false && strpos($css, 'max-width: 72px') !== false && strpos($css, '.face-public') !== false, 'public device is slightly smaller than the 96px profile photo');
+alb_ok(strpos($css, '.public-device.device-visual-slot') !== false && strpos($css, 'max-height: 84px') !== false && strpos($css, '.face-public') !== false, 'public device is slightly smaller than the 96px profile photo');
 alb_ok(strpos($css, '.public-device .device-visual img') !== false && strpos($css, 'object-fit: contain') !== false, 'public device keeps native proportions');
-alb_ok(strpos($css, '@media (max-width: 419px)') !== false && strpos($css, '.public-hero-row') !== false, 'public profile stacks on narrow screens');
+alb_ok(strpos($css, '@media (max-width: 339px)') !== false && strpos($css, '.public-hero-row') !== false, 'public profile stacks only on very narrow screens');
 alb_ok(strpos($scan_tpl, 'otp_code') === false && strpos($scan_tpl, 'alb_action') === false && strpos($scan_tpl, 'method="post"') === false, 'public QR page has no OTP, login, or write forms');
 alb_ok(strpos($scan_tpl, 'driver.phone') !== false && strpos($scan_tpl, 'scanner.serial') !== false && strpos($scan_tpl, 'scanner.phone') !== false, 'public QR page shows employee and scanner fields from the live record');
 alb_ok(strpos($frontend, 'serve_public_photo') !== false && strpos($photos, 'serve_public_photo') !== false, 'QR photo is served only for the matching token');
