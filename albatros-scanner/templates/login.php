@@ -2,6 +2,10 @@
 if (!defined('ABSPATH')) {
     exit;
 }
+$login_error = $login_error ?? '';
+$login_notice = $login_notice ?? '';
+$login_notice_ok = $login_notice_ok ?? false;
+$show_reset = isset($_POST['alb_action']) && $_POST['alb_action'] === 'reset';
 ?><!doctype html>
 <html lang="<?php echo esc_attr($locale); ?>">
 <head>
@@ -13,9 +17,15 @@ if (!defined('ABSPATH')) {
 <body class="login-body">
     <div class="login-box">
         <h1><?php echo esc_html($config['company']); ?></h1>
-        <div class="login-sub" data-i18n="login.subtitle"><?php echo esc_html($i18n['login.subtitle']); ?></div>
-        <div id="login-msg" hidden class="msg"></div>
-        <form id="login-form">
+        <div class="login-sub"><?php echo esc_html($i18n['login.subtitle']); ?></div>
+        <?php if ($login_error) : ?>
+            <div class="msg msg-error"><?php echo esc_html($login_error); ?></div>
+        <?php elseif ($login_notice) : ?>
+            <div class="msg <?php echo $login_notice_ok ? 'msg-ok' : 'msg-error'; ?>"><?php echo esc_html($login_notice); ?></div>
+        <?php endif; ?>
+        <form id="login-form" method="post" action="" <?php echo $show_reset ? 'hidden' : ''; ?>>
+            <input type="hidden" name="alb_action" value="login">
+            <?php wp_nonce_field('alb_login'); ?>
             <div class="field">
                 <label for="login"><?php echo esc_html($i18n['login.username']); ?></label>
                 <input id="login" name="login" type="text" autocomplete="username" required>
@@ -30,7 +40,9 @@ if (!defined('ABSPATH')) {
             </label>
             <button class="btn btn-block" type="submit"><?php echo esc_html($i18n['login.submit']); ?></button>
         </form>
-        <form id="reset-form" hidden>
+        <form id="reset-form" method="post" action="" <?php echo $show_reset ? '' : 'hidden'; ?>>
+            <input type="hidden" name="alb_action" value="reset">
+            <?php wp_nonce_field('alb_reset'); ?>
             <div class="field">
                 <label for="reset-login"><?php echo esc_html($i18n['login.username']); ?></label>
                 <input id="reset-login" name="login" type="text" autocomplete="username" required>
@@ -39,7 +51,7 @@ if (!defined('ABSPATH')) {
             <button class="btn btn-block" type="submit"><?php echo esc_html($i18n['login.reset_send']); ?></button>
         </form>
         <div class="login-links">
-            <button type="button" id="toggle-reset"><?php echo esc_html($i18n['login.forgot']); ?></button>
+            <button type="button" id="toggle-reset"><?php echo esc_html($show_reset ? $i18n['login.reset_back'] : $i18n['login.forgot']); ?></button>
         </div>
         <div class="lang-inline">
             <button type="button" data-locale="de" class="<?php echo $locale === 'de' ? 'active' : ''; ?>">Deutsch</button>

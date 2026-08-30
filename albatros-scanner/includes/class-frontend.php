@@ -45,6 +45,7 @@ class Alb_Frontend {
         if (!$logged_in && $path !== 'login') {
             $redirect = $path !== '' ? '/' . $path : '/';
             if ($path === '') {
+                self::handle_login_post();
                 self::print_login();
                 exit;
             }
@@ -52,6 +53,7 @@ class Alb_Frontend {
             exit;
         }
         if (!$logged_in) {
+            self::handle_login_post();
             self::print_login();
             exit;
         }
@@ -100,10 +102,46 @@ class Alb_Frontend {
         header('Cache-Control: no-store, no-cache, must-revalidate, max-age=0');
     }
 
+    private static function handle_login_post() {
+        if (($_SERVER['REQUEST_METHOD'] ?? '') !== 'POST') {
+            return;
+        }
+        $action = isset($_POST['alb_action']) ? sanitize_key(wp_unslash($_POST['alb_action'])) : '';
+        if ($action === 'reset') {
+            if (!wp_verify_nonce(sanitize_text_field(wp_unslash($_POST['_wpnonce'] ?? '')), 'alb_reset')) {
+                $GLOBALS['alb_login_error'] = Alb_I18n::t('error.forbidden');
+                return;
+            }
+            $result = Alb_Auth::request_reset(wp_unslash($_POST['login'] ?? ''));
+            $GLOBALS['alb_login_notice'] = is_wp_error($result) ? $result->get_error_message() : ($result['message'] ?? Alb_I18n::t('login.reset_sent'));
+            $GLOBALS['alb_login_notice_ok'] = !is_wp_error($result);
+            return;
+        }
+        if ($action !== 'login') {
+            return;
+        }
+        if (!wp_verify_nonce(sanitize_text_field(wp_unslash($_POST['_wpnonce'] ?? '')), 'alb_login')) {
+            $GLOBALS['alb_login_error'] = Alb_I18n::t('error.forbidden');
+            return;
+        }
+        $result = Alb_Auth::login(wp_unslash($_POST['login'] ?? ''), (string) ($_POST['password'] ?? ''), !empty($_POST['remember']));
+        if (is_wp_error($result)) {
+            $GLOBALS['alb_login_error'] = $result->get_error_message();
+            return;
+        }
+        $next = isset($_GET['next']) ? wp_unslash($_GET['next']) : '/';
+        $next = wp_validate_redirect($next, home_url('/'));
+        wp_safe_redirect($next);
+        exit;
+    }
+
     private static function print_login() {
         $settings = Alb_Settings::get();
         $locale = Alb_I18n::current();
         $i18n = Alb_I18n::catalog($locale);
+        $login_error = $GLOBALS['alb_login_error'] ?? '';
+        $login_notice = $GLOBALS['alb_login_notice'] ?? '';
+        $login_notice_ok = !empty($GLOBALS['alb_login_notice_ok']);
         $config = array(
             'rest' => esc_url_raw(rest_url(Alb_Rest::NS . '/')),
             'nonce' => wp_create_nonce('wp_rest'),

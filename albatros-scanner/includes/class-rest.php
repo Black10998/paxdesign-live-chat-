@@ -9,6 +9,15 @@ class Alb_Rest {
 
     public static function init() {
         add_action('rest_api_init', array(__CLASS__, 'register'));
+        add_filter('rest_authentication_errors', array(__CLASS__, 'allow_auth_routes'), 99);
+    }
+
+    public static function allow_auth_routes($result) {
+        $route = isset($GLOBALS['wp']->query_vars['rest_route']) ? (string) $GLOBALS['wp']->query_vars['rest_route'] : '';
+        if ($route && strpos($route, '/albatros/v1/auth/') === 0) {
+            return true;
+        }
+        return $result;
     }
 
     public static function register() {
