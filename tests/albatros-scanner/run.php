@@ -55,6 +55,9 @@ $denied = file_get_contents($plugin . '/templates/denied.php');
 $otp = file_get_contents($plugin . '/includes/class-otp.php');
 $employee = file_get_contents($plugin . '/includes/class-employee.php');
 $photos = file_get_contents($plugin . '/includes/class-photos.php');
+$users_php = is_file($plugin . '/includes/class-users.php') ? file_get_contents($plugin . '/includes/class-users.php') : '';
+$drivers = file_get_contents($plugin . '/includes/class-drivers.php');
+$device = $plugin . '/assets/img/handheld-device.svg';
 
 alb_ok(strpos($boot, 'paxdesign.at') === false, 'plugin does not reference paxdesign.at');
 alb_ok(strpos($frontend, 'paxdesign.at') === false, 'frontend does not reference paxdesign.at');
@@ -79,6 +82,14 @@ alb_ok(strpos($otp, 'send_sms') !== false && strpos($otp, 'api.twilio.com') !== 
 alb_ok(strpos($otp, 'IMEI') === false && strpos($otp, 'getDevicePhone') === false, 'code does not pretend to read a phone number from the device');
 alb_ok(strpos($employee, 'employee_accept') !== false, 'employee accept uses the server handover time');
 alb_ok(strpos($photos, 'albatros-private') !== false && strpos($photos, 'Require all denied') !== false, 'employee photos are stored privately');
+alb_ok(strpos($photos, 'alb-photo/(driver|handover|user)') !== false, 'user photos are served privately');
+alb_ok(strpos($users_php, 'set_photo') !== false && strpos($users_php, 'alb_photo_path') !== false, 'user accounts store a profile photo');
+alb_ok(strpos($drivers, 'upsert_for_user') !== false && strpos($drivers, 'user_id') !== false, 'user photos can sync to employee/driver records');
+alb_ok(is_file($device), 'handheld device illustration exists');
+$svg = (string) file_get_contents($device);
+alb_ok(strpos($svg, '<svg') !== false && stripos($svg, 'samsung') === false && stripos($svg, 'logo') === false, 'device mark is a neutral SVG without a brand logo');
+alb_ok(strpos($js, 'users.photo') !== false && strpos($js, '/photo') !== false, 'admin user form can upload a photo');
+alb_ok(strpos($js, 'scanner.current_holder') !== false && strpos($js, 'device-mark') !== false, 'scanner detail shows holder photo and device mark');
 alb_ok(strpos($js, 'scanner.copy_qr') !== false && strpos($scan_tpl, 'scanner.copy_qr') !== false, 'managers can copy the unique QR link');
 alb_ok(strpos($caps, 'can_use_admin_app') !== false, 'admin app access is role-gated');
 alb_ok(strpos($caps, 'scanners.identity') !== false, 'identity permission exists');

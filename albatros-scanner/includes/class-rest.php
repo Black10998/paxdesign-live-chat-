@@ -156,6 +156,11 @@ class Alb_Rest {
                 'permission_callback' => array(__CLASS__, 'can_drivers_edit'),
             ),
         ));
+        register_rest_route(self::NS, '/drivers/(?P<id>\d+)/photo', array(
+            'methods' => 'POST',
+            'callback' => array(__CLASS__, 'driver_photo'),
+            'permission_callback' => array(__CLASS__, 'can_drivers_edit'),
+        ));
         register_rest_route(self::NS, '/audit', array(
             'methods' => 'GET',
             'callback' => array(__CLASS__, 'audit'),
@@ -172,6 +177,11 @@ class Alb_Rest {
                 'callback' => array(__CLASS__, 'create_user'),
                 'permission_callback' => array(__CLASS__, 'can_users_manage'),
             ),
+        ));
+        register_rest_route(self::NS, '/users/(?P<id>\d+)/photo', array(
+            'methods' => 'POST',
+            'callback' => array(__CLASS__, 'user_photo'),
+            'permission_callback' => array(__CLASS__, 'can_users_manage'),
         ));
         register_rest_route(self::NS, '/users/(?P<id>\d+)', array(
             array(
@@ -571,6 +581,14 @@ class Alb_Rest {
 
     public static function update_user(WP_REST_Request $request) {
         return self::respond(Alb_Users::update((int) $request['id'], $request->get_json_params() ?: $request->get_params()));
+    }
+
+    public static function user_photo(WP_REST_Request $request) {
+        return self::respond(Alb_Users::set_photo((int) $request['id'], $_FILES['photo'] ?? array()));
+    }
+
+    public static function driver_photo(WP_REST_Request $request) {
+        return self::respond(Alb_Drivers::set_photo((int) $request['id'], $_FILES['photo'] ?? array(), get_current_user_id()));
     }
 
     public static function get_settings() {

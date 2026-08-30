@@ -25,6 +25,7 @@ class Alb_Drivers {
             'employee_code' => sanitize_text_field($data['employee_code'] ?? ''),
             'status' => !empty($data['status']) && $data['status'] === 'inactive' ? 'inactive' : 'active',
             'notes' => sanitize_textarea_field($data['notes'] ?? ''),
+            'user_id' => !empty($data['user_id']) ? (int) $data['user_id'] : null,
             'created_at' => $now,
             'created_by' => (int) $user_id,
             'updated_at' => $now,
@@ -76,6 +77,13 @@ class Alb_Drivers {
                 $changes['email'] = array($current['email'], $value);
             }
         }
+        if (array_key_exists('user_id', $data)) {
+            $value = (int) $data['user_id'] ?: null;
+            if ((int) ($current['user_id'] ?? 0) !== (int) $value) {
+                $fields['user_id'] = $value;
+                $changes['user_id'] = array($current['user_id'] ?? '', $value);
+            }
+        }
         if (array_key_exists('status', $data)) {
             $value = $data['status'] === 'inactive' ? 'inactive' : 'active';
             if ($value !== $current['status']) {
@@ -108,6 +116,91 @@ class Alb_Drivers {
         global $wpdb;
         $row = $wpdb->get_row($wpdb->prepare('SELECT * FROM ' . self::table() . ' WHERE phone = %s ORDER BY id ASC LIMIT 1', sanitize_text_field($phone)), ARRAY_A);
         return $row ? self::present($row) : null;
+    }
+
+    public static function find_by_user($user_id) {
+        global $wpdb;
+        $row = $wpdb->get_row($wpdb->prepare('SELECT * FROM ' . self::table() . ' WHERE user_id = %d ORDER BY id ASC LIMIT 1', (int) $user_id), ARRAY_A);
+        return $row ? self::present($row) : null;
+    }
+
+    public static function id_for_user($user_id) {
+        $found = self::find_by_user($user_id);
+        return $found ? (int) $found['id'] : null;
+    }
+
+    public static function upsert_for_user($user_id) {
+        $user = get_userdata((int) $user_id);
+        if (!$user) {
+            return new WP_Error('alb_not_found', Alb_I18n::t('users.error.not_found'), array('status' => 404));
+        }
+        $name = trim($user->display_name !== '' ? $user->display_name : $user->user_login);
+        $parts = preg_split('/\s+/', $name, 2);
+        $first = $parts[0];
+        $last = isset($parts[1]) && $parts[1] !== '' ? $parts[1] : $parts[0];
+        $phone = (string) get_user_meta($user->ID, 'alb_phone', true);
+        $photo = Alb_Users::photo_path($user->ID);
+        $existing = self::find_by_user($user->ID);
+        $now = Alb_Settings::now_mysql();
+        $fields = array(
+            'first_name' => $first,
+            'last_name' => $last,
+            'email' => $user->user_email,
+            'phone' => $phone,
+            'photo_path' => $photo,
+            'user_id' => (int) $user->ID,
+            'status' => 'active',
+            'updated_at' => $now,
+            'updated_by' => get_current_user_id(),
+        );
+        global $wpdb;
+        if ($existing) {
+            $wpdb->update(self::table(), $fields, array('id' => (int) $existing['id']));
+            return self::get((int) $existing['id']);
+        }
+        $fields['employee_code'] = '';
+        $fields['notes'] = '';
+        $fields['created_at'] = $now;
+        $fields['created_by'] = get_current_user_id();
+        $wpdb->insert(self::table(), $fields);
+        return self::get((int) $wpdb->insert_id);
+    }
+
+    public static function sync_user_profile($user_id) {
+        $existing = self::find_by_user($user_id);
+        if (!$existing) {
+            return null;
+        }
+        return self::upsert_for_user($user_id);
+    }
+
+    public static function set_photo($id, $file, $actor_id) {
+        $current = self::get($id);
+        if (!$current) {
+            return new WP_Error('alb_not_found', Alb_I18n::t('driver.error.not_found'), array('status' => 404));
+        }
+        $stored = Alb_Photos::store_upload($file, 'driver');
+        if (is_wp_error($stored)) {
+            return $stored;
+        }
+        global $wpdb;
+        $wpdb->update(self::table(), array(
+            'photo_path' => $stored,
+            'updated_at' => Alb_Settings::now_mysql(),
+            'updated_by' => (int) $actor_id,
+        ), array('id' => (int) $id));
+        if (!empty($current['user_id'])) {
+            update_user_meta((int) $current['user_id'], 'alb_photo_path', $stored);
+        }
+        Alb_Audit::record(array(
+            'action' => 'driver_photo',
+            'entity_type' => 'driver',
+            'entity_id' => (int) $id,
+            'driver_id' => (int) $id,
+            'field' => 'photo',
+            'new' => 'uploaded',
+        ));
+        return self::get($id);
     }
 
     public static function upsert_verified($data) {
@@ -257,8 +350,19 @@ class Alb_Drivers {
 
     public static function present($row) {
         $photo = $row['photo_path'] ?? '';
+        $user_id = !empty($row['user_id']) ? (int) $row['user_id'] : 0;
+        if ($photo === '' && $user_id) {
+            $photo = Alb_Users::photo_path($user_id);
+        }
+        $photo_url = '';
+        if ($photo !== '') {
+            $photo_url = Alb_Photos::admin_url('driver', (int) $row['id']);
+        } elseif ($user_id && Alb_Users::photo_path($user_id) !== '') {
+            $photo_url = Alb_Photos::admin_url('user', $user_id);
+        }
         return array(
             'id' => (int) $row['id'],
+            'user_id' => $user_id ?: null,
             'first_name' => $row['first_name'],
             'last_name' => $row['last_name'],
             'name' => trim($row['first_name'] . ' ' . $row['last_name']),
@@ -267,7 +371,7 @@ class Alb_Drivers {
             'phone_verified_at' => $row['phone_verified_at'] ?? '',
             'phone_verified_at_display' => !empty($row['phone_verified_at']) ? Alb_Settings::format_datetime($row['phone_verified_at']) : '',
             'photo_path' => $photo,
-            'photo_url' => $photo !== '' ? Alb_Photos::admin_url('driver', (int) $row['id']) : '',
+            'photo_url' => $photo_url,
             'email' => $row['email'],
             'employee_code' => $row['employee_code'],
             'status' => $row['status'],

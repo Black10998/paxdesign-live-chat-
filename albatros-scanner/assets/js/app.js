@@ -18,6 +18,42 @@
   function can(perm) {
     return !!(user.permissions && user.permissions[perm]);
   }
+  function setPageTitle(name) {
+    document.title = (name ? name + ' — ' : '') + (A.company || 'Albatros');
+  }
+  function deviceMark(size) {
+    if (!A.device_mark) return '';
+    return '<img class="device-mark' + (size === 'sm' ? ' device-mark-sm' : '') + '" src="' + esc(A.device_mark) + '" alt="' + esc(t('scanner.device')) + '">';
+  }
+  function face(url, cls) {
+    return url ? '<img class="' + (cls || 'face-thumb') + '" src="' + esc(url) + '" alt="">' : '';
+  }
+  function apiUpload(path, file) {
+    var fd = new FormData();
+    fd.append('photo', file);
+    return fetch(A.rest + path, {
+      method: 'POST',
+      credentials: 'same-origin',
+      headers: { 'X-WP-Nonce': A.nonce },
+      body: fd
+    }).then(function (r) {
+      return r.json().then(function (data) { return { ok: r.ok, data: data }; });
+    }).then(function (res) {
+      if (!res.ok) throw new Error(res.data && res.data.message ? res.data.message : t('common.error'));
+      return res.data;
+    });
+  }
+  function maybeUpload(path, form) {
+    var input = form.querySelector('input[name="photo"]');
+    if (!input || !input.files || !input.files[0]) return Promise.resolve();
+    return apiUpload(path, input.files[0]);
+  }
+  function photoField(currentUrl) {
+    return '<div class="field wide"><label>' + esc(t('users.photo')) + '</label>' +
+      (currentUrl ? '<div class="person-row">' + face(currentUrl) + '</div>' : '') +
+      '<input type="file" name="photo" accept="image/jpeg,image/png,image/webp,image/*">' +
+      '<p class="hint">' + esc(t('users.photo_hint')) + '</p></div>';
+  }
   function esc(value) {
     return String(value == null ? '' : value)
       .replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
@@ -131,9 +167,9 @@
     options = options || {};
     var rows = (items || []).map(function (s) {
       return '<tr class="click" data-go="/scanners/' + s.id + '">' +
-        '<td>' + esc(s.scanner_code) + '</td><td>' + esc(s.brand) + '</td><td>' + esc(s.model) + '</td>' +
+        '<td>' + deviceMark('sm') + esc(s.scanner_code) + '</td><td>' + esc(s.brand) + '</td><td>' + esc(s.model) + '</td>' +
         '<td>' + esc(s.serial_number) + '</td><td>' + esc(s.phone_number) + '</td>' +
-        '<td>' + esc(s.driver_name || t('scanner.no_driver')) + '</td>' +
+        '<td class="person-cell">' + face(s.driver_photo_url) + ' ' + esc(s.driver_name || t('scanner.no_driver')) + '</td>' +
         '<td>' + esc(s.handover_date_display) + '</td><td>' + badge(s.status) + '</td>' +
         (options.actions ? '<td class="row-actions" data-stop="1">' + scannerRowActions(s) + '</td>' : '') +
         '</tr>';
@@ -290,7 +326,7 @@
   }
 
   function renderScannerForm() {
-    root.innerHTML = '<div class="page-head"><h1>' + esc(t('scanner.new')) + '</h1><button class="btn btn-sec" data-go="/scanners">' + esc(t('common.back')) + '</button></div>' +
+    root.innerHTML = '<div class="page-head"><h1>' + deviceMark('sm') + ' ' + esc(t('scanner.new')) + '</h1><button class="btn btn-sec" data-go="/scanners">' + esc(t('common.back')) + '</button></div>' +
       '<form id="scanner-form" class="card form-grid">' +
       field('brand', t('scanner.brand'), 'text', '', false) +
       field('model', t('scanner.model'), 'text', '', false) +
@@ -322,6 +358,7 @@
   function renderScannerDetail(id) {
     root.innerHTML = '<p>' + esc(t('common.loading')) + '</p>';
     api('scanners/' + id).then(function (s) {
+      setPageTitle(s.scanner_code + ' / ' + s.serial_number);
       var lost = '';
       if (s.status === 'lost') {
         if (s.last_assigned) {
@@ -350,20 +387,21 @@
         '<div class="detail">' +
         '<div class="card">' +
         '<h2>' + esc(t('scanner.detail')) + '</h2>' +
-        '<div class="kv">' +
+        '<div class="device-head">' + deviceMark() + '<div class="kv">' +
         kv(t('scanner.code'), s.scanner_code) +
         kv(t('scanner.brand'), s.brand) +
         kv(t('scanner.model'), s.model) +
         kv(t('scanner.serial'), s.serial_number) +
         kv(t('scanner.phone'), s.phone_number) +
-        '<div class="k">' + esc(t('scanner.driver')) + '</div><div>' +
-        (s.driver_photo_url ? '<img class="face-thumb" src="' + esc(s.driver_photo_url) + '" alt=""> ' : '') +
-        esc(s.driver_name || t('scanner.no_driver')) + '</div>' +
-        kv(t('handover.verified_phone'), s.driver_phone || '—') +
-        kv(t('scanner.handover_date'), s.handover_at_display || s.handover_date_display) +
         kv(t('common.status'), statusLabel(s.status)) +
         kv(t('common.notes'), s.notes || '') +
-        '</div>' +
+        '</div></div>' +
+        '<div class="holder-box"><h2>' + esc(t('scanner.current_holder')) + '</h2>' +
+        '<div class="person-row">' + face(s.driver_photo_url, 'face-lg') +
+        '<div><strong>' + esc(s.driver_name || t('scanner.no_driver')) + '</strong><br>' +
+        esc(t('handover.verified_phone')) + ': ' + esc(s.driver_phone || '—') + '<br>' +
+        esc(t('scanner.handover_date')) + ': ' + esc(s.handover_at_display || s.handover_date_display || '—') +
+        '</div></div></div>' +
         (can('scanners.edit') || can('scanners.identity') || can('scanners.assign') || can('scanners.status') || can('scanners.delete') ? renderScannerActions(s) : '') +
         '</div>' +
         '<div>' +
@@ -488,7 +526,7 @@
     root.innerHTML = '<p>' + esc(t('common.loading')) + '</p>';
     api('drivers?' + qs({ q: query.q || '', status: query.status || '', page: query.page || 1 })).then(function (data) {
       var rows = (data.items || []).map(function (d) {
-        return '<tr class="click" data-go="/drivers/' + d.id + '"><td>' + esc(d.name) + '</td><td>' + esc(d.phone) + '</td><td>' + esc(d.email) + '</td><td>' + esc(d.employee_code) + '</td><td>' + badge(d.status) + '</td></tr>';
+        return '<tr class="click" data-go="/drivers/' + d.id + '"><td class="person-cell">' + face(d.photo_url) + ' ' + esc(d.name) + '</td><td>' + esc(d.phone) + '</td><td>' + esc(d.email) + '</td><td>' + esc(d.employee_code) + '</td><td>' + badge(d.status) + '</td></tr>';
       }).join('') || emptyRow(5);
       root.innerHTML = '<div class="page-head"><h1>' + esc(t('driver.title')) + '</h1>' +
         (can('drivers.create') ? '<button class="btn" data-go="/drivers/new">' + esc(t('driver.new')) + '</button>' : '') + '</div>' +
@@ -511,13 +549,16 @@
       field('phone', t('driver.phone'), 'text', '') +
       field('email', t('driver.email'), 'email', '') +
       field('employee_code', t('driver.employee_code'), 'text', '') +
+      photoField('') +
       '<div class="field wide"><label>' + esc(t('common.notes')) + '</label><textarea name="notes"></textarea></div>' +
       '<div class="wide"><button class="btn" type="submit">' + esc(t('common.create')) + '</button></div></form>';
     document.getElementById('driver-form').onsubmit = function (e) {
       e.preventDefault();
       var body = {};
-      new FormData(e.target).forEach(function (v, k) { body[k] = v; });
-      api('drivers', { method: 'POST', body: body }).then(function (d) { go('/drivers/' + d.id); }).catch(showError);
+      new FormData(e.target).forEach(function (v, k) { if (k !== 'photo') body[k] = v; });
+      api('drivers', { method: 'POST', body: body }).then(function (d) {
+        return maybeUpload('drivers/' + d.id + '/photo', e.target).then(function () { go('/drivers/' + d.id); });
+      }).catch(showError);
     };
   }
 
@@ -532,12 +573,14 @@
       }).join('') || '<li>' + esc(t('common.empty')) + '</li>';
       root.innerHTML = '<div class="page-head"><h1>' + esc(d.name) + '</h1><button class="btn btn-sec" data-go="/drivers">' + esc(t('common.back')) + '</button></div>' +
         '<div class="detail"><div class="card"><h2>' + esc(t('driver.detail')) + '</h2>' +
+        '<div class="person-row">' + face(d.photo_url, 'face-lg') + '<div><strong>' + esc(d.name) + '</strong><br>' + esc(d.phone || '—') + '</div></div>' +
         (can('drivers.edit') ? '<form id="driver-edit" class="form-grid">' +
           field('first_name', t('driver.first_name'), 'text', d.first_name) +
           field('last_name', t('driver.last_name'), 'text', d.last_name) +
           field('phone', t('driver.phone'), 'text', d.phone) +
           field('email', t('driver.email'), 'email', d.email) +
           field('employee_code', t('driver.employee_code'), 'text', d.employee_code) +
+          photoField(d.photo_url) +
           '<div class="field wide"><label>' + esc(t('common.notes')) + '</label><textarea name="notes">' + esc(d.notes || '') + '</textarea></div>' +
           '<div class="wide"><button class="btn" type="submit">' + esc(t('common.save')) + '</button>' +
           (can('drivers.deactivate') ? ' <button type="button" class="btn btn-danger" id="toggle-driver">' + esc(d.status === 'active' ? t('driver.deactivate') : t('driver.activate')) + '</button>' : '') +
@@ -549,8 +592,10 @@
         form.onsubmit = function (e) {
           e.preventDefault();
           var body = {};
-          new FormData(form).forEach(function (v, k) { body[k] = v; });
-          api('drivers/' + d.id, { method: 'POST', body: body }).then(function () { renderDriverDetail(d.id); }).catch(showError);
+          new FormData(form).forEach(function (v, k) { if (k !== 'photo') body[k] = v; });
+          api('drivers/' + d.id, { method: 'POST', body: body }).then(function () {
+            return maybeUpload('drivers/' + d.id + '/photo', form);
+          }).then(function () { renderDriverDetail(d.id); }).catch(showError);
         };
       }
       var tog = document.getElementById('toggle-driver');
@@ -596,9 +641,12 @@
     var perms = {};
     var hasPerm = false;
     new FormData(form).forEach(function (v, k) {
+      if (k === 'photo') return;
       if (k.indexOf('perm_') === 0) {
         perms[k.slice(5)] = true;
         hasPerm = true;
+      } else if (k === 'create_as_employee') {
+        body[k] = true;
       } else {
         body[k] = v;
       }
@@ -612,14 +660,17 @@
     root.innerHTML = '<p>' + esc(t('common.loading')) + '</p>';
     api('users').then(function (data) {
       var rows = (data.items || []).map(function (u) {
-        return '<tr class="click" data-go="/users/' + u.id + '"><td>' + esc(u.name) + '</td><td>' + esc(u.username) + '</td><td>' + esc(u.email) + '</td><td>' + esc(t('role.' + u.role)) + '</td><td>' + esc(u.last_login_display || '—') + '</td></tr>';
+        return '<tr class="click" data-go="/users/' + u.id + '"><td class="person-cell">' + face(u.photo_url) + ' ' + esc(u.name) + '</td><td>' + esc(u.username) + '</td><td>' + esc(u.email) + '</td><td>' + esc(t('role.' + u.role)) + '</td><td>' + esc(u.last_login_display || '—') + '</td></tr>';
       }).join('') || emptyRow(5);
       var form = can('users.manage') ? '<form id="user-form" class="card form-grid"><div class="wide"><h2>' + esc(t('users.new')) + '</h2></div>' +
         field('name', t('users.name'), 'text', '') +
         field('username', t('users.username'), 'text', '') +
         field('email', t('driver.email'), 'email', '') +
+        field('phone', t('users.phone'), 'tel', '') +
         field('password', t('users.password'), 'password', '') +
         '<div class="field"><label>' + esc(t('users.role')) + '</label><select name="role">' + roleOptions('staff') + '</select></div>' +
+        photoField('') +
+        '<label class="row-check wide"><input type="checkbox" name="create_as_employee" value="1" checked><span>' + esc(t('users.create_employee')) + '</span></label>' +
         (A.can_assign_permissions ? userPermBoxes({}) : '') +
         '<div class="wide"><button class="btn" type="submit">' + esc(t('common.create')) + '</button></div></form>' : '';
       root.innerHTML = '<div class="page-head"><h1>' + esc(t('users.title')) + '</h1></div>' + form +
@@ -628,7 +679,9 @@
       if (uf) {
         uf.onsubmit = function (e) {
           e.preventDefault();
-          api('users', { method: 'POST', body: collectUserBody(uf) }).then(function () { renderUsers(); }).catch(showError);
+          api('users', { method: 'POST', body: collectUserBody(uf) }).then(function (created) {
+            return maybeUpload('users/' + created.id + '/photo', uf);
+          }).then(function () { renderUsers(); }).catch(showError);
         };
       }
     }).catch(showError);
@@ -641,20 +694,26 @@
     root.innerHTML = '<p>' + esc(t('common.loading')) + '</p>';
     api('users/' + id).then(function (u) {
       var form = can('users.manage') ? '<form id="user-edit" class="card form-grid"><div class="wide"><h2>' + esc(t('users.edit')) + '</h2></div>' +
+        '<div class="person-row">' + face(u.photo_url, 'face-lg') + '<div><strong>' + esc(u.name) + '</strong><br>' + esc(t('role.' + u.role)) + '</div></div>' +
         field('name', t('users.name'), 'text', u.name) +
         field('email', t('driver.email'), 'email', u.email) +
+        field('phone', t('users.phone'), 'tel', u.phone || '') +
         field('password', t('users.password'), 'password', '') +
         '<div class="field"><label>' + esc(t('users.role')) + '</label><select name="role">' + roleOptions(u.role) + '</select></div>' +
         '<div class="field"><label>' + esc(t('users.last_login')) + '</label><input type="text" value="' + esc(u.last_login_display || '—') + '" readonly class="readonly"></div>' +
+        photoField(u.photo_url) +
+        '<label class="row-check wide"><input type="checkbox" name="create_as_employee" value="1"' + (u.driver_id ? ' checked' : '') + '><span>' + esc(t('users.create_employee')) + '</span></label>' +
         (A.can_assign_permissions ? userPermBoxes(u.permissions || {}) : '') +
         '<div class="wide"><button class="btn" type="submit">' + esc(t('common.save')) + '</button></div></form>' :
-        '<div class="card"><div class="kv">' + kv(t('users.name'), u.name) + kv(t('users.username'), u.username) + kv(t('driver.email'), u.email) + kv(t('users.role'), t('role.' + u.role)) + kv(t('users.last_login'), u.last_login_display || '—') + '</div></div>';
+        '<div class="card"><div class="person-row">' + face(u.photo_url, 'face-lg') + '<div><strong>' + esc(u.name) + '</strong></div></div><div class="kv">' + kv(t('users.name'), u.name) + kv(t('users.username'), u.username) + kv(t('driver.email'), u.email) + kv(t('users.phone'), u.phone || '—') + kv(t('users.role'), t('role.' + u.role)) + kv(t('users.last_login'), u.last_login_display || '—') + '</div></div>';
       root.innerHTML = '<div class="page-head"><h1>' + esc(u.name || u.username) + '</h1><button class="btn btn-sec" data-go="/users">' + esc(t('common.back')) + '</button></div>' + form;
       var uf = document.getElementById('user-edit');
       if (uf) {
         uf.onsubmit = function (e) {
           e.preventDefault();
-          api('users/' + id, { method: 'POST', body: collectUserBody(uf) }).then(function () { renderUserDetail(id); }).catch(showError);
+          api('users/' + id, { method: 'POST', body: collectUserBody(uf) }).then(function () {
+            return maybeUpload('users/' + id + '/photo', uf);
+          }).then(function () { renderUserDetail(id); }).catch(showError);
         };
       }
     }).catch(showError);
@@ -772,18 +831,19 @@
     renderNav();
     var route = parseRoute();
     var p = route.parts;
-    if (p.length === 0) return renderDashboard();
-    if (p[0] === 'scanners' && p[1] === 'new') return renderScannerForm();
-    if (p[0] === 'scanners' && p[1]) return renderScannerDetail(p[1]);
-    if (p[0] === 'scanners') return renderScanners(Object.fromEntries(new URLSearchParams(window.location.search)));
-    if (p[0] === 'drivers' && p[1] === 'new') return renderDriverForm();
-    if (p[0] === 'drivers' && p[1]) return renderDriverDetail(p[1]);
-    if (p[0] === 'drivers') return renderDrivers({});
-    if (p[0] === 'audit') return renderAudit({});
-    if (p[0] === 'users' && p[1]) return renderUserDetail(p[1]);
-    if (p[0] === 'users') return renderUsers();
-    if (p[0] === 'settings') return renderSettings();
-    if (p[0] === 'reports') return renderReports();
+    if (p.length === 0) { setPageTitle(t('dash.title')); return renderDashboard(); }
+    if (p[0] === 'scanners' && p[1] === 'new') { setPageTitle(t('scanner.new')); return renderScannerForm(); }
+    if (p[0] === 'scanners' && p[1]) { setPageTitle(t('scanner.detail')); return renderScannerDetail(p[1]); }
+    if (p[0] === 'scanners') { setPageTitle(t('scanner.title')); return renderScanners(Object.fromEntries(new URLSearchParams(window.location.search))); }
+    if (p[0] === 'drivers' && p[1] === 'new') { setPageTitle(t('driver.new')); return renderDriverForm(); }
+    if (p[0] === 'drivers' && p[1]) { setPageTitle(t('driver.detail')); return renderDriverDetail(p[1]); }
+    if (p[0] === 'drivers') { setPageTitle(t('driver.title')); return renderDrivers({}); }
+    if (p[0] === 'audit') { setPageTitle(t('audit.title')); return renderAudit({}); }
+    if (p[0] === 'users' && p[1]) { setPageTitle(t('users.edit')); return renderUserDetail(p[1]); }
+    if (p[0] === 'users') { setPageTitle(t('users.title')); return renderUsers(); }
+    if (p[0] === 'settings') { setPageTitle(t('settings.title')); return renderSettings(); }
+    if (p[0] === 'reports') { setPageTitle(t('reports.title')); return renderReports(); }
+    setPageTitle(t('dash.title'));
     renderDashboard();
   }
 

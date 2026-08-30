@@ -72,8 +72,14 @@ class Alb_Users {
             return $user_id;
         }
         Alb_Capabilities::set_role($user_id, $role);
+        if (isset($data['phone'])) {
+            update_user_meta($user_id, 'alb_phone', sanitize_text_field($data['phone']));
+        }
         if (Alb_Capabilities::can_assign_user_permissions($actor) && isset($data['permissions'])) {
             Alb_Capabilities::set_user_permissions($user_id, $data['permissions']);
+        }
+        if (!empty($data['create_as_employee']) || $role === Alb_Capabilities::STAFF) {
+            Alb_Drivers::upsert_for_user((int) $user_id);
         }
         Alb_Audit::record(array(
             'action' => 'user_create',
@@ -140,22 +146,64 @@ class Alb_Users {
                 ));
             }
         }
+        if (array_key_exists('phone', $data)) {
+            update_user_meta((int) $id, 'alb_phone', sanitize_text_field($data['phone']));
+        }
         if (Alb_Capabilities::can_assign_user_permissions($actor) && array_key_exists('permissions', $data)) {
             Alb_Capabilities::set_user_permissions($id, $data['permissions']);
+        }
+        if (!empty($data['create_as_employee'])) {
+            Alb_Drivers::upsert_for_user((int) $id);
+        } else {
+            Alb_Drivers::sync_user_profile((int) $id);
         }
         return self::present(get_userdata((int) $id));
     }
 
+    public static function set_photo($id, $file) {
+        $actor = wp_get_current_user();
+        if (!Alb_Capabilities::user_can($actor, 'users.manage')) {
+            return new WP_Error('alb_forbidden', Alb_I18n::t('error.forbidden'), array('status' => 403));
+        }
+        $user = get_userdata((int) $id);
+        if (!$user) {
+            return new WP_Error('alb_not_found', Alb_I18n::t('users.error.not_found'), array('status' => 404));
+        }
+        $stored = Alb_Photos::store_upload($file, 'user');
+        if (is_wp_error($stored)) {
+            return $stored;
+        }
+        update_user_meta((int) $id, 'alb_photo_path', $stored);
+        Alb_Drivers::sync_user_profile((int) $id);
+        Alb_Audit::record(array(
+            'action' => 'user_photo',
+            'entity_type' => 'user',
+            'entity_id' => (int) $id,
+            'field' => 'photo',
+            'new' => 'uploaded',
+        ));
+        return self::present($user);
+    }
+
+    public static function photo_path($user_id) {
+        return (string) get_user_meta((int) $user_id, 'alb_photo_path', true);
+    }
+
     public static function present(WP_User $user) {
+        $photo = self::photo_path($user->ID);
         return array(
             'id' => (int) $user->ID,
             'username' => $user->user_login,
             'email' => $user->user_email,
             'name' => $user->display_name,
+            'phone' => (string) get_user_meta($user->ID, 'alb_phone', true),
             'role' => Alb_Capabilities::role_of($user),
+            'photo_path' => $photo,
+            'photo_url' => $photo !== '' ? Alb_Photos::admin_url('user', (int) $user->ID) : '',
             'last_login' => Alb_Auth::last_login($user->ID),
             'last_login_display' => Alb_Auth::last_login_display($user->ID),
             'permissions' => Alb_Capabilities::user_permissions($user),
+            'driver_id' => Alb_Drivers::id_for_user((int) $user->ID),
         );
     }
 

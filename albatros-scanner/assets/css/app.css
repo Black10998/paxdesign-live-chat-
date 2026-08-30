@@ -332,7 +332,18 @@ table.data tbody tr.click { cursor: pointer; }
   vertical-align: middle;
   margin-right: 6px;
 }
-.person-row { display: flex; align-items: center; gap: 10px; padding: 12px; }
+.face-lg {
+  width: 72px;
+  height: 72px;
+  object-fit: cover;
+  border: 1px solid var(--line);
+}
+.person-row { display: flex; align-items: center; gap: 10px; padding: 12px 0; }
+.person-cell { white-space: nowrap; }
+.device-head { display: flex; align-items: flex-start; gap: 16px; }
+.device-mark { width: 56px; height: 88px; flex: 0 0 auto; display: block; }
+.device-mark-sm { width: 16px; height: 26px; vertical-align: middle; margin-right: 6px; display: inline-block; }
+.holder-box { margin-top: 16px; padding-top: 12px; border-top: 1px solid var(--line); }
 
 .settings-nav { display: flex; gap: 0; border-bottom: 1px solid var(--line); margin-bottom: 12px; }
 .settings-nav button {

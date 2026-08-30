@@ -74,14 +74,19 @@ class Alb_Photos {
             status_header(403);
             exit;
         }
-        if (!preg_match('#^alb-photo/(driver|handover)/(\d+)$#', $path, $match)) {
+        if (!preg_match('#^alb-photo/(driver|handover|user)/(\d+)$#', $path, $match)) {
             status_header(404);
             exit;
         }
         $filename = '';
-        if ($match[1] === 'driver') {
+        if ($match[1] === 'user') {
+            $filename = (string) get_user_meta((int) $match[2], 'alb_photo_path', true);
+        } elseif ($match[1] === 'driver') {
             $driver = Alb_Drivers::get((int) $match[2]);
             $filename = $driver['photo_path'] ?? '';
+            if ($filename === '' && !empty($driver['user_id'])) {
+                $filename = (string) get_user_meta((int) $driver['user_id'], 'alb_photo_path', true);
+            }
         } else {
             $row = Alb_Drivers::handover_snapshot((int) $match[2]);
             $filename = $row['snapshot_photo'] ?? '';
