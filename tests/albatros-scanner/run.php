@@ -187,6 +187,8 @@ alb_ok(($en['about.developer'] ?? '') !== '', 'about developer label exists');
 alb_ok(($de['driver.vehicle'] ?? '') === 'Lieferfahrzeug' && ($en['driver.package'] ?? '') === 'Package', 'driver vehicle and package labels exist');
 alb_ok(($de['status.assigned'] ?? '') === 'Zugewiesen' && ($en['status.assigned'] ?? '') === 'Assigned', 'assigned device state is translated');
 alb_ok(($de['scanner.phone'] ?? '') === 'Scanner-Telefonnummer / SIM' && ($de['driver.phone'] ?? '') === 'Persönliche Telefonnummer', 'scanner SIM and personal phone labels are distinct');
+alb_ok(($de['scanner.phone_short'] ?? '') === 'Scanner-Telefon' && ($de['scanner.handover_short'] ?? '') === 'Übernahme', 'scanner list uses short column titles');
+alb_ok(strpos($js, "t('scanner.phone_short')") !== false && strpos($js, "t('scanner.handover_short')") !== false, 'scanner table headers use the short titles');
 alb_ok(($de['branch.wien'] ?? '') === 'Wien' && ($de['branch.graz'] ?? '') === 'Graz', 'Wien and Graz branch labels exist');
 
 foreach (glob($plugin . '/includes/*.php') as $file) {

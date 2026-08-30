@@ -331,8 +331,8 @@
     }).join('') || emptyRow(options.actions ? 10 : 9);
     return '<div class="table-scroll"><table class="data scanner-table"><thead><tr>' +
       '<th class="c-id">' + esc(t('scanner.code')) + '</th><th class="c-brand">' + esc(t('scanner.brand')) + '</th><th class="c-model">' + esc(t('scanner.model')) + '</th>' +
-      '<th class="c-serial">' + esc(t('scanner.serial')) + '</th><th class="c-sim">' + esc(t('scanner.phone')) + '</th><th class="c-branch">' + esc(t('branch.label')) + '</th><th class="person-col">' + esc(t('scanner.driver')) + '</th>' +
-      '<th class="c-date">' + esc(t('scanner.handover_date')) + '</th><th class="c-status">' + esc(t('common.status')) + '</th>' +
+      '<th class="c-serial">' + esc(t('scanner.serial')) + '</th><th class="c-sim">' + esc(t('scanner.phone_short')) + '</th><th class="c-branch">' + esc(t('branch.label')) + '</th><th class="person-col">' + esc(t('scanner.driver')) + '</th>' +
+      '<th class="c-date">' + esc(t('scanner.handover_short')) + '</th><th class="c-status">' + esc(t('common.status')) + '</th>' +
       (options.actions ? '<th class="c-act">' + esc(t('common.actions')) + '</th>' : '') +
       '</tr></thead><tbody>' + rows + '</tbody></table></div>';
   }
