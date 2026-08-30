@@ -290,6 +290,22 @@ table.data tbody tr.click { cursor: pointer; }
 .perm-table td, .perm-table th { text-align: center; }
 .perm-table th:first-child, .perm-table td:first-child { text-align: left; }
 .perm-user { display: grid; grid-template-columns: 1fr 1fr; gap: 4px 16px; }
+.role-pick { display: grid; gap: 8px; }
+.role-card {
+  display: flex;
+  align-items: flex-start;
+  gap: 10px;
+  margin: 0;
+  padding: 10px;
+  border: 1px solid var(--line);
+  background: #fff;
+  color: var(--text);
+}
+.role-card input { width: auto; height: auto; margin-top: 3px; }
+.role-card strong { display: block; }
+.role-card small { display: block; color: var(--muted); font-size: 12px; }
+.extras { border: 1px solid var(--line); padding: 10px 12px; background: #fff; }
+.extras summary { cursor: pointer; font-weight: 600; }
 
 .hint { color: var(--muted); font-size: 12px; margin: 0 0 8px; }
 .qr-box { padding: 14px; text-align: center; }

@@ -26,6 +26,10 @@ class Alb_Auth {
         }
         wp_set_current_user($user->ID);
         Alb_Capabilities::bootstrap_user($user->ID);
+        if (!Alb_Capabilities::is_active($user)) {
+            wp_logout();
+            return new WP_Error('alb_forbidden', Alb_I18n::t('users.error.inactive'), array('status' => 403));
+        }
         self::clear_failures();
         update_user_meta((int) $user->ID, 'alb_last_login', Alb_Settings::now_mysql());
         return self::current_payload();
@@ -68,6 +72,8 @@ class Alb_Auth {
             'email' => $user->user_email,
             'name' => $user->display_name,
             'role' => $role,
+            'is_primary' => Alb_Capabilities::is_primary($user),
+            'status' => Alb_Capabilities::status_of($user),
             'locale' => Alb_I18n::current(),
             'last_login' => self::last_login($user->ID),
             'last_login_display' => self::last_login_display($user->ID),

@@ -462,9 +462,9 @@
         html += field('brand', t('scanner.brand'), 'text', s.brand, false);
         html += field('model', t('scanner.model'), 'text', s.model, false);
         html += field('serial_number', t('scanner.serial'), 'text', s.serial_number, false);
+        html += field('phone_number', t('scanner.phone'), 'text', s.phone_number, false);
       }
       if (can('scanners.edit')) {
-        html += field('phone_number', t('scanner.phone'), 'text', s.phone_number, false);
         html += '<div class="field wide"><label>' + esc(t('common.notes')) + '</label><textarea name="notes">' + esc(s.notes || '') + '</textarea></div>';
       }
       html += '<div class="wide"><button class="btn" type="submit">' + esc(t('common.save')) + '</button></div>';
@@ -491,11 +491,12 @@
       edit.onsubmit = function (e) {
         e.preventDefault();
         var fd = new FormData(edit);
-        var body = { phone_number: fd.get('phone_number'), notes: fd.get('notes') };
+        var body = { notes: fd.get('notes') };
         if (can('scanners.identity')) {
           body.brand = fd.get('brand');
           body.model = fd.get('model');
           body.serial_number = fd.get('serial_number');
+          body.phone_number = fd.get('phone_number');
         }
         api('scanners/' + s.id, { method: 'POST', body: body })
           .then(function () { renderScannerDetail(s.id); }).catch(showError);
@@ -623,35 +624,40 @@
     }).catch(showError);
   }
 
-  function roleOptions(selected) {
+  function isPrimary() {
+    return !!(user.is_primary || A.is_primary);
+  }
+  function roleCards(selected) {
     var roles = A.assignable_roles || A.roles || [];
-    return roles.map(function (r) {
-      return '<option value="' + r + '"' + (selected === r ? ' selected' : '') + '>' + esc(t('role.' + r)) + '</option>';
-    }).join('');
+    return '<div class="wide"><label>' + esc(t('users.role')) + '</label><p class="hint">' + esc(t('users.role_hint')) + '</p><div class="role-pick">' +
+      roles.map(function (r) {
+        return '<label class="role-card"><input type="radio" name="role" value="' + r + '"' + (selected === r ? ' checked' : '') + '>' +
+          '<span><strong>' + esc(t('role.' + r)) + '</strong><small>' + esc(t('role.hint.' + r)) + '</small></span></label>';
+      }).join('') + '</div></div>';
   }
-  function userPermBoxes(selected) {
+  function extraPermBoxes(selected) {
+    if (!A.can_assign_permissions) return '';
     selected = selected || {};
-    return '<div class="wide"><h2>' + esc(t('users.permissions')) + '</h2><p class="hint">' + esc(t('users.permissions_hint')) + '</p></div>' +
-      '<div class="wide perm-user">' + (A.permission_keys || []).map(function (key) {
+    var keys = A.extra_permission_keys || ['scanners.identity'];
+    return '<details class="wide extras"><summary>' + esc(t('users.extras')) + '</summary><p class="hint">' + esc(t('users.extras_hint')) + '</p>' +
+      keys.map(function (key) {
         return '<label class="row-check"><input type="checkbox" name="perm_' + key + '" value="1"' + (selected[key] ? ' checked' : '') + '><span>' + esc(t('perm.' + key)) + '</span></label>';
-      }).join('') + '</div>';
+      }).join('') + '</details>';
   }
-  function collectUserBody(form) {
+  function collectUserBody(form, includeExtras) {
     var body = {};
     var perms = {};
-    var hasPerm = false;
     new FormData(form).forEach(function (v, k) {
       if (k === 'photo') return;
       if (k.indexOf('perm_') === 0) {
         perms[k.slice(5)] = true;
-        hasPerm = true;
       } else if (k === 'create_as_employee') {
         body[k] = true;
       } else {
         body[k] = v;
       }
     });
-    if (A.can_assign_permissions) {
+    if (includeExtras && A.can_assign_permissions) {
       body.permissions = perms;
     }
     return body;
@@ -660,26 +666,26 @@
     root.innerHTML = '<p>' + esc(t('common.loading')) + '</p>';
     api('users').then(function (data) {
       var rows = (data.items || []).map(function (u) {
-        return '<tr class="click" data-go="/users/' + u.id + '"><td class="person-cell">' + face(u.photo_url) + ' ' + esc(u.name) + '</td><td>' + esc(u.username) + '</td><td>' + esc(u.email) + '</td><td>' + esc(t('role.' + u.role)) + '</td><td>' + esc(u.last_login_display || '—') + '</td></tr>';
-      }).join('') || emptyRow(5);
+        var role = (u.is_primary ? t('users.primary') + ' · ' : '') + t('role.' + u.role);
+        return '<tr class="click" data-go="/users/' + u.id + '"><td class="person-cell">' + face(u.photo_url) + ' ' + esc(u.name) + '</td><td>' + esc(u.username) + '</td><td>' + esc(u.email) + '</td><td>' + esc(role) + '</td><td>' + esc(t('users.status.' + (u.status || 'active'))) + '</td><td>' + esc(u.last_login_display || '—') + '</td></tr>';
+      }).join('') || emptyRow(6);
       var form = can('users.manage') ? '<form id="user-form" class="card form-grid"><div class="wide"><h2>' + esc(t('users.new')) + '</h2></div>' +
         field('name', t('users.name'), 'text', '') +
         field('username', t('users.username'), 'text', '') +
         field('email', t('driver.email'), 'email', '') +
         field('phone', t('users.phone'), 'tel', '') +
         field('password', t('users.password'), 'password', '') +
-        '<div class="field"><label>' + esc(t('users.role')) + '</label><select name="role">' + roleOptions('staff') + '</select></div>' +
+        roleCards('staff') +
         photoField('') +
         '<label class="row-check wide"><input type="checkbox" name="create_as_employee" value="1" checked><span>' + esc(t('users.create_employee')) + '</span></label>' +
-        (A.can_assign_permissions ? userPermBoxes({}) : '') +
         '<div class="wide"><button class="btn" type="submit">' + esc(t('common.create')) + '</button></div></form>' : '';
       root.innerHTML = '<div class="page-head"><h1>' + esc(t('users.title')) + '</h1></div>' + form +
-        '<div class="card"><table class="data"><thead><tr><th>' + esc(t('users.name')) + '</th><th>' + esc(t('users.username')) + '</th><th>' + esc(t('driver.email')) + '</th><th>' + esc(t('users.role')) + '</th><th>' + esc(t('users.last_login')) + '</th></tr></thead><tbody>' + rows + '</tbody></table></div>';
+        '<div class="card"><table class="data"><thead><tr><th>' + esc(t('users.name')) + '</th><th>' + esc(t('users.username')) + '</th><th>' + esc(t('driver.email')) + '</th><th>' + esc(t('users.role')) + '</th><th>' + esc(t('users.status')) + '</th><th>' + esc(t('users.last_login')) + '</th></tr></thead><tbody>' + rows + '</tbody></table></div>';
       var uf = document.getElementById('user-form');
       if (uf) {
         uf.onsubmit = function (e) {
           e.preventDefault();
-          api('users', { method: 'POST', body: collectUserBody(uf) }).then(function (created) {
+          api('users', { method: 'POST', body: collectUserBody(uf, false) }).then(function (created) {
             return maybeUpload('users/' + created.id + '/photo', uf);
           }).then(function () { renderUsers(); }).catch(showError);
         };
@@ -693,25 +699,31 @@
     }
     root.innerHTML = '<p>' + esc(t('common.loading')) + '</p>';
     api('users/' + id).then(function (u) {
-      var form = can('users.manage') ? '<form id="user-edit" class="card form-grid"><div class="wide"><h2>' + esc(t('users.edit')) + '</h2></div>' +
-        '<div class="person-row">' + face(u.photo_url, 'face-lg') + '<div><strong>' + esc(u.name) + '</strong><br>' + esc(t('role.' + u.role)) + '</div></div>' +
+      var locked = u.is_primary && !isPrimary();
+      var canEdit = can('users.manage') && !locked;
+      var form = canEdit ? '<form id="user-edit" class="card form-grid"><div class="wide"><h2>' + esc(t('users.edit')) + '</h2></div>' +
+        '<div class="person-row">' + face(u.photo_url, 'face-lg') + '<div><strong>' + esc(u.name) + '</strong><br>' + esc((u.is_primary ? t('users.primary') + ' · ' : '') + t('role.' + u.role)) + '</div></div>' +
         field('name', t('users.name'), 'text', u.name) +
         field('email', t('driver.email'), 'email', u.email) +
         field('phone', t('users.phone'), 'tel', u.phone || '') +
         field('password', t('users.password'), 'password', '') +
-        '<div class="field"><label>' + esc(t('users.role')) + '</label><select name="role">' + roleOptions(u.role) + '</select></div>' +
+        roleCards(u.role) +
+        '<div class="field"><label>' + esc(t('users.status')) + '</label><select name="status"' + (u.is_primary ? ' disabled' : '') + '>' +
+          '<option value="active"' + (u.status !== 'inactive' ? ' selected' : '') + '>' + esc(t('users.status.active')) + '</option>' +
+          '<option value="inactive"' + (u.status === 'inactive' ? ' selected' : '') + '>' + esc(t('users.status.inactive')) + '</option>' +
+        '</select></div>' +
         '<div class="field"><label>' + esc(t('users.last_login')) + '</label><input type="text" value="' + esc(u.last_login_display || '—') + '" readonly class="readonly"></div>' +
         photoField(u.photo_url) +
         '<label class="row-check wide"><input type="checkbox" name="create_as_employee" value="1"' + (u.driver_id ? ' checked' : '') + '><span>' + esc(t('users.create_employee')) + '</span></label>' +
-        (A.can_assign_permissions ? userPermBoxes(u.permissions || {}) : '') +
+        extraPermBoxes(u.permissions || {}) +
         '<div class="wide"><button class="btn" type="submit">' + esc(t('common.save')) + '</button></div></form>' :
-        '<div class="card"><div class="person-row">' + face(u.photo_url, 'face-lg') + '<div><strong>' + esc(u.name) + '</strong></div></div><div class="kv">' + kv(t('users.name'), u.name) + kv(t('users.username'), u.username) + kv(t('driver.email'), u.email) + kv(t('users.phone'), u.phone || '—') + kv(t('users.role'), t('role.' + u.role)) + kv(t('users.last_login'), u.last_login_display || '—') + '</div></div>';
+        '<div class="card"><div class="person-row">' + face(u.photo_url, 'face-lg') + '<div><strong>' + esc(u.name) + '</strong></div></div><div class="kv">' + kv(t('users.name'), u.name) + kv(t('users.username'), u.username) + kv(t('driver.email'), u.email) + kv(t('users.phone'), u.phone || '—') + kv(t('users.role'), (u.is_primary ? t('users.primary') + ' · ' : '') + t('role.' + u.role)) + kv(t('users.status'), t('users.status.' + (u.status || 'active'))) + kv(t('users.last_login'), u.last_login_display || '—') + '</div></div>';
       root.innerHTML = '<div class="page-head"><h1>' + esc(u.name || u.username) + '</h1><button class="btn btn-sec" data-go="/users">' + esc(t('common.back')) + '</button></div>' + form;
       var uf = document.getElementById('user-edit');
       if (uf) {
         uf.onsubmit = function (e) {
           e.preventDefault();
-          api('users/' + id, { method: 'POST', body: collectUserBody(uf) }).then(function () {
+          api('users/' + id, { method: 'POST', body: collectUserBody(uf, true) }).then(function () {
             return maybeUpload('users/' + id + '/photo', uf);
           }).then(function () { renderUserDetail(id); }).catch(showError);
         };
@@ -733,9 +745,13 @@
         (needSettings ? '<button type="button" class="active" data-tab="general">' + esc(t('settings.general')) + '</button>' : '') +
         (needPerms ? '<button type="button" data-tab="roles">' + esc(t('settings.roles')) + '</button>' : '') +
         '</div>';
+      var ownerFields = isPrimary()
+        ? field('company_name', t('settings.company_name'), 'text', s.company_name) + field('owner_name', t('settings.owner_name'), 'text', s.owner_name)
+        : '<div class="field"><label>' + esc(t('settings.company_name')) + '</label><input type="text" value="' + esc(s.company_name || '') + '" readonly class="readonly"></div>' +
+          '<div class="field"><label>' + esc(t('settings.owner_name')) + '</label><input type="text" value="' + esc(s.owner_name || '') + '" readonly class="readonly"></div>' +
+          '<p class="hint wide">' + esc(t('settings.owner_locked')) + '</p>';
       var general = needSettings ? '<form id="settings-form" class="card form-grid">' +
-        field('company_name', t('settings.company_name'), 'text', s.company_name) +
-        field('owner_name', t('settings.owner_name'), 'text', s.owner_name) +
+        ownerFields +
         '<div class="field wide"><label>' + esc(t('official.website')) + '</label>' +
         '<a href="' + esc(A.official_url || 'https://www.albatros-express.at/') + '" target="_blank" rel="noopener noreferrer">www.albatros-express.at</a></div>' +
         '<div class="field"><label>' + esc(t('settings.default_language')) + '</label><select name="default_language">' +
@@ -759,7 +775,8 @@
           p.roles.map(function (r) { return '<th>' + esc(t('role.' + r)) + '</th>'; }).join('') + '</tr></thead><tbody>' +
           p.keys.map(function (key) {
             return '<tr><td>' + esc(t('perm.' + key)) + '</td>' + p.roles.map(function (r) {
-              var locked = r === 'super_admin';
+              var privileged = (A.extra_permission_keys || []).indexOf(key) !== -1 && key !== 'audit.view';
+              var locked = r === 'super_admin' || (privileged && r !== 'super_admin');
               return '<td><input type="checkbox" data-role="' + r + '" data-key="' + key + '"' + (p.map[r][key] ? ' checked' : '') + (locked ? ' disabled' : '') + '></td>';
             }).join('') + '</tr>';
           }).join('') + '</tbody></table><div style="padding:12px"><button class="btn" type="submit">' + esc(t('common.save')) + '</button></div></form>';
@@ -781,6 +798,10 @@
           e.preventDefault();
           var body = {};
           new FormData(sf).forEach(function (v, k) { body[k] = v; });
+          if (!isPrimary()) {
+            delete body.company_name;
+            delete body.owner_name;
+          }
           api('settings', { method: 'POST', body: body }).then(function () { root.insertAdjacentHTML('afterbegin', '<div class="msg msg-ok">' + esc(t('settings.saved')) + '</div>'); }).catch(showError);
         };
       }
@@ -911,6 +932,8 @@
     A.locale = boot.locale || A.locale;
     if (boot.assignable_roles) A.assignable_roles = boot.assignable_roles;
     if (typeof boot.can_assign_permissions !== 'undefined') A.can_assign_permissions = boot.can_assign_permissions;
+    if (boot.extra_permission_keys) A.extra_permission_keys = boot.extra_permission_keys;
+    if (typeof boot.is_primary !== 'undefined') A.is_primary = boot.is_primary;
     if (boot.permission_keys) A.permission_keys = boot.permission_keys;
     state.drivers = boot.driver_options || [];
     render();

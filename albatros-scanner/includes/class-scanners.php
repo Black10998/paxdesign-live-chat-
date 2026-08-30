@@ -108,6 +108,9 @@ class Alb_Scanners {
         if (array_key_exists('phone_number', $data)) {
             $value = sanitize_text_field($data['phone_number']);
             if ($value !== (string) $current['phone_number']) {
+                if (!$can_identity) {
+                    return new WP_Error('alb_immutable', Alb_I18n::t('scanner.error.phone_protected'), array('status' => 403));
+                }
                 $fields['phone_number'] = $value;
                 $changes['phone_number'] = array($current['phone_number'], $value);
             }

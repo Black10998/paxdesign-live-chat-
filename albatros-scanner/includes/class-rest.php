@@ -327,6 +327,8 @@ class Alb_Rest {
             'permission_keys' => Alb_Capabilities::permission_keys(),
             'assignable_roles' => Alb_Capabilities::assignable_roles(),
             'can_assign_permissions' => Alb_Capabilities::can_assign_user_permissions(),
+            'extra_permission_keys' => Alb_Capabilities::extra_permission_keys(),
+            'is_primary' => Alb_Capabilities::is_primary(),
             'driver_options' => Alb_Capabilities::current_user_can('drivers.view') ? Alb_Drivers::options() : array(),
         ));
     }
@@ -598,6 +600,9 @@ class Alb_Rest {
     public static function update_settings(WP_REST_Request $request) {
         $before = Alb_Settings::get();
         $after = Alb_Settings::update($request->get_json_params() ?: $request->get_params());
+        if (is_wp_error($after)) {
+            return self::respond($after);
+        }
         foreach ($after as $key => $value) {
             if ((string) ($before[$key] ?? '') !== (string) $value) {
                 Alb_Audit::record(array(
@@ -625,6 +630,9 @@ class Alb_Rest {
         $params = $request->get_json_params() ?: $request->get_params();
         $map = isset($params['map']) && is_array($params['map']) ? $params['map'] : $params;
         $saved = Alb_Capabilities::save_map($map);
+        if (is_wp_error($saved)) {
+            return self::respond($saved);
+        }
         Alb_Audit::record(array(
             'action' => 'permissions_update',
             'entity_type' => 'settings',

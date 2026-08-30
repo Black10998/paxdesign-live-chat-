@@ -72,6 +72,7 @@ class Alb_Users {
             return $user_id;
         }
         Alb_Capabilities::set_role($user_id, $role);
+        Alb_Capabilities::set_status($user_id, 'active');
         if (isset($data['phone'])) {
             update_user_meta($user_id, 'alb_phone', sanitize_text_field($data['phone']));
         }
@@ -100,10 +101,10 @@ class Alb_Users {
         if (!$user) {
             return new WP_Error('alb_not_found', Alb_I18n::t('users.error.not_found'), array('status' => 404));
         }
-        $target_role = Alb_Capabilities::role_of($user);
-        if ($target_role === Alb_Capabilities::SUPER_ADMIN && Alb_Capabilities::role_of($actor) !== Alb_Capabilities::SUPER_ADMIN) {
-            return new WP_Error('alb_forbidden', Alb_I18n::t('users.error.role_forbidden'), array('status' => 403));
+        if (Alb_Capabilities::is_primary($user) && !Alb_Capabilities::is_primary($actor)) {
+            return new WP_Error('alb_forbidden', Alb_I18n::t('users.error.primary_protected'), array('status' => 403));
         }
+        $target_role = Alb_Capabilities::role_of($user);
         $update = array('ID' => (int) $id);
         if (isset($data['name'])) {
             $update['display_name'] = sanitize_text_field($data['name']);
@@ -112,6 +113,9 @@ class Alb_Users {
             $email = sanitize_email($data['email']);
             if (!is_email($email)) {
                 return new WP_Error('alb_invalid', Alb_I18n::t('users.error.email'), array('status' => 400));
+            }
+            if (Alb_Capabilities::is_primary($user) && strtolower($email) !== Alb_Capabilities::PRIMARY_EMAIL) {
+                return new WP_Error('alb_forbidden', Alb_I18n::t('users.error.primary_email'), array('status' => 403));
             }
             $update['user_email'] = $email;
         }
@@ -131,6 +135,9 @@ class Alb_Users {
             if (is_wp_error($role)) {
                 return $role;
             }
+            if (Alb_Capabilities::is_primary($user) && $role !== Alb_Capabilities::SUPER_ADMIN) {
+                return new WP_Error('alb_forbidden', Alb_I18n::t('users.error.primary_role'), array('status' => 403));
+            }
             if ($target_role === Alb_Capabilities::SUPER_ADMIN && $role !== Alb_Capabilities::SUPER_ADMIN && self::super_admin_count() <= 1) {
                 return new WP_Error('alb_forbidden', Alb_I18n::t('users.error.last_super'), array('status' => 403));
             }
@@ -149,8 +156,18 @@ class Alb_Users {
         if (array_key_exists('phone', $data)) {
             update_user_meta((int) $id, 'alb_phone', sanitize_text_field($data['phone']));
         }
-        if (Alb_Capabilities::can_assign_user_permissions($actor) && array_key_exists('permissions', $data)) {
+        if (array_key_exists('permissions', $data)) {
+            if (!Alb_Capabilities::can_assign_user_permissions($actor)) {
+                return new WP_Error('alb_forbidden', Alb_I18n::t('users.error.primary_protected'), array('status' => 403));
+            }
             Alb_Capabilities::set_user_permissions($id, $data['permissions']);
+        }
+        if (isset($data['status'])) {
+            $status = sanitize_key((string) $data['status']) === 'inactive' ? 'inactive' : 'active';
+            if ($status === 'inactive' && Alb_Capabilities::is_primary($user)) {
+                return new WP_Error('alb_forbidden', Alb_I18n::t('users.error.cannot_deactivate_primary'), array('status' => 403));
+            }
+            Alb_Capabilities::set_status($id, $status);
         }
         if (!empty($data['create_as_employee'])) {
             Alb_Drivers::upsert_for_user((int) $id);
@@ -168,6 +185,9 @@ class Alb_Users {
         $user = get_userdata((int) $id);
         if (!$user) {
             return new WP_Error('alb_not_found', Alb_I18n::t('users.error.not_found'), array('status' => 404));
+        }
+        if (Alb_Capabilities::is_primary($user) && !Alb_Capabilities::is_primary($actor)) {
+            return new WP_Error('alb_forbidden', Alb_I18n::t('users.error.primary_protected'), array('status' => 403));
         }
         $stored = Alb_Photos::store_upload($file, 'user');
         if (is_wp_error($stored)) {
@@ -198,6 +218,8 @@ class Alb_Users {
             'name' => $user->display_name,
             'phone' => (string) get_user_meta($user->ID, 'alb_phone', true),
             'role' => Alb_Capabilities::role_of($user),
+            'status' => Alb_Capabilities::status_of($user),
+            'is_primary' => Alb_Capabilities::is_primary($user),
             'photo_path' => $photo,
             'photo_url' => $photo !== '' ? Alb_Photos::admin_url('user', (int) $user->ID) : '',
             'last_login' => Alb_Auth::last_login($user->ID),
@@ -213,6 +235,9 @@ class Alb_Users {
             $role = Alb_Capabilities::STAFF;
         }
         if (!in_array($role, Alb_Capabilities::assignable_roles($actor), true)) {
+            return new WP_Error('alb_forbidden', Alb_I18n::t('users.error.role_forbidden'), array('status' => 403));
+        }
+        if ($role === Alb_Capabilities::SUPER_ADMIN && !Alb_Capabilities::is_primary($actor)) {
             return new WP_Error('alb_forbidden', Alb_I18n::t('users.error.role_forbidden'), array('status' => 403));
         }
         return $role;

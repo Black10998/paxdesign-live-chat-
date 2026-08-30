@@ -93,13 +93,20 @@ alb_ok(strpos($js, 'scanner.current_holder') !== false && strpos($js, 'device-ma
 alb_ok(strpos($js, 'scanner.copy_qr') !== false && strpos($scan_tpl, 'scanner.copy_qr') !== false, 'managers can copy the unique QR link');
 alb_ok(strpos($caps, 'can_use_admin_app') !== false, 'admin app access is role-gated');
 alb_ok(strpos($caps, 'scanners.identity') !== false, 'identity permission exists');
+alb_ok(strpos($caps, "PRIMARY_EMAIL = 'sarah.gta1995@gmail.com'") !== false, 'sarah is the hardcoded primary manager');
+alb_ok(strpos($caps, 'SCANNER_ADMIN') !== false && strpos($caps, 'scanner_admin') !== false, 'scanner administrator role exists');
+alb_ok(strpos($caps, 'privileged_keys') !== false && strpos($caps, 'ensure_primary') !== false, 'primary manager lock and privileged keys exist');
+alb_ok(strpos($caps, 'extra_permission_keys') !== false, 'optional extra rights stay small');
 alb_ok(strpos($caps, 'USER_PERMS') !== false, 'per-user permissions exist');
 alb_ok(strpos($caps, 'assignable_roles') !== false, 'user creation roles are restricted');
 alb_ok(strpos($users, 'users.error.role_forbidden') !== false, 'non-super-admins cannot create administrator accounts');
+alb_ok(strpos($users, 'users.error.primary_protected') !== false, 'primary account cannot be edited by others');
+alb_ok(strpos($users, 'alb_status') !== false || strpos($caps, 'set_status') !== false, 'users can be activated or deactivated');
 alb_ok(strpos($auth, 'alb_last_login') !== false, 'last login is stored as a single field');
 alb_ok(strpos($auth, "'action' => 'login'") === false, 'login does not append audit rows');
 alb_ok(strpos($plugin_class, 'users_can_register') !== false, 'public self-registration is disabled');
 alb_ok(strpos($scanners, 'scanners.identity') !== false, 'identity field changes are permission-checked');
+alb_ok(strpos($scanners, 'scanner.error.phone_protected') !== false, 'scanner phone number is identity-protected');
 alb_ok(strpos($frontend, "wp_safe_redirect(home_url('/scanners/'") === false, 'QR scan is not redirected away from the scanner token');
 alb_ok(strpos($scan_class, 'maybe_record_open') !== false && strpos($scan_class, 'actor_name') !== false, 'scans store person, scanner and time');
 alb_ok(strpos($scanners, 'soft_delete') !== false && strpos($scanners, 'restore') !== false, 'scanners can be removed without erasing history');
@@ -116,7 +123,7 @@ alb_ok(strpos($scanners, 'last_assigned_driver') !== false, 'lost scanners retai
 foreach (array('active', 'lost', 'defective', 'returned', 'repair') as $status) {
     alb_ok(strpos($scanners, "'" . $status . "'") !== false, 'status supported: ' . $status);
 }
-foreach (array('super_admin', 'administrator', 'staff') as $role) {
+foreach (array('super_admin', 'administrator', 'scanner_admin', 'staff') as $role) {
     alb_ok(strpos($caps, $role) !== false, 'role exists: ' . $role);
 }
 foreach (array('scanners.assign', 'audit.view', 'users.manage', 'reports.export') as $perm) {
@@ -125,6 +132,12 @@ foreach (array('scanners.assign', 'audit.view', 'users.manage', 'reports.export'
 alb_ok(strpos($css, 'animation') === false && strpos($css, 'gradient') === false, 'css has no animations or gradients');
 alb_ok(strpos($css, 'box-shadow') === false, 'css has no box shadows');
 alb_ok(strpos($js, 'login.error') === false || strpos($js, 'api(') !== false, 'app talks to rest api');
+alb_ok(strpos($js, 'role-card') !== false && strpos($js, 'roleCards') !== false, 'user creation uses simple role cards');
+alb_ok(strpos($js, 'userPermBoxes') === false, 'create-user screen does not show a full permission grid');
+alb_ok(strpos($js, 'extraPermBoxes') !== false && strpos($js, 'users.extras') !== false, 'optional extra rights are collapsed');
+alb_ok(strpos($js, "body.phone_number = fd.get('phone_number')") !== false, 'phone edits are sent only with identity permission');
+alb_ok(strpos(file_get_contents($plugin . '/includes/class-settings.php'), 'settings.owner_locked') !== false, 'owner settings are primary-only');
+alb_ok(strpos($auth, 'users.error.inactive') !== false, 'inactive users cannot sign in');
 
 $de = alb_json($plugin . '/languages/de.json');
 $en = alb_json($plugin . '/languages/en.json');

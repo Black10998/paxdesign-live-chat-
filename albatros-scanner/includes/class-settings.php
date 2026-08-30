@@ -44,11 +44,14 @@ class Alb_Settings {
     public static function update($input) {
         $current = self::get();
         $next = $current;
-        if (isset($input['company_name'])) {
-            $next['company_name'] = sanitize_text_field($input['company_name']);
-        }
-        if (isset($input['owner_name'])) {
-            $next['owner_name'] = sanitize_text_field($input['owner_name']);
+        if (isset($input['company_name']) || isset($input['owner_name'])) {
+            $company = isset($input['company_name']) ? sanitize_text_field($input['company_name']) : $current['company_name'];
+            $owner = isset($input['owner_name']) ? sanitize_text_field($input['owner_name']) : $current['owner_name'];
+            if (($company !== $current['company_name'] || $owner !== $current['owner_name']) && !Alb_Capabilities::is_primary()) {
+                return new WP_Error('alb_forbidden', Alb_I18n::t('settings.owner_locked'), array('status' => 403));
+            }
+            $next['company_name'] = $company;
+            $next['owner_name'] = $owner;
         }
         if (isset($input['default_language'])) {
             $next['default_language'] = Alb_I18n::normalize($input['default_language']);
