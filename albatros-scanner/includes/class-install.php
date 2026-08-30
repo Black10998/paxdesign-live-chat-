@@ -37,6 +37,8 @@ class Alb_Install {
             self::create_tables();
             update_option('alb_scanner_db_version', ALB_SCANNER_DB_VERSION, false);
         }
+        Alb_Capabilities::lock_staff();
+        Alb_Photos::dir();
     }
 
     private static function schema_ready() {
@@ -46,8 +48,11 @@ class Alb_Install {
         if ($found !== $scans) {
             return false;
         }
-        $column = $wpdb->get_var('SHOW COLUMNS FROM ' . self::table('scanners') . " LIKE 'deleted_at'");
-        return $column === 'deleted_at';
+        $otp = self::table('otp_challenges');
+        $otp_found = $wpdb->get_var($wpdb->prepare('SHOW TABLES LIKE %s', $otp));
+        $photo = $wpdb->get_var('SHOW COLUMNS FROM ' . self::table('drivers') . " LIKE 'photo_path'");
+        $deleted = $wpdb->get_var('SHOW COLUMNS FROM ' . self::table('scanners') . " LIKE 'deleted_at'");
+        return $otp_found === $otp && $photo === 'photo_path' && $deleted === 'deleted_at';
     }
 
     public static function table($name) {
@@ -66,6 +71,7 @@ class Alb_Install {
         $status_events = self::table('status_events');
         $audit = self::table('audit_logs');
         $scans = self::table('scan_events');
+        $otp = self::table('otp_challenges');
 
         dbDelta("CREATE TABLE $scanners (
             id bigint(20) unsigned NOT NULL AUTO_INCREMENT,
@@ -104,6 +110,9 @@ class Alb_Install {
             email varchar(190) NOT NULL DEFAULT '',
             employee_code varchar(60) NOT NULL DEFAULT '',
             status varchar(20) NOT NULL DEFAULT 'active',
+            photo_path varchar(190) NOT NULL DEFAULT '',
+            phone_verified tinyint(1) NOT NULL DEFAULT 0,
+            phone_verified_at datetime DEFAULT NULL,
             notes text NULL,
             created_at datetime NOT NULL,
             created_by bigint(20) unsigned NOT NULL DEFAULT 0,
@@ -112,7 +121,8 @@ class Alb_Install {
             PRIMARY KEY  (id),
             KEY status (status),
             KEY last_name (last_name),
-            KEY employee_code (employee_code)
+            KEY employee_code (employee_code),
+            KEY phone (phone)
         ) $charset;");
 
         dbDelta("CREATE TABLE $handovers (
@@ -123,6 +133,9 @@ class Alb_Install {
             action varchar(20) NOT NULL DEFAULT 'assign',
             handover_at datetime NOT NULL,
             recorded_by bigint(20) unsigned NOT NULL DEFAULT 0,
+            snapshot_name varchar(190) NOT NULL DEFAULT '',
+            snapshot_phone varchar(60) NOT NULL DEFAULT '',
+            snapshot_photo varchar(190) NOT NULL DEFAULT '',
             notes text NULL,
             PRIMARY KEY  (id),
             KEY scanner_id (scanner_id),
@@ -182,6 +195,23 @@ class Alb_Install {
             KEY scanner_id (scanner_id),
             KEY created_at (created_at),
             KEY action (action)
+        ) $charset;");
+
+        dbDelta("CREATE TABLE $otp (
+            id bigint(20) unsigned NOT NULL AUTO_INCREMENT,
+            scanner_id bigint(20) unsigned NOT NULL,
+            full_name varchar(190) NOT NULL DEFAULT '',
+            phone varchar(60) NOT NULL DEFAULT '',
+            photo_path varchar(190) NOT NULL DEFAULT '',
+            code_hash varchar(255) NOT NULL,
+            expires_at datetime NOT NULL,
+            attempts smallint(5) unsigned NOT NULL DEFAULT 0,
+            consumed_at datetime DEFAULT NULL,
+            ip_address varchar(64) NOT NULL DEFAULT '',
+            created_at datetime NOT NULL,
+            PRIMARY KEY  (id),
+            KEY scanner_phone (scanner_id, phone),
+            KEY created_at (created_at)
         ) $charset;");
     }
 }

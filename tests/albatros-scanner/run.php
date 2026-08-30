@@ -48,6 +48,10 @@ $rest = file_get_contents($plugin . '/includes/class-rest.php');
 $css = file_get_contents($plugin . '/assets/css/app.css');
 $js = file_get_contents($plugin . '/assets/js/app.js');
 $scan_tpl = file_get_contents($plugin . '/templates/scan.php');
+$denied = file_get_contents($plugin . '/templates/denied.php');
+$otp = file_get_contents($plugin . '/includes/class-otp.php');
+$employee = file_get_contents($plugin . '/includes/class-employee.php');
+$photos = file_get_contents($plugin . '/includes/class-photos.php');
 
 alb_ok(strpos($boot, 'paxdesign.at') === false, 'plugin does not reference paxdesign.at');
 alb_ok(strpos($frontend, 'paxdesign.at') === false, 'frontend does not reference paxdesign.at');
@@ -61,9 +65,20 @@ alb_ok(strpos($install, 'schema_ready') !== false, 'schema upgrade repairs missi
 alb_ok(strpos($install, 'deleted_at') !== false, 'schema supports soft-delete');
 alb_ok(is_file($plugin . '/includes/class-scan.php'), 'scan workflow class exists');
 alb_ok(is_file($plugin . '/templates/scan.php'), 'mobile scan template exists');
-alb_ok(strpos($scan_tpl, 'full_name') !== false && strpos($scan_tpl, 'scan.identify_hint') !== false, 'guest scan asks for a real name');
-alb_ok(strpos($scan_tpl, 'scanner.take_over') !== false && strpos($scan_tpl, 'scanner.mark_lost') !== false, 'scan page offers authorized actions');
+alb_ok(strpos($scan_tpl, 'full_name') !== false && strpos($scan_tpl, 'handover.privacy_notice') !== false, 'guest handover asks for a real name and records a privacy notice');
+alb_ok(strpos($scan_tpl, 'selfie') !== false && strpos($scan_tpl, 'handover.phone') !== false, 'handover collects selfie and mobile number');
+alb_ok(strpos($scan_tpl, 'scanner.take_over') !== false && strpos($scan_tpl, 'otp_code') !== false, 'employee must verify then explicitly accept the scanner');
+alb_ok(strpos($scan_tpl, 'driver_name') === false || strpos($scan_tpl, 'is_manager') !== false, 'employee QR page does not publish other employees by default');
 alb_ok(strpos($frontend, 'render_scan') !== false && strpos($frontend, "strpos(\$path, 's/') === 0") !== false, 'QR routes render the scanner record, not the homepage');
+alb_ok(strpos($frontend, 'can_use_admin_app') !== false && is_file($plugin . '/templates/denied.php'), 'non-managers are blocked from the admin app');
+alb_ok(strpos($denied, 'access.denied') !== false, 'denied page tells employees to use the QR link');
+alb_ok(strpos($otp, 'send_sms') !== false && strpos($otp, 'api.twilio.com') !== false, 'phone verification uses SMS OTP');
+alb_ok(strpos($otp, 'IMEI') === false && strpos($otp, 'getDevicePhone') === false, 'code does not pretend to read a phone number from the device');
+alb_ok(strpos($employee, 'employee_accept') !== false, 'employee accept uses the server handover time');
+alb_ok(strpos($photos, 'albatros-private') !== false && strpos($photos, 'Require all denied') !== false, 'employee photos are stored privately');
+alb_ok(strpos($js, 'scanner.copy_qr') !== false && strpos($scan_tpl, 'scanner.copy_qr') !== false, 'managers can copy the unique QR link');
+alb_ok(strpos($caps, 'can_use_admin_app') !== false, 'admin app access is role-gated');
+alb_ok(strpos($caps, 'STAFF] = array_fill_keys(self::permission_keys(), false)') !== false, 'staff role cannot receive admin permissions');
 alb_ok(strpos($frontend, "wp_safe_redirect(home_url('/scanners/'") === false, 'QR scan is not redirected away from the scanner token');
 alb_ok(strpos($scan_class, 'maybe_record_open') !== false && strpos($scan_class, 'actor_name') !== false, 'scans store person, scanner and time');
 alb_ok(strpos($scanners, 'soft_delete') !== false && strpos($scanners, 'restore') !== false, 'scanners can be removed without erasing history');
@@ -101,6 +116,9 @@ alb_ok(($de['nav.scanners'] ?? '') !== ($tr['nav.scanners'] ?? ''), 'german and 
 alb_ok(($de['official.website'] ?? '') === 'Offizielle Unternehmenswebsite', 'german official website label exists');
 alb_ok(($en['official.website'] ?? '') === 'Official Company Website', 'english official website label exists');
 alb_ok(($de['scan.full_name'] ?? '') === 'Name / Vollständiger Name', 'german scan identification label exists');
+alb_ok(($de['handover.privacy_notice'] ?? '') !== '', 'german handover privacy notice exists');
+alb_ok(($en['scanner.copy_qr'] ?? '') === 'Copy QR link', 'english copy-link label exists');
+alb_ok(strpos($install, "table('otp_challenges')") !== false, 'schema creates otp table');
 alb_ok(($en['scanner.take_over'] ?? '') === 'Take over scanner', 'english take-over action exists');
 alb_ok(($de['dash.click_hint'] ?? '') !== ($en['dash.click_hint'] ?? ''), 'dashboard hint is translated');
 

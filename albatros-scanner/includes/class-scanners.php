@@ -156,6 +156,9 @@ class Alb_Scanners {
             'action' => $action,
             'handover_at' => $when,
             'recorded_by' => (int) $user_id,
+            'snapshot_name' => $driver ? $driver['name'] : '',
+            'snapshot_phone' => $driver ? $driver['phone'] : '',
+            'snapshot_photo' => $driver ? ($driver['photo_path'] ?? '') : '',
             'notes' => sanitize_textarea_field($notes),
         ));
         $handover_id = (int) $wpdb->insert_id;
@@ -258,6 +261,23 @@ class Alb_Scanners {
         }
         Alb_Scan::record($assigned, 'take_over', $notes);
         return $assigned;
+    }
+
+    public static function employee_accept($scanner_id, $driver_id) {
+        $scanner = self::get($scanner_id);
+        if (!$scanner) {
+            return new WP_Error('alb_not_found', Alb_I18n::t('scanner.error.not_found'), array('status' => 404));
+        }
+        if (!empty($scanner['deleted_at'])) {
+            return new WP_Error('alb_deleted', Alb_I18n::t('scanner.error.deleted'), array('status' => 400));
+        }
+        if ($scanner['status'] !== 'active') {
+            $activated = self::change_status($scanner_id, 'active', 'employee_accept', 0);
+            if (is_wp_error($activated)) {
+                return $activated;
+            }
+        }
+        return self::assign($scanner_id, (int) $driver_id, '', 'employee_accept', 0);
     }
 
     public static function return_device($scanner_id, $notes, $user_id) {
@@ -448,7 +468,7 @@ class Alb_Scanners {
         $where_sql = implode(' AND ', $where);
         $count_sql = "SELECT COUNT(*) FROM $scanners s LEFT JOIN $drivers d ON d.id = s.current_driver_id WHERE $where_sql";
         $total = (int) ($params ? $wpdb->get_var($wpdb->prepare($count_sql, $params)) : $wpdb->get_var($count_sql));
-        $sql = "SELECT s.*, CONCAT(d.first_name, ' ', d.last_name) AS _driver_name FROM $scanners s LEFT JOIN $drivers d ON d.id = s.current_driver_id WHERE $where_sql ORDER BY $sort $dir LIMIT %d OFFSET %d";
+        $sql = "SELECT s.*, CONCAT(d.first_name, ' ', d.last_name) AS _driver_name, d.phone AS _driver_phone, d.photo_path AS _driver_photo, d.phone_verified AS _driver_phone_verified FROM $scanners s LEFT JOIN $drivers d ON d.id = s.current_driver_id WHERE $where_sql ORDER BY $sort $dir LIMIT %d OFFSET %d";
         $params[] = $per_page;
         $params[] = $offset;
         $rows = $wpdb->get_results($wpdb->prepare($sql, $params), ARRAY_A);
@@ -501,7 +521,9 @@ class Alb_Scanners {
                 'id' => (int) $row['id'],
                 'action' => $row['action'],
                 'driver_id' => $row['driver_id'] ? (int) $row['driver_id'] : null,
-                'driver_name' => trim((string) $row['driver_name']),
+                'driver_name' => $row['snapshot_name'] !== '' ? $row['snapshot_name'] : trim((string) $row['driver_name']),
+                'driver_phone' => $row['snapshot_phone'] ?? '',
+                'driver_photo_url' => !empty($row['snapshot_photo']) ? Alb_Photos::admin_url('handover', (int) $row['id']) : '',
                 'previous_driver_id' => $row['previous_driver_id'] ? (int) $row['previous_driver_id'] : null,
                 'previous_driver_name' => trim((string) $row['previous_driver_name']),
                 'at' => $row['handover_at'],
@@ -583,12 +605,32 @@ class Alb_Scanners {
     }
 
     public static function present($row, $detail = true) {
+        $driver = null;
         $driver_name = '';
+        $driver_phone = '';
+        $driver_photo = '';
+        $driver_verified = false;
         if (isset($row['_driver_name'])) {
             $driver_name = trim((string) $row['_driver_name']);
+            $driver_phone = (string) ($row['_driver_phone'] ?? '');
+            $driver_photo = (string) ($row['_driver_photo'] ?? '');
+            $driver_verified = !empty($row['_driver_phone_verified']);
         } elseif ($detail && !empty($row['current_driver_id'])) {
             $driver = Alb_Drivers::get((int) $row['current_driver_id']);
-            $driver_name = $driver ? $driver['name'] : '';
+            if ($driver) {
+                $driver_name = $driver['name'];
+                $driver_phone = $driver['phone'];
+                $driver_photo = $driver['photo_path'];
+                $driver_verified = !empty($driver['phone_verified']);
+            }
+        }
+        $handover_at = '';
+        if ($detail && !empty($row['current_handover_id'])) {
+            global $wpdb;
+            $handover_at = (string) $wpdb->get_var($wpdb->prepare(
+                'SELECT handover_at FROM ' . Alb_Install::table('handovers') . ' WHERE id = %d',
+                (int) $row['current_handover_id']
+            ));
         }
         $last = null;
         if ($detail && $row['status'] === 'lost') {
@@ -605,8 +647,13 @@ class Alb_Scanners {
             'status' => $row['status'],
             'current_driver_id' => $row['current_driver_id'] ? (int) $row['current_driver_id'] : null,
             'driver_name' => $driver_name,
+            'driver_phone' => $driver_phone,
+            'driver_phone_verified' => $driver_verified,
+            'driver_photo_url' => $driver_photo !== '' && !empty($row['current_driver_id']) ? Alb_Photos::admin_url('driver', (int) $row['current_driver_id']) : '',
             'handover_date' => $row['handover_date'],
             'handover_date_display' => Alb_Settings::format_date($row['handover_date']),
+            'handover_at' => $handover_at,
+            'handover_at_display' => $handover_at !== '' ? Alb_Settings::format_datetime($handover_at) : Alb_Settings::format_date($row['handover_date']),
             'qr_token' => $row['qr_token'],
             'qr_url' => home_url('/s/' . $row['qr_token']),
             'notes' => $row['notes'],

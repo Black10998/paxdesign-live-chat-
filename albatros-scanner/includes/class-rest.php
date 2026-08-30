@@ -491,20 +491,12 @@ class Alb_Rest {
 
     private static function public_scanner_payload($scanner) {
         return array(
-            'id' => $scanner['id'],
             'scanner_code' => $scanner['scanner_code'],
             'brand' => $scanner['brand'],
             'model' => $scanner['model'],
             'serial_number' => $scanner['serial_number'],
             'phone_number' => $scanner['phone_number'],
             'status' => $scanner['status'],
-            'driver_name' => $scanner['driver_name'],
-            'current_driver_id' => $scanner['current_driver_id'],
-            'handover_date_display' => $scanner['handover_date_display'],
-            'notes' => $scanner['notes'],
-            'deleted_at' => $scanner['deleted_at'],
-            'last_assigned' => $scanner['last_assigned'],
-            'qr_url' => $scanner['qr_url'],
         );
     }
 
@@ -564,7 +556,7 @@ class Alb_Rest {
     }
 
     public static function get_settings() {
-        return rest_ensure_response(Alb_Settings::get());
+        return rest_ensure_response(Alb_Settings::public_settings());
     }
 
     public static function update_settings(WP_REST_Request $request) {
@@ -582,7 +574,7 @@ class Alb_Rest {
                 ));
             }
         }
-        return rest_ensure_response($after);
+        return rest_ensure_response(Alb_Settings::public_settings());
     }
 
     public static function get_permissions() {

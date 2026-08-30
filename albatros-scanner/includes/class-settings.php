@@ -27,6 +27,9 @@ class Alb_Settings {
             'min_password_length' => 10,
             'remember_days' => 14,
             'audit_retention_days' => 0,
+            'twilio_sid' => '',
+            'twilio_token' => '',
+            'twilio_from' => '',
         );
     }
 
@@ -72,6 +75,18 @@ class Alb_Settings {
         if (isset($input['audit_retention_days'])) {
             $next['audit_retention_days'] = max(0, min(3650, (int) $input['audit_retention_days']));
         }
+        if (isset($input['twilio_sid'])) {
+            $next['twilio_sid'] = sanitize_text_field($input['twilio_sid']);
+        }
+        if (isset($input['twilio_from'])) {
+            $next['twilio_from'] = sanitize_text_field($input['twilio_from']);
+        }
+        if (array_key_exists('twilio_token', $input)) {
+            $token = trim((string) $input['twilio_token']);
+            if ($token !== '' && $token !== '********') {
+                $next['twilio_token'] = sanitize_text_field($token);
+            }
+        }
         update_option(self::OPTION, $next, false);
         return $next;
     }
@@ -115,6 +130,18 @@ class Alb_Settings {
 
     public static function now_mysql() {
         return gmdate('Y-m-d H:i:s');
+    }
+
+    public static function sms_ready() {
+        $settings = self::get();
+        return $settings['twilio_sid'] !== '' && $settings['twilio_token'] !== '' && $settings['twilio_from'] !== '';
+    }
+
+    public static function public_settings() {
+        $settings = self::get();
+        $settings['twilio_token'] = $settings['twilio_token'] !== '' ? '********' : '';
+        $settings['sms_ready'] = self::sms_ready();
+        return $settings;
     }
 
     private static function safe_format($value, $fallback) {

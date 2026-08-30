@@ -51,11 +51,6 @@ class Alb_Capabilities {
         $admin['audit.view'] = false;
         $admin['scanners.delete'] = false;
         $staff = array_fill_keys(self::permission_keys(), false);
-        $staff['dashboard.view'] = true;
-        $staff['scanners.view'] = true;
-        $staff['drivers.view'] = true;
-        $staff['history.view'] = true;
-        $staff['qr.view'] = true;
         return array(
             self::SUPER_ADMIN => $all,
             self::ADMINISTRATOR => $admin,
@@ -74,6 +69,7 @@ class Alb_Capabilities {
             $stored[$role] = array_merge($perms, array_intersect_key($stored[$role], $perms));
         }
         $stored[self::SUPER_ADMIN] = array_fill_keys(self::permission_keys(), true);
+        $stored[self::STAFF] = array_fill_keys(self::permission_keys(), false);
         return $stored;
     }
 
@@ -131,6 +127,17 @@ class Alb_Capabilities {
 
     public static function current_user_can($permission) {
         return self::user_can(wp_get_current_user(), $permission);
+    }
+
+    public static function can_use_admin_app($user = null) {
+        $role = self::role_of($user === null ? wp_get_current_user() : $user);
+        return in_array($role, array(self::SUPER_ADMIN, self::ADMINISTRATOR), true);
+    }
+
+    public static function lock_staff() {
+        $map = self::map();
+        update_option(self::PERMS_OPTION, $map, false);
+        return $map;
     }
 
     public static function require_login() {

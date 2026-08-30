@@ -104,6 +104,67 @@ class Alb_Drivers {
         return self::get($id);
     }
 
+    public static function find_by_phone($phone) {
+        global $wpdb;
+        $row = $wpdb->get_row($wpdb->prepare('SELECT * FROM ' . self::table() . ' WHERE phone = %s ORDER BY id ASC LIMIT 1', sanitize_text_field($phone)), ARRAY_A);
+        return $row ? self::present($row) : null;
+    }
+
+    public static function upsert_verified($data) {
+        $phone = $data['phone'];
+        $existing = self::find_by_phone($phone);
+        $now = Alb_Settings::now_mysql();
+        $fields = array(
+            'first_name' => $data['first_name'],
+            'last_name' => $data['last_name'],
+            'phone' => $phone,
+            'photo_path' => $data['photo_path'],
+            'phone_verified' => 1,
+            'phone_verified_at' => $now,
+            'status' => 'active',
+            'updated_at' => $now,
+            'updated_by' => 0,
+        );
+        global $wpdb;
+        if ($existing) {
+            $wpdb->update(self::table(), $fields, array('id' => (int) $existing['id']));
+            Alb_Audit::record(array(
+                'action' => 'driver_verify',
+                'entity_type' => 'driver',
+                'entity_id' => (int) $existing['id'],
+                'driver_id' => (int) $existing['id'],
+                'field' => 'phone',
+                'new' => Alb_Otp::mask_phone($phone),
+                'actor_id' => 0,
+                'actor_name' => trim($data['first_name'] . ' ' . $data['last_name']),
+            ));
+            return self::get((int) $existing['id']);
+        }
+        $fields['email'] = '';
+        $fields['employee_code'] = '';
+        $fields['notes'] = '';
+        $fields['created_at'] = $now;
+        $fields['created_by'] = 0;
+        $wpdb->insert(self::table(), $fields);
+        $id = (int) $wpdb->insert_id;
+        Alb_Audit::record(array(
+            'action' => 'driver_create',
+            'entity_type' => 'driver',
+            'entity_id' => $id,
+            'driver_id' => $id,
+            'field' => 'phone',
+            'new' => Alb_Otp::mask_phone($phone),
+            'actor_id' => 0,
+            'actor_name' => trim($data['first_name'] . ' ' . $data['last_name']),
+        ));
+        return self::get($id);
+    }
+
+    public static function handover_snapshot($handover_id) {
+        global $wpdb;
+        return $wpdb->get_row($wpdb->prepare('SELECT snapshot_name, snapshot_phone, snapshot_photo FROM ' . Alb_Install::table('handovers') . ' WHERE id = %d', (int) $handover_id), ARRAY_A);
+    }
+
     public static function get($id) {
         global $wpdb;
         $row = $wpdb->get_row($wpdb->prepare('SELECT * FROM ' . self::table() . ' WHERE id = %d', (int) $id), ARRAY_A);
@@ -195,12 +256,18 @@ class Alb_Drivers {
     }
 
     public static function present($row) {
+        $photo = $row['photo_path'] ?? '';
         return array(
             'id' => (int) $row['id'],
             'first_name' => $row['first_name'],
             'last_name' => $row['last_name'],
             'name' => trim($row['first_name'] . ' ' . $row['last_name']),
             'phone' => $row['phone'],
+            'phone_verified' => !empty($row['phone_verified']),
+            'phone_verified_at' => $row['phone_verified_at'] ?? '',
+            'phone_verified_at_display' => !empty($row['phone_verified_at']) ? Alb_Settings::format_datetime($row['phone_verified_at']) : '',
+            'photo_path' => $photo,
+            'photo_url' => $photo !== '' ? Alb_Photos::admin_url('driver', (int) $row['id']) : '',
             'email' => $row['email'],
             'employee_code' => $row['employee_code'],
             'status' => $row['status'],

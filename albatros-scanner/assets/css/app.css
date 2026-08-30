@@ -323,6 +323,15 @@ table.data tbody tr.click { cursor: pointer; }
 .scan-page .lang-inline { margin-top: 16px; }
 .scan-page .lang-inline a { color: var(--muted); }
 .scan-page .lang-inline a.active { color: var(--text); font-weight: 600; }
+.face-thumb {
+  width: 36px;
+  height: 36px;
+  object-fit: cover;
+  border: 1px solid var(--line);
+  vertical-align: middle;
+  margin-right: 6px;
+}
+.person-row { display: flex; align-items: center; gap: 10px; padding: 12px; }
 
 .settings-nav { display: flex; gap: 0; border-bottom: 1px solid var(--line); margin-bottom: 12px; }
 .settings-nav button {

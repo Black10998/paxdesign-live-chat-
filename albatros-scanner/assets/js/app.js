@@ -334,7 +334,10 @@
         }
         if (h.type === 'handover') {
           var key = h.action === 'return' ? 'handover.returned' : 'handover.received';
-          return '<li>' + esc(t(key, { date: h.at_display, driver: h.driver_name || '-', serial: s.serial_number })) + (h.notes ? ' — ' + esc(h.notes) : '') + '</li>';
+          var face = h.driver_photo_url ? '<img class="face-thumb" src="' + esc(h.driver_photo_url) + '" alt=""> ' : '';
+          return '<li>' + face + esc(t(key, { date: h.at_display, driver: h.driver_name || '-', serial: s.serial_number })) +
+            (h.driver_phone ? ' — ' + esc(h.driver_phone) : '') +
+            (h.notes ? ' — ' + esc(h.notes) : '') + '</li>';
         }
         return '<li>' + esc(h.at_display) + ' — ' + esc(statusLabel(h.old_status)) + ' → ' + esc(statusLabel(h.new_status)) + '</li>';
       }).join('') || '<li>' + esc(t('common.empty')) + '</li>';
@@ -351,19 +354,32 @@
         kv(t('scanner.model'), s.model) +
         kv(t('scanner.serial'), s.serial_number) +
         kv(t('scanner.phone'), s.phone_number) +
-        kv(t('scanner.driver'), s.driver_name || t('scanner.no_driver')) +
-        kv(t('scanner.handover_date'), s.handover_date_display) +
+        '<div class="k">' + esc(t('scanner.driver')) + '</div><div>' +
+        (s.driver_photo_url ? '<img class="face-thumb" src="' + esc(s.driver_photo_url) + '" alt=""> ' : '') +
+        esc(s.driver_name || t('scanner.no_driver')) + '</div>' +
+        kv(t('handover.verified_phone'), s.driver_phone || '—') +
+        kv(t('scanner.handover_date'), s.handover_at_display || s.handover_date_display) +
         kv(t('common.status'), statusLabel(s.status)) +
         kv(t('common.notes'), s.notes || '') +
         '</div>' +
         (can('scanners.edit') || can('scanners.assign') || can('scanners.status') || can('scanners.delete') ? renderScannerActions(s) : '') +
         '</div>' +
         '<div>' +
-        (can('qr.view') ? '<div class="card"><h2>' + esc(t('scanner.qr')) + '</h2><div class="qr-box"><div id="qr"></div><div class="hint">' + esc(t('scanner.qr_hint')) + '</div><div>' + esc(s.qr_url) + '</div></div></div>' : '') +
+        (can('qr.view') ? '<div class="card"><h2>' + esc(t('scanner.qr')) + '</h2><div class="qr-box"><div id="qr"></div><div class="hint">' + esc(t('scanner.qr_hint')) + '</div><div id="qr-url">' + esc(s.qr_url) + '</div>' +
+          '<div class="action-bar" style="border:0;justify-content:center"><button type="button" class="btn" id="copy-qr">' + esc(t('scanner.copy_qr')) + '</button>' +
+          '<a class="btn btn-sec" target="_blank" rel="noopener noreferrer" href="https://wa.me/?text=' + encodeURIComponent(t('scanner.whatsapp_text') + ' ' + s.qr_url) + '">' + esc(t('scanner.whatsapp')) + '</a></div></div></div>' : '') +
         '</div></div>' +
         '<div class="card" style="margin-top:12px"><h2>' + esc(t('scanner.history')) + '</h2><ul class="history">' + history + '</ul></div>';
       if (can('qr.view') && window.QRCode) {
         new QRCode(document.getElementById('qr'), { text: s.qr_url, width: 140, height: 140 });
+      }
+      var copy = document.getElementById('copy-qr');
+      if (copy) {
+        copy.onclick = function () {
+          if (navigator.clipboard && navigator.clipboard.writeText) {
+            navigator.clipboard.writeText(s.qr_url).then(function () { copy.textContent = t('scanner.link_copied'); });
+          }
+        };
       }
       bindScannerActions(s);
     }).catch(showError);
@@ -603,6 +619,10 @@
         field('min_password_length', t('settings.min_password_length'), 'number', s.min_password_length) +
         field('remember_days', t('settings.remember_days'), 'number', s.remember_days) +
         field('audit_retention_days', t('settings.audit_retention_days'), 'number', s.audit_retention_days) +
+        '<div class="wide"><h2>' + esc(t('settings.sms')) + '</h2><p class="hint">' + esc(t('settings.sms_hint')) + '</p></div>' +
+        field('twilio_sid', t('settings.twilio_sid'), 'text', s.twilio_sid || '') +
+        field('twilio_token', t('settings.twilio_token'), 'password', s.twilio_token || '') +
+        field('twilio_from', t('settings.twilio_from'), 'text', s.twilio_from || '') +
         (can('settings.manage') ? '<div class="wide"><button class="btn" type="submit">' + esc(t('common.save')) + '</button></div>' : '') +
         '</form>' : '';
       var roles = '';
@@ -611,7 +631,7 @@
           p.roles.map(function (r) { return '<th>' + esc(t('role.' + r)) + '</th>'; }).join('') + '</tr></thead><tbody>' +
           p.keys.map(function (key) {
             return '<tr><td>' + esc(t('perm.' + key)) + '</td>' + p.roles.map(function (r) {
-              var locked = r === 'super_admin';
+              var locked = r === 'super_admin' || r === 'staff';
               return '<td><input type="checkbox" data-role="' + r + '" data-key="' + key + '"' + (p.map[r][key] ? ' checked' : '') + (locked ? ' disabled' : '') + '></td>';
             }).join('') + '</tr>';
           }).join('') + '</tbody></table><div style="padding:12px"><button class="btn" type="submit">' + esc(t('common.save')) + '</button></div></form>';
