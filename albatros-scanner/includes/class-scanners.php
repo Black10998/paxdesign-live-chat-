@@ -471,9 +471,11 @@ class Alb_Scanners {
         return $scanner;
     }
 
-    public static function public_photo_url($token) {
+    public static function public_photo_url($token, $version = '') {
         $token = preg_replace('/[^A-Za-z0-9]/', '', (string) $token);
-        return $token !== '' ? home_url('/s/' . $token . '/photo') : '';
+        $url = $token !== '' ? home_url('/s/' . $token . '/photo') : '';
+        $version = preg_replace('/[^A-Za-z0-9._-]/', '', (string) $version);
+        return ($url !== '' && $version !== '') ? add_query_arg('v', $version, $url) : $url;
     }
 
     public static function find_by_serial($serial) {
@@ -685,6 +687,7 @@ class Alb_Scanners {
         $driver_name = '';
         $driver_phone = '';
         $driver_photo_url = '';
+        $driver_photo_path = '';
         $driver_verified = false;
         $driver_branch = '';
         $driver_branch_label = Alb_Branches::label('');
@@ -695,6 +698,7 @@ class Alb_Scanners {
             $driver_name = $driver['name'];
             $driver_phone = $driver['phone'];
             $driver_photo_url = $driver['photo_url'];
+            $driver_photo_path = (string) ($driver['photo_path'] ?? '');
             $driver_verified = !empty($driver['phone_verified']);
             $driver_branch = $driver['branch'];
             $driver_branch_label = $driver['branch_label'];
@@ -705,9 +709,11 @@ class Alb_Scanners {
             $driver_branch = Alb_Branches::normalize($row['_driver_branch'] ?? '');
             $driver_branch_label = Alb_Branches::label($row['_driver_branch'] ?? '');
             if (!empty($row['_driver_photo']) && !empty($row['current_driver_id'])) {
-                $driver_photo_url = Alb_Photos::admin_url('driver', (int) $row['current_driver_id']);
+                $driver_photo_path = (string) $row['_driver_photo'];
+                $driver_photo_url = Alb_Photos::admin_url('driver', (int) $row['current_driver_id'], $driver_photo_path);
             } elseif (!empty($row['_driver_user_id']) && Alb_Users::photo_path((int) $row['_driver_user_id']) !== '') {
-                $driver_photo_url = Alb_Photos::admin_url('user', (int) $row['_driver_user_id']);
+                $driver_photo_path = Alb_Users::photo_path((int) $row['_driver_user_id']);
+                $driver_photo_url = Alb_Photos::admin_url('user', (int) $row['_driver_user_id'], $driver_photo_path);
             }
         }
         $handover_at = '';
@@ -738,6 +744,7 @@ class Alb_Scanners {
             'driver_phone' => $driver_phone,
             'driver_phone_verified' => $driver_verified,
             'driver_photo_url' => $driver_photo_url,
+            'driver_photo_path' => $driver_photo_path,
             'driver_branch' => $driver_branch,
             'driver_branch_label' => $driver_branch_label,
             'handover_date' => $row['handover_date'],

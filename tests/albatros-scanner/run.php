@@ -97,6 +97,13 @@ alb_ok(strpos($css, 'device-visual--lost') !== false && strpos($css, 'device-vis
 alb_ok(strpos($css, 'device-visual-slot') !== false && strpos($css, 'aspect-ratio: 181 / 366') !== false, 'device is centered in the right half with native proportions');
 alb_ok(strpos($svg, '5c7a94') === false && strpos($svg, 'c9a227') === false, 'device mark has no fake screen UI or decorative gold');
 alb_ok(strpos($js, 'users.photo') !== false && strpos($js, '/photo') !== false, 'admin user form can upload a photo');
+alb_ok(strpos($js, 'bindPhotoReplace') !== false && strpos($js, 'users.photo_replace') !== false, 'admin can replace an existing profile photo without editing other fields');
+alb_ok(strpos($photos, 'from_request') !== false && strpos($photos, 'is_readable') !== false, 'photo replace reads REST uploads even after the first save');
+preg_match('/function set_photo\(.+?function photo_path/s', $users_php, $user_photo_fn);
+alb_ok(!empty($user_photo_fn[0]) && strpos($user_photo_fn[0], 'sync_user_profile') === false && strpos($user_photo_fn[0], 'first_name') === false, 'user photo replace does not resync other employee fields');
+preg_match('/function set_photo\(.+?function upsert_verified/s', $drivers, $driver_photo_fn);
+alb_ok(!empty($driver_photo_fn[0]) && strpos($driver_photo_fn[0], "'photo_path'") !== false && strpos($driver_photo_fn[0], 'first_name') === false && strpos($driver_photo_fn[0], 'phone_number') === false, 'driver photo replace writes only the photo path');
+alb_ok(strpos($photos, "add_query_arg('v'") !== false, 'replaced photos use a new cache-busting url');
 alb_ok(strpos($js, 'holderCard') !== false && strpos($js, 'device-visual') !== false, 'scanner detail shows holder photo and device mark');
 alb_ok(strpos($js, 'scanner.copy_qr') !== false && strpos($js, 'function qrCard') !== false, 'managers can copy the unique QR link from the record');
 alb_ok(strpos($rest, 'public_scan_action') !== false && strpos($rest, "status' => 403") !== false, 'public QR API rejects write actions');
@@ -181,6 +188,7 @@ alb_ok(($de['official.website'] ?? '') === 'Offizielle Unternehmenswebsite', 'ge
 alb_ok(($en['official.website'] ?? '') === 'Official Company Website', 'english official website label exists');
 alb_ok(($de['scan.full_name'] ?? '') === 'Name / Vollständiger Name', 'german scan identification label exists');
 alb_ok(($de['handover.privacy_notice'] ?? '') !== '', 'german handover privacy notice exists');
+alb_ok(($de['users.photo_replace'] ?? '') === 'Foto ersetzen', 'german replace-photo label exists');
 alb_ok(($de['scan.readonly'] ?? '') === 'Nur Ansicht' && ($de['scan.assigned_scanner'] ?? '') === 'Zugewiesener Scanner', 'public QR view labels exist');
 alb_ok(($en['scanner.copy_qr'] ?? '') === 'Copy QR link', 'english copy-link label exists');
 alb_ok(strpos($install, "table('otp_challenges')") !== false, 'schema creates otp table');

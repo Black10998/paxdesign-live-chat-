@@ -174,10 +174,20 @@
     return apiUpload(path, input.files[0]);
   }
   function photoField(currentUrl) {
-    return '<div class="field wide"><label>' + esc(t('users.photo')) + '</label>' +
-      (currentUrl ? '<div class="person-row">' + face(currentUrl) + '</div>' : '') +
+    return '<div class="field wide"><label>' + esc(currentUrl ? t('users.photo_replace') : t('users.photo')) + '</label>' +
+      (currentUrl ? '<div class="person-row photo-preview">' + face(currentUrl, 'face-lg') + '</div>' : '') +
       '<input type="file" name="photo" accept="image/jpeg,image/png,image/webp,image/*">' +
       '<p class="hint">' + esc(t('users.photo_hint')) + '</p></div>';
+  }
+  function bindPhotoReplace(form, path, onDone) {
+    var input = form.querySelector('input[name="photo"]');
+    if (!input) return;
+    input.addEventListener('change', function () {
+      if (!input.files || !input.files[0]) return;
+      apiUpload(path, input.files[0]).then(function () {
+        if (onDone) onDone();
+      }).catch(showError);
+    });
   }
   function esc(value) {
     return String(value == null ? '' : value)
@@ -673,6 +683,9 @@
     }
     var assign = document.getElementById('assign-form');
     if (assign) {
+      if (s.current_driver_id) {
+        bindPhotoReplace(assign, 'drivers/' + s.current_driver_id + '/photo', function () { renderScannerDetail(s.id); });
+      }
       assign.onsubmit = function (e) {
         e.preventDefault();
         var fd = new FormData(assign);
@@ -779,6 +792,7 @@
       bindQr(qrItem);
       var form = document.getElementById('driver-edit');
       if (form) {
+        bindPhotoReplace(form, 'drivers/' + d.id + '/photo', function () { renderDriverDetail(d.id); });
         form.onsubmit = function (e) {
           e.preventDefault();
           var body = {};
@@ -916,6 +930,7 @@
       root.innerHTML = '<div class="page-head"><h1>' + esc(u.name || u.username) + '</h1><button class="btn btn-sec" data-go="/users">' + esc(t('common.back')) + '</button></div>' + form;
       var uf = document.getElementById('user-edit');
       if (uf) {
+        bindPhotoReplace(uf, 'users/' + id + '/photo', function () { renderUserDetail(id); });
         uf.onsubmit = function (e) {
           e.preventDefault();
           api('users/' + id, { method: 'POST', body: collectUserBody(uf, true) }).then(function () {

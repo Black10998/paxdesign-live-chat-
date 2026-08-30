@@ -612,6 +612,7 @@ table.data tbody tr.click { cursor: pointer; }
   border: 1px solid var(--line);
 }
 .person-row { display: flex; align-items: center; gap: 10px; padding: 12px 0; }
+.photo-preview { margin: 0 0 8px; }
 .person-cell { white-space: normal; }
 .device-status-row {
   display: grid;

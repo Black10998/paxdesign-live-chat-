@@ -506,7 +506,7 @@ class Alb_Rest {
             'handover_date_display' => $scanner['handover_at_display'] ?: $scanner['handover_date_display'],
             'driver_name' => $scanner['driver_name'] ?: '',
             'driver_phone' => $scanner['driver_phone'] ?: '',
-            'driver_photo_url' => $has_driver ? Alb_Scanners::public_photo_url($scanner['qr_token']) : '',
+            'driver_photo_url' => $has_driver ? Alb_Scanners::public_photo_url($scanner['qr_token'], $scanner['driver_photo_path'] ?? '') : '',
         );
     }
 
@@ -574,11 +574,11 @@ class Alb_Rest {
     }
 
     public static function user_photo(WP_REST_Request $request) {
-        return self::respond(Alb_Users::set_photo((int) $request['id'], $_FILES['photo'] ?? array()));
+        return self::respond(Alb_Users::set_photo((int) $request['id'], Alb_Photos::from_request($request)));
     }
 
     public static function driver_photo(WP_REST_Request $request) {
-        return self::respond(Alb_Drivers::set_photo((int) $request['id'], $_FILES['photo'] ?? array(), get_current_user_id()));
+        return self::respond(Alb_Drivers::set_photo((int) $request['id'], Alb_Photos::from_request($request), get_current_user_id()));
     }
 
     public static function get_settings() {

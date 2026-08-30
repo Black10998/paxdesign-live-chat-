@@ -24,14 +24,23 @@ class Alb_Photos {
         return $dir;
     }
 
+    public static function from_request($request, $key = 'photo') {
+        $files = is_object($request) && method_exists($request, 'get_file_params') ? $request->get_file_params() : array();
+        if (!empty($files[$key]) && is_array($files[$key])) {
+            return $files[$key];
+        }
+        return isset($_FILES[$key]) && is_array($_FILES[$key]) ? $_FILES[$key] : array();
+    }
+
     public static function store_upload($file, $prefix) {
-        if (empty($file['tmp_name']) || !is_uploaded_file($file['tmp_name'])) {
+        $tmp = isset($file['tmp_name']) ? (string) $file['tmp_name'] : '';
+        if ($tmp === '' || !is_readable($tmp)) {
             return new WP_Error('alb_photo', Alb_I18n::t('handover.error.photo_required'), array('status' => 400));
         }
         if (!empty($file['size']) && (int) $file['size'] > self::MAX_BYTES) {
             return new WP_Error('alb_photo', Alb_I18n::t('handover.error.photo_type'), array('status' => 400));
         }
-        $info = @getimagesize($file['tmp_name']);
+        $info = @getimagesize($tmp);
         if (!$info || empty($info['mime'])) {
             return new WP_Error('alb_photo', Alb_I18n::t('handover.error.photo_type'), array('status' => 400));
         }
@@ -45,11 +54,19 @@ class Alb_Photos {
         }
         $name = $prefix . '-' . wp_generate_password(16, false, false) . '.' . $map[$info['mime']];
         $dest = self::dir() . '/' . $name;
-        if (!move_uploaded_file($file['tmp_name'], $dest)) {
+        $moved = is_uploaded_file($tmp) ? move_uploaded_file($tmp, $dest) : (@rename($tmp, $dest) || @copy($tmp, $dest));
+        if (!$moved || !is_file($dest)) {
             return new WP_Error('alb_photo', Alb_I18n::t('error.save_failed'), array('status' => 500));
         }
         @chmod($dest, 0640);
         return $name;
+    }
+
+    public static function delete_file($filename) {
+        $full = self::path($filename);
+        if ($full !== '') {
+            @unlink($full);
+        }
     }
 
     public static function path($filename) {
@@ -61,8 +78,10 @@ class Alb_Photos {
         return is_file($full) ? $full : '';
     }
 
-    public static function admin_url($kind, $id) {
-        return home_url('/alb-photo/' . $kind . '/' . (int) $id);
+    public static function admin_url($kind, $id, $version = '') {
+        $url = home_url('/alb-photo/' . $kind . '/' . (int) $id);
+        $version = self::safe_name($version);
+        return $version !== '' ? add_query_arg('v', $version, $url) : $url;
     }
 
     public static function selfie_url($token) {
@@ -134,6 +153,7 @@ class Alb_Photos {
         }
         $mime = mime_content_type($full) ?: 'image/jpeg';
         nocache_headers();
+        header('Cache-Control: private, no-store, no-cache, must-revalidate, max-age=0');
         header('Content-Type: ' . $mime);
         header('Content-Length: ' . filesize($full));
         header('X-Content-Type-Options: nosniff');

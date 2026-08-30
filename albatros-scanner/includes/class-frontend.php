@@ -170,7 +170,7 @@ class Alb_Frontend {
         $i18n = Alb_I18n::catalog($locale);
         $settings = Alb_Settings::get();
         $photo_url = ($scanner && !empty($scanner['current_driver_id']))
-            ? Alb_Scanners::public_photo_url($scanner['qr_token'])
+            ? Alb_Scanners::public_photo_url($scanner['qr_token'], $scanner['driver_photo_path'] ?? '')
             : '';
         $config = array(
             'company' => $settings['company_name'],

@@ -239,12 +239,14 @@ class Alb_Drivers {
             'last_name' => $last,
             'email' => $user->user_email,
             'phone' => $phone,
-            'photo_path' => $photo,
             'user_id' => (int) $user->ID,
             'status' => 'active',
             'updated_at' => $now,
             'updated_by' => get_current_user_id(),
         );
+        if ($photo !== '') {
+            $fields['photo_path'] = $photo;
+        }
         if ($branch !== '') {
             $fields['branch'] = $branch;
         }
@@ -278,6 +280,7 @@ class Alb_Drivers {
         if (is_wp_error($stored)) {
             return $stored;
         }
+        $previous = (string) ($current['photo_path'] ?? '');
         global $wpdb;
         $wpdb->update(self::table(), array(
             'photo_path' => $stored,
@@ -286,6 +289,9 @@ class Alb_Drivers {
         ), array('id' => (int) $id));
         if (!empty($current['user_id'])) {
             update_user_meta((int) $current['user_id'], 'alb_photo_path', $stored);
+        }
+        if ($previous !== '' && $previous !== $stored) {
+            Alb_Photos::delete_file($previous);
         }
         Alb_Audit::record(array(
             'action' => 'driver_photo',
@@ -458,9 +464,9 @@ class Alb_Drivers {
         }
         $photo_url = '';
         if ($photo !== '') {
-            $photo_url = Alb_Photos::admin_url('driver', (int) $row['id']);
+            $photo_url = Alb_Photos::admin_url('driver', (int) $row['id'], $photo);
         } elseif ($user_id && Alb_Users::photo_path($user_id) !== '') {
-            $photo_url = Alb_Photos::admin_url('user', $user_id);
+            $photo_url = Alb_Photos::admin_url('user', $user_id, Alb_Users::photo_path($user_id));
         }
         return array(
             'id' => (int) $row['id'],

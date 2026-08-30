@@ -204,8 +204,20 @@ class Alb_Users {
         if (is_wp_error($stored)) {
             return $stored;
         }
+        $previous = self::photo_path($id);
         update_user_meta((int) $id, 'alb_photo_path', $stored);
-        Alb_Drivers::sync_user_profile((int) $id);
+        $driver_id = Alb_Drivers::id_for_user((int) $id);
+        if ($driver_id) {
+            global $wpdb;
+            $wpdb->update(Alb_Drivers::table(), array(
+                'photo_path' => $stored,
+                'updated_at' => Alb_Settings::now_mysql(),
+                'updated_by' => (int) $actor->ID,
+            ), array('id' => (int) $driver_id));
+        }
+        if ($previous !== '' && $previous !== $stored) {
+            Alb_Photos::delete_file($previous);
+        }
         Alb_Audit::record(array(
             'action' => 'user_photo',
             'entity_type' => 'user',
@@ -234,7 +246,7 @@ class Alb_Users {
             'status' => Alb_Capabilities::status_of($user),
             'is_primary' => Alb_Capabilities::is_primary($user),
             'photo_path' => $photo,
-            'photo_url' => $photo !== '' ? Alb_Photos::admin_url('user', (int) $user->ID) : '',
+            'photo_url' => $photo !== '' ? Alb_Photos::admin_url('user', (int) $user->ID, $photo) : '',
             'last_login' => Alb_Auth::last_login($user->ID),
             'last_login_display' => Alb_Auth::last_login_display($user->ID),
             'permissions' => Alb_Capabilities::user_permissions($user),
