@@ -5,7 +5,7 @@ if (!defined('ABSPATH')) {
 }
 
 class Alb_Scanners {
-    const STATUSES = array('active', 'lost', 'defective', 'returned', 'repair');
+    const STATUSES = array('active', 'lost', 'defective', 'returned', 'repair', 'inactive');
     const IMMUTABLE = array('brand', 'model', 'serial_number');
 
     public static function table() {
@@ -76,6 +76,9 @@ class Alb_Scanners {
         if (!$current) {
             return new WP_Error('alb_not_found', Alb_I18n::t('scanner.error.not_found'), array('status' => 404));
         }
+        if (!empty($current['deleted_at'])) {
+            return new WP_Error('alb_deleted', Alb_I18n::t('scanner.error.deleted'), array('status' => 400));
+        }
         foreach (self::IMMUTABLE as $field) {
             if (array_key_exists($field, $data) && (string) $data[$field] !== (string) $current[$field]) {
                 return new WP_Error('alb_immutable', Alb_I18n::t('scanner.error.immutable'), array('status' => 400));
@@ -131,6 +134,9 @@ class Alb_Scanners {
         if (!$scanner) {
             return new WP_Error('alb_not_found', Alb_I18n::t('scanner.error.not_found'), array('status' => 404));
         }
+        if (!empty($scanner['deleted_at'])) {
+            return new WP_Error('alb_deleted', Alb_I18n::t('scanner.error.deleted'), array('status' => 400));
+        }
         $driver_id = (int) $driver_id;
         $driver = $driver_id ? Alb_Drivers::get($driver_id) : null;
         if ($driver_id && !$driver) {
@@ -177,6 +183,9 @@ class Alb_Scanners {
         $scanner = self::get($scanner_id);
         if (!$scanner) {
             return new WP_Error('alb_not_found', Alb_I18n::t('scanner.error.not_found'), array('status' => 404));
+        }
+        if (!empty($scanner['deleted_at'])) {
+            return new WP_Error('alb_deleted', Alb_I18n::t('scanner.error.deleted'), array('status' => 400));
         }
         $status = self::normalize_status($status);
         if ($status === $scanner['status']) {
@@ -225,6 +234,144 @@ class Alb_Scanners {
         return self::get($scanner_id);
     }
 
+    public static function take_over($scanner_id, $driver_id, $notes, $user_id) {
+        $scanner = self::get($scanner_id);
+        if (!$scanner) {
+            return new WP_Error('alb_not_found', Alb_I18n::t('scanner.error.not_found'), array('status' => 404));
+        }
+        if (!empty($scanner['deleted_at'])) {
+            return new WP_Error('alb_deleted', Alb_I18n::t('scanner.error.deleted'), array('status' => 400));
+        }
+        $driver_id = (int) $driver_id;
+        if ($driver_id <= 0) {
+            return new WP_Error('alb_invalid', Alb_I18n::t('driver.error.not_found'), array('status' => 400));
+        }
+        if ($scanner['status'] !== 'active') {
+            $activated = self::change_status($scanner_id, 'active', $notes, $user_id);
+            if (is_wp_error($activated)) {
+                return $activated;
+            }
+        }
+        $assigned = self::assign($scanner_id, $driver_id, '', $notes, $user_id);
+        if (is_wp_error($assigned)) {
+            return $assigned;
+        }
+        Alb_Scan::record($assigned, 'take_over', $notes);
+        return $assigned;
+    }
+
+    public static function return_device($scanner_id, $notes, $user_id) {
+        $result = self::change_status($scanner_id, 'returned', $notes, $user_id);
+        if (!is_wp_error($result)) {
+            Alb_Scan::record($result, 'mark_returned', $notes);
+        }
+        return $result;
+    }
+
+    public static function soft_delete($scanner_id, $notes, $user_id) {
+        $scanner = self::get($scanner_id);
+        if (!$scanner) {
+            return new WP_Error('alb_not_found', Alb_I18n::t('scanner.error.not_found'), array('status' => 404));
+        }
+        if (!empty($scanner['deleted_at'])) {
+            return $scanner;
+        }
+        $now = Alb_Settings::now_mysql();
+        $stored_serial = $scanner['serial_number'];
+        if (strpos($stored_serial, '#DEL') === false) {
+            $stored_serial .= '#DEL' . (int) $scanner_id;
+        }
+        global $wpdb;
+        $wpdb->update(self::table(), array(
+            'serial_number' => $stored_serial,
+            'deleted_at' => $now,
+            'deleted_by' => (int) $user_id,
+            'updated_at' => $now,
+            'updated_by' => (int) $user_id,
+        ), array('id' => (int) $scanner_id));
+        Alb_Audit::record(array(
+            'action' => 'scanner_delete',
+            'entity_type' => 'scanner',
+            'entity_id' => (int) $scanner_id,
+            'scanner_id' => (int) $scanner_id,
+            'driver_id' => $scanner['current_driver_id'],
+            'field' => 'deleted_at',
+            'old' => '',
+            'new' => $now,
+        ));
+        if ($notes !== '') {
+            Alb_Audit::record(array(
+                'action' => 'scanner_delete',
+                'entity_type' => 'scanner',
+                'entity_id' => (int) $scanner_id,
+                'scanner_id' => (int) $scanner_id,
+                'field' => 'notes',
+                'new' => sanitize_textarea_field($notes),
+            ));
+        }
+        return self::get($scanner_id);
+    }
+
+    public static function restore($scanner_id, $notes, $user_id) {
+        $scanner = self::get($scanner_id);
+        if (!$scanner) {
+            return new WP_Error('alb_not_found', Alb_I18n::t('scanner.error.not_found'), array('status' => 404));
+        }
+        $now = Alb_Settings::now_mysql();
+        $old_status = $scanner['status'];
+        global $wpdb;
+        if (!empty($scanner['deleted_at'])) {
+            $row = self::raw($scanner_id);
+            $serial = Alb_Scan::display_serial($row ? $row['serial_number'] : $scanner['serial_number']);
+            $existing = self::find_by_serial($serial);
+            if ($existing && (int) $existing['id'] !== (int) $scanner_id) {
+                return new WP_Error('alb_conflict', Alb_I18n::t('scanner.error.serial_exists'), array('status' => 409));
+            }
+            $wpdb->query($wpdb->prepare(
+                'UPDATE ' . self::table() . ' SET serial_number = %s, deleted_at = NULL, deleted_by = 0, status = %s, updated_at = %s, updated_by = %d WHERE id = %d',
+                $serial,
+                'active',
+                $now,
+                (int) $user_id,
+                (int) $scanner_id
+            ));
+        } else {
+            $wpdb->update(self::table(), array(
+                'status' => 'active',
+                'updated_at' => $now,
+                'updated_by' => (int) $user_id,
+            ), array('id' => (int) $scanner_id));
+        }
+        if ($old_status !== 'active') {
+            $wpdb->insert(Alb_Install::table('status_events'), array(
+                'scanner_id' => (int) $scanner_id,
+                'old_status' => $scanner['status'],
+                'new_status' => 'active',
+                'changed_at' => $now,
+                'changed_by' => (int) $user_id,
+                'notes' => sanitize_textarea_field($notes),
+            ));
+        }
+        Alb_Audit::record(array(
+            'action' => 'scanner_restore',
+            'entity_type' => 'scanner',
+            'entity_id' => (int) $scanner_id,
+            'scanner_id' => (int) $scanner_id,
+            'driver_id' => $scanner['current_driver_id'],
+            'field' => 'status',
+            'old' => $scanner['status'],
+            'new' => 'active',
+        ));
+        $restored = self::get($scanner_id);
+        Alb_Scan::record($restored, 'restore', $notes);
+        return $restored;
+    }
+
+    public static function raw($id) {
+        global $wpdb;
+        return $wpdb->get_row($wpdb->prepare('SELECT * FROM ' . self::table() . ' WHERE id = %d', (int) $id), ARRAY_A);
+    }
+
     public static function get($id) {
         global $wpdb;
         $row = $wpdb->get_row($wpdb->prepare('SELECT * FROM ' . self::table() . ' WHERE id = %d', (int) $id), ARRAY_A);
@@ -252,6 +399,12 @@ class Alb_Scanners {
         $drivers = Alb_Install::table('drivers');
         $where = array('1=1');
         $params = array();
+        $removed = !empty($args['removed']) && $args['removed'] !== '0' && $args['removed'] !== 'false';
+        if ($removed) {
+            $where[] = 's.deleted_at IS NOT NULL';
+        } else {
+            $where[] = 's.deleted_at IS NULL';
+        }
         if (!empty($args['q'])) {
             $q = '%' . $wpdb->esc_like($args['q']) . '%';
             $where[] = "(s.scanner_code LIKE %s OR s.serial_number LIKE %s OR s.phone_number LIKE %s OR s.brand LIKE %s OR s.model LIKE %s OR CAST(s.id AS CHAR) LIKE %s OR CONCAT(d.first_name, ' ', d.last_name) LIKE %s)";
@@ -260,6 +413,9 @@ class Alb_Scanners {
         if (!empty($args['status'])) {
             $where[] = 's.status = %s';
             $params[] = self::normalize_status($args['status']);
+        }
+        if (!empty($args['assigned']) && $args['assigned'] !== '0' && $args['assigned'] !== 'false') {
+            $where[] = "s.current_driver_id IS NOT NULL AND s.status != 'returned'";
         }
         if (!empty($args['driver_id'])) {
             $where[] = 's.current_driver_id = %d';
@@ -309,10 +465,10 @@ class Alb_Scanners {
     public static function counts() {
         global $wpdb;
         $table = self::table();
-        $rows = $wpdb->get_results("SELECT status, COUNT(*) AS total FROM $table GROUP BY status", ARRAY_A);
+        $rows = $wpdb->get_results("SELECT status, COUNT(*) AS total FROM $table WHERE deleted_at IS NULL GROUP BY status", ARRAY_A);
         $counts = array_fill_keys(self::STATUSES, 0);
         $counts['total'] = 0;
-        $counts['assigned'] = (int) $wpdb->get_var("SELECT COUNT(*) FROM $table WHERE current_driver_id IS NOT NULL AND status != 'returned'");
+        $counts['assigned'] = (int) $wpdb->get_var("SELECT COUNT(*) FROM $table WHERE deleted_at IS NULL AND current_driver_id IS NOT NULL AND status != 'returned'");
         foreach ($rows ?: array() as $row) {
             $counts[$row['status']] = (int) $row['total'];
             $counts['total'] += (int) $row['total'];
@@ -364,6 +520,9 @@ class Alb_Scanners {
                 'at_display' => Alb_Settings::format_datetime($row['changed_at']),
                 'notes' => $row['notes'],
             );
+        }
+        foreach (Alb_Scan::history($scanner_id, 80) as $row) {
+            $items[] = $row;
         }
         usort($items, function ($a, $b) {
             return strcmp($b['at'], $a['at']);
@@ -435,12 +594,13 @@ class Alb_Scanners {
         if ($detail && $row['status'] === 'lost') {
             $last = self::last_assigned_driver((int) $row['id']);
         }
+        $serial = Alb_Scan::display_serial($row['serial_number']);
         return array(
             'id' => (int) $row['id'],
             'scanner_code' => $row['scanner_code'],
             'brand' => $row['brand'],
             'model' => $row['model'],
-            'serial_number' => $row['serial_number'],
+            'serial_number' => $serial,
             'phone_number' => $row['phone_number'],
             'status' => $row['status'],
             'current_driver_id' => $row['current_driver_id'] ? (int) $row['current_driver_id'] : null,
@@ -451,6 +611,8 @@ class Alb_Scanners {
             'qr_url' => home_url('/s/' . $row['qr_token']),
             'notes' => $row['notes'],
             'last_assigned' => $last,
+            'deleted_at' => !empty($row['deleted_at']) ? $row['deleted_at'] : null,
+            'deleted_at_display' => !empty($row['deleted_at']) ? Alb_Settings::format_datetime($row['deleted_at']) : '',
             'created_at' => $row['created_at'],
             'updated_at' => $row['updated_at'],
         );

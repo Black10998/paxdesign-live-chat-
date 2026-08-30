@@ -54,6 +54,7 @@ class Alb_Install {
         $handovers = self::table('handovers');
         $status_events = self::table('status_events');
         $audit = self::table('audit_logs');
+        $scans = self::table('scan_events');
 
         dbDelta("CREATE TABLE $scanners (
             id bigint(20) unsigned NOT NULL AUTO_INCREMENT,
@@ -68,6 +69,8 @@ class Alb_Install {
             handover_date date DEFAULT NULL,
             qr_token varchar(64) NOT NULL,
             notes text NULL,
+            deleted_at datetime DEFAULT NULL,
+            deleted_by bigint(20) unsigned NOT NULL DEFAULT 0,
             created_at datetime NOT NULL,
             created_by bigint(20) unsigned NOT NULL DEFAULT 0,
             updated_at datetime NOT NULL,
@@ -78,7 +81,8 @@ class Alb_Install {
             UNIQUE KEY qr_token (qr_token),
             KEY status (status),
             KEY current_driver_id (current_driver_id),
-            KEY phone_number (phone_number)
+            KEY phone_number (phone_number),
+            KEY deleted_at (deleted_at)
         ) $charset;");
 
         dbDelta("CREATE TABLE $drivers (
@@ -147,6 +151,25 @@ class Alb_Install {
             KEY created_at (created_at),
             KEY scanner_id (scanner_id),
             KEY actor_id (actor_id),
+            KEY action (action)
+        ) $charset;");
+
+        dbDelta("CREATE TABLE $scans (
+            id bigint(20) unsigned NOT NULL AUTO_INCREMENT,
+            scanner_id bigint(20) unsigned NOT NULL,
+            serial_number varchar(120) NOT NULL DEFAULT '',
+            scanner_code varchar(32) NOT NULL DEFAULT '',
+            actor_id bigint(20) unsigned NOT NULL DEFAULT 0,
+            actor_name varchar(190) NOT NULL DEFAULT '',
+            actor_kind varchar(20) NOT NULL DEFAULT 'guest',
+            action varchar(40) NOT NULL DEFAULT 'opened',
+            notes text NULL,
+            ip_address varchar(64) NOT NULL DEFAULT '',
+            user_agent varchar(255) NOT NULL DEFAULT '',
+            created_at datetime NOT NULL,
+            PRIMARY KEY  (id),
+            KEY scanner_id (scanner_id),
+            KEY created_at (created_at),
             KEY action (action)
         ) $charset;");
     }

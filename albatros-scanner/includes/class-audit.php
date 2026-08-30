@@ -12,9 +12,18 @@ class Alb_Audit {
     public static function record($args) {
         global $wpdb;
         $user = wp_get_current_user();
+        $actor_id = array_key_exists('actor_id', $args)
+            ? (int) $args['actor_id']
+            : ($user && $user->exists() ? (int) $user->ID : 0);
+        $actor_name = array_key_exists('actor_name', $args)
+            ? sanitize_text_field($args['actor_name'])
+            : ($user && $user->exists() ? $user->display_name : 'system');
+        if ($actor_name === '') {
+            $actor_name = 'system';
+        }
         $row = array(
-            'actor_id' => $user && $user->exists() ? (int) $user->ID : 0,
-            'actor_name' => $user && $user->exists() ? $user->display_name : 'system',
+            'actor_id' => $actor_id,
+            'actor_name' => $actor_name,
             'action' => sanitize_key($args['action'] ?? 'change'),
             'entity_type' => sanitize_key($args['entity_type'] ?? ''),
             'entity_id' => isset($args['entity_id']) ? (int) $args['entity_id'] : 0,

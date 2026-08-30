@@ -24,6 +24,7 @@ class Alb_Capabilities {
             'scanners.edit',
             'scanners.assign',
             'scanners.status',
+            'scanners.delete',
             'drivers.view',
             'drivers.create',
             'drivers.edit',
@@ -48,6 +49,7 @@ class Alb_Capabilities {
         $admin['roles.manage'] = false;
         $admin['settings.manage'] = false;
         $admin['audit.view'] = false;
+        $admin['scanners.delete'] = false;
         $staff = array_fill_keys(self::permission_keys(), false);
         $staff['dashboard.view'] = true;
         $staff['scanners.view'] = true;

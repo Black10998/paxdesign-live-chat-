@@ -115,35 +115,122 @@
     }).join('');
   }
 
+  function dashView() {
+    return new URLSearchParams(window.location.search).get('view') || '';
+  }
+  function dashQuery(view) {
+    if (view === 'assigned') return { assigned: 1 };
+    if (view === 'active' || view === 'lost' || view === 'defective' || view === 'returned' || view === 'inactive') {
+      return { status: view };
+    }
+    return {};
+  }
+  function scannerTable(items, options) {
+    options = options || {};
+    var rows = (items || []).map(function (s) {
+      return '<tr class="click" data-go="/scanners/' + s.id + '">' +
+        '<td>' + esc(s.scanner_code) + '</td><td>' + esc(s.brand) + '</td><td>' + esc(s.model) + '</td>' +
+        '<td>' + esc(s.serial_number) + '</td><td>' + esc(s.phone_number) + '</td>' +
+        '<td>' + esc(s.driver_name || t('scanner.no_driver')) + '</td>' +
+        '<td>' + esc(s.handover_date_display) + '</td><td>' + badge(s.status) + '</td>' +
+        (options.actions ? '<td class="row-actions" data-stop="1">' + scannerRowActions(s) + '</td>' : '') +
+        '</tr>';
+    }).join('') || emptyRow(options.actions ? 9 : 8);
+    return '<table class="data"><thead><tr>' +
+      '<th>' + esc(t('scanner.code')) + '</th><th>' + esc(t('scanner.brand')) + '</th><th>' + esc(t('scanner.model')) + '</th>' +
+      '<th>' + esc(t('scanner.serial')) + '</th><th>' + esc(t('scanner.phone')) + '</th><th>' + esc(t('scanner.driver')) + '</th>' +
+      '<th>' + esc(t('scanner.handover_date')) + '</th><th>' + esc(t('common.status')) + '</th>' +
+      (options.actions ? '<th>' + esc(t('common.actions')) + '</th>' : '') +
+      '</tr></thead><tbody>' + rows + '</tbody></table>';
+  }
+  function scannerRowActions(s) {
+    var html = '';
+    if (s.deleted_at) {
+      if (can('scanners.delete')) {
+        html += '<button type="button" class="btn btn-sec" data-act="restore" data-id="' + s.id + '">' + esc(t('scanner.restore')) + '</button>';
+      }
+      return html;
+    }
+    html += '<button type="button" class="btn btn-sec" data-go="/scanners/' + s.id + '">' + esc(t('common.details')) + '</button>';
+    if (can('scanners.status')) {
+      if (s.status !== 'lost') html += '<button type="button" class="btn btn-sec" data-act="lost" data-id="' + s.id + '">' + esc(t('scanner.mark_lost')) + '</button>';
+      if (s.status !== 'defective') html += '<button type="button" class="btn btn-sec" data-act="defective" data-id="' + s.id + '">' + esc(t('scanner.mark_defective')) + '</button>';
+      if (s.status !== 'returned') html += '<button type="button" class="btn btn-sec" data-act="returned" data-id="' + s.id + '">' + esc(t('scanner.mark_returned')) + '</button>';
+      if (s.status !== 'inactive') html += '<button type="button" class="btn btn-sec" data-act="deactivate" data-id="' + s.id + '">' + esc(t('scanner.deactivate')) + '</button>';
+      if (s.status !== 'active') html += '<button type="button" class="btn btn-sec" data-act="restore" data-id="' + s.id + '">' + esc(t('scanner.reactivate')) + '</button>';
+    }
+    if (can('scanners.delete')) {
+      html += '<button type="button" class="btn btn-danger" data-act="delete" data-id="' + s.id + '">' + esc(t('scanner.delete')) + '</button>';
+    }
+    return html;
+  }
+  function runScannerAction(act, id, extra) {
+    extra = extra || {};
+    if (act === 'delete' && !window.confirm(t('scanner.delete_confirm'))) return Promise.resolve();
+    if (act === 'deactivate' && !window.confirm(t('scanner.deactivate'))) return Promise.resolve();
+    if (act === 'delete') return api('scanners/' + id + '/delete', { method: 'POST', body: extra });
+    if (act === 'restore') return api('scanners/' + id + '/restore', { method: 'POST', body: extra });
+    if (act === 'take_over') return api('scanners/' + id + '/take-over', { method: 'POST', body: extra });
+    var statusMap = { lost: 'lost', defective: 'defective', returned: 'returned', deactivate: 'inactive', activate: 'active' };
+    if (statusMap[act]) {
+      return api('scanners/' + id + '/status', { method: 'POST', body: { status: statusMap[act], notes: extra.notes || '' } });
+    }
+    return Promise.reject(new Error(t('common.error')));
+  }
+
   function renderDashboard() {
+    var view = dashView();
     root.innerHTML = '<div class="page-head"><h1>' + esc(t('dash.title')) + '</h1></div><p>' + esc(t('common.loading')) + '</p>';
     api('dashboard').then(function (data) {
       var c = data.counts || {};
       var kpis = [
-        ['dash.total', c.total || 0],
-        ['dash.active', c.active || 0],
-        ['dash.assigned', c.assigned || 0],
-        ['dash.lost', c.lost || 0],
-        ['dash.defective', c.defective || 0],
-        ['dash.returned', c.returned || 0]
+        ['total', 'dash.total', c.total || 0],
+        ['active', 'dash.active', c.active || 0],
+        ['assigned', 'dash.assigned', c.assigned || 0],
+        ['lost', 'dash.lost', c.lost || 0],
+        ['defective', 'dash.defective', c.defective || 0],
+        ['returned', 'dash.returned', c.returned || 0]
       ];
       var handovers = (data.recent_handovers || []).map(function (h) {
         var key = h.action === 'return' ? 'handover.returned' : 'handover.received';
         return '<li>' + esc(t(key, { date: h.at_display, driver: h.driver_name || '-', serial: h.serial_number })) + '</li>';
       }).join('') || '<li>' + esc(t('dash.no_handovers')) + '</li>';
       var activity = (data.recent_activity || []).map(function (a) {
-        return '<li>' + esc(a.created_at_display) + ' — ' + esc(a.actor_name) + ': ' + esc(a.field) + ' ' + esc(a.old_value || '') + ' → ' + esc(a.new_value || '') + '</li>';
+        return '<li>' + esc(a.created_at_display) + ' — ' + esc(a.actor_name) + ': ' + esc(a.action === 'scanner_scan' ? t('scan.action.' + a.new_value) : (a.field + ' ' + (a.old_value || '') + ' → ' + (a.new_value || ''))) + '</li>';
       }).join('') || '<li>' + esc(t('dash.no_activity')) + '</li>';
       root.innerHTML =
         '<div class="page-head"><h1>' + esc(t('dash.title')) + '</h1></div>' +
+        '<p class="hint">' + esc(t('dash.click_hint')) + '</p>' +
         '<div class="kpis">' + kpis.map(function (k) {
-          return '<div class="kpi"><div class="label">' + esc(t(k[0])) + '</div><div class="value">' + esc(k[1]) + '</div></div>';
+          return '<button type="button" class="kpi' + (view === k[0] ? ' is-on' : '') + '" data-view="' + k[0] + '"><div class="label">' + esc(t(k[1])) + '</div><div class="value">' + esc(k[2]) + '</div></button>';
         }).join('') + '</div>' +
-        '<div class="grid-2">' +
+        '<div class="card" id="dash-list"><h2>' + esc(t('dash.list')) + '</h2><div class="body" style="padding:12px">' + esc(view ? t('common.loading') : t('dash.click_hint')) + '</div></div>' +
+        '<div class="grid-2" style="margin-top:12px">' +
         '<div class="card"><h2>' + esc(t('dash.recent_handovers')) + '</h2><ul class="history">' + handovers + '</ul></div>' +
         '<div class="card"><h2>' + esc(t('dash.recent_activity')) + '</h2><ul class="history">' + activity + '</ul></div>' +
         '</div>';
+      root.querySelectorAll('[data-view]').forEach(function (btn) {
+        btn.onclick = function () {
+          go('/?view=' + btn.getAttribute('data-view'));
+        };
+      });
+      if (view) {
+        loadDashList(view);
+      }
     }).catch(showError);
+  }
+  function loadDashList(view) {
+    var box = document.getElementById('dash-list');
+    if (!box) return;
+    var title = {
+      total: 'dash.total', active: 'dash.active', assigned: 'dash.assigned',
+      lost: 'dash.lost', defective: 'dash.defective', returned: 'dash.returned'
+    }[view] || 'dash.list';
+    api('scanners?' + qs(Object.assign({ per_page: 100, sort: 'id', dir: 'desc' }, dashQuery(view)))).then(function (data) {
+      box.innerHTML = '<h2>' + esc(t(title)) + ' (' + esc((data.total || 0)) + ')</h2>' + scannerTable(data.items || [], { actions: true });
+    }).catch(function (err) {
+      box.innerHTML = '<h2>' + esc(t('dash.list')) + '</h2><div class="msg msg-error">' + esc(err.message) + '</div>';
+    });
   }
 
   function scannerFilters(q) {
@@ -154,6 +241,11 @@
       (A.statuses || []).map(function (s) {
         return '<option value="' + s + '"' + (q.status === s ? ' selected' : '') + '>' + esc(statusLabel(s)) + '</option>';
       }).join('') + '</select></div>' +
+      '<div class="field"><label>' + esc(t('dash.assigned')) + '</label><select id="f-assigned">' +
+      '<option value="">' + esc(t('common.all')) + '</option>' +
+      '<option value="1"' + (String(q.assigned) === '1' ? ' selected' : '') + '>' + esc(t('dash.assigned')) + '</option>' +
+      '</select></div>' +
+      (can('scanners.delete') ? '<div class="field"><label>' + esc(t('scanner.removed')) + '</label><select id="f-removed"><option value="">' + esc(t('common.no')) + '</option><option value="1"' + (String(q.removed) === '1' ? ' selected' : '') + '>' + esc(t('scanner.show_removed')) + '</option></select></div>' : '') +
       '<div class="field"><label>' + esc(t('scanner.brand')) + '</label><input id="f-brand" value="' + esc(q.brand || '') + '"></div>' +
       '<div class="field"><label>' + esc(t('scanner.model')) + '</label><input id="f-model" value="' + esc(q.model || '') + '"></div>' +
       '<button class="btn" id="f-apply">' + esc(t('common.filter')) + '</button>' +
@@ -167,28 +259,20 @@
       '</div>' + scannerFilters(query) + '<div class="card"><p class="body" style="padding:12px">' + esc(t('common.loading')) + '</p></div>';
     api('scanners?' + qs({
       q: query.q || '', status: query.status || '', brand: query.brand || '', model: query.model || '',
+      assigned: query.assigned || '', removed: query.removed || '',
       sort: query.sort || 'id', dir: query.dir || 'desc', page: query.page || 1
     })).then(function (data) {
-      var rows = (data.items || []).map(function (s) {
-        return '<tr class="click" data-go="/scanners/' + s.id + '">' +
-          '<td>' + esc(s.scanner_code) + '</td><td>' + esc(s.brand) + '</td><td>' + esc(s.model) + '</td>' +
-          '<td>' + esc(s.serial_number) + '</td><td>' + esc(s.phone_number) + '</td>' +
-          '<td>' + esc(s.driver_name || t('scanner.no_driver')) + '</td>' +
-          '<td>' + esc(s.handover_date_display) + '</td><td>' + badge(s.status) + '</td></tr>';
-      }).join('') || emptyRow(8);
       root.innerHTML = '<div class="page-head"><h1>' + esc(t('scanner.title')) + '</h1>' +
         (can('scanners.create') ? '<div class="actions"><button class="btn" data-go="/scanners/new">' + esc(t('scanner.new')) + '</button></div>' : '') +
         '</div>' + scannerFilters(query) +
-        '<div class="card"><table class="data"><thead><tr>' +
-        '<th>' + esc(t('scanner.code')) + '</th><th>' + esc(t('scanner.brand')) + '</th><th>' + esc(t('scanner.model')) + '</th>' +
-        '<th>' + esc(t('scanner.serial')) + '</th><th>' + esc(t('scanner.phone')) + '</th><th>' + esc(t('scanner.driver')) + '</th>' +
-        '<th>' + esc(t('scanner.handover_date')) + '</th><th>' + esc(t('common.status')) + '</th></tr></thead><tbody>' + rows +
-        '</tbody></table>' + pager(data) + '</div>';
+        '<div class="card">' + scannerTable(data.items || [], { actions: true }) + pager(data) + '</div>';
       bindPager(function (page) { renderScanners(Object.assign({}, query, { page: page })); });
       document.getElementById('f-apply').onclick = function () {
         renderScanners({
           q: document.getElementById('f-q').value,
           status: document.getElementById('f-status').value,
+          assigned: document.getElementById('f-assigned').value,
+          removed: document.getElementById('f-removed') ? document.getElementById('f-removed').value : '',
           brand: document.getElementById('f-brand').value,
           model: document.getElementById('f-model').value
         });
@@ -245,15 +329,19 @@
         }
       }
       var history = (s.history || []).map(function (h) {
+        if (h.type === 'scan') {
+          return '<li>' + esc(h.at_display) + ' — ' + esc(h.actor_name) + ': ' + esc(t('scan.action.' + h.action)) + (h.notes ? ' — ' + esc(h.notes) : '') + '</li>';
+        }
         if (h.type === 'handover') {
           var key = h.action === 'return' ? 'handover.returned' : 'handover.received';
           return '<li>' + esc(t(key, { date: h.at_display, driver: h.driver_name || '-', serial: s.serial_number })) + (h.notes ? ' — ' + esc(h.notes) : '') + '</li>';
         }
         return '<li>' + esc(h.at_display) + ' — ' + esc(statusLabel(h.old_status)) + ' → ' + esc(statusLabel(h.new_status)) + '</li>';
       }).join('') || '<li>' + esc(t('common.empty')) + '</li>';
+      var deleted = s.deleted_at ? '<div class="msg msg-warn">' + esc(t('scanner.deleted_banner')) + '</div>' : '';
       root.innerHTML =
         '<div class="page-head"><h1>' + esc(s.scanner_code) + ' / ' + esc(s.serial_number) + '</h1><button class="btn btn-sec" data-go="/scanners">' + esc(t('common.back')) + '</button></div>' +
-        lost +
+        deleted + lost +
         '<div class="detail">' +
         '<div class="card">' +
         '<h2>' + esc(t('scanner.detail')) + '</h2>' +
@@ -268,7 +356,7 @@
         kv(t('common.status'), statusLabel(s.status)) +
         kv(t('common.notes'), s.notes || '') +
         '</div>' +
-        (can('scanners.edit') || can('scanners.assign') || can('scanners.status') ? renderScannerActions(s) : '') +
+        (can('scanners.edit') || can('scanners.assign') || can('scanners.status') || can('scanners.delete') ? renderScannerActions(s) : '') +
         '</div>' +
         '<div>' +
         (can('qr.view') ? '<div class="card"><h2>' + esc(t('scanner.qr')) + '</h2><div class="qr-box"><div id="qr"></div><div class="hint">' + esc(t('scanner.qr_hint')) + '</div><div>' + esc(s.qr_url) + '</div></div></div>' : '') +
@@ -286,7 +374,33 @@
   }
 
   function renderScannerActions(s) {
-    var html = '<form id="scanner-edit" class="form-grid">';
+    var html = '<div class="action-bar">';
+    if (s.deleted_at) {
+      if (can('scanners.delete')) {
+        html += '<button type="button" class="btn" data-act="restore" data-id="' + s.id + '">' + esc(t('scanner.restore')) + '</button>';
+      }
+      html += '</div>';
+      return html;
+    }
+    if (can('scanners.assign')) {
+      html += '<button type="button" class="btn" data-act="take_over" data-id="' + s.id + '">' + esc(t('scanner.take_over')) + '</button>';
+    }
+    if (can('scanners.status')) {
+      html += '<button type="button" class="btn btn-sec" data-act="returned" data-id="' + s.id + '">' + esc(t('scanner.return_device')) + '</button>';
+      html += '<button type="button" class="btn btn-sec" data-act="defective" data-id="' + s.id + '">' + esc(t('scanner.mark_defective')) + '</button>';
+      html += '<button type="button" class="btn btn-sec" data-act="lost" data-id="' + s.id + '">' + esc(t('scanner.mark_lost')) + '</button>';
+      if (s.status !== 'inactive') {
+        html += '<button type="button" class="btn btn-sec" data-act="deactivate" data-id="' + s.id + '">' + esc(t('scanner.deactivate')) + '</button>';
+      }
+      if (s.status !== 'active') {
+        html += '<button type="button" class="btn btn-sec" data-act="restore" data-id="' + s.id + '">' + esc(t('scanner.reactivate')) + '</button>';
+      }
+    }
+    if (can('scanners.delete')) {
+      html += '<button type="button" class="btn btn-danger" data-act="delete" data-id="' + s.id + '">' + esc(t('scanner.delete')) + '</button>';
+    }
+    html += '</div>';
+    html += '<form id="scanner-edit" class="form-grid">';
     if (can('scanners.edit')) {
       html += field('phone_number', t('scanner.phone'), 'text', s.phone_number, false);
       html += '<div class="field wide"><label>' + esc(t('common.notes')) + '</label><textarea name="notes">' + esc(s.notes || '') + '</textarea></div>';
@@ -327,16 +441,16 @@
           .then(function () { renderScannerDetail(s.id); }).catch(showError);
       };
     }
-    var status = document.getElementById('status-form');
-    if (status) {
-      status.onsubmit = function (e) {
-        e.preventDefault();
-        var fd = new FormData(status);
-        api('scanners/' + s.id + '/status', { method: 'POST', body: { status: fd.get('status'), notes: fd.get('notes') } })
-          .then(function () { renderScannerDetail(s.id); }).catch(showError);
-      };
+      var status = document.getElementById('status-form');
+      if (status) {
+        status.onsubmit = function (e) {
+          e.preventDefault();
+          var fd = new FormData(status);
+          api('scanners/' + s.id + '/status', { method: 'POST', body: { status: fd.get('status'), notes: fd.get('notes') } })
+            .then(function () { renderScannerDetail(s.id); }).catch(showError);
+        };
+      }
     }
-  }
 
   function renderDrivers(query) {
     query = query || {};
@@ -584,6 +698,37 @@
   }
 
   document.addEventListener('click', function (e) {
+    var actEl = e.target.closest('[data-act]');
+    if (actEl && !e.target.closest('#scanner-edit, #assign-form, #status-form')) {
+      e.preventDefault();
+      e.stopPropagation();
+      var id = actEl.getAttribute('data-id');
+      var act = actEl.getAttribute('data-act');
+      var extra = {};
+      if (act === 'take_over') {
+        var sel = document.querySelector('#assign-form select[name="driver_id"]');
+        extra.driver_id = sel ? sel.value : '';
+        if (!extra.driver_id) {
+          showError(new Error(t('driver.error.not_found')));
+          return;
+        }
+      }
+      runScannerAction(act, id, extra).then(function () {
+        if (path() === '/' || path() === '') {
+          renderDashboard();
+        } else if (path().indexOf('/scanners/') === 0) {
+          renderScannerDetail(id);
+        } else {
+          renderScanners(Object.fromEntries(new URLSearchParams(window.location.search)));
+        }
+      }).catch(showError);
+      return;
+    }
+    if (e.target.closest('[data-stop]')) {
+      if (!e.target.closest('[data-go]')) {
+        e.stopPropagation();
+      }
+    }
     var goEl = e.target.closest('[data-go]');
     if (goEl) {
       e.preventDefault();

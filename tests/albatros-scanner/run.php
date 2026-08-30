@@ -43,8 +43,11 @@ $install = file_get_contents($plugin . '/includes/class-install.php');
 $scanners = file_get_contents($plugin . '/includes/class-scanners.php');
 $caps = file_get_contents($plugin . '/includes/class-capabilities.php');
 $frontend = file_get_contents($plugin . '/includes/class-frontend.php');
+$scan_class = file_get_contents($plugin . '/includes/class-scan.php');
+$rest = file_get_contents($plugin . '/includes/class-rest.php');
 $css = file_get_contents($plugin . '/assets/css/app.css');
 $js = file_get_contents($plugin . '/assets/js/app.js');
+$scan_tpl = file_get_contents($plugin . '/templates/scan.php');
 
 alb_ok(strpos($boot, 'paxdesign.at') === false, 'plugin does not reference paxdesign.at');
 alb_ok(strpos($frontend, 'paxdesign.at') === false, 'frontend does not reference paxdesign.at');
@@ -53,6 +56,22 @@ alb_ok(strpos($install, "table('drivers')") !== false, 'schema creates drivers t
 alb_ok(strpos($install, "table('handovers')") !== false, 'schema creates handovers table');
 alb_ok(strpos($install, "table('status_events')") !== false, 'schema creates status events table');
 alb_ok(strpos($install, "table('audit_logs')") !== false, 'schema creates audit table');
+alb_ok(strpos($install, "table('scan_events')") !== false, 'schema creates scan events table');
+alb_ok(strpos($install, 'deleted_at') !== false, 'schema supports soft-delete');
+alb_ok(is_file($plugin . '/includes/class-scan.php'), 'scan workflow class exists');
+alb_ok(is_file($plugin . '/templates/scan.php'), 'mobile scan template exists');
+alb_ok(strpos($scan_tpl, 'full_name') !== false && strpos($scan_tpl, 'scan.identify_hint') !== false, 'guest scan asks for a real name');
+alb_ok(strpos($scan_tpl, 'scanner.take_over') !== false && strpos($scan_tpl, 'scanner.mark_lost') !== false, 'scan page offers authorized actions');
+alb_ok(strpos($frontend, 'render_scan') !== false && strpos($frontend, "strpos(\$path, 's/') === 0") !== false, 'QR routes render the scanner record, not the homepage');
+alb_ok(strpos($frontend, "wp_safe_redirect(home_url('/scanners/'") === false, 'QR scan is not redirected away from the scanner token');
+alb_ok(strpos($scan_class, 'maybe_record_open') !== false && strpos($scan_class, 'actor_name') !== false, 'scans store person, scanner and time');
+alb_ok(strpos($scanners, 'soft_delete') !== false && strpos($scanners, 'restore') !== false, 'scanners can be removed without erasing history');
+alb_ok(strpos($scanners, "s.current_driver_id IS NOT NULL") !== false, 'assigned scanners can be queried');
+alb_ok(strpos($scanners, "'inactive'") !== false, 'inactive status is supported');
+alb_ok(strpos($caps, 'scanners.delete') !== false, 'delete permission exists');
+alb_ok(strpos($js, 'data-view') !== false && strpos($js, 'loadDashList') !== false, 'dashboard cards load matching scanner lists');
+alb_ok(strpos($js, 'scanner.take_over') !== false && strpos($js, 'scanner.delete_confirm') !== false, 'scanner management actions are in the UI');
+alb_ok(strpos($rest, '/scan/') !== false && strpos($rest, 'public_scan') !== false, 'public scan API exists');
 alb_ok(strpos($scanners, "const IMMUTABLE = array('brand', 'model', 'serial_number')") !== false, 'brand/model/serial are immutable');
 alb_ok(strpos($scanners, 'scanner.error.immutable') !== false, 'immutable update is rejected');
 alb_ok(strpos($scanners, 'handovers') !== false && strpos($scanners, 'reassign') !== false, 'handovers are stored instead of overwritten');
@@ -80,6 +99,9 @@ alb_ok(($de['login.title'] ?? '') !== ($en['login.title'] ?? ''), 'german and en
 alb_ok(($de['nav.scanners'] ?? '') !== ($tr['nav.scanners'] ?? ''), 'german and turkish nav labels differ');
 alb_ok(($de['official.website'] ?? '') === 'Offizielle Unternehmenswebsite', 'german official website label exists');
 alb_ok(($en['official.website'] ?? '') === 'Official Company Website', 'english official website label exists');
+alb_ok(($de['scan.full_name'] ?? '') === 'Name / Vollständiger Name', 'german scan identification label exists');
+alb_ok(($en['scanner.take_over'] ?? '') === 'Take over scanner', 'english take-over action exists');
+alb_ok(($de['dash.click_hint'] ?? '') !== ($en['dash.click_hint'] ?? ''), 'dashboard hint is translated');
 
 foreach (glob($plugin . '/includes/*.php') as $file) {
     $out = array();

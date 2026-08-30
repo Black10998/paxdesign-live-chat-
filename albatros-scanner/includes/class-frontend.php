@@ -38,6 +38,10 @@ class Alb_Frontend {
             $wp_query->is_404 = false;
         }
         status_header(200);
+        if (strpos($path, 's/') === 0) {
+            self::render_scan(substr($path, 2));
+            exit;
+        }
         $logged_in = is_user_logged_in();
         if ($logged_in) {
             Alb_Capabilities::bootstrap_user(get_current_user_id());
@@ -60,14 +64,6 @@ class Alb_Frontend {
         if ($path === 'login') {
             wp_safe_redirect(home_url('/'));
             exit;
-        }
-        if (strpos($path, 's/') === 0) {
-            $token = substr($path, 2);
-            $scanner = Alb_Scanners::get_by_qr($token);
-            if ($scanner && Alb_Capabilities::current_user_can('scanners.view')) {
-                wp_safe_redirect(home_url('/scanners/' . $scanner['id']));
-                exit;
-            }
         }
         self::print_app();
         exit;
@@ -134,6 +130,77 @@ class Alb_Frontend {
         $next = wp_validate_redirect($next, home_url('/'));
         wp_safe_redirect($next);
         exit;
+    }
+
+    private static function render_scan($token) {
+        $token = preg_replace('/[^A-Za-z0-9]/', '', (string) $token);
+        if (isset($_GET['alb_lang'])) {
+            Alb_I18n::set_locale(wp_unslash($_GET['alb_lang']), get_current_user_id());
+            wp_safe_redirect(home_url('/s/' . $token));
+            exit;
+        }
+        $scanner = $token !== '' ? Alb_Scanners::get_by_qr($token) : null;
+        $scan_error = '';
+        $scan_notice = '';
+        if (($_SERVER['REQUEST_METHOD'] ?? '') === 'POST') {
+            if (!wp_verify_nonce(sanitize_text_field(wp_unslash($_POST['_wpnonce'] ?? '')), 'alb_scan')) {
+                $scan_error = Alb_I18n::t('error.forbidden');
+            } elseif (!$scanner) {
+                $scan_error = Alb_I18n::t('scan.not_found');
+            } else {
+                $action = sanitize_key(wp_unslash($_POST['alb_action'] ?? ''));
+                if ($action === 'identify') {
+                    $name = Alb_Scan::set_guest_name(wp_unslash($_POST['full_name'] ?? ''));
+                    if (is_wp_error($name)) {
+                        $scan_error = $name->get_error_message();
+                    } else {
+                        wp_safe_redirect(home_url('/s/' . $token));
+                        exit;
+                    }
+                } else {
+                    $params = wp_unslash($_POST);
+                    $result = Alb_Rest::dispatch_scan_action($scanner, $action, $params);
+                    if (is_wp_error($result)) {
+                        $scan_error = $result->get_error_message();
+                    } else {
+                        wp_safe_redirect(home_url('/s/' . $token));
+                        exit;
+                    }
+                }
+            }
+        }
+        if ($scanner) {
+            $identity = Alb_Scan::identity();
+            if (!empty($identity['identified'])) {
+                Alb_Scan::maybe_record_open($scanner);
+                $scanner = Alb_Scanners::get((int) $scanner['id']) ?: $scanner;
+            }
+        }
+        $locale = Alb_I18n::current();
+        $i18n = Alb_I18n::catalog($locale);
+        $settings = Alb_Settings::get();
+        $identity = Alb_Scan::identity();
+        $history = ($scanner && !empty($identity['identified']) && (Alb_Capabilities::current_user_can('history.view') || Alb_Capabilities::current_user_can('audit.view')))
+            ? Alb_Scan::history((int) $scanner['id'], 12)
+            : array();
+        $drivers = (is_user_logged_in() && Alb_Capabilities::current_user_can('scanners.assign'))
+            ? Alb_Drivers::options()
+            : array();
+        $config = array(
+            'company' => $settings['company_name'],
+            'logo' => Alb_Settings::logo_url(),
+            'official_url' => Alb_Settings::official_url(),
+            'locale' => $locale,
+            'i18n' => $i18n,
+            'identity' => $identity,
+            'permissions' => array(
+                'assign' => Alb_Capabilities::current_user_can('scanners.assign'),
+                'status' => Alb_Capabilities::current_user_can('scanners.status'),
+                'delete' => Alb_Capabilities::current_user_can('scanners.delete'),
+                'view_record' => is_user_logged_in() && Alb_Capabilities::current_user_can('scanners.view'),
+            ),
+        );
+        include ALB_SCANNER_PLUGIN_DIR . 'templates/scan.php';
     }
 
     private static function print_login() {
