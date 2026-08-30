@@ -784,7 +784,7 @@
         '<div class="toolbar"><div class="field grow"><label>' + esc(t('common.search')) + '</label><input id="d-q" value="' + esc(query.q || '') + '"></div>' +
         '<div class="field"><label>' + esc(t('common.status')) + '</label><select id="d-status"><option value="">' + esc(t('common.all')) + '</option><option value="active"' + (query.status === 'active' ? ' selected' : '') + '>' + esc(t('common.active')) + '</option><option value="inactive"' + (query.status === 'inactive' ? ' selected' : '') + '>' + esc(t('common.inactive')) + '</option></select></div>' +
         '<button class="btn" id="d-apply">' + esc(t('common.filter')) + '</button></div>' +
-        '<div class="card"><table class="data"><thead><tr><th>' + esc(t('users.name')) + '</th><th>' + esc(t('driver.phone')) + '</th><th>' + esc(t('branch.label')) + '</th><th>' + esc(t('driver.email')) + '</th><th>' + esc(t('driver.employee_code')) + '</th><th>' + esc(t('common.status')) + '</th></tr></thead><tbody>' + rows + '</tbody></table>' + pager(data) + '</div>';
+        '<div class="card"><div class="table-scroll"><table class="data"><thead><tr><th>' + esc(t('users.name')) + '</th><th>' + esc(t('driver.phone')) + '</th><th>' + esc(t('branch.label')) + '</th><th>' + esc(t('driver.email')) + '</th><th>' + esc(t('driver.employee_code')) + '</th><th>' + esc(t('common.status')) + '</th></tr></thead><tbody>' + rows + '</tbody></table></div>' + pager(data) + '</div>';
       function applyDriverFilters() {
         renderDrivers({
           q: document.getElementById('d-q').value,
@@ -850,7 +850,7 @@
           (can('drivers.deactivate') ? ' <button type="button" class="btn btn-danger" id="toggle-driver">' + esc(d.status === 'active' ? t('driver.deactivate') : t('driver.activate')) + '</button>' : '') +
           '</div></form>' : '<div class="kv">' + kv(t('driver.phone'), d.phone) + kv(t('branch.label'), d.branch_label || branchLabel(d.branch)) + kv(t('driver.email'), d.email) + '</div>') +
         '</div>' + qrCard(qrItem) + '</div>' +
-        '<div class="card" style="margin-top:12px"><h2>' + esc(t('driver.assigned')) + '</h2><table class="data"><thead><tr><th>' + esc(t('scanner.code')) + '</th><th>' + esc(t('scanner.serial')) + '</th><th>' + esc(t('scanner.phone')) + '</th><th>' + esc(t('branch.label')) + '</th><th>' + esc(t('common.status')) + '</th></tr></thead><tbody>' + assigned + '</tbody></table></div>' +
+        '<div class="card" style="margin-top:12px"><h2>' + esc(t('driver.assigned')) + '</h2><div class="table-scroll"><table class="data"><thead><tr><th>' + esc(t('scanner.code')) + '</th><th>' + esc(t('scanner.serial')) + '</th><th>' + esc(t('scanner.phone')) + '</th><th>' + esc(t('branch.label')) + '</th><th>' + esc(t('common.status')) + '</th></tr></thead><tbody>' + assigned + '</tbody></table></div></div>' +
         '<div class="card" style="margin-top:12px"><h2>' + esc(t('driver.history')) + '</h2><ul class="history">' + history + '</ul></div>';
       bindQr(qrItem);
       var form = document.getElementById('driver-edit');
@@ -885,7 +885,7 @@
       }).join('') || emptyRow(8);
       root.innerHTML = '<div class="page-head"><h1>' + esc(t('audit.title')) + '</h1></div><p class="hint">' + esc(t('audit.immutable_note')) + '</p>' +
         '<div class="toolbar"><div class="field grow"><input id="a-q" value="' + esc(query.q || '') + '"><button class="btn" id="a-apply">' + esc(t('common.search')) + '</button></div></div>' +
-        '<div class="card"><table class="data"><thead><tr><th>' + esc(t('common.date')) + '</th><th>' + esc(t('audit.actor')) + '</th><th>' + esc(t('common.action')) + '</th><th>' + esc(t('audit.field')) + '</th><th>' + esc(t('audit.old')) + '</th><th>' + esc(t('audit.new')) + '</th><th>' + esc(t('scanner.code')) + '</th><th>' + esc(t('scanner.driver')) + '</th></tr></thead><tbody>' + rows + '</tbody></table>' + pager(data) + '</div>';
+        '<div class="card"><div class="table-scroll"><table class="data"><thead><tr><th>' + esc(t('common.date')) + '</th><th>' + esc(t('audit.actor')) + '</th><th>' + esc(t('common.action')) + '</th><th>' + esc(t('audit.field')) + '</th><th>' + esc(t('audit.old')) + '</th><th>' + esc(t('audit.new')) + '</th><th>' + esc(t('scanner.code')) + '</th><th>' + esc(t('scanner.driver')) + '</th></tr></thead><tbody>' + rows + '</tbody></table></div>' + pager(data) + '</div>';
       document.getElementById('a-apply').onclick = function () { renderAudit({ q: document.getElementById('a-q').value }); };
       bindPager(function (page) { renderAudit(Object.assign({}, query, { page: page })); });
     }).catch(showError);
@@ -947,7 +947,7 @@
         '<div class="wide"><button class="btn" type="submit">' + esc(t('common.create')) + '</button></div></form>' : '';
       root.innerHTML = '<div class="page-head"><h1>' + esc(t('users.title')) + '</h1></div>' +
         branchTabs(query.branch || '') + form +
-        '<div class="card"><table class="data"><thead><tr><th>' + esc(t('users.name')) + '</th><th>' + esc(t('users.username')) + '</th><th>' + esc(t('driver.email')) + '</th><th>' + esc(t('branch.label')) + '</th><th>' + esc(t('users.role')) + '</th><th>' + esc(t('users.status')) + '</th><th>' + esc(t('users.last_login')) + '</th></tr></thead><tbody>' + rows + '</tbody></table></div>';
+        '<div class="card"><div class="table-scroll"><table class="data"><thead><tr><th>' + esc(t('users.name')) + '</th><th>' + esc(t('users.username')) + '</th><th>' + esc(t('driver.email')) + '</th><th>' + esc(t('branch.label')) + '</th><th>' + esc(t('users.role')) + '</th><th>' + esc(t('users.status')) + '</th><th>' + esc(t('users.last_login')) + '</th></tr></thead><tbody>' + rows + '</tbody></table></div></div>';
       bindBranchTabs(function () {
         renderUsers({
           q: query.q || '',
@@ -1044,7 +1044,7 @@
         '</form>' : '';
       var roles = '';
       if (p) {
-        roles = '<form id="perm-form" class="card" hidden><table class="data perm-table"><thead><tr><th></th>' +
+        roles = '<form id="perm-form" class="card" hidden><div class="table-scroll"><table class="data perm-table"><thead><tr><th></th>' +
           p.roles.map(function (r) { return '<th>' + esc(t('role.' + r)) + '</th>'; }).join('') + '</tr></thead><tbody>' +
           p.keys.map(function (key) {
             return '<tr><td>' + esc(t('perm.' + key)) + '</td>' + p.roles.map(function (r) {
@@ -1052,7 +1052,7 @@
               var locked = r === 'super_admin' || (privileged && r !== 'super_admin');
               return '<td><input type="checkbox" data-role="' + r + '" data-key="' + key + '"' + (p.map[r][key] ? ' checked' : '') + (locked ? ' disabled' : '') + '></td>';
             }).join('') + '</tr>';
-          }).join('') + '</tbody></table><div style="padding:12px"><button class="btn" type="submit">' + esc(t('common.save')) + '</button></div></form>';
+          }).join('') + '</tbody></table></div><div style="padding:12px"><button class="btn" type="submit">' + esc(t('common.save')) + '</button></div></form>';
       }
       root.innerHTML = '<div class="page-head"><h1>' + esc(t('settings.title')) + '</h1></div>' + tabs + '<div id="tab-general">' + general + '</div><div id="tab-roles">' + roles + '</div>';
       document.querySelectorAll('.settings-nav button').forEach(function (btn) {
@@ -1097,14 +1097,14 @@
 
   function renderReports() {
     var types = ['scanners', 'drivers', 'handovers', 'lost'];
-    root.innerHTML = '<div class="page-head"><h1>' + esc(t('reports.title')) + '</h1></div><div class="card"><table class="data"><thead><tr><th></th><th>CSV</th><th>Excel</th><th>PDF</th></tr></thead><tbody>' +
+    root.innerHTML = '<div class="page-head"><h1>' + esc(t('reports.title')) + '</h1></div><div class="card"><div class="table-scroll"><table class="data"><thead><tr><th></th><th>CSV</th><th>Excel</th><th>PDF</th></tr></thead><tbody>' +
       types.map(function (type) {
         var base = A.rest + 'export/' + type + '?_wpnonce=' + encodeURIComponent(A.nonce);
         return '<tr><td>' + esc(t('reports.' + type)) + '</td>' +
           '<td><a href="' + base + '&format=csv">CSV</a></td>' +
           '<td><a href="' + base + '&format=xlsx">Excel</a></td>' +
           '<td><a href="' + base + '&format=pdf" target="_blank">' + esc(t('reports.pdf')) + '</a></td></tr>';
-      }).join('') + '</tbody></table></div>';
+      }).join('') + '</tbody></table></div></div>';
   }
 
   function bindPager(fn) {

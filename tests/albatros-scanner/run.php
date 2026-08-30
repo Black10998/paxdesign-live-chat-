@@ -138,6 +138,12 @@ alb_ok(strpos($js, "kv(t('scanner.phone')") !== false && strpos($js, "t('driver.
 alb_ok(strpos($js, 'employeeEntryFields') !== false && strpos($js, 'employee_name') !== false && strpos($js, "name=\"driver_id\"") === false, 'managers enter employee data directly without a picker');
 alb_ok(strpos($drivers, 'upsert_from_entry') !== false && strpos($scanners, 'person_id_from_request') !== false, 'entered employee data is stored and linked automatically');
 alb_ok(strpos($js, 'scanner-table') !== false && strpos($js, 'personMini') !== false && strpos($css, 'table.data.scanner-table') !== false, 'scanner list is a compact aligned table');
+alb_ok(strpos($css, "table.data.scanner-table th,\ntable.data.scanner-table td") !== false && strpos($css, "width: auto;\n  max-width: none;") !== false && strpos($css, "td.row-actions {\n  width: auto;") !== false, 'scanner table columns share leftover width instead of shrinking to overflow');
+alb_ok(strpos($css, 'text-overflow: ellipsis') !== false && strpos($css, '.table-scroll') !== false, 'table text stays inside cells and wide tables scroll in-place');
+alb_ok(strpos($css, 'display: block; overflow-x: auto') === false, 'tables keep row layout on small screens');
+alb_ok(strpos($css, '.app') !== false && strpos($css, 'overflow-x: hidden') !== false, 'the app shell does not create a page-level horizontal scroll');
+alb_ok(strpos($css, 'max-width: calc(100vw - 24px)') !== false, 'login box fits narrow viewports');
+alb_ok(strpos($js, 'table-scroll') !== false, 'list pages wrap tables for small screens');
 alb_ok(strpos($js, 'users.create_employee') === false, 'user accounts are not created as employees from the admin form');
 alb_ok(strpos($scanners, 'Alb_Drivers::get') !== false && strpos($scanners, 'driver_branch') !== false, 'scanner records load live employee name, photo, personal phone and branch');
 alb_ok(strpos($scanners, "s.current_driver_id IS NULL") !== false, 'unassigned scanners can be queried for automatic linking');
