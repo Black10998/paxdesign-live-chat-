@@ -69,6 +69,7 @@
   "common.loading": "Loading…",
   "common.empty": "No records found.",
   "common.error": "The action could not be completed.",
+  "common.saved": "Saved.",
   "common.close": "Close",
   "common.all": "All",
   "common.status": "Status",

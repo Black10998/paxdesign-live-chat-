@@ -179,13 +179,35 @@
       '<input type="file" name="photo" accept="image/jpeg,image/png,image/webp,image/*">' +
       '<p class="hint">' + esc(t('users.photo_hint')) + '</p></div>';
   }
+  function updatePhotoPreview(form, photoUrl) {
+    if (!form || !photoUrl) return;
+    var wrap = form.querySelector('.photo-preview');
+    if (wrap) {
+      var img = wrap.querySelector('img');
+      if (img) {
+        img.src = photoUrl;
+        return;
+      }
+      wrap.innerHTML = face(photoUrl, 'face-lg');
+      return;
+    }
+    var input = form.querySelector('input[name="photo"]');
+    if (!input || !input.parentElement) return;
+    var preview = document.createElement('div');
+    preview.className = 'person-row photo-preview';
+    preview.innerHTML = face(photoUrl, 'face-lg');
+    input.parentElement.insertBefore(preview, input);
+  }
   function bindPhotoReplace(form, path, onDone) {
     var input = form.querySelector('input[name="photo"]');
     if (!input) return;
     input.addEventListener('change', function () {
       if (!input.files || !input.files[0]) return;
-      apiUpload(path, input.files[0]).then(function () {
-        if (onDone) onDone();
+      apiUpload(path, input.files[0]).then(function (res) {
+        input.value = '';
+        var url = res && (res.photo_url || res.driver_photo_url);
+        if (url) updatePhotoPreview(form, url);
+        if (onDone) onDone(res);
       }).catch(showError);
     });
   }
@@ -538,7 +560,18 @@
     return '<div class="field"><label>' + esc(label) + '</label><input name="' + name + '" type="' + type + '" value="' + esc(value || '') + '"' + (readonly ? ' readonly class="readonly"' : '') + '></div>';
   }
   function clearFormAlert() {
-    root.querySelectorAll('.msg-error.form-alert').forEach(function (el) { el.remove(); });
+    root.querySelectorAll('.msg-error.form-alert, .msg-ok.form-alert').forEach(function (el) { el.remove(); });
+  }
+  function showSuccess(message) {
+    clearFormAlert();
+    var box = document.createElement('div');
+    box.className = 'msg msg-ok form-alert';
+    box.textContent = message || t('common.saved');
+    if (root.firstChild) {
+      root.insertBefore(box, root.firstChild);
+    } else {
+      root.appendChild(box);
+    }
   }
   function showError(err) {
     clearFormAlert();
@@ -745,7 +778,13 @@
     var assign = document.getElementById('assign-form');
     if (assign) {
       if (s.current_driver_id) {
-        bindPhotoReplace(assign, 'drivers/' + s.current_driver_id + '/photo', function () { renderScannerDetail(s.id); });
+        bindPhotoReplace(assign, 'drivers/' + s.current_driver_id + '/photo', function (res) {
+          var url = res && res.photo_url;
+          if (url) {
+            var holderImg = root.querySelector('.holder-person img');
+            if (holderImg) holderImg.src = url;
+          }
+        });
       }
       assign.onsubmit = function (e) {
         e.preventDefault();
@@ -855,15 +894,22 @@
       bindQr(qrItem);
       var form = document.getElementById('driver-edit');
       if (form) {
-        bindPhotoReplace(form, 'drivers/' + d.id + '/photo', function () { renderDriverDetail(d.id); });
+        bindPhotoReplace(form, 'drivers/' + d.id + '/photo', function (res) {
+          var url = res && res.photo_url;
+          if (url) {
+            var summaryImg = root.querySelector('.detail .card .person-row img.face-lg');
+            if (summaryImg) summaryImg.src = url;
+          }
+        });
         bindAjaxForm(form, function () {
           var body = collectDriverBody(form);
           if (!body.first_name) {
             return Promise.reject(new Error(t('driver.error.name_required')));
           }
+          var refresh = function () { renderDriverDetail(d.id); };
           return api('drivers/' + d.id, { method: 'POST', body: body }).then(function () {
             return maybeUpload('drivers/' + d.id + '/photo', form);
-          }).then(function () { renderDriverDetail(d.id); });
+          }).then(refresh, refresh);
         });
       }
       var tog = document.getElementById('toggle-driver');
@@ -994,11 +1040,15 @@
       root.innerHTML = '<div class="page-head"><h1>' + esc(u.name || u.username) + '</h1><button class="btn btn-sec" data-go="/users">' + esc(t('common.back')) + '</button></div>' + form;
       var uf = document.getElementById('user-edit');
       if (uf) {
-        bindPhotoReplace(uf, 'users/' + id + '/photo', function () { renderUserDetail(id); });
+        bindPhotoReplace(uf, 'users/' + id + '/photo', function (res) {
+          var url = res && res.photo_url;
+          if (url) updatePhotoPreview(uf, url);
+        });
         bindAjaxForm(uf, function () {
+          var refresh = function () { renderUserDetail(id); };
           return api('users/' + id, { method: 'POST', body: collectUserBody(uf, true) }).then(function () {
             return maybeUpload('users/' + id + '/photo', uf);
-          }).then(function () { renderUserDetail(id); });
+          }).then(refresh, refresh);
         });
       }
     }).catch(showError);

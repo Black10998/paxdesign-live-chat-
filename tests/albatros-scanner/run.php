@@ -220,8 +220,15 @@ alb_ok(strpos($js, 'function collectDriverBody') !== false, 'employee create nor
 alb_ok(strpos($js, 'insertBefore(box, root.firstChild)') !== false, 'errors prepend a banner without replacing the form');
 alb_ok(strpos($js, "root.innerHTML = '<div class=\"msg msg-error\">' + esc(err.message") === false, 'errors do not serialize and wipe typed form values');
 alb_ok(strpos($js, '.then(done, done)') !== false, 'a photo upload failure does not undo a successful employee create');
+alb_ok(strpos($js, 'function updatePhotoPreview') !== false, 'photo replace updates preview without reloading the edit form');
+alb_ok(strpos($js, 'input.value = \'\'') !== false, 'photo input is cleared after upload so save does not re-upload');
+preg_match('/bindPhotoReplace\(form, \'drivers\/\' \+ d\.id \+ \'\/photo\'.+?bindAjaxForm/s', $js, $driver_edit_photo);
+alb_ok(!empty($driver_edit_photo[0]) && strpos($driver_edit_photo[0], 'renderDriverDetail(d.id)') === false, 'driver photo replace does not reload the edit form');
+alb_ok(strpos($js, "var refresh = function () { renderDriverDetail(d.id); }") !== false && strpos($js, '.then(refresh, refresh)') !== false, 'driver edit save refreshes even when photo upload fails');
 alb_ok(strpos($js, "addEventListener('submit'") !== false, 'app forms cannot fall back to a native page reload');
 alb_ok(strpos($drivers, 'function person_names') !== false, 'driver create splits or copies a single filled name');
+preg_match('/function update\(.+?function digits/s', $drivers, $update_fn);
+alb_ok(!empty($update_fn[0]) && strpos($update_fn[0], 'person_names') !== false, 'driver update normalizes names like create');
 preg_match('/function create\(.+?function update/s', $drivers, $create_fn);
 alb_ok(!empty($create_fn[0]) && strpos($create_fn[0], 'person_names') !== false && strpos($create_fn[0], "\$first === '' || \$last === ''") === false, 'employee create no longer requires both name fields separately');
 

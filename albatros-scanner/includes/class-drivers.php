@@ -51,6 +51,14 @@ class Alb_Drivers {
         if (!$current) {
             return new WP_Error('alb_not_found', Alb_I18n::t('driver.error.not_found'), array('status' => 404));
         }
+        if (array_key_exists('first_name', $data) || array_key_exists('last_name', $data) || array_key_exists('name', $data) || array_key_exists('full_name', $data)) {
+            list($first, $last) = self::person_names($data);
+            if ($first === '') {
+                return new WP_Error('alb_invalid', Alb_I18n::t('driver.error.name_required'), array('status' => 400));
+            }
+            $data['first_name'] = $first;
+            $data['last_name'] = $last;
+        }
         $map = array(
             'first_name' => 'sanitize_text_field',
             'last_name' => 'sanitize_text_field',

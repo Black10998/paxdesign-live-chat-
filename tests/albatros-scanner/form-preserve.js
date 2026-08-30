@@ -54,6 +54,33 @@ try {
 }
 assert.ok(threw, 'invalid optional email is rejected without saving');
 
+function updatePhotoPreview(form, photoUrl) {
+  if (!form || !photoUrl) return;
+  var wrap = form.querySelector('.photo-preview');
+  if (wrap) {
+    var img = wrap.querySelector('img');
+    if (img) {
+      img.src = photoUrl;
+      return;
+    }
+  }
+}
+
+var editForm = {
+  innerHTML: '',
+  querySelector: function (sel) {
+    if (sel === '.photo-preview') {
+      return { querySelector: function () { return { src: 'old.jpg' }; } };
+    }
+    if (sel === 'input[name="first_name"]') {
+      return { value: 'Edited Name' };
+    }
+    return null;
+  }
+};
+updatePhotoPreview(editForm, 'new.jpg');
+assert.strictEqual(editForm.innerHTML, '', 'photo preview update must not rewrite the form');
+
 var rootHtml = '<form id="driver-form"><input name="first_name" value=""><input name="last_name" value=""></form>';
 var innerHTMLWritten = false;
 var inserted = false;

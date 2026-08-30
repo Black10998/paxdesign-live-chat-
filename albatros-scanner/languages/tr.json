@@ -69,6 +69,7 @@
   "common.loading": "Yükleniyor…",
   "common.empty": "Kayıt yok.",
   "common.error": "İşlem tamamlanamadı.",
+  "common.saved": "Kaydedildi.",
   "common.close": "Kapat",
   "common.all": "Tümü",
   "common.status": "Durum",
