@@ -1,13 +1,5 @@
-<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 72 148" role="img" aria-label="Handheld scanner">
-  <rect x="16" y="3" width="40" height="142" rx="6" fill="#2b3138"/>
-  <rect x="17.5" y="4.5" width="37" height="139" rx="5" fill="#1a2027"/>
-  <rect x="26" y="9" width="20" height="5" rx="1" fill="#0d1116"/>
-  <rect x="27.5" y="10.2" width="17" height="2.6" rx="0.6" fill="#3a424c"/>
-  <circle cx="23.5" cy="11.5" r="1.4" fill="#0d1116"/>
-  <rect x="20" y="20" width="32" height="110" rx="2" fill="#12171c"/>
-  <rect x="21.2" y="21.2" width="29.6" height="107.6" rx="1.4" fill="#1c252e"/>
-  <rect x="13.5" y="46" width="2.5" height="18" rx="0.6" fill="#2b3138"/>
-  <rect x="56" y="46" width="2.5" height="18" rx="0.6" fill="#2b3138"/>
-  <rect x="56" y="70" width="2.5" height="8" rx="0.6" fill="#2b3138"/>
-  <rect x="31" y="136" width="10" height="2.4" rx="1.2" fill="#3a424c"/>
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" role="img" aria-label="Handheld scanner">
+  <!-- Ionicons phone-portrait (MIT). https://ionic.io/ionicons -->
+  <rect x="144" y="64" width="224" height="384" rx="28" fill="#12171c"/>
+  <path fill="#1c2128" d="M336 0H176a64 64 0 00-64 64v384a64 64 0 0064 64h160a64 64 0 0064-64V64a64 64 0 00-64-64zm32 448a32 32 0 01-32 32H176a32 32 0 01-32-32V64a32 32 0 0132-32h11.35a7.94 7.94 0 017.3 4.75A32 32 0 00224 56h64a32 32 0 0029.35-19.25 7.94 7.94 0 017.3-4.75H336a32 32 0 0132 32z"/>
 </svg>
