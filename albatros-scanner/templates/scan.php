@@ -7,9 +7,13 @@ $photo_url = $config['photo_url'] ?? '';
 $has_driver = $scanner && !empty($scanner['current_driver_id']);
 $driver_name = $has_driver ? ($scanner['driver_name'] ?: $i18n['scanner.no_driver']) : $i18n['scanner.no_driver'];
 $driver_phone = $has_driver && $scanner['driver_phone'] !== '' ? $scanner['driver_phone'] : '—';
-$standort = $has_driver
-    ? ($scanner['driver_branch_label'] ?: ($scanner['branch_label'] ?? '—'))
-    : ($scanner['branch_label'] ?? ($i18n['branch.empty'] ?? '—'));
+$driver_branch = $has_driver ? trim((string) ($scanner['driver_branch'] ?? '')) : '';
+$standort = $driver_branch !== ''
+    ? ($scanner['driver_branch_label'] ?? '')
+    : ($scanner['branch_label'] ?? '');
+if ($standort === '' || $standort === '—') {
+    $standort = $scanner['branch_label'] ?? ($i18n['branch.empty'] ?? '—');
+}
 $status_label = $scanner ? ($i18n['status.' . $scanner['status']] ?? $scanner['status']) : '';
 $handover = $scanner ? ($scanner['handover_at_display'] ?: $scanner['handover_date_display'] ?: '—') : '—';
 $title = $scanner

@@ -502,7 +502,7 @@ class Alb_Rest {
             'phone_number' => $scanner['phone_number'],
             'status' => $scanner['status'],
             'status_label' => Alb_I18n::t('status.' . $scanner['status']),
-            'branch_label' => $has_driver ? ($scanner['driver_branch_label'] ?: $scanner['branch_label']) : $scanner['branch_label'],
+            'branch_label' => (!empty($scanner['driver_branch']) ? $scanner['driver_branch_label'] : $scanner['branch_label']) ?: ($scanner['branch_label'] ?? ''),
             'handover_date_display' => $scanner['handover_at_display'] ?: $scanner['handover_date_display'],
             'driver_name' => $scanner['driver_name'] ?: '',
             'driver_phone' => $scanner['driver_phone'] ?: '',
