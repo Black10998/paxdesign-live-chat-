@@ -426,7 +426,7 @@ table.data tbody tr.click { cursor: pointer; }
 .person-row { display: flex; align-items: center; gap: 10px; padding: 12px 0; }
 .person-cell { white-space: nowrap; }
 .device-head { display: flex; align-items: flex-start; gap: 16px; }
-.device-mark { width: 40px; height: 40px; flex: 0 0 auto; display: block; }
+.device-mark { width: 32px; height: 32px; flex: 0 0 auto; display: block; }
 .device-mark-sm { width: 18px; height: 18px; vertical-align: middle; margin-right: 6px; display: inline-block; }
 .holder-box { margin-top: 16px; padding-top: 12px; border-top: 1px solid var(--line); }
 
