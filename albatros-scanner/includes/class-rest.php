@@ -10,6 +10,23 @@ class Alb_Rest {
     public static function init() {
         add_action('rest_api_init', array(__CLASS__, 'register'));
         add_filter('rest_authentication_errors', array(__CLASS__, 'allow_auth_routes'), 99);
+        add_filter('rest_post_dispatch', array(__CLASS__, 'nocache_rest'), 10, 3);
+    }
+
+    public static function nocache_rest($response, $server, $request) {
+        unset($server);
+        $route = (string) $request->get_route();
+        if (strpos($route, '/' . self::NS) !== 0) {
+            return $response;
+        }
+        if (!headers_sent()) {
+            nocache_headers();
+            header('X-LiteSpeed-Cache-Control: no-cache');
+            header('Cache-Control: no-store, no-cache, must-revalidate, max-age=0');
+            header('Pragma: no-cache');
+            header('Vary: Cookie');
+        }
+        return $response;
     }
 
     public static function allow_auth_routes($result) {

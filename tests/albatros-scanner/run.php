@@ -224,7 +224,10 @@ alb_ok(strpos($js, 'function updatePhotoPreview') !== false, 'photo replace upda
 alb_ok(strpos($js, 'input.value = \'\'') !== false, 'photo input is cleared after upload so save does not re-upload');
 preg_match('/bindPhotoReplace\(form, \'drivers\/\' \+ d\.id \+ \'\/photo\'.+?bindAjaxForm/s', $js, $driver_edit_photo);
 alb_ok(!empty($driver_edit_photo[0]) && strpos($driver_edit_photo[0], 'renderDriverDetail(d.id)') === false, 'driver photo replace does not reload the edit form');
-alb_ok(strpos($js, 'function collectFormValues') !== false, 'forms share trimmed field collection');
+alb_ok(strpos($rest, 'rest_post_dispatch') !== false && strpos($rest, 'nocache_rest') !== false, 'albatros REST responses disable CDN caching');
+alb_ok(strpos($rest, 'X-LiteSpeed-Cache-Control: no-cache') !== false, 'REST responses opt out of LiteSpeed cache');
+alb_ok(strpos($js, "cache: 'no-store'") !== false, 'admin fetch bypasses browser cache');
+alb_ok(strpos($js, 'assignable_roles.length') !== false, 'role picker falls back when assignable roles are empty');
 alb_ok(strpos($js, 'function collectScannerEditBody') !== false, 'scanner edit sends only permitted fields');
 alb_ok(strpos($js, 'bindAjaxForm(edit, function') !== false, 'scanner edit uses ajax save');
 alb_ok(strpos($js, 'bindAjaxForm(sf, function') !== false, 'settings use ajax save');

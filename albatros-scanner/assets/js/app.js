@@ -159,6 +159,7 @@
     return fetch(A.rest + path, {
       method: 'POST',
       credentials: 'same-origin',
+      cache: 'no-store',
       headers: { 'X-WP-Nonce': A.nonce },
       body: fd
     }).then(function (r) {
@@ -230,6 +231,7 @@
     return fetch(A.rest + path, {
       method: options.method || 'GET',
       credentials: 'same-origin',
+      cache: 'no-store',
       headers: {
         'Content-Type': 'application/json',
         'X-WP-Nonce': A.nonce
@@ -931,7 +933,10 @@
     return !!(user.is_primary || A.is_primary);
   }
   function roleCards(selected) {
-    var roles = A.assignable_roles || A.roles || [];
+    var roles = (A.assignable_roles && A.assignable_roles.length) ? A.assignable_roles : (A.roles || []);
+    if (selected && roles.indexOf(selected) === -1) {
+      roles = roles.concat([selected]);
+    }
     return '<div class="wide"><label>' + esc(t('users.role')) + '</label><p class="hint">' + esc(t('users.role_hint')) + '</p><div class="role-pick">' +
       roles.map(function (r) {
         return '<label class="role-card"><input type="radio" name="role" value="' + r + '"' + (selected === r ? ' checked' : '') + '>' +
@@ -966,6 +971,14 @@
       perms[k.slice(5)] = true;
       delete body[k];
     });
+    var roleInput = form.querySelector('input[name="role"]:checked');
+    if (roleInput) {
+      body.role = roleInput.value;
+    }
+    var statusSelect = form.querySelector('select[name="status"]');
+    if (statusSelect && !statusSelect.disabled) {
+      body.status = statusSelect.value;
+    }
     if (includeExtras && A.can_assign_permissions) {
       extraKeys.forEach(function (key) {
         if (!Object.prototype.hasOwnProperty.call(perms, key)) {
@@ -1048,7 +1061,7 @@
     api('users/' + id).then(function (u) {
       var locked = u.is_primary && !isPrimary();
       var canEdit = can('users.manage') && !locked;
-      var form = canEdit ? '<form id="user-edit" class="card form-grid"><div class="wide"><h2>' + esc(t('users.edit')) + '</h2></div>' +
+      var form = canEdit ? '<form id="user-edit" class="card form-grid" method="post" action="#" novalidate><div class="wide"><h2>' + esc(t('users.edit')) + '</h2></div>' +
         '<div class="person-row">' + face(u.photo_url, 'face-lg') + '<div><strong>' + esc(u.name) + '</strong><br>' + esc((u.is_primary ? t('users.primary') + ' · ' : '') + t('role.' + u.role)) + '</div></div>' +
         field('name', t('users.name'), 'text', u.name) +
         field('email', t('driver.email'), 'email', u.email) +
