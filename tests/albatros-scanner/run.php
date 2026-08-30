@@ -97,7 +97,7 @@ alb_ok(strpos($css, 'device-visual--lost') !== false && strpos($css, 'device-vis
 alb_ok(strpos($css, 'device-visual-slot') !== false && strpos($css, 'aspect-ratio: 181 / 366') !== false, 'device is centered in the right half with native proportions');
 alb_ok(strpos($svg, '5c7a94') === false && strpos($svg, 'c9a227') === false, 'device mark has no fake screen UI or decorative gold');
 alb_ok(strpos($js, 'users.photo') !== false && strpos($js, '/photo') !== false, 'admin user form can upload a photo');
-alb_ok(strpos($js, 'scanner.current_holder') !== false && strpos($js, 'device-visual') !== false, 'scanner detail shows holder photo and device mark');
+alb_ok(strpos($js, 'holderCard') !== false && strpos($js, 'device-visual') !== false, 'scanner detail shows holder photo and device mark');
 alb_ok(strpos($js, 'scanner.copy_qr') !== false && strpos($scan_tpl, 'scanner.copy_qr') !== false, 'managers can copy the unique QR link');
 alb_ok(strpos($caps, 'can_use_admin_app') !== false, 'admin app access is role-gated');
 alb_ok(strpos($caps, 'scanners.identity') !== false, 'identity permission exists');
