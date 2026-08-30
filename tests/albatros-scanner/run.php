@@ -202,6 +202,25 @@ alb_ok(($de['scanner.phone'] ?? '') === 'Scanner-Telefonnummer / SIM' && ($de['d
 alb_ok(($de['scanner.phone_short'] ?? '') === 'Scanner-Telefon' && ($de['scanner.handover_short'] ?? '') === 'Übernahme', 'scanner list uses short column titles');
 alb_ok(strpos($js, "t('scanner.phone_short')") !== false && strpos($js, "t('scanner.handover_short')") !== false, 'scanner table headers use the short titles');
 alb_ok(($de['branch.wien'] ?? '') === 'Wien' && ($de['branch.graz'] ?? '') === 'Graz', 'Wien and Graz branch labels exist');
+alb_ok(strpos($js, 'function bindAjaxForm') !== false && strpos($js, "form.setAttribute('novalidate'") !== false, 'ajax forms skip native html5 interruption');
+alb_ok(strpos($js, 'id="driver-form"') !== false && strpos($js, 'novalidate') !== false, 'employee create form is not blocked by native email checks');
+alb_ok(strpos($js, 'function collectDriverBody') !== false, 'employee create normalizes name fields before save');
+alb_ok(strpos($js, 'insertBefore(box, root.firstChild)') !== false, 'errors prepend a banner without replacing the form');
+alb_ok(strpos($js, "root.innerHTML = '<div class=\"msg msg-error\">' + esc(err.message") === false, 'errors do not serialize and wipe typed form values');
+alb_ok(strpos($js, '.then(done, done)') !== false, 'a photo upload failure does not undo a successful employee create');
+alb_ok(strpos($js, "addEventListener('submit'") !== false, 'app forms cannot fall back to a native page reload');
+alb_ok(strpos($drivers, 'function person_names') !== false, 'driver create splits or copies a single filled name');
+preg_match('/function create\(.+?function update/s', $drivers, $create_fn);
+alb_ok(!empty($create_fn[0]) && strpos($create_fn[0], 'person_names') !== false && strpos($create_fn[0], "\$first === '' || \$last === ''") === false, 'employee create no longer requires both name fields separately');
+
+$js_check = array();
+$js_code = 0;
+exec('node --check ' . escapeshellarg($plugin . '/assets/js/app.js') . ' 2>&1', $js_check, $js_code);
+alb_ok($js_code === 0, 'app js syntax is valid');
+$form_out = array();
+$form_code = 0;
+exec('node ' . escapeshellarg(__DIR__ . '/form-preserve.js') . ' 2>&1', $form_out, $form_code);
+alb_ok($form_code === 0, 'employee form keeps values on error and normalizes names: ' . implode(' ', $form_out));
 
 foreach (glob($plugin . '/includes/*.php') as $file) {
     $out = array();

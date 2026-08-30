@@ -10,9 +10,8 @@ class Alb_Drivers {
     }
 
     public static function create($data, $user_id) {
-        $first = sanitize_text_field($data['first_name'] ?? '');
-        $last = sanitize_text_field($data['last_name'] ?? '');
-        if ($first === '' || $last === '') {
+        list($first, $last) = self::person_names($data);
+        if ($first === '') {
             return new WP_Error('alb_invalid', Alb_I18n::t('driver.error.name_required'), array('status' => 400));
         }
         $now = Alb_Settings::now_mysql();
@@ -132,6 +131,25 @@ class Alb_Drivers {
         $parts = preg_split('/\s+/', $name, 2);
         $first = $parts[0];
         $last = isset($parts[1]) && $parts[1] !== '' ? $parts[1] : $parts[0];
+        return array($first, $last);
+    }
+
+    public static function person_names($data) {
+        $first = sanitize_text_field($data['first_name'] ?? '');
+        $last = sanitize_text_field($data['last_name'] ?? '');
+        if ($first === '' && $last === '') {
+            $combined = trim(sanitize_text_field($data['name'] ?? $data['full_name'] ?? ''));
+            if ($combined !== '') {
+                return self::split_name($combined);
+            }
+            return array('', '');
+        }
+        if ($last === '') {
+            return self::split_name($first);
+        }
+        if ($first === '') {
+            return self::split_name($last);
+        }
         return array($first, $last);
     }
 

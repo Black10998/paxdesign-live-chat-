@@ -499,7 +499,7 @@
 
   function renderScannerForm() {
     root.innerHTML = '<div class="page-head"><h1>' + esc(t('scanner.new')) + '</h1><button class="btn btn-sec" data-go="/scanners">' + esc(t('common.back')) + '</button></div>' +
-      '<form id="scanner-form" class="card form-grid">' +
+      '<form id="scanner-form" class="card form-grid" method="post" action="#" novalidate>' +
       '<div class="wide"><h2>' + esc(t('scanner.detail')) + '</h2></div>' +
       field('brand', t('scanner.brand'), 'text', '', false) +
       field('model', t('scanner.model'), 'text', '', false) +
@@ -514,9 +514,7 @@
       field('handover_date', t('scanner.handover_date'), 'date', '', false) +
       '<div class="wide"><p class="hint">' + esc(t('scanner.immutable')) + '</p><button class="btn" type="submit">' + esc(t('common.create')) + '</button></div>' +
       '</form>';
-    document.getElementById('scanner-form').onsubmit = function (e) {
-      e.preventDefault();
-      var form = e.target;
+    bindAjaxForm(document.getElementById('scanner-form'), function (form) {
       var fd = new FormData(form);
       var body = {
         brand: fd.get('brand'),
@@ -529,14 +527,77 @@
         handover_date: fd.get('handover_date')
       };
       Object.assign(body, employeePayload(fd));
-      api('scanners', { method: 'POST', body: body }).then(function (item) {
-        return attachEmployeePhoto(item.current_driver_id, form).then(function () { go('/scanners/' + item.id); });
-      }).catch(showError);
-    };
+      return api('scanners', { method: 'POST', body: body }).then(function (item) {
+        var done = function () { go('/scanners/' + item.id); };
+        return attachEmployeePhoto(item.current_driver_id, form).then(done, done);
+      });
+    });
   }
 
   function field(name, label, type, value, readonly) {
     return '<div class="field"><label>' + esc(label) + '</label><input name="' + name + '" type="' + type + '" value="' + esc(value || '') + '"' + (readonly ? ' readonly class="readonly"' : '') + '></div>';
+  }
+  function clearFormAlert() {
+    root.querySelectorAll('.msg-error.form-alert').forEach(function (el) { el.remove(); });
+  }
+  function showError(err) {
+    clearFormAlert();
+    var box = document.createElement('div');
+    box.className = 'msg msg-error form-alert';
+    box.setAttribute('role', 'alert');
+    box.textContent = (err && err.message) ? err.message : t('common.error');
+    if (root.firstChild) {
+      root.insertBefore(box, root.firstChild);
+    } else {
+      root.appendChild(box);
+    }
+    if (box.scrollIntoView) {
+      box.scrollIntoView({ block: 'nearest' });
+    }
+  }
+  function bindAjaxForm(form, handler) {
+    if (!form) return;
+    form.setAttribute('novalidate', 'novalidate');
+    form.setAttribute('method', 'post');
+    form.setAttribute('action', '#');
+    form.onsubmit = function (e) {
+      e.preventDefault();
+      e.stopPropagation();
+      if (form.getAttribute('data-saving') === '1') return;
+      form.setAttribute('data-saving', '1');
+      var btn = form.querySelector('button[type="submit"]');
+      if (btn) btn.disabled = true;
+      clearFormAlert();
+      Promise.resolve().then(function () { return handler(form); }).catch(showError).then(function () {
+        form.removeAttribute('data-saving');
+        if (btn && document.body.contains(btn)) btn.disabled = false;
+      });
+    };
+  }
+  function collectDriverBody(form) {
+    var body = {};
+    new FormData(form).forEach(function (v, k) {
+      if (k === 'photo') return;
+      body[k] = typeof v === 'string' ? v.trim() : v;
+    });
+    var first = body.first_name || '';
+    var last = body.last_name || '';
+    if (!last && first) {
+      var parts = first.split(/\s+/).filter(Boolean);
+      body.first_name = parts[0] || '';
+      body.last_name = parts.length > 1 ? parts.slice(1).join(' ') : body.first_name;
+    } else if (!first && last) {
+      var lastParts = last.split(/\s+/).filter(Boolean);
+      body.first_name = lastParts[0] || '';
+      body.last_name = lastParts.length > 1 ? lastParts.slice(1).join(' ') : body.first_name;
+    } else {
+      body.first_name = first;
+      body.last_name = last;
+    }
+    if (body.email && body.email.indexOf('@') === -1) {
+      throw new Error(t('users.error.email'));
+    }
+    return body;
   }
 
   function renderScannerDetail(id) {
@@ -740,7 +801,7 @@
   function renderDriverForm() {
     root.innerHTML = '<div class="page-head"><h1>' + icon('drivers') + ' ' + esc(t('driver.new')) + '</h1><button class="btn btn-sec" data-go="/drivers">' + esc(t('common.back')) + '</button></div>' +
       topicMarks() +
-      '<form id="driver-form" class="card form-grid">' +
+      '<form id="driver-form" class="card form-grid" method="post" action="#" novalidate>' +
       field('first_name', t('driver.first_name'), 'text', '') +
       field('last_name', t('driver.last_name'), 'text', '') +
       field('phone', t('driver.phone'), 'text', '') +
@@ -750,14 +811,16 @@
       photoField('') +
       '<div class="field wide"><label>' + esc(t('common.notes')) + '</label><textarea name="notes"></textarea></div>' +
       '<div class="wide"><button class="btn" type="submit">' + esc(t('common.create')) + '</button></div></form>';
-    document.getElementById('driver-form').onsubmit = function (e) {
-      e.preventDefault();
-      var body = {};
-      new FormData(e.target).forEach(function (v, k) { if (k !== 'photo') body[k] = v; });
-      api('drivers', { method: 'POST', body: body }).then(function (d) {
-        return maybeUpload('drivers/' + d.id + '/photo', e.target).then(function () { go('/drivers/' + d.id); });
-      }).catch(showError);
-    };
+    bindAjaxForm(document.getElementById('driver-form'), function (form) {
+      var body = collectDriverBody(form);
+      if (!body.first_name) {
+        return Promise.reject(new Error(t('driver.error.name_required')));
+      }
+      return api('drivers', { method: 'POST', body: body }).then(function (d) {
+        var done = function () { go('/drivers/' + d.id); };
+        return maybeUpload('drivers/' + d.id + '/photo', form).then(done, done);
+      });
+    });
   }
 
   function renderDriverDetail(id) {
@@ -774,7 +837,7 @@
         topicMarks() +
         '<div class="detail"><div class="card"><h2>' + esc(t('driver.detail')) + '</h2>' +
         '<div class="person-row">' + face(d.photo_url, 'face-lg') + '<div><strong>' + esc(d.name) + '</strong><br>' + esc(t('driver.phone')) + ': ' + esc(d.phone || '—') + '<br>' + esc(t('branch.label')) + ': ' + esc(d.branch_label || branchLabel(d.branch)) + '</div></div>' +
-        (can('drivers.edit') ? '<form id="driver-edit" class="form-grid">' +
+        (can('drivers.edit') ? '<form id="driver-edit" class="form-grid" method="post" action="#" novalidate>' +
           field('first_name', t('driver.first_name'), 'text', d.first_name) +
           field('last_name', t('driver.last_name'), 'text', d.last_name) +
           field('phone', t('driver.phone'), 'text', d.phone) +
@@ -793,14 +856,15 @@
       var form = document.getElementById('driver-edit');
       if (form) {
         bindPhotoReplace(form, 'drivers/' + d.id + '/photo', function () { renderDriverDetail(d.id); });
-        form.onsubmit = function (e) {
-          e.preventDefault();
-          var body = {};
-          new FormData(form).forEach(function (v, k) { if (k !== 'photo') body[k] = v; });
-          api('drivers/' + d.id, { method: 'POST', body: body }).then(function () {
+        bindAjaxForm(form, function () {
+          var body = collectDriverBody(form);
+          if (!body.first_name) {
+            return Promise.reject(new Error(t('driver.error.name_required')));
+          }
+          return api('drivers/' + d.id, { method: 'POST', body: body }).then(function () {
             return maybeUpload('drivers/' + d.id + '/photo', form);
-          }).then(function () { renderDriverDetail(d.id); }).catch(showError);
-        };
+          }).then(function () { renderDriverDetail(d.id); });
+        });
       }
       var tog = document.getElementById('toggle-driver');
       if (tog) {
@@ -892,12 +956,12 @@
       });
       var uf = document.getElementById('user-form');
       if (uf) {
-        uf.onsubmit = function (e) {
-          e.preventDefault();
-          api('users', { method: 'POST', body: collectUserBody(uf, false) }).then(function (created) {
-            return maybeUpload('users/' + created.id + '/photo', uf);
-          }).then(function () { renderUsers(query); }).catch(showError);
-        };
+        bindAjaxForm(uf, function () {
+          return api('users', { method: 'POST', body: collectUserBody(uf, false) }).then(function (created) {
+            var done = function () { renderUsers(query); };
+            return maybeUpload('users/' + created.id + '/photo', uf).then(done, done);
+          });
+        });
       }
     }).catch(showError);
   }
@@ -931,12 +995,11 @@
       var uf = document.getElementById('user-edit');
       if (uf) {
         bindPhotoReplace(uf, 'users/' + id + '/photo', function () { renderUserDetail(id); });
-        uf.onsubmit = function (e) {
-          e.preventDefault();
-          api('users/' + id, { method: 'POST', body: collectUserBody(uf, true) }).then(function () {
+        bindAjaxForm(uf, function () {
+          return api('users/' + id, { method: 'POST', body: collectUserBody(uf, true) }).then(function () {
             return maybeUpload('users/' + id + '/photo', uf);
-          }).then(function () { renderUserDetail(id); }).catch(showError);
-        };
+          }).then(function () { renderUserDetail(id); });
+        });
       }
     }).catch(showError);
   }
@@ -1053,10 +1116,6 @@
     });
   }
 
-  function showError(err) {
-    root.innerHTML = '<div class="msg msg-error">' + esc(err.message || t('common.error')) + '</div>' + root.innerHTML;
-  }
-
   function render() {
     header();
     renderNav();
@@ -1115,6 +1174,11 @@
       '</div>';
   }
 
+  document.addEventListener('submit', function (e) {
+    if (root && e.target && root.contains(e.target)) {
+      e.preventDefault();
+    }
+  }, true);
   document.addEventListener('click', function (e) {
     var actEl = e.target.closest('[data-act]');
     if (actEl && !e.target.closest('#scanner-edit, #assign-form, #status-form')) {
