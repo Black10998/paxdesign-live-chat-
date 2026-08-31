@@ -12,7 +12,7 @@ $show_reset = isset($_POST['alb_action']) && $_POST['alb_action'] === 'reset';
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width, initial-scale=1">
     <title><?php echo esc_html($config['company']); ?></title>
-    <link rel="stylesheet" href="<?php echo esc_url(ALB_SCANNER_PLUGIN_URL . 'assets/css/app.css?ver=' . ALB_SCANNER_VERSION); ?>">
+    <link rel="stylesheet" href="<?php echo esc_url(Alb_Frontend::asset_url('assets/css/app.css')); ?>">
 </head>
 <body class="login-body">
     <div class="login-box">
@@ -67,6 +67,6 @@ $show_reset = isset($_POST['alb_action']) && $_POST['alb_action'] === 'reset';
         </p>
     </div>
     <script>window.ALB_LOGIN = <?php echo wp_json_encode($config); ?>;</script>
-    <script src="<?php echo esc_url(ALB_SCANNER_PLUGIN_URL . 'assets/js/login.js?ver=' . ALB_SCANNER_VERSION); ?>"></script>
+    <script src="<?php echo esc_url(Alb_Frontend::asset_url('assets/js/login.js')); ?>"></script>
 </body>
 </html>

@@ -156,11 +156,15 @@
   function apiUpload(path, file) {
     var fd = new FormData();
     fd.append('photo', file);
-    return fetch(A.rest + path, {
+    return fetch(apiUrl(path, 'POST'), {
       method: 'POST',
       credentials: 'same-origin',
       cache: 'no-store',
-      headers: { 'X-WP-Nonce': A.nonce },
+      headers: {
+        'X-WP-Nonce': A.nonce,
+        'Cache-Control': 'no-cache',
+        'Pragma': 'no-cache'
+      },
       body: fd
     }).then(function (r) {
       return r.json().then(function (data) { return { ok: r.ok, data: data }; });
@@ -226,18 +230,32 @@
     return Object.keys(params).filter(function (k) { return params[k] !== '' && params[k] != null; })
       .map(function (k) { return encodeURIComponent(k) + '=' + encodeURIComponent(params[k]); }).join('&');
   }
+  function apiUrl(path, method) {
+    var url = A.rest + path;
+    if ((method || 'GET') === 'GET') {
+      url += (path.indexOf('?') >= 0 ? '&' : '?') + '_=' + Date.now();
+    }
+    return url;
+  }
   function api(path, options) {
     options = options || {};
-    return fetch(A.rest + path, {
-      method: options.method || 'GET',
+    var method = options.method || 'GET';
+    return fetch(apiUrl(path, method), {
+      method: method,
       credentials: 'same-origin',
       cache: 'no-store',
       headers: {
         'Content-Type': 'application/json',
-        'X-WP-Nonce': A.nonce
+        'X-WP-Nonce': A.nonce,
+        'Cache-Control': 'no-cache',
+        'Pragma': 'no-cache'
       },
       body: options.body ? JSON.stringify(options.body) : undefined
     }).then(function (r) {
+      var hdrNonce = r.headers.get('X-WP-Nonce') || r.headers.get('x-wp-nonce');
+      if (hdrNonce) {
+        A.nonce = hdrNonce;
+      }
       var type = r.headers.get('content-type') || '';
       if (type.indexOf('application/json') === -1) {
         return r.text().then(function (text) { return { ok: r.ok, data: text, status: r.status }; });
@@ -246,6 +264,10 @@
     }).then(function (res) {
       if (res.status === 401) {
         window.location.href = '/login';
+      }
+      if (res.status === 403 && res.data && res.data.code === 'rest_cookie_invalid_nonce') {
+        window.location.reload();
+        throw new Error(t('common.error'));
       }
       if (!res.ok) {
         throw new Error(res.data && res.data.message ? res.data.message : t('common.error'));
@@ -609,6 +631,14 @@
       });
     };
   }
+  function afterSave(refreshFn, savePromise, uploadFn) {
+    return savePromise.then(function (saved) {
+      var upload = uploadFn ? Promise.resolve(uploadFn(saved)) : Promise.resolve();
+      return upload.then(function () { return saved; }, function () { return saved; });
+    }).then(function (saved) {
+      return refreshFn(saved);
+    });
+  }
   function collectDriverBody(form) {
     var body = {};
     new FormData(form).forEach(function (v, k) {
@@ -761,8 +791,11 @@
     var edit = document.getElementById('scanner-edit');
     if (edit) {
       bindAjaxForm(edit, function () {
-        var refresh = function () { renderScannerDetail(s.id); };
-        return api('scanners/' + s.id, { method: 'POST', body: collectScannerEditBody(edit) }).then(refresh, refresh);
+        var refresh = function () {
+          renderScannerDetail(s.id);
+          showSuccess(t('common.saved'));
+        };
+        return afterSave(refresh, api('scanners/' + s.id, { method: 'POST', body: collectScannerEditBody(edit) }));
       });
     }
     var assign = document.getElementById('assign-form');
@@ -783,9 +816,9 @@
           notes: String(fd.get('notes') || '').trim()
         }, employeePayload(fd));
         var refresh = function () { renderScannerDetail(s.id); };
-        return api('scanners/' + s.id + '/assign', { method: 'POST', body: body }).then(function (item) {
+        return afterSave(refresh, api('scanners/' + s.id + '/assign', { method: 'POST', body: body }), function (item) {
           return attachEmployeePhoto(item && item.current_driver_id, assign);
-        }).then(refresh, refresh);
+        });
       });
     }
     var status = document.getElementById('status-form');
@@ -793,10 +826,10 @@
       bindAjaxForm(status, function () {
         var fd = new FormData(status);
         var refresh = function () { renderScannerDetail(s.id); };
-        return api('scanners/' + s.id + '/status', { method: 'POST', body: {
+        return afterSave(refresh, api('scanners/' + s.id + '/status', { method: 'POST', body: {
           status: fd.get('status'),
           notes: String(fd.get('notes') || '').trim()
-        } }).then(refresh, refresh);
+        } }));
       });
     }
   }
@@ -898,10 +931,13 @@
           if (!body.first_name) {
             return Promise.reject(new Error(t('driver.error.name_required')));
           }
-          var refresh = function () { renderDriverDetail(d.id); };
-          return api('drivers/' + d.id, { method: 'POST', body: body }).then(function () {
-            return maybeUpload('drivers/' + d.id + '/photo', form);
-          }).then(refresh, refresh);
+          return afterSave(function () {
+            renderDriverDetail(d.id);
+            showSuccess(t('common.saved'));
+          },
+            api('drivers/' + d.id, { method: 'POST', body: body }),
+            function () { return maybeUpload('drivers/' + d.id + '/photo', form); }
+          );
         });
       }
       var tog = document.getElementById('toggle-driver');
@@ -1052,13 +1088,14 @@
       }
     }).catch(showError);
   }
-  function renderUserDetail(id) {
+  function renderUserDetail(id, preloaded) {
     if (!can('users.manage') && !can('users.view')) {
       root.innerHTML = '<div class="msg msg-error">' + esc(t('error.forbidden')) + '</div>';
       return;
     }
     root.innerHTML = '<p>' + esc(t('common.loading')) + '</p>';
-    api('users/' + id).then(function (u) {
+    var load = (preloaded && preloaded.id) ? Promise.resolve(preloaded) : api('users/' + id);
+    load.then(function (u) {
       var locked = u.is_primary && !isPrimary();
       var canEdit = can('users.manage') && !locked;
       var form = canEdit ? '<form id="user-edit" class="card form-grid" method="post" action="#" novalidate><div class="wide"><h2>' + esc(t('users.edit')) + '</h2></div>' +
@@ -1086,10 +1123,13 @@
           if (url) updatePhotoPreview(uf, url);
         });
         bindAjaxForm(uf, function () {
-          var refresh = function () { renderUserDetail(id); };
-          return api('users/' + id, { method: 'POST', body: collectUserBody(uf, true) }).then(function () {
-            return maybeUpload('users/' + id + '/photo', uf);
-          }).then(refresh, refresh);
+          return afterSave(function (saved) {
+            renderUserDetail(id, saved);
+            showSuccess(t('common.saved'));
+          },
+            api('users/' + id, { method: 'POST', body: collectUserBody(uf, true) }),
+            function () { return maybeUpload('users/' + id + '/photo', uf); }
+          );
         });
       }
     }).catch(showError);
@@ -1099,7 +1139,7 @@
     root.innerHTML = '<p>' + esc(t('common.loading')) + '</p>';
     var needSettings = can('settings.view') || can('settings.manage');
     var needPerms = can('roles.manage');
-    Promise.all([
+    return Promise.all([
       needSettings ? api('settings') : Promise.resolve(null),
       needPerms ? api('permissions') : Promise.resolve(null)
     ]).then(function (pack) {
@@ -1160,6 +1200,8 @@
       if (sf && can('settings.manage')) {
         bindAjaxForm(sf, function () {
           return api('settings', { method: 'POST', body: collectSettingsBody(sf) }).then(function () {
+            return renderSettings();
+          }).then(function () {
             showSuccess(t('settings.saved'));
           });
         });
@@ -1175,6 +1217,8 @@
             map[role][key] = box.checked || role === 'super_admin';
           });
           return api('permissions', { method: 'POST', body: { map: map } }).then(function () {
+            return renderSettings();
+          }).then(function () {
             showSuccess(t('settings.saved'));
           });
         });

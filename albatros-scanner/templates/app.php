@@ -8,7 +8,7 @@ if (!defined('ABSPATH')) {
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width, initial-scale=1">
     <title><?php echo esc_html($config['company']); ?></title>
-    <link rel="stylesheet" href="<?php echo esc_url(ALB_SCANNER_PLUGIN_URL . 'assets/css/app.css?ver=' . ALB_SCANNER_VERSION); ?>">
+    <link rel="stylesheet" href="<?php echo esc_url(Alb_Frontend::asset_url('assets/css/app.css')); ?>">
 </head>
 <body>
     <div class="app">
@@ -47,7 +47,7 @@ if (!defined('ABSPATH')) {
         </section>
     </div>
     <script>window.ALB = <?php echo wp_json_encode($config); ?>;</script>
-    <script src="<?php echo esc_url(ALB_SCANNER_PLUGIN_URL . 'assets/js/qrcode.min.js?ver=' . ALB_SCANNER_VERSION); ?>"></script>
-    <script src="<?php echo esc_url(ALB_SCANNER_PLUGIN_URL . 'assets/js/app.js?ver=' . ALB_SCANNER_VERSION); ?>"></script>
+    <script src="<?php echo esc_url(Alb_Frontend::asset_url('assets/js/qrcode.min.js')); ?>"></script>
+    <script src="<?php echo esc_url(Alb_Frontend::asset_url('assets/js/app.js')); ?>"></script>
 </body>
 </html>

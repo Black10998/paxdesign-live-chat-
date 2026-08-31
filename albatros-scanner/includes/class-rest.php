@@ -10,7 +10,27 @@ class Alb_Rest {
     public static function init() {
         add_action('rest_api_init', array(__CLASS__, 'register'));
         add_filter('rest_authentication_errors', array(__CLASS__, 'allow_auth_routes'), 99);
-        add_filter('rest_post_dispatch', array(__CLASS__, 'nocache_rest'), 10, 3);
+        add_filter('rest_post_dispatch', array(__CLASS__, 'nocache_rest'), 999, 3);
+        add_filter('rest_pre_serve_request', array(__CLASS__, 'serve_nocache'), 0, 4);
+        add_filter('litespeed_control_cacheable', array(__CLASS__, 'disable_litespeed_rest_cache'));
+    }
+
+    public static function disable_litespeed_rest_cache($cacheable) {
+        if (self::is_albatros_rest_request()) {
+            return false;
+        }
+        return $cacheable;
+    }
+
+    private static function is_albatros_rest_request() {
+        if (defined('REST_REQUEST') && REST_REQUEST) {
+            $route = isset($GLOBALS['wp']->query_vars['rest_route']) ? (string) $GLOBALS['wp']->query_vars['rest_route'] : '';
+            if ($route !== '' && strpos($route, '/' . self::NS) === 0) {
+                return true;
+            }
+        }
+        $uri = isset($_SERVER['REQUEST_URI']) ? (string) wp_unslash($_SERVER['REQUEST_URI']) : '';
+        return strpos($uri, '/wp-json/' . self::NS) !== false;
     }
 
     public static function nocache_rest($response, $server, $request) {
@@ -19,14 +39,47 @@ class Alb_Rest {
         if (strpos($route, '/' . self::NS) !== 0) {
             return $response;
         }
-        if (!headers_sent()) {
-            nocache_headers();
-            header('X-LiteSpeed-Cache-Control: no-cache');
-            header('Cache-Control: no-store, no-cache, must-revalidate, max-age=0');
-            header('Pragma: no-cache');
-            header('Vary: Cookie');
+        if ($response instanceof WP_REST_Response) {
+            $response->header('Cache-Control', 'private, no-store, no-cache, must-revalidate, max-age=0');
+            $response->header('Pragma', 'no-cache');
+            $response->header('Expires', '0');
+            $response->header('X-LiteSpeed-Cache-Control', 'no-cache');
+            $response->header('CDN-Cache-Control', 'no-store');
+            $response->header('Surrogate-Control', 'no-store');
+            $response->header('Vary', 'Cookie');
+            if (is_user_logged_in()) {
+                $response->header('X-WP-Nonce', wp_create_nonce('wp_rest'));
+            }
         }
+        self::send_nocache_headers();
         return $response;
+    }
+
+    public static function serve_nocache($served, $result, $request, $server) {
+        unset($result, $server);
+        $route = (string) $request->get_route();
+        if (strpos($route, '/' . self::NS) === 0) {
+            self::send_nocache_headers();
+        }
+        return $served;
+    }
+
+    private static function send_nocache_headers() {
+        if (headers_sent()) {
+            return;
+        }
+        nocache_headers();
+        header_remove('Cache-Control');
+        header('Cache-Control: private, no-store, no-cache, must-revalidate, max-age=0');
+        header('Pragma: no-cache');
+        header('Expires: 0');
+        header('X-LiteSpeed-Cache-Control: no-cache');
+        header('CDN-Cache-Control: no-store');
+        header('Surrogate-Control: no-store');
+        header('Vary: Cookie');
+        if (is_user_logged_in()) {
+            header('X-WP-Nonce: ' . wp_create_nonce('wp_rest'));
+        }
     }
 
     public static function allow_auth_routes($result) {

@@ -113,6 +113,25 @@ class Alb_Users {
             return new WP_Error('alb_forbidden', Alb_I18n::t('users.error.primary_protected'), array('status' => 403));
         }
         $target_role = Alb_Capabilities::role_of($user);
+        $next_role = null;
+        if (isset($data['role'])) {
+            $requested_role = sanitize_key((string) $data['role']);
+            if ($requested_role !== '' && $requested_role !== $target_role) {
+                $next_role = self::normalize_assignable_role($data['role'], $actor);
+                if (is_wp_error($next_role)) {
+                    return $next_role;
+                }
+                if (Alb_Capabilities::is_primary($user) && $next_role !== Alb_Capabilities::SUPER_ADMIN) {
+                    return new WP_Error('alb_forbidden', Alb_I18n::t('users.error.primary_role'), array('status' => 403));
+                }
+                if ($target_role === Alb_Capabilities::SUPER_ADMIN && $next_role !== Alb_Capabilities::SUPER_ADMIN && self::super_admin_count() <= 1) {
+                    return new WP_Error('alb_forbidden', Alb_I18n::t('users.error.last_super'), array('status' => 403));
+                }
+            }
+        }
+        if (array_key_exists('permissions', $data) && !Alb_Capabilities::can_assign_user_permissions($actor)) {
+            return new WP_Error('alb_forbidden', Alb_I18n::t('users.error.primary_protected'), array('status' => 403));
+        }
         $update = array('ID' => (int) $id);
         if (isset($data['name'])) {
             $update['display_name'] = sanitize_text_field($data['name']);
@@ -138,28 +157,16 @@ class Alb_Users {
         if (is_wp_error($result)) {
             return $result;
         }
-        if (isset($data['role'])) {
-            $role = self::normalize_assignable_role($data['role'], $actor);
-            if (is_wp_error($role)) {
-                return $role;
-            }
-            if (Alb_Capabilities::is_primary($user) && $role !== Alb_Capabilities::SUPER_ADMIN) {
-                return new WP_Error('alb_forbidden', Alb_I18n::t('users.error.primary_role'), array('status' => 403));
-            }
-            if ($target_role === Alb_Capabilities::SUPER_ADMIN && $role !== Alb_Capabilities::SUPER_ADMIN && self::super_admin_count() <= 1) {
-                return new WP_Error('alb_forbidden', Alb_I18n::t('users.error.last_super'), array('status' => 403));
-            }
-            if ($target_role !== $role) {
-                Alb_Capabilities::set_role($id, $role);
-                Alb_Audit::record(array(
-                    'action' => 'user_role',
-                    'entity_type' => 'user',
-                    'entity_id' => (int) $id,
-                    'field' => 'role',
-                    'old' => $target_role,
-                    'new' => $role,
-                ));
-            }
+        if ($next_role) {
+            Alb_Capabilities::set_role($id, $next_role);
+            Alb_Audit::record(array(
+                'action' => 'user_role',
+                'entity_type' => 'user',
+                'entity_id' => (int) $id,
+                'field' => 'role',
+                'old' => $target_role,
+                'new' => $next_role,
+            ));
         }
         if (array_key_exists('phone', $data)) {
             update_user_meta((int) $id, 'alb_phone', sanitize_text_field($data['phone']));
@@ -168,9 +175,6 @@ class Alb_Users {
             update_user_meta((int) $id, 'alb_branch', Alb_Branches::normalize($data['branch']));
         }
         if (array_key_exists('permissions', $data)) {
-            if (!Alb_Capabilities::can_assign_user_permissions($actor)) {
-                return new WP_Error('alb_forbidden', Alb_I18n::t('users.error.primary_protected'), array('status' => 403));
-            }
             Alb_Capabilities::set_user_permissions($id, $data['permissions']);
         }
         if (isset($data['status'])) {
@@ -185,7 +189,9 @@ class Alb_Users {
         } else {
             Alb_Drivers::sync_user_profile((int) $id);
         }
-        return self::present(get_userdata((int) $id));
+        clean_user_cache((int) $id);
+        $fresh = get_userdata((int) $id);
+        return $fresh ? self::present($fresh) : new WP_Error('alb_not_found', Alb_I18n::t('users.error.not_found'), array('status' => 404));
     }
 
     public static function set_photo($id, $file) {

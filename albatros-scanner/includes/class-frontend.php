@@ -159,7 +159,16 @@ class Alb_Frontend {
     }
 
     public static function device_mark_url() {
-        return ALB_SCANNER_PLUGIN_URL . 'assets/img/handheld-device.svg?ver=' . ALB_SCANNER_VERSION;
+        return self::asset_url('assets/img/handheld-device.svg');
+    }
+
+    public static function asset_url($rel) {
+        $path = ALB_SCANNER_PLUGIN_DIR . ltrim($rel, '/');
+        $ver = ALB_SCANNER_VERSION;
+        if (is_file($path)) {
+            $ver .= '.' . filemtime($path);
+        }
+        return ALB_SCANNER_PLUGIN_URL . ltrim($rel, '/') . '?ver=' . rawurlencode($ver);
     }
 
     public static function device_state_icon($key) {

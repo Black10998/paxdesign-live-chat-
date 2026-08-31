@@ -17,6 +17,13 @@ class Alb_Plugin {
         add_filter('rest_pre_dispatch', array(__CLASS__, 'block_public_user_create'), 10, 3);
         Alb_Rest::init();
         Alb_Frontend::init();
+        if ((string) get_option('alb_asset_cache', '') !== ALB_SCANNER_VERSION) {
+            if (function_exists('wp_cache_flush')) {
+                wp_cache_flush();
+            }
+            do_action('litespeed_purge_all');
+            update_option('alb_asset_cache', ALB_SCANNER_VERSION, false);
+        }
     }
 
     public static function block_public_user_create($result, $server, $request) {
