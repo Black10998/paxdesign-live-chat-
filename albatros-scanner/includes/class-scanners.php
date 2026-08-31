@@ -168,17 +168,23 @@ class Alb_Scanners {
             return new WP_Error('alb_deleted', Alb_I18n::t('scanner.error.deleted'), array('status' => 400));
         }
         $can_identity = Alb_Capabilities::user_can((int) $user_id, 'scanners.identity');
+        foreach (self::IMMUTABLE as $field) {
+            if (array_key_exists($field, $data) && (string) $data[$field] !== (string) $current[$field] && !$can_identity) {
+                return new WP_Error('alb_immutable', Alb_I18n::t('scanner.error.immutable'), array('status' => 403));
+            }
+        }
+        if (array_key_exists('phone_number', $data)) {
+            $wanted_phone = sanitize_text_field($data['phone_number']);
+            if ($wanted_phone !== (string) $current['phone_number'] && !$can_identity) {
+                return new WP_Error('alb_immutable', Alb_I18n::t('scanner.error.phone_protected'), array('status' => 403));
+            }
+        }
         if (self::request_has_holder($data)) {
             $held = self::apply_holder($current, $data, $user_id);
             if (is_wp_error($held)) {
                 return $held;
             }
             $current = $held;
-        }
-        foreach (self::IMMUTABLE as $field) {
-            if (array_key_exists($field, $data) && (string) $data[$field] !== (string) $current[$field] && !$can_identity) {
-                return new WP_Error('alb_immutable', Alb_I18n::t('scanner.error.immutable'), array('status' => 403));
-            }
         }
         $fields = array();
         $changes = array();
