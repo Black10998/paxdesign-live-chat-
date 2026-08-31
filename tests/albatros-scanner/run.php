@@ -184,6 +184,11 @@ alb_ok(strpos($js, 'topicMarks') !== false && strpos($js, 'vehicle:') !== false 
 alb_ok(strpos($js, 'role-card') !== false && strpos($js, 'roleCards') !== false, 'user creation uses simple role cards');
 alb_ok(strpos($js, 'userPermBoxes') === false, 'create-user screen does not show a full permission grid');
 alb_ok(strpos($js, 'extraPermBoxes') !== false && strpos($js, 'users.extras') !== false, 'optional extra rights are collapsed');
+alb_ok(strpos($js, "t('users.revoke')") !== false && strpos($js, "value=\"0\"") !== false, 'extra rights include a revoke option');
+alb_ok(strpos($js, 'function restoreUserSelections') !== false && strpos($js, 'id="user-revoke"') !== false, 'user edit can restore the previous selection');
+alb_ok(strpos($js, "raw === '1'") !== false, 'revoked extra rights are sent as false instead of omitted');
+preg_match('/function set_user_permissions\(.+?function user_can/s', $caps, $set_perms_fn);
+alb_ok(!empty($set_perms_fn[0]) && strpos($set_perms_fn[0], '!empty($permissions[$key])') !== false && strpos($set_perms_fn[0], 'delete_user_meta') !== false, 'revoked extras are cleared instead of stored as sticky denials');
 alb_ok(strpos($js, 'collectScannerEditBody') !== false && strpos($js, "body.phone_number = values.phone_number") !== false, 'phone edits are sent only with identity permission');
 alb_ok(strpos(file_get_contents($plugin . '/includes/class-settings.php'), 'settings.owner_locked') !== false, 'owner settings are primary-only');
 alb_ok(strpos($auth, 'users.error.inactive') !== false, 'inactive users cannot sign in');

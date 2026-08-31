@@ -993,10 +993,48 @@
     if (!A.can_assign_permissions) return '';
     selected = selected || {};
     var keys = A.extra_permission_keys || ['scanners.identity'];
-    return '<details class="wide extras"><summary>' + esc(t('users.extras')) + '</summary><p class="hint">' + esc(t('users.extras_hint')) + '</p>' +
+    var anyGranted = keys.some(function (key) { return !!selected[key]; });
+    return '<details class="wide extras"' + (anyGranted ? ' open' : '') + '><summary>' + esc(t('users.extras')) + '</summary><p class="hint">' + esc(t('users.extras_hint')) + '</p>' +
       keys.map(function (key) {
-        return '<label class="row-check"><input type="checkbox" name="perm_' + key + '" value="1"' + (selected[key] ? ' checked' : '') + '><span>' + esc(t('perm.' + key)) + '</span></label>';
+        var granted = !!selected[key];
+        return '<div class="perm-choice">' +
+          '<div class="perm-choice-label">' + esc(t('perm.' + key)) + '</div>' +
+          '<div class="perm-choice-actions">' +
+          '<label class="choice-card"><input type="radio" name="perm_' + key + '" value="1"' + (granted ? ' checked' : '') + '>' + esc(t('users.grant')) + '</label>' +
+          '<label class="choice-card"><input type="radio" name="perm_' + key + '" value="0"' + (!granted ? ' checked' : '') + '>' + esc(t('users.revoke')) + '</label>' +
+          '</div></div>';
       }).join('') + '</details>';
+  }
+  function restoreUserSelections(form) {
+    if (!form) return;
+    var orig;
+    try {
+      orig = JSON.parse(form.getAttribute('data-original') || '{}');
+    } catch (e) {
+      return;
+    }
+    ['name', 'email', 'phone'].forEach(function (name) {
+      var el = form.querySelector('[name="' + name + '"]');
+      if (el && Object.prototype.hasOwnProperty.call(orig, name)) {
+        el.value = orig[name] || '';
+      }
+    });
+    var branch = form.querySelector('select[name="branch"]');
+    if (branch && Object.prototype.hasOwnProperty.call(orig, 'branch')) {
+      branch.value = orig.branch || '';
+    }
+    form.querySelectorAll('input[name="role"]').forEach(function (r) {
+      r.checked = r.value === orig.role;
+    });
+    var status = form.querySelector('select[name="status"]');
+    if (status && !status.disabled && orig.status) {
+      status.value = orig.status;
+    }
+    var perms = orig.permissions || {};
+    form.querySelectorAll('input[type="radio"][name^="perm_"]').forEach(function (r) {
+      var granted = !!perms[r.name.slice(5)];
+      r.checked = r.value === (granted ? '1' : '0');
+    });
   }
   function collectFormValues(form, options) {
     options = options || {};
@@ -1014,7 +1052,8 @@
     var extraKeys = A.extra_permission_keys || ['scanners.identity'];
     Object.keys(body).forEach(function (k) {
       if (k.indexOf('perm_') !== 0) return;
-      perms[k.slice(5)] = true;
+      var raw = body[k];
+      perms[k.slice(5)] = raw === '1' || raw === 1 || raw === true || raw === 'true' || raw === 'on';
       delete body[k];
     });
     var roleInput = form.querySelector('input[name="role"]:checked');
@@ -1123,15 +1162,32 @@
         '<div class="field"><label>' + esc(t('users.last_login')) + '</label><input type="text" value="' + esc(u.last_login_display || '—') + '" readonly class="readonly"></div>' +
         photoField(u.photo_url) +
         extraPermBoxes(u.permissions || {}) +
-        '<div class="wide"><button class="btn" type="submit">' + esc(t('common.save')) + '</button></div></form>' :
+        '<div class="wide action-bar-form"><button class="btn" type="submit">' + esc(t('common.save')) + '</button>' +
+        '<button class="btn btn-sec" type="button" id="user-revoke">' + esc(t('users.revoke')) + '</button></div></form>' :
         '<div class="card"><div class="person-row">' + face(u.photo_url, 'face-lg') + '<div><strong>' + esc(u.name) + '</strong></div></div><div class="kv">' + kv(t('users.name'), u.name) + kv(t('users.username'), u.username) + kv(t('driver.email'), u.email) + kv(t('users.phone'), u.phone || '—') + kv(t('branch.label'), u.branch_label || branchLabel(u.branch)) + kv(t('users.role'), (u.is_primary ? t('users.primary') + ' · ' : '') + t('role.' + u.role)) + kv(t('users.status'), t('users.status.' + (u.status || 'active'))) + kv(t('users.last_login'), u.last_login_display || '—') + '</div></div>';
       root.innerHTML = '<div class="page-head"><h1>' + esc(u.name || u.username) + '</h1><button class="btn btn-sec" data-go="/users">' + esc(t('common.back')) + '</button></div>' + form;
       var uf = document.getElementById('user-edit');
       if (uf) {
+        uf.setAttribute('data-original', JSON.stringify({
+          name: u.name || '',
+          email: u.email || '',
+          phone: u.phone || '',
+          branch: u.branch || '',
+          role: u.role || '',
+          status: u.status || 'active',
+          permissions: u.permissions || {}
+        }));
         bindPhotoReplace(uf, 'users/' + id + '/photo', function (res) {
           var url = res && res.photo_url;
           if (url) updatePhotoPreview(uf, url);
         });
+        var revokeBtn = document.getElementById('user-revoke');
+        if (revokeBtn) {
+          revokeBtn.onclick = function () {
+            restoreUserSelections(uf);
+            showSuccess(t('users.revoked'));
+          };
+        }
         bindAjaxForm(uf, function () {
           return afterSave(function (saved) {
             return renderUserDetail(id, saved).then(function () {

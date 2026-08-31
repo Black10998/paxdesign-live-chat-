@@ -238,8 +238,8 @@ class Alb_Capabilities {
         $clean = array();
         if (is_array($permissions)) {
             foreach (self::permission_keys() as $key) {
-                if (array_key_exists($key, $permissions)) {
-                    $clean[$key] = !empty($permissions[$key]);
+                if (array_key_exists($key, $permissions) && !empty($permissions[$key])) {
+                    $clean[$key] = true;
                 }
             }
         }

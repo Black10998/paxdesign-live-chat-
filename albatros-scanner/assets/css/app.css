@@ -521,6 +521,23 @@ table.data tbody tr.click { cursor: pointer; }
 .role-card small { display: block; color: var(--muted); font-size: 12px; }
 .extras { border: 1px solid var(--line); padding: 10px 12px; background: #fff; }
 .extras summary { cursor: pointer; font-weight: 600; }
+.perm-choice { display: grid; gap: 6px; padding: 8px 0; border-top: 1px solid var(--line); }
+.perm-choice:first-of-type { border-top: 0; }
+.perm-choice-label { font-size: 13px; }
+.perm-choice-actions { display: flex; flex-wrap: wrap; gap: 8px; }
+.choice-card {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  margin: 0;
+  padding: 6px 10px;
+  border: 1px solid var(--line);
+  background: #fff;
+  color: var(--text);
+  font-size: 13px;
+}
+.choice-card input { width: auto; height: auto; }
+.action-bar-form { display: flex; flex-wrap: wrap; gap: 8px; align-items: center; }
 
 .hint { color: var(--muted); font-size: 12px; margin: 0 0 8px; }
 .qr-box { padding: 14px; text-align: center; }
