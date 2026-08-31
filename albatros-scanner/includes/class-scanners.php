@@ -94,17 +94,69 @@ class Alb_Scanners {
         $phone = sanitize_text_field($data['employee_phone'] ?? '');
         $branch = $data['employee_branch'] ?? '';
         if ($name !== '' || $phone !== '') {
-            $person = Alb_Drivers::upsert_from_entry(array(
+            $entry = array(
                 'name' => $name,
                 'phone' => $phone,
                 'branch' => $branch,
-            ), $user_id);
+            );
+            if (array_key_exists('employee_notes', $data)) {
+                $entry['notes'] = $data['employee_notes'];
+            } elseif (array_key_exists('assign_notes', $data)) {
+                $entry['notes'] = $data['assign_notes'];
+            }
+            $person = Alb_Drivers::upsert_from_entry($entry, $user_id);
             if (is_wp_error($person)) {
                 return $person;
             }
             return (int) $person['id'];
         }
         return (int) ($data['driver_id'] ?? 0);
+    }
+
+    private static function request_has_holder($data) {
+        return array_key_exists('employee_name', $data)
+            || array_key_exists('employee_phone', $data)
+            || array_key_exists('employee_branch', $data)
+            || array_key_exists('driver_id', $data);
+    }
+
+    /**
+     * Create, update, replace, or remove the assigned employee without touching
+     * protected device identity (brand, model, serial, scanner SIM).
+     */
+    private static function apply_holder($scanner, $data, $user_id) {
+        if (!Alb_Capabilities::user_can((int) $user_id, 'scanners.assign')) {
+            return $scanner;
+        }
+        $name = trim(sanitize_text_field($data['employee_name'] ?? ''));
+        $phone = sanitize_text_field($data['employee_phone'] ?? '');
+        $current_id = !empty($scanner['current_driver_id']) ? (int) $scanner['current_driver_id'] : 0;
+        $notes = $data['assign_notes'] ?? $data['employee_notes'] ?? '';
+        if ($name === '' && $phone === '') {
+            if ($current_id) {
+                return self::assign((int) $scanner['id'], 0, $data['handover_date'] ?? '', $notes, $user_id);
+            }
+            return $scanner;
+        }
+        $driver_id = self::person_id_from_request($data, $user_id);
+        if (is_wp_error($driver_id)) {
+            return $driver_id;
+        }
+        $driver_id = (int) $driver_id;
+        if ($driver_id === $current_id) {
+            if (array_key_exists('handover_date', $data) && $data['handover_date'] !== '') {
+                $value = self::normalize_date($data['handover_date']);
+                if ($value !== '' && $value !== (string) ($scanner['handover_date'] ?? '')) {
+                    self::write_row((int) $scanner['id'], array(
+                        'handover_date' => $value,
+                        'updated_at' => Alb_Settings::now_mysql(),
+                        'updated_by' => (int) $user_id,
+                    ));
+                }
+            }
+            return self::get((int) $scanner['id']);
+        }
+        return self::assign((int) $scanner['id'], $driver_id, $data['handover_date'] ?? '', $notes, $user_id);
     }
 
     public static function update($id, $data, $user_id) {
@@ -116,6 +168,13 @@ class Alb_Scanners {
             return new WP_Error('alb_deleted', Alb_I18n::t('scanner.error.deleted'), array('status' => 400));
         }
         $can_identity = Alb_Capabilities::user_can((int) $user_id, 'scanners.identity');
+        if (self::request_has_holder($data)) {
+            $held = self::apply_holder($current, $data, $user_id);
+            if (is_wp_error($held)) {
+                return $held;
+            }
+            $current = $held;
+        }
         foreach (self::IMMUTABLE as $field) {
             if (array_key_exists($field, $data) && (string) $data[$field] !== (string) $current[$field] && !$can_identity) {
                 return new WP_Error('alb_immutable', Alb_I18n::t('scanner.error.immutable'), array('status' => 403));
@@ -223,6 +282,17 @@ class Alb_Scanners {
         }
         $when = self::normalize_datetime($handover_at);
         $previous = $scanner['current_driver_id'] ? (int) $scanner['current_driver_id'] : null;
+        if ($driver_id && $previous === $driver_id) {
+            $fields = array(
+                'updated_at' => Alb_Settings::now_mysql(),
+                'updated_by' => (int) $user_id,
+            );
+            if ($handover_at !== '') {
+                $fields['handover_date'] = substr($when, 0, 10);
+            }
+            self::write_row((int) $scanner_id, $fields);
+            return self::get($scanner_id);
+        }
         $action = $driver_id ? ($previous ? 'reassign' : 'assign') : 'return';
         global $wpdb;
         $wpdb->insert(Alb_Install::table('handovers'), array(

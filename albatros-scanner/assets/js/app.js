@@ -750,17 +750,22 @@
       html += '<button type="button" class="btn btn-danger" data-act="delete" data-id="' + s.id + '">' + esc(t('scanner.delete')) + '</button>';
     }
     html += '</div>';
+    var canDevice = can('scanners.identity');
+    var canMeta = can('scanners.edit') || canDevice;
+    var canHolder = can('scanners.assign');
+    var canStatus = can('scanners.status');
+    var canSave = canMeta || canHolder || canStatus;
     html += '<form id="scanner-edit" class="form-grid" method="post" action="#" novalidate>';
-    if (can('scanners.identity')) {
-      html += field('brand', t('scanner.brand'), 'text', s.brand, false);
-      html += field('model', t('scanner.model'), 'text', s.model, false);
-      html += field('serial_number', t('scanner.serial'), 'text', s.serial_number, false);
-      html += field('phone_number', t('scanner.phone'), 'text', s.phone_number, false);
-    }
-    if (can('scanners.edit') || can('scanners.identity')) {
+    html += '<div class="wide"><h2>' + esc(t('scanner.detail')) + '</h2></div>';
+    html += field('brand', t('scanner.brand'), 'text', s.brand, !canDevice);
+    html += field('model', t('scanner.model'), 'text', s.model, !canDevice);
+    html += field('serial_number', t('scanner.serial'), 'text', s.serial_number, !canDevice);
+    html += field('phone_number', t('scanner.phone'), 'text', s.phone_number, !canDevice);
+    html += '<p class="hint wide">' + esc(t('scanner.immutable')) + '</p>';
+    if (canMeta) {
       html += branchSelect('branch', s.branch || '');
     }
-    if (can('scanners.status')) {
+    if (canStatus) {
       html += '<div class="field"><label>' + esc(t('common.status')) + '</label><select name="status">' +
         (A.statuses || []).map(function (st) { return '<option value="' + st + '"' + (s.status === st ? ' selected' : '') + '>' + esc(statusLabel(st)) + '</option>'; }).join('') +
         '</select></div>';
@@ -768,23 +773,25 @@
     if (can('scanners.edit')) {
       html += '<div class="field wide"><label>' + esc(t('common.notes')) + '</label><textarea name="notes">' + esc(s.notes || '') + '</textarea></div>';
     }
-    if (can('scanners.edit') || can('scanners.identity') || can('scanners.status')) {
-      html += '<div class="wide"><button class="btn" type="submit">' + esc(t('common.save')) + '</button></div>';
+    if (canHolder) {
+      html += employeeEntryFields({
+        name: s.driver_name || '',
+        phone: s.driver_phone || '',
+        branch: s.driver_branch || '',
+        photo_url: s.driver_photo_url || ''
+      });
+      html += field('handover_date', t('scanner.handover_date'), 'date', s.handover_date || '', false);
+      html += '<div class="field wide"><label>' + esc(t('common.notes')) + '</label><input name="assign_notes"></div>';
+    }
+    if (canSave) {
+      html += '<div class="wide action-bar-form"><button class="btn" type="submit">' + esc(t('common.save')) + '</button>';
+      if (canHolder) {
+        html += '<button class="btn btn-sec" type="submit">' + esc(t('scanner.assign')) + '</button>';
+      }
+      html += '</div>';
     }
     html += '</form>';
-    if (can('scanners.assign')) {
-      html += '<form id="assign-form" class="form-grid" method="post" action="#" novalidate>' +
-        employeeEntryFields({
-          name: s.driver_name || '',
-          phone: s.driver_phone || '',
-          branch: s.driver_branch || '',
-          photo_url: s.driver_photo_url || ''
-        }) +
-        field('handover_date', t('scanner.handover_date'), 'date', s.handover_date || '', false) +
-        '<div class="field wide"><label>' + esc(t('common.notes')) + '</label><input name="notes"></div>' +
-        '<div class="wide"><button class="btn" type="submit">' + esc(t('scanner.assign')) + '</button></div></form>';
-    }
-    if (can('scanners.status')) {
+    if (canStatus) {
       html += '<form id="status-form" class="form-grid" method="post" action="#" novalidate>' +
         '<div class="field"><label>' + esc(t('common.notes')) + '</label><input name="notes"></div>' +
         '<div class="wide"><button class="btn" type="submit">' + esc(t('scanner.change_status')) + '</button></div></form>';
@@ -800,32 +807,8 @@
           return renderScannerDetail(s.id, saved).then(function () {
             showSuccess(t('common.saved'));
           });
-        }, api('scanners/' + s.id, { method: 'POST', body: collectScannerEditBody(edit) }));
-      });
-    }
-    var assign = document.getElementById('assign-form');
-    if (assign) {
-      if (s.current_driver_id) {
-        bindPhotoReplace(assign, 'drivers/' + s.current_driver_id + '/photo', function (res) {
-          var url = res && res.photo_url;
-          if (url) {
-            var holderImg = root.querySelector('.holder-person img');
-            if (holderImg) holderImg.src = url;
-          }
-        });
-      }
-      bindAjaxForm(assign, function () {
-        var fd = new FormData(assign);
-        var body = Object.assign({
-          handover_date: fd.get('handover_date'),
-          notes: String(fd.get('notes') || '').trim()
-        }, employeePayload(fd));
-        return afterSave(function (saved) {
-          return renderScannerDetail(s.id, saved).then(function () {
-            showSuccess(t('common.saved'));
-          });
-        }, api('scanners/' + s.id + '/assign', { method: 'POST', body: body }), function (item) {
-          return attachEmployeePhoto(item && item.current_driver_id, assign);
+        }, api('scanners/' + s.id, { method: 'POST', body: collectScannerEditBody(edit) }), function (item) {
+          return attachEmployeePhoto(item && item.current_driver_id, edit);
         });
       });
     }
@@ -1103,6 +1086,11 @@
       if (statusForm && statusForm.notes) {
         body.status_notes = String(statusForm.notes.value || '').trim();
       }
+    }
+    if (can('scanners.assign')) {
+      Object.assign(body, employeePayload(new FormData(form)));
+      body.handover_date = values.handover_date || '';
+      body.assign_notes = values.assign_notes || '';
     }
     return body;
   }
@@ -1403,12 +1391,12 @@
       var act = actEl.getAttribute('data-act');
       var extra = {};
       if (act === 'take_over') {
-        var assignForm = document.getElementById('assign-form');
+        var assignForm = document.getElementById('scanner-edit') || document.getElementById('assign-form');
         var extraPerson = assignForm ? employeePayload(new FormData(assignForm)) : {};
         extra.employee_name = extraPerson.employee_name || '';
         extra.employee_phone = extraPerson.employee_phone || '';
         extra.employee_branch = extraPerson.employee_branch || '';
-        extra.notes = assignForm && assignForm.notes ? assignForm.notes.value : '';
+        extra.notes = assignForm && (assignForm.assign_notes || assignForm.notes) ? String((assignForm.assign_notes || assignForm.notes).value || '').trim() : '';
         if (!extra.employee_name && !extra.employee_phone) {
           showError(new Error(t('driver.error.name_required')));
           return;

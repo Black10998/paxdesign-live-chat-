@@ -114,7 +114,7 @@
   "scanner.driver": "Sürücü / çalışan",
   "scanner.handover_date": "Teslim tarihi",
   "scanner.handover_short": "Devir",
-  "scanner.immutable": "Marka, model ve seri numarası oluşturduktan sonra değiştirilemez.",
+  "scanner.immutable": "Marka, model, seri numarası ve tarayıcı telefonu/SIM korunur. Bu cihaz verilerini yalnızca yetkili hesaplar değiştirebilir.",
   "scanner.no_driver": "Atanmamış",
   "scanner.assign_hint": "Ad, kişisel telefon, fotoğraf ve şubeyi doğrudan girin. Çalışan Sürücüler / Çalışanlar altında otomatik kaydedilir. Tarayıcı SIM değişmez.",
   "scanner.employee_new": "Yeni çalışan ekle",

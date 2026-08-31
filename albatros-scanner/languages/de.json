@@ -114,7 +114,7 @@
   "scanner.driver": "Fahrer / Mitarbeiter",
   "scanner.handover_date": "Datum der Übernahme",
   "scanner.handover_short": "Übernahme",
-  "scanner.immutable": "Marke, Modell und Seriennummer können nach dem Anlegen nicht mehr geändert werden.",
+  "scanner.immutable": "Marke, Modell, Seriennummer und Scanner-Telefonnummer/SIM sind geschützt. Nur berechtigte Konten dürfen diese Gerätedaten ändern.",
   "scanner.no_driver": "Nicht zugewiesen",
   "scanner.assign_hint": "Geben Sie Name, persönliche Telefonnummer, Foto und Standort direkt ein. Der Mitarbeiter wird automatisch unter Fahrer / Mitarbeiter gespeichert. Die Scanner-SIM bleibt unverändert.",
   "scanner.employee_new": "Neuen Mitarbeiter anlegen",

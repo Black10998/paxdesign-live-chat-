@@ -157,7 +157,7 @@ class Alb_Rest {
             array(
                 'methods' => 'POST',
                 'callback' => array(__CLASS__, 'update_scanner'),
-                'permission_callback' => array(__CLASS__, 'can_scanners_edit'),
+                'permission_callback' => array(__CLASS__, 'can_scanners_update'),
             ),
         ));
         register_rest_route(self::NS, '/scanners/(?P<id>\d+)/assign', array(
@@ -308,6 +308,11 @@ class Alb_Rest {
     public static function can_scanners_edit() {
         return Alb_Capabilities::current_user_can('scanners.edit')
             || Alb_Capabilities::current_user_can('scanners.identity');
+    }
+    public static function can_scanners_update() {
+        return self::can_scanners_edit()
+            || self::can_scanners_assign()
+            || self::can_scanners_status();
     }
     public static function can_scanners_assign() {
         return Alb_Capabilities::current_user_can('scanners.assign');

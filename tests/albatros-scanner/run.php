@@ -273,7 +273,13 @@ alb_ok(strpos($js, 'return renderScannerDetail(id, saved)') !== false, 'scanner 
 alb_ok(strpos($js, 'data-act="activate"') !== false && strpos($js, "activate: 'active'") !== false, 'reactivate uses the status endpoint instead of soft-delete restore');
 alb_ok(strpos($rest, 'function with_scanner_detail') !== false && strpos($rest, 'function respond_scanner') !== false, 'scanner mutations return history so the UI can paint without a stale GET');
 alb_ok(strpos($rest, 'function with_driver_detail') !== false && strpos($rest, 'function respond_driver') !== false, 'driver mutations return assigned scanners and history');
-alb_ok(strpos($boot, "ALB_SCANNER_VERSION', '1.6.24'") !== false, 'plugin version is 1.6.24');
+alb_ok(strpos($boot, "ALB_SCANNER_VERSION', '1.6.25'") !== false, 'plugin version is 1.6.25');
+alb_ok(strpos($scanners, 'function apply_holder') !== false && strpos($scanners, 'function request_has_holder') !== false, 'scanner Speichern can create, replace, or remove the assigned employee');
+alb_ok(strpos($js, 'body.assign_notes') !== false && strpos($js, 'employeePayload(new FormData(form))') !== false, 'scanner Speichern sends employee name, phone, branch, and notes');
+alb_ok(strpos($js, 'field(\'brand\'') !== false && strpos($js, '!canDevice') !== false, 'device identity fields are read-only without identity permission');
+alb_ok(strpos($rest, 'function can_scanners_update') !== false && strpos($rest, 'can_scanners_update') !== false, 'scanner Speichern is allowed for assign and status roles');
+alb_ok(strpos($scanners, '$previous === $driver_id') !== false, 'saving the same employee does not insert a duplicate handover');
+alb_ok(($de['scanner.immutable'] ?? '') !== ($en['scanner.immutable'] ?? ''), 'protected device data hint is translated');
 
 $js_check = array();
 $js_code = 0;

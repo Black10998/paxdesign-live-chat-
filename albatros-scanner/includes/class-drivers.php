@@ -221,6 +221,9 @@ class Alb_Drivers {
             if (array_key_exists('branch', $data)) {
                 $update['branch'] = $branch;
             }
+            if (array_key_exists('notes', $data)) {
+                $update['notes'] = sanitize_textarea_field($data['notes']);
+            }
             return $update ? self::update((int) $existing['id'], $update, $user_id) : $existing;
         }
         if ($first === '') {

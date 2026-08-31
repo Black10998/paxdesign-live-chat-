@@ -114,7 +114,7 @@
   "scanner.driver": "Driver / employee",
   "scanner.handover_date": "Date of handover",
   "scanner.handover_short": "Taken over",
-  "scanner.immutable": "Brand, model and serial number cannot be changed after creation.",
+  "scanner.immutable": "Brand, model, serial number and scanner phone/SIM are protected. Only authorized accounts may change this device data.",
   "scanner.no_driver": "Unassigned",
   "scanner.assign_hint": "Enter name, personal phone number, photo, and branch directly. The employee is stored automatically under Drivers / Employees. The scanner SIM stays unchanged.",
   "scanner.employee_new": "Add new employee",
