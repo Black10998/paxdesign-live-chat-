@@ -172,24 +172,35 @@ class Alb_Scanners {
                 $changes['handover_date'] = array($current['handover_date'], $value);
             }
         }
-        if (!$fields) {
+        $wanted_status = null;
+        if (array_key_exists('status', $data) && Alb_Capabilities::user_can((int) $user_id, 'scanners.status')) {
+            $wanted_status = self::normalize_status($data['status']);
+        }
+        if (!$fields && ($wanted_status === null || $wanted_status === $current['status'])) {
             return $current;
         }
-        $fields['updated_at'] = Alb_Settings::now_mysql();
-        $fields['updated_by'] = (int) $user_id;
-        global $wpdb;
-        $wpdb->update(self::table(), $fields, array('id' => (int) $id));
-        foreach ($changes as $field => $pair) {
-            Alb_Audit::record(array(
-                'action' => 'scanner_update',
-                'entity_type' => 'scanner',
-                'entity_id' => (int) $id,
-                'scanner_id' => (int) $id,
-                'driver_id' => $current['current_driver_id'],
-                'field' => $field,
-                'old' => $pair[0],
-                'new' => $pair[1],
-            ));
+        if ($fields) {
+            $fields['updated_at'] = Alb_Settings::now_mysql();
+            $fields['updated_by'] = (int) $user_id;
+            self::write_row((int) $id, $fields);
+            foreach ($changes as $field => $pair) {
+                Alb_Audit::record(array(
+                    'action' => 'scanner_update',
+                    'entity_type' => 'scanner',
+                    'entity_id' => (int) $id,
+                    'scanner_id' => (int) $id,
+                    'driver_id' => $current['current_driver_id'],
+                    'field' => $field,
+                    'old' => $pair[0],
+                    'new' => $pair[1],
+                ));
+            }
+        }
+        if ($wanted_status !== null && $wanted_status !== $current['status']) {
+            $changed = self::change_status($id, $wanted_status, $data['status_notes'] ?? '', $user_id);
+            if (is_wp_error($changed)) {
+                return $changed;
+            }
         }
         return self::get($id);
     }
@@ -228,13 +239,13 @@ class Alb_Scanners {
         ));
         $handover_id = (int) $wpdb->insert_id;
         // Device SIM (phone_number) stays on the scanner row. Assignment only stores the employee's personal number in the handover snapshot.
-        $wpdb->update(self::table(), array(
+        self::write_row((int) $scanner_id, array(
             'current_driver_id' => $driver_id ?: null,
             'current_handover_id' => $handover_id,
             'handover_date' => substr($when, 0, 10),
             'updated_at' => Alb_Settings::now_mysql(),
             'updated_by' => (int) $user_id,
-        ), array('id' => (int) $scanner_id));
+        ));
         Alb_Audit::record(array(
             'action' => 'scanner_assign',
             'entity_type' => 'scanner',
@@ -270,7 +281,7 @@ class Alb_Scanners {
         if ($status === 'returned') {
             $fields['current_driver_id'] = null;
         }
-        $wpdb->update(self::table(), $fields, array('id' => (int) $scanner_id));
+        self::write_row((int) $scanner_id, $fields);
         if ($status === 'returned' && $scanner['current_driver_id']) {
             $wpdb->insert(Alb_Install::table('handovers'), array(
                 'scanner_id' => (int) $scanner_id,
@@ -776,6 +787,57 @@ class Alb_Scanners {
     public static function normalize_status($status) {
         $status = sanitize_key($status);
         return in_array($status, self::STATUSES, true) ? $status : 'active';
+    }
+
+    /**
+     * Persist scanner columns, including real SQL NULL. wpdb->update() turns
+     * PHP null into an empty string, which then still looks assigned.
+     */
+    private static function write_row($id, $fields) {
+        global $wpdb;
+        $id = (int) $id;
+        if ($id < 1 || !is_array($fields) || !$fields) {
+            return 0;
+        }
+        $allowed = array(
+            'scanner_code',
+            'brand',
+            'model',
+            'serial_number',
+            'phone_number',
+            'branch',
+            'status',
+            'current_driver_id',
+            'current_handover_id',
+            'handover_date',
+            'qr_token',
+            'notes',
+            'created_at',
+            'created_by',
+            'updated_at',
+            'updated_by',
+            'deleted_at',
+            'deleted_by',
+        );
+        $sets = array();
+        $values = array();
+        foreach ($fields as $column => $value) {
+            if (!in_array($column, $allowed, true)) {
+                continue;
+            }
+            if ($value === null) {
+                $sets[] = '`' . $column . '` = NULL';
+                continue;
+            }
+            $sets[] = '`' . $column . '` = %s';
+            $values[] = $value;
+        }
+        if (!$sets) {
+            return 0;
+        }
+        $values[] = $id;
+        $sql = 'UPDATE ' . self::table() . ' SET ' . implode(', ', $sets) . ' WHERE id = %d';
+        return (int) $wpdb->query($wpdb->prepare($sql, $values));
     }
 
     private static function normalize_date($value) {

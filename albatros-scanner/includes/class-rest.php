@@ -435,7 +435,7 @@ class Alb_Rest {
     }
 
     public static function update_scanner(WP_REST_Request $request) {
-        return self::respond(Alb_Scanners::update((int) $request['id'], $request->get_json_params() ?: $request->get_params(), get_current_user_id()));
+        return self::respond_scanner(Alb_Scanners::update((int) $request['id'], $request->get_json_params() ?: $request->get_params(), get_current_user_id()));
     }
 
     public static function assign_scanner(WP_REST_Request $request) {
@@ -444,7 +444,7 @@ class Alb_Rest {
         if (is_wp_error($driver_id)) {
             return self::respond($driver_id);
         }
-        return self::respond(Alb_Scanners::assign(
+        return self::respond_scanner(Alb_Scanners::assign(
             (int) $request['id'],
             $driver_id,
             $params['handover_date'] ?? '',
@@ -467,12 +467,12 @@ class Alb_Rest {
             $status = $result['status'] ?? '';
             Alb_Scan::record($result, $map[$status] ?? 'status', $params['notes'] ?? '');
         }
-        return self::respond($result);
+        return self::respond_scanner($result);
     }
 
     public static function delete_scanner(WP_REST_Request $request) {
         $params = $request->get_json_params() ?: $request->get_params();
-        return self::respond(Alb_Scanners::soft_delete((int) $request['id'], $params['notes'] ?? '', get_current_user_id()));
+        return self::respond_scanner(Alb_Scanners::soft_delete((int) $request['id'], $params['notes'] ?? '', get_current_user_id()));
     }
 
     public static function restore_scanner(WP_REST_Request $request) {
@@ -484,7 +484,7 @@ class Alb_Rest {
             return self::respond(new WP_Error('alb_forbidden', Alb_I18n::t('error.forbidden'), array('status' => 403)));
         }
         $params = $request->get_json_params() ?: $request->get_params();
-        return self::respond(Alb_Scanners::restore((int) $request['id'], $params['notes'] ?? '', get_current_user_id()));
+        return self::respond_scanner(Alb_Scanners::restore((int) $request['id'], $params['notes'] ?? '', get_current_user_id()));
     }
 
     public static function take_over_scanner(WP_REST_Request $request) {
@@ -493,7 +493,7 @@ class Alb_Rest {
         if (is_wp_error($driver_id)) {
             return self::respond($driver_id);
         }
-        return self::respond(Alb_Scanners::take_over(
+        return self::respond_scanner(Alb_Scanners::take_over(
             (int) $request['id'],
             $driver_id,
             $params['notes'] ?? '',
@@ -616,7 +616,7 @@ class Alb_Rest {
         if (isset($params['status']) && $params['status'] === 'inactive' && !Alb_Capabilities::current_user_can('drivers.deactivate')) {
             return self::respond(new WP_Error('alb_forbidden', Alb_I18n::t('error.forbidden'), array('status' => 403)));
         }
-        return self::respond(Alb_Drivers::update((int) $request['id'], $params, get_current_user_id()));
+        return self::respond_driver(Alb_Drivers::update((int) $request['id'], $params, get_current_user_id()));
     }
 
     public static function audit(WP_REST_Request $request) {
@@ -715,5 +715,34 @@ class Alb_Rest {
             return new WP_REST_Response(array('code' => $result->get_error_code(), 'message' => $result->get_error_message()), $status);
         }
         return rest_ensure_response($result);
+    }
+
+    private static function respond_scanner($result) {
+        return self::respond(self::with_scanner_detail($result));
+    }
+
+    private static function respond_driver($result) {
+        return self::respond(self::with_driver_detail($result));
+    }
+
+    private static function with_scanner_detail($result) {
+        if (is_wp_error($result) || !is_array($result) || empty($result['id'])) {
+            return $result;
+        }
+        $result['history'] = Alb_Capabilities::current_user_can('history.view')
+            ? Alb_Scanners::history((int) $result['id'])
+            : array();
+        return $result;
+    }
+
+    private static function with_driver_detail($result) {
+        if (is_wp_error($result) || !is_array($result) || empty($result['id'])) {
+            return $result;
+        }
+        $result['assigned_scanners'] = Alb_Drivers::assigned_scanners((int) $result['id']);
+        $result['history'] = Alb_Capabilities::current_user_can('history.view')
+            ? Alb_Drivers::history((int) $result['id'])
+            : array();
+        return $result;
     }
 }

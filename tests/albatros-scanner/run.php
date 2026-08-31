@@ -245,7 +245,7 @@ alb_ok(strpos($users_php, '$next_role = null') !== false, 'unchanged user roles 
 alb_ok(strpos($users_php, 'clean_user_cache') !== false, 'user update clears WP user object cache');
 alb_ok(strpos($frontend, 'function asset_url') !== false, 'plugin assets are cache-busted by filemtime');
 alb_ok(strpos($plugin_class, 'litespeed_purge_all') !== false, 'plugin version bump purges LiteSpeed cache');
-alb_ok(strpos($js, 'return renderSettings()') !== false, 'settings and permissions reload after save');
+alb_ok(strpos($js, 'return renderSettings({ settings: saved, permissions: p })') !== false, 'settings and permissions reload after save');
 alb_ok(strpos($rest, 'X-LiteSpeed-Cache-Control: no-cache') !== false, 'REST responses opt out of LiteSpeed cache');
 alb_ok(strpos($js, "cache: 'no-store'") !== false, 'admin fetch bypasses browser cache');
 alb_ok(strpos($js, 'assignable_roles.length') !== false, 'role picker falls back when assignable roles are empty');
@@ -256,13 +256,24 @@ alb_ok(strpos($js, 'bindAjaxForm(pf, function') !== false, 'role permissions use
 alb_ok(strpos($js, 'skipEmptyPassword') !== false, 'empty password is omitted on user save');
 preg_match('/function upsert_for_user\(.+?function sync_user_profile/s', $drivers, $upsert_fn);
 alb_ok(!empty($upsert_fn[0]) && strpos($upsert_fn[0], "if (\$existing)") !== false && strpos($upsert_fn[0], "\$fields['status'] = 'active'") !== false && strpos($upsert_fn[0], "\$wpdb->update(self::table(), \$fields") !== false, 'user sync preserves existing driver status on update');
-alb_ok(strpos($js, 'renderDriverDetail(d.id)') !== false && strpos($js, 'afterSave(function ()') !== false, 'driver edit save refreshes even when photo upload fails');
+alb_ok(strpos($js, 'renderDriverDetail(d.id, saved)') !== false && strpos($js, 'afterSave(function (saved)') !== false, 'driver edit save paints from the POST body even when photo upload fails');
 alb_ok(strpos($js, "addEventListener('submit'") !== false, 'app forms cannot fall back to a native page reload');
 alb_ok(strpos($drivers, 'function person_names') !== false, 'driver create splits or copies a single filled name');
 preg_match('/function update\(.+?function digits/s', $drivers, $update_fn);
 alb_ok(!empty($update_fn[0]) && strpos($update_fn[0], 'person_names') !== false, 'driver update normalizes names like create');
 preg_match('/function create\(.+?function update/s', $drivers, $create_fn);
 alb_ok(!empty($create_fn[0]) && strpos($create_fn[0], 'person_names') !== false && strpos($create_fn[0], "\$first === '' || \$last === ''") === false, 'employee create no longer requires both name fields separately');
+alb_ok(strpos($scanners, '$wanted_status = self::normalize_status') !== false && strpos($scanners, 'self::change_status($id, $wanted_status') !== false, 'scanner Speichern persists status through change_status');
+alb_ok(strpos($scanners, 'private static function write_row') !== false && strpos($scanners, '` = NULL') !== false, 'scanner writes use real SQL NULL instead of empty strings');
+alb_ok(strpos($drivers, 'private static function write_row') !== false, 'driver writes use the same NULL-safe row helper');
+alb_ok(strpos($js, 'if (can(\'scanners.status\') && values.status)') !== false, 'scanner Speichern includes the selected status');
+alb_ok(strpos($js, "var load = (preloaded && preloaded.id) ? Promise.resolve(preloaded) : api('scanners/' + id)") !== false, 'scanner detail can skip GET when POST already returned the record');
+alb_ok(strpos($js, 'return renderScannerDetail(s.id, saved)') !== false, 'scanner save paints from the POST body');
+alb_ok(strpos($js, 'return renderScannerDetail(id, saved)') !== false, 'scanner action buttons paint from the POST body');
+alb_ok(strpos($js, 'data-act="activate"') !== false && strpos($js, "activate: 'active'") !== false, 'reactivate uses the status endpoint instead of soft-delete restore');
+alb_ok(strpos($rest, 'function with_scanner_detail') !== false && strpos($rest, 'function respond_scanner') !== false, 'scanner mutations return history so the UI can paint without a stale GET');
+alb_ok(strpos($rest, 'function with_driver_detail') !== false && strpos($rest, 'function respond_driver') !== false, 'driver mutations return assigned scanners and history');
+alb_ok(strpos($boot, "ALB_SCANNER_VERSION', '1.6.24'") !== false, 'plugin version is 1.6.24');
 
 $js_check = array();
 $js_code = 0;

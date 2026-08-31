@@ -111,8 +111,7 @@ class Alb_Drivers {
         }
         $fields['updated_at'] = Alb_Settings::now_mysql();
         $fields['updated_by'] = (int) $user_id;
-        global $wpdb;
-        $wpdb->update(self::table(), $fields, array('id' => (int) $id));
+        self::write_row((int) $id, $fields);
         foreach ($changes as $field => $pair) {
             Alb_Audit::record(array(
                 'action' => 'driver_update',
@@ -515,5 +514,53 @@ class Alb_Drivers {
             'created_at' => $row['created_at'],
             'updated_at' => $row['updated_at'],
         );
+    }
+
+    /**
+     * Persist driver columns, including real SQL NULL for optional FKs.
+     */
+    private static function write_row($id, $fields) {
+        global $wpdb;
+        $id = (int) $id;
+        if ($id < 1 || !is_array($fields) || !$fields) {
+            return 0;
+        }
+        $allowed = array(
+            'user_id',
+            'first_name',
+            'last_name',
+            'phone',
+            'phone_verified',
+            'phone_verified_at',
+            'photo_path',
+            'email',
+            'employee_code',
+            'branch',
+            'status',
+            'notes',
+            'created_at',
+            'created_by',
+            'updated_at',
+            'updated_by',
+        );
+        $sets = array();
+        $values = array();
+        foreach ($fields as $column => $value) {
+            if (!in_array($column, $allowed, true)) {
+                continue;
+            }
+            if ($value === null) {
+                $sets[] = '`' . $column . '` = NULL';
+                continue;
+            }
+            $sets[] = '`' . $column . '` = %s';
+            $values[] = $value;
+        }
+        if (!$sets) {
+            return 0;
+        }
+        $values[] = $id;
+        $sql = 'UPDATE ' . self::table() . ' SET ' . implode(', ', $sets) . ' WHERE id = %d';
+        return (int) $wpdb->query($wpdb->prepare($sql, $values));
     }
 }

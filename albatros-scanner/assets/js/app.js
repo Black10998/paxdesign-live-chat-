@@ -440,7 +440,7 @@
   function renderDashboard() {
     var view = dashView();
     root.innerHTML = '<div class="page-head"><h1>' + esc(t('dash.title')) + '</h1></div><p>' + esc(t('common.loading')) + '</p>';
-    api('dashboard').then(function (data) {
+    return api('dashboard').then(function (data) {
       var c = data.counts || {};
       var kpis = [
         ['total', 'dash.total', c.total || 0],
@@ -517,7 +517,7 @@
     root.innerHTML = '<div class="page-head"><h1>' + esc(t('scanner.title')) + '</h1>' +
       (can('scanners.create') ? '<div class="actions"><button class="btn" data-go="/scanners/new">' + esc(t('scanner.new')) + '</button></div>' : '') +
       '</div>' + scannerFilters(query) + '<div class="card"><p class="body" style="padding:12px">' + esc(t('common.loading')) + '</p></div>';
-    api('scanners?' + qs({
+    return api('scanners?' + qs({
       q: query.q || '', status: query.status || '', brand: query.brand || '', model: query.model || '',
       assigned: query.assigned || '', removed: query.removed || '', branch: query.branch || '',
       sort: query.sort || 'id', dir: query.dir || 'desc', page: query.page || 1
@@ -665,9 +665,10 @@
     return body;
   }
 
-  function renderScannerDetail(id) {
+  function renderScannerDetail(id, preloaded) {
     root.innerHTML = '<p>' + esc(t('common.loading')) + '</p>';
-    return api('scanners/' + id).then(function (s) {
+    var load = (preloaded && preloaded.id) ? Promise.resolve(preloaded) : api('scanners/' + id);
+    return load.then(function (s) {
       setPageTitle(s.scanner_code + ' / ' + s.serial_number);
       var lost = '';
       if (s.status === 'lost') {
@@ -742,7 +743,7 @@
         html += '<button type="button" class="btn btn-sec" data-act="deactivate" data-id="' + s.id + '">' + esc(t('scanner.deactivate')) + '</button>';
       }
       if (s.status !== 'active') {
-        html += '<button type="button" class="btn btn-sec" data-act="restore" data-id="' + s.id + '">' + esc(t('scanner.reactivate')) + '</button>';
+        html += '<button type="button" class="btn btn-sec" data-act="activate" data-id="' + s.id + '">' + esc(t('scanner.reactivate')) + '</button>';
       }
     }
     if (can('scanners.delete')) {
@@ -750,19 +751,24 @@
     }
     html += '</div>';
     html += '<form id="scanner-edit" class="form-grid" method="post" action="#" novalidate>';
+    if (can('scanners.identity')) {
+      html += field('brand', t('scanner.brand'), 'text', s.brand, false);
+      html += field('model', t('scanner.model'), 'text', s.model, false);
+      html += field('serial_number', t('scanner.serial'), 'text', s.serial_number, false);
+      html += field('phone_number', t('scanner.phone'), 'text', s.phone_number, false);
+    }
     if (can('scanners.edit') || can('scanners.identity')) {
-      if (can('scanners.identity')) {
-        html += field('brand', t('scanner.brand'), 'text', s.brand, false);
-        html += field('model', t('scanner.model'), 'text', s.model, false);
-        html += field('serial_number', t('scanner.serial'), 'text', s.serial_number, false);
-        html += field('phone_number', t('scanner.phone'), 'text', s.phone_number, false);
-      }
-      if (can('scanners.edit') || can('scanners.identity')) {
-        html += branchSelect('branch', s.branch || '');
-      }
-      if (can('scanners.edit')) {
-        html += '<div class="field wide"><label>' + esc(t('common.notes')) + '</label><textarea name="notes">' + esc(s.notes || '') + '</textarea></div>';
-      }
+      html += branchSelect('branch', s.branch || '');
+    }
+    if (can('scanners.status')) {
+      html += '<div class="field"><label>' + esc(t('common.status')) + '</label><select name="status">' +
+        (A.statuses || []).map(function (st) { return '<option value="' + st + '"' + (s.status === st ? ' selected' : '') + '>' + esc(statusLabel(st)) + '</option>'; }).join('') +
+        '</select></div>';
+    }
+    if (can('scanners.edit')) {
+      html += '<div class="field wide"><label>' + esc(t('common.notes')) + '</label><textarea name="notes">' + esc(s.notes || '') + '</textarea></div>';
+    }
+    if (can('scanners.edit') || can('scanners.identity') || can('scanners.status')) {
       html += '<div class="wide"><button class="btn" type="submit">' + esc(t('common.save')) + '</button></div>';
     }
     html += '</form>';
@@ -779,9 +785,8 @@
         '<div class="wide"><button class="btn" type="submit">' + esc(t('scanner.assign')) + '</button></div></form>';
     }
     if (can('scanners.status')) {
-      html += '<form id="status-form" class="form-grid" method="post" action="#" novalidate><div class="field"><label>' + esc(t('common.status')) + '</label><select name="status">' +
-        (A.statuses || []).map(function (st) { return '<option value="' + st + '"' + (s.status === st ? ' selected' : '') + '>' + esc(statusLabel(st)) + '</option>'; }).join('') +
-        '</select></div><div class="field"><label>' + esc(t('common.notes')) + '</label><input name="notes"></div>' +
+      html += '<form id="status-form" class="form-grid" method="post" action="#" novalidate>' +
+        '<div class="field"><label>' + esc(t('common.notes')) + '</label><input name="notes"></div>' +
         '<div class="wide"><button class="btn" type="submit">' + esc(t('scanner.change_status')) + '</button></div></form>';
     }
     return html;
@@ -791,12 +796,11 @@
     var edit = document.getElementById('scanner-edit');
     if (edit) {
       bindAjaxForm(edit, function () {
-        var refresh = function () {
-          return renderScannerDetail(s.id).then(function () {
+        return afterSave(function (saved) {
+          return renderScannerDetail(s.id, saved).then(function () {
             showSuccess(t('common.saved'));
           });
-        };
-        return afterSave(refresh, api('scanners/' + s.id, { method: 'POST', body: collectScannerEditBody(edit) }));
+        }, api('scanners/' + s.id, { method: 'POST', body: collectScannerEditBody(edit) }));
       });
     }
     var assign = document.getElementById('assign-form');
@@ -816,12 +820,11 @@
           handover_date: fd.get('handover_date'),
           notes: String(fd.get('notes') || '').trim()
         }, employeePayload(fd));
-        var refresh = function () {
-          return renderScannerDetail(s.id).then(function () {
+        return afterSave(function (saved) {
+          return renderScannerDetail(s.id, saved).then(function () {
             showSuccess(t('common.saved'));
           });
-        };
-        return afterSave(refresh, api('scanners/' + s.id + '/assign', { method: 'POST', body: body }), function (item) {
+        }, api('scanners/' + s.id + '/assign', { method: 'POST', body: body }), function (item) {
           return attachEmployeePhoto(item && item.current_driver_id, assign);
         });
       });
@@ -830,13 +833,13 @@
     if (status) {
       bindAjaxForm(status, function () {
         var fd = new FormData(status);
-        var refresh = function () {
-          return renderScannerDetail(s.id).then(function () {
+        var statusSelect = edit ? edit.querySelector('select[name="status"]') : null;
+        return afterSave(function (saved) {
+          return renderScannerDetail(s.id, saved).then(function () {
             showSuccess(t('common.saved'));
           });
-        };
-        return afterSave(refresh, api('scanners/' + s.id + '/status', { method: 'POST', body: {
-          status: fd.get('status'),
+        }, api('scanners/' + s.id + '/status', { method: 'POST', body: {
+          status: statusSelect ? statusSelect.value : (fd.get('status') || s.status),
           notes: String(fd.get('notes') || '').trim()
         } }));
       });
@@ -896,9 +899,10 @@
     });
   }
 
-  function renderDriverDetail(id) {
+  function renderDriverDetail(id, preloaded) {
     root.innerHTML = '<p>' + esc(t('common.loading')) + '</p>';
-    return api('drivers/' + id).then(function (d) {
+    var load = (preloaded && preloaded.id) ? Promise.resolve(preloaded) : api('drivers/' + id);
+    return load.then(function (d) {
       var assigned = (d.assigned_scanners || []).map(function (s) {
         return '<tr class="click" data-go="/scanners/' + s.id + '"><td>' + esc(s.scanner_code) + '</td><td>' + esc(s.serial_number) + '</td><td>' + esc(s.phone_number || '') + '</td><td>' + esc(s.branch_label || branchLabel(s.branch)) + '</td><td>' + badge(s.status) + '</td></tr>';
       }).join('') || emptyRow(5);
@@ -940,8 +944,8 @@
           if (!body.first_name) {
             return Promise.reject(new Error(t('driver.error.name_required')));
           }
-          return afterSave(function () {
-            return renderDriverDetail(d.id).then(function () {
+          return afterSave(function (saved) {
+            return renderDriverDetail(d.id, saved).then(function () {
               showSuccess(t('common.saved'));
             });
           },
@@ -954,7 +958,11 @@
       if (tog) {
         tog.onclick = function () {
           api('drivers/' + d.id, { method: 'POST', body: { status: d.status === 'active' ? 'inactive' : 'active' } })
-            .then(function () { renderDriverDetail(d.id); }).catch(showError);
+            .then(function (saved) {
+              return renderDriverDetail(d.id, saved).then(function () {
+                showSuccess(t('common.saved'));
+              });
+            }).catch(showError);
         };
       }
     }).catch(showError);
@@ -1089,6 +1097,13 @@
       body.serial_number = values.serial_number || '';
       body.phone_number = values.phone_number || '';
     }
+    if (can('scanners.status') && values.status) {
+      body.status = values.status;
+      var statusForm = document.getElementById('status-form');
+      if (statusForm && statusForm.notes) {
+        body.status_notes = String(statusForm.notes.value || '').trim();
+      }
+    }
     return body;
   }
   function collectSettingsBody(form) {
@@ -1202,13 +1217,14 @@
     }).catch(showError);
   }
 
-  function renderSettings() {
+  function renderSettings(preloaded) {
     root.innerHTML = '<p>' + esc(t('common.loading')) + '</p>';
     var needSettings = can('settings.view') || can('settings.manage');
     var needPerms = can('roles.manage');
+    preloaded = preloaded || {};
     return Promise.all([
-      needSettings ? api('settings') : Promise.resolve(null),
-      needPerms ? api('permissions') : Promise.resolve(null)
+      preloaded.settings ? Promise.resolve(preloaded.settings) : (needSettings ? api('settings') : Promise.resolve(null)),
+      preloaded.permissions ? Promise.resolve(preloaded.permissions) : (needPerms ? api('permissions') : Promise.resolve(null))
     ]).then(function (pack) {
       var s = pack[0] || {};
       var p = pack[1];
@@ -1266,8 +1282,8 @@
       var sf = document.getElementById('settings-form');
       if (sf && can('settings.manage')) {
         bindAjaxForm(sf, function () {
-          return api('settings', { method: 'POST', body: collectSettingsBody(sf) }).then(function () {
-            return renderSettings();
+          return api('settings', { method: 'POST', body: collectSettingsBody(sf) }).then(function (saved) {
+            return renderSettings({ settings: saved, permissions: p });
           }).then(function () {
             showSuccess(t('settings.saved'));
           });
@@ -1283,8 +1299,9 @@
             map[role] = map[role] || {};
             map[role][key] = box.checked || role === 'super_admin';
           });
-          return api('permissions', { method: 'POST', body: { map: map } }).then(function () {
-            return renderSettings();
+          return api('permissions', { method: 'POST', body: { map: map } }).then(function (saved) {
+            var nextPerms = p ? Object.assign({}, p, saved || {}) : saved;
+            return renderSettings({ settings: s, permissions: nextPerms });
           }).then(function () {
             showSuccess(t('settings.saved'));
           });
@@ -1397,14 +1414,20 @@
           return;
         }
       }
-      runScannerAction(act, id, extra).then(function () {
-        if (path().indexOf('/dashboard') === 0) {
-          renderDashboard();
-        } else if (path().indexOf('/scanners/') === 0) {
-          renderScannerDetail(id);
-        } else {
-          renderScanners(Object.fromEntries(new URLSearchParams(window.location.search)));
+      runScannerAction(act, id, extra).then(function (saved) {
+        if (saved == null) {
+          return;
         }
+        var done = function () {
+          showSuccess(t('common.saved'));
+        };
+        if (path().indexOf('/dashboard') === 0) {
+          return renderDashboard().then(done);
+        }
+        if (path().indexOf('/scanners/') === 0) {
+          return renderScannerDetail(id, saved).then(done);
+        }
+        return renderScanners(Object.fromEntries(new URLSearchParams(window.location.search))).then(done);
       }).catch(showError);
       return;
     }
