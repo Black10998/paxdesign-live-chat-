@@ -228,7 +228,7 @@ alb_ok(strpos($rest, 'disable_litespeed_rest_cache') !== false, 'LiteSpeed cache
 alb_ok(strpos($rest, 'CDN-Cache-Control') !== false, 'REST responses opt out of CDN edge cache');
 alb_ok(strpos($js, 'function apiUrl') !== false && strpos($js, "'_=' + Date.now()") !== false, 'GET requests bust browser and CDN cache');
 alb_ok(strpos($js, 'function afterSave') !== false, 'save handlers refresh even when optional uploads fail');
-alb_ok(strpos($js, 'renderUserDetail(id, saved)') !== false, 'user edit re-renders from the POST response instead of a cached GET');
+alb_ok(strpos($js, 'return renderUserDetail(id, saved)') !== false, 'user save waits for the form to paint before the saved banner');
 alb_ok(strpos($js, 'showSuccess(t(\'common.saved\'))') !== false, 'successful user save shows a saved banner');
 alb_ok(strpos($js, "var load = (preloaded && preloaded.id) ? Promise.resolve(preloaded) : api('users/' + id)") !== false, 'user detail can skip GET when POST already returned the record');
 alb_ok(strpos($js, "res.data.code === 'rest_cookie_invalid_nonce'") !== false, 'stale REST nonce reloads instead of silently reverting');

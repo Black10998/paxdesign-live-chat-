@@ -667,7 +667,7 @@
 
   function renderScannerDetail(id) {
     root.innerHTML = '<p>' + esc(t('common.loading')) + '</p>';
-    api('scanners/' + id).then(function (s) {
+    return api('scanners/' + id).then(function (s) {
       setPageTitle(s.scanner_code + ' / ' + s.serial_number);
       var lost = '';
       if (s.status === 'lost') {
@@ -792,8 +792,9 @@
     if (edit) {
       bindAjaxForm(edit, function () {
         var refresh = function () {
-          renderScannerDetail(s.id);
-          showSuccess(t('common.saved'));
+          return renderScannerDetail(s.id).then(function () {
+            showSuccess(t('common.saved'));
+          });
         };
         return afterSave(refresh, api('scanners/' + s.id, { method: 'POST', body: collectScannerEditBody(edit) }));
       });
@@ -815,7 +816,11 @@
           handover_date: fd.get('handover_date'),
           notes: String(fd.get('notes') || '').trim()
         }, employeePayload(fd));
-        var refresh = function () { renderScannerDetail(s.id); };
+        var refresh = function () {
+          return renderScannerDetail(s.id).then(function () {
+            showSuccess(t('common.saved'));
+          });
+        };
         return afterSave(refresh, api('scanners/' + s.id + '/assign', { method: 'POST', body: body }), function (item) {
           return attachEmployeePhoto(item && item.current_driver_id, assign);
         });
@@ -825,7 +830,11 @@
     if (status) {
       bindAjaxForm(status, function () {
         var fd = new FormData(status);
-        var refresh = function () { renderScannerDetail(s.id); };
+        var refresh = function () {
+          return renderScannerDetail(s.id).then(function () {
+            showSuccess(t('common.saved'));
+          });
+        };
         return afterSave(refresh, api('scanners/' + s.id + '/status', { method: 'POST', body: {
           status: fd.get('status'),
           notes: String(fd.get('notes') || '').trim()
@@ -889,7 +898,7 @@
 
   function renderDriverDetail(id) {
     root.innerHTML = '<p>' + esc(t('common.loading')) + '</p>';
-    api('drivers/' + id).then(function (d) {
+    return api('drivers/' + id).then(function (d) {
       var assigned = (d.assigned_scanners || []).map(function (s) {
         return '<tr class="click" data-go="/scanners/' + s.id + '"><td>' + esc(s.scanner_code) + '</td><td>' + esc(s.serial_number) + '</td><td>' + esc(s.phone_number || '') + '</td><td>' + esc(s.branch_label || branchLabel(s.branch)) + '</td><td>' + badge(s.status) + '</td></tr>';
       }).join('') || emptyRow(5);
@@ -932,8 +941,9 @@
             return Promise.reject(new Error(t('driver.error.name_required')));
           }
           return afterSave(function () {
-            renderDriverDetail(d.id);
-            showSuccess(t('common.saved'));
+            return renderDriverDetail(d.id).then(function () {
+              showSuccess(t('common.saved'));
+            });
           },
             api('drivers/' + d.id, { method: 'POST', body: body }),
             function () { return maybeUpload('drivers/' + d.id + '/photo', form); }
@@ -1095,7 +1105,7 @@
     }
     root.innerHTML = '<p>' + esc(t('common.loading')) + '</p>';
     var load = (preloaded && preloaded.id) ? Promise.resolve(preloaded) : api('users/' + id);
-    load.then(function (u) {
+    return load.then(function (u) {
       var locked = u.is_primary && !isPrimary();
       var canEdit = can('users.manage') && !locked;
       var form = canEdit ? '<form id="user-edit" class="card form-grid" method="post" action="#" novalidate><div class="wide"><h2>' + esc(t('users.edit')) + '</h2></div>' +
@@ -1124,8 +1134,9 @@
         });
         bindAjaxForm(uf, function () {
           return afterSave(function (saved) {
-            renderUserDetail(id, saved);
-            showSuccess(t('common.saved'));
+            return renderUserDetail(id, saved).then(function () {
+              showSuccess(t('common.saved'));
+            });
           },
             api('users/' + id, { method: 'POST', body: collectUserBody(uf, true) }),
             function () { return maybeUpload('users/' + id + '/photo', uf); }
