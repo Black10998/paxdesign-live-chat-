@@ -182,6 +182,9 @@ alb_ok(strpos($js, "items.push(['/help', 'nav.help', 'help'])") !== false, 'help
 alb_ok(strpos($js, 'function icon(') !== false && strpos($js, 'nav-icon') !== false, 'navigation uses consistent SVG icons');
 alb_ok(strpos($js, 'renderHelp') !== false && strpos($js, 'help-center') !== false && strpos($js, 'about.title') !== false, 'help page is a help center with system information');
 alb_ok(strpos($js, 'team-card--dev') !== false && strpos($js, 'help.role.ceo') !== false, 'help page has vertical team cards including a darker developer card');
+$team_at = strpos($js, 'id="help-team"');
+$topics_at = strpos($js, 'id="help-topics"');
+alb_ok($team_at !== false && $topics_at !== false && $team_at < $topics_at, 'help page shows team profiles before topics');
 alb_ok(strpos($js, 'stroke="currentColor"') !== false && strpos($js, 'stroke-width="1.75"') !== false, 'icons are stroke SVGs without decorative fills');
 alb_ok(strpos($frontend, "home_url('/scanners')") !== false && strpos($js, "replaceState({}, '', '/scanners')") !== false, 'login and app root open the scanner page');
 alb_ok(strpos($js, "items.push(['/dashboard', 'nav.dashboard', 'dashboard'])") !== false, 'overview stays available at /dashboard');
@@ -279,7 +282,7 @@ alb_ok(strpos($js, 'return renderScannerDetail(id, saved)') !== false, 'scanner 
 alb_ok(strpos($js, 'data-act="activate"') !== false && strpos($js, "activate: 'active'") !== false, 'reactivate uses the status endpoint instead of soft-delete restore');
 alb_ok(strpos($rest, 'function with_scanner_detail') !== false && strpos($rest, 'function respond_scanner') !== false, 'scanner mutations return history so the UI can paint without a stale GET');
 alb_ok(strpos($rest, 'function with_driver_detail') !== false && strpos($rest, 'function respond_driver') !== false, 'driver mutations return assigned scanners and history');
-alb_ok(strpos($boot, "ALB_SCANNER_VERSION', '1.6.29'") !== false, 'plugin version is 1.6.29');
+alb_ok(strpos($boot, "ALB_SCANNER_VERSION', '1.6.30'") !== false, 'plugin version is 1.6.30');
 alb_ok(is_file($plugin . '/includes/class-updates.php'), 'update checker exists');
 alb_ok(is_file($plugin . '/assets/img/team-ceo.jpeg'), 'CEO portrait is bundled');
 alb_ok(strpos($app_tpl, 'id="update-check"') !== false && strpos($js, 'updates/check') !== false, 'sidebar can check for plugin updates');

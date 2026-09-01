@@ -354,54 +354,64 @@ a.help-card, button.help-card { width: 100%; cursor: pointer; }
   margin: 8px 0 0;
   color: var(--muted);
 }
-.help-team, .help-about { padding: 4px 16px 16px; margin-bottom: 16px; }
+.help-team, .help-about { padding: 16px 16px 18px; margin-bottom: 18px; }
 .help-team .help-lead,
-.help-about .help-lead { margin: 0 16px 0 0; }
+.help-about .help-lead { margin: 0 0 4px; }
 .help-about .btn { margin-top: 12px; }
 .team-list {
   display: flex;
   flex-direction: column;
-  gap: 10px;
-  margin-top: 12px;
+  align-items: stretch;
+  gap: 12px;
+  margin: 14px auto 0;
+  max-width: 360px;
 }
 .team-card {
   display: flex;
+  flex-direction: column;
   align-items: center;
-  gap: 14px;
-  padding: 12px;
+  text-align: center;
+  gap: 10px;
+  padding: 18px 16px 16px;
   border: 1px solid var(--line);
   background: #f7f8fa;
 }
 .team-card--dev {
-  background: #151b22;
-  border-color: #2c3642;
-  color: #e8eef3;
+  background: #07090c;
+  border-color: #1a222c;
+  color: #f3f6f8;
 }
 .team-card--dev .team-meta span,
-.team-card--dev .team-meta a { color: #9eb0bf; }
+.team-card--dev .team-meta a { color: #8fa0b0; }
 .team-card--dev .team-meta a:hover { color: #fff; }
 .team-photo {
-  width: 64px;
-  height: 64px;
+  width: 88px;
+  height: 88px;
   border-radius: 50%;
   object-fit: cover;
   object-position: center 18%;
   border: 1px solid var(--line);
-  flex: 0 0 64px;
+  flex: 0 0 88px;
   background: #e8edf2;
 }
-.team-photo--logo { object-fit: contain; background: #fff; padding: 8px; }
+.team-photo--logo { object-fit: contain; background: #fff; padding: 10px; }
 .team-photo--initials {
   display: flex;
   align-items: center;
   justify-content: center;
-  background: #0d1116;
-  color: #d5dde4;
+  background: #000;
+  color: #f3f6f8;
+  font-size: 22px;
   font-weight: 700;
-  letter-spacing: 0.04em;
-  border-color: #3a4654;
+  letter-spacing: 0.06em;
+  border-color: #3d4b59;
 }
-.team-meta strong { display: block; font-size: 14px; }
+.team-card--dev .team-photo--initials {
+  background: #000;
+  border-color: #5b6b7a;
+  color: #fff;
+}
+.team-meta strong { display: block; font-size: 15px; }
 .team-meta span, .team-meta a { display: block; font-size: 12px; color: var(--muted); }
 .settings-stack { display: flex; flex-direction: column; gap: 12px; }
 .settings-card { padding: 14px 16px 8px; }
@@ -1113,6 +1123,7 @@ table.data tbody tr.click { cursor: pointer; }
   .toolbar .btn { flex: 0 0 auto; }
   .page-head { align-items: flex-start; }
   .help-quick, .help-topics { grid-template-columns: 1fr; }
-  .team-photo { width: 56px; height: 56px; flex-basis: 56px; }
+  .team-list { max-width: none; }
+  .team-photo { width: 80px; height: 80px; flex-basis: 80px; }
   .help-search-wrap input { max-width: none; }
 }

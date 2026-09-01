@@ -1487,10 +1487,30 @@
     if (can('drivers.view')) quick.push(helpCard('/drivers', 'drivers', 'help.quick.drivers', 'help.quick.drivers_body'));
     if (can('reports.export')) quick.push(helpCard('/reports', 'reports', 'help.reports', 'help.reports_body'));
     if (can('settings.view') || can('roles.manage')) quick.push(helpCard('/settings', 'settings', 'help.quick.settings', 'help.quick.settings_body'));
+    var teamHtml =
+      '<section class="card help-team" id="help-team">' +
+        '<h2>' + esc(t('help.team')) + '</h2>' +
+        '<p class="help-lead">' + esc(t('help.team_lead')) + '</p>' +
+        '<div class="team-list">' +
+          '<article class="team-card">' +
+            ceoPhoto +
+            '<div class="team-meta"><strong>' + esc(ceoName) + '</strong><span>' + esc(t('help.role.ceo')) + '</span></div>' +
+          '</article>' +
+          '<article class="team-card team-card--dev">' +
+            '<div class="team-photo team-photo--initials" aria-hidden="true">AA</div>' +
+            '<div class="team-meta"><strong>' + esc(team.developer_name || A.developer_name || 'Ahmad Al Khalaf') + '</strong><span>' + esc(t('help.role.dev')) + '</span><a href="' + esc(aboutUrl) + '" target="_blank" rel="noopener noreferrer">paxdesign.at</a></div>' +
+          '</article>' +
+          '<article class="team-card">' +
+            supportPhoto +
+            '<div class="team-meta"><strong>' + esc(team.support_name || 'Albatros Express') + '</strong><span>' + esc(t('help.role.support')) + '</span><a href="' + esc(team.support_url || A.official_url || 'https://www.albatros-express.at/') + '" target="_blank" rel="noopener noreferrer">' + esc(t('help.support_site')) + '</a></div>' +
+          '</article>' +
+        '</div>' +
+      '</section>';
     root.innerHTML =
       '<div class="help-center">' +
       '<div class="page-head"><div><h1>' + esc(t('help.title')) + '</h1><p class="help-lead">' + esc(t('help.lead')) + '</p></div></div>' +
       '<div class="help-search-wrap"><input id="help-q" type="search" placeholder="' + esc(t('help.search')) + '" aria-label="' + esc(t('help.search')) + '"></div>' +
+      teamHtml +
       (quick.length ? '<p class="help-section-title">' + esc(t('help.quick_title')) + '</p><div class="help-quick">' + quick.join('') + '</div>' : '') +
       '<p class="help-section-title">' + esc(t('help.topics')) + '</p>' +
       '<div class="help-topics" id="help-topics">' +
@@ -1508,12 +1528,6 @@
         helpFaq('help.faq_q3', 'help.faq_a3') +
         helpFaq('help.faq_q4', 'help.faq_a4') +
       '</section>' +
-      '<section class="card help-team"><h2>' + esc(t('help.team')) + '</h2><p class="help-lead">' + esc(t('help.team_lead')) + '</p>' +
-        '<div class="team-list">' +
-          '<article class="team-card">' + ceoPhoto + '<div class="team-meta"><strong>' + esc(ceoName) + '</strong><span>' + esc(t('help.role.ceo')) + '</span></div></article>' +
-          '<article class="team-card team-card--dev"><div class="team-photo team-photo--initials" aria-hidden="true">AA</div><div class="team-meta"><strong>' + esc(team.developer_name || A.developer_name || 'Ahmad Al Khalaf') + '</strong><span>' + esc(t('help.role.dev')) + '</span><a href="' + esc(aboutUrl) + '" target="_blank" rel="noopener noreferrer">paxdesign.at</a></div></article>' +
-          '<article class="team-card">' + supportPhoto + '<div class="team-meta"><strong>' + esc(team.support_name || 'Albatros Express') + '</strong><span>' + esc(t('help.role.support')) + '</span><a href="' + esc(team.support_url || A.official_url || 'https://www.albatros-express.at/') + '" target="_blank" rel="noopener noreferrer">' + esc(t('help.support_site')) + '</a></div></article>' +
-        '</div></section>' +
       '<section class="card help-about"><h2>' + esc(t('about.title')) + '</h2>' +
         '<div class="settings-kv"><span>' + esc(t('settings.version')) + '</span><strong>' + esc(A.version || '') + '</strong></div>' +
         '<div class="settings-kv"><span>' + esc(t('about.developer')) + '</span><strong>' + esc(A.developer_name || 'Ahmad Al Khalaf') + '</strong></div>' +
