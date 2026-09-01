@@ -173,6 +173,8 @@ foreach (array('scanners.assign', 'audit.view', 'users.manage', 'reports.export'
 }
 alb_ok(strpos($css, 'animation') === false && strpos($css, 'gradient') === false, 'css has no animations or gradients');
 alb_ok(strpos($css, 'box-shadow') === false, 'css has no box shadows');
+alb_ok(strpos($css, '[hidden] { display: none !important; }') !== false, 'hidden panels stay hidden over flex/grid display');
+alb_ok(strpos($css, 'position: sticky') !== false, 'desktop sidebar keeps version visible');
 alb_ok(strpos($css, '.public-record') !== false && strpos($css, '.public-hero') !== false && strpos($css, '@media (min-width: 640px)') !== false, 'public QR page has a mobile-first layout');
 alb_ok(strpos($js, 'login.error') === false || strpos($js, 'api(') !== false, 'app talks to rest api');
 alb_ok(strpos($app_tpl, 'help-btn') !== false && strpos($app_tpl, 'page-context') !== false, 'header has page context, search, and help');
@@ -277,7 +279,7 @@ alb_ok(strpos($js, 'return renderScannerDetail(id, saved)') !== false, 'scanner 
 alb_ok(strpos($js, 'data-act="activate"') !== false && strpos($js, "activate: 'active'") !== false, 'reactivate uses the status endpoint instead of soft-delete restore');
 alb_ok(strpos($rest, 'function with_scanner_detail') !== false && strpos($rest, 'function respond_scanner') !== false, 'scanner mutations return history so the UI can paint without a stale GET');
 alb_ok(strpos($rest, 'function with_driver_detail') !== false && strpos($rest, 'function respond_driver') !== false, 'driver mutations return assigned scanners and history');
-alb_ok(strpos($boot, "ALB_SCANNER_VERSION', '1.6.28'") !== false, 'plugin version is 1.6.28');
+alb_ok(strpos($boot, "ALB_SCANNER_VERSION', '1.6.29'") !== false, 'plugin version is 1.6.29');
 alb_ok(is_file($plugin . '/includes/class-updates.php'), 'update checker exists');
 alb_ok(is_file($plugin . '/assets/img/team-ceo.jpeg'), 'CEO portrait is bundled');
 alb_ok(strpos($app_tpl, 'id="update-check"') !== false && strpos($js, 'updates/check') !== false, 'sidebar can check for plugin updates');
