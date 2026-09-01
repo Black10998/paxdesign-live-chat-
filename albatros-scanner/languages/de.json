@@ -140,6 +140,7 @@
   "status.returned": "Zurückgegeben",
   "status.repair": "In Reparatur",
   "status.assigned": "Zugewiesen",
+  "status.unassigned": "Nicht zugewiesen",
   "branch.label": "Standort",
   "branch.all": "Alle",
   "branch.wien": "Wien",

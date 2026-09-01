@@ -185,19 +185,38 @@ class Alb_Frontend {
         return '<svg class="device-visual-ico" viewBox="0 0 24 24" width="12" height="12" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="square" stroke-linejoin="miter" aria-hidden="true">' . $d . '</svg>';
     }
 
-    public static function device_visual_html($scanner, $i18n) {
+    public static function device_visual_html($scanner, $i18n, $extra_class = 'public-device') {
         if (!$scanner) {
             return '';
         }
-        $key = Alb_Scanners::visual_state($scanner);
-        $label = $key === 'assigned'
+        $status = (string) ($scanner['status'] ?? 'active');
+        $assigned = !empty($scanner['current_driver_id']);
+        $state = Alb_Scanners::visual_state($scanner);
+        $status_icon = in_array($status, array('lost', 'defective', 'repair', 'returned', 'inactive'), true)
+            ? $status
+            : 'active';
+        $assign_label = $assigned
             ? ($i18n['status.assigned'] ?? '')
-            : ($i18n['status.' . $key] ?? $key);
-        return '<div class="device-visual-slot public-device device-visual--' . esc_attr($key) . '">'
-            . '<div class="device-visual">'
-            . '<img src="' . esc_url(self::device_mark_url()) . '" alt="' . esc_attr($i18n['scanner.device'] ?? '') . '">'
-            . '<div class="device-visual-caption">' . self::device_state_icon($key) . '<span>' . esc_html($label) . '</span></div>'
-            . '</div></div>';
+            : ($i18n['status.unassigned'] ?? '');
+        $status_label = $i18n['status.' . $status] ?? $status;
+        $code = (string) ($scanner['scanner_code'] ?? '');
+        $classes = 'device-visual-slot device-visual--' . $state . ($assigned ? ' is-assigned' : ' is-free');
+        if ($extra_class !== '') {
+            $classes .= ' ' . $extra_class;
+        }
+        return '<div class="' . esc_attr($classes) . '">'
+            . '<div class="device-visual phone-device">'
+            . '<div class="phone-shell">'
+            . '<img class="phone-frame" src="' . esc_url(self::device_mark_url()) . '" alt="' . esc_attr($i18n['scanner.device'] ?? '') . '">'
+            . '<div class="phone-screen"><div class="phone-ui">'
+            . ($code !== '' ? '<div class="phone-code">' . esc_html($code) . '</div>' : '')
+            . '<span class="phone-chip phone-chip--assign ' . ($assigned ? 'is-on' : 'is-off') . '">'
+            . self::device_state_icon($assigned ? 'assigned' : 'inactive')
+            . '<span>' . esc_html($assign_label) . '</span></span>'
+            . '<span class="phone-chip phone-chip--status is-' . esc_attr($status) . '">'
+            . self::device_state_icon($status_icon)
+            . '<span>' . esc_html($status_label) . '</span></span>'
+            . '</div></div></div></div></div>';
     }
 
     private static function render_scan($token) {

@@ -41,18 +41,29 @@
       returned: '<path d="M9 11H4V6"/><path d="M4 11a8 8 0 1 0 2.4-5.7"/>',
       lost: '<circle cx="11" cy="11" r="6"/><path d="M16 16l4 4"/>'
     };
-    return '<svg class="device-visual-ico" viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="square" stroke-linejoin="miter" aria-hidden="true">' +
+    return '<svg class="device-visual-ico" viewBox="0 0 24 24" width="12" height="12" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="square" stroke-linejoin="miter" aria-hidden="true">' +
       (paths[key] || paths.active) + '</svg>';
   }
   function deviceVisual(s) {
     if (!A.device_mark) return '';
-    var key = deviceVisualKey(s || {});
-    var label = key === 'assigned' ? t('status.assigned') : statusLabel(key);
-    return '<div class="device-visual-slot device-visual--' + esc(key) + '">' +
-      '<div class="device-visual">' +
-      '<img src="' + esc(A.device_mark) + '" alt="' + esc(t('scanner.device')) + '">' +
-      '<div class="device-visual-caption">' + deviceStateIcon(key) + '<span>' + esc(label) + '</span></div>' +
-      '</div></div>';
+    s = s || {};
+    var state = deviceVisualKey(s);
+    var status = s.status || 'active';
+    var assigned = !!s.current_driver_id;
+    var statusIcon = (status === 'lost' || status === 'defective' || status === 'repair' || status === 'returned' || status === 'inactive')
+      ? status
+      : 'active';
+    var code = s.scanner_code ? '<div class="phone-code">' + esc(s.scanner_code) + '</div>' : '';
+    return '<div class="device-visual-slot device-visual--' + esc(state) + (assigned ? ' is-assigned' : ' is-free') + '">' +
+      '<div class="device-visual phone-device">' +
+      '<div class="phone-shell">' +
+      '<img class="phone-frame" src="' + esc(A.device_mark) + '" alt="' + esc(t('scanner.device')) + '">' +
+      '<div class="phone-screen"><div class="phone-ui">' + code +
+      '<span class="phone-chip phone-chip--assign ' + (assigned ? 'is-on' : 'is-off') + '">' +
+      deviceStateIcon(assigned ? 'assigned' : 'inactive') + '<span>' + esc(assigned ? t('status.assigned') : t('status.unassigned')) + '</span></span>' +
+      '<span class="phone-chip phone-chip--status is-' + esc(status) + '">' +
+      deviceStateIcon(statusIcon) + '<span>' + esc(statusLabel(status)) + '</span></span>' +
+      '</div></div></div></div></div>';
   }
   function branches() {
     return A.branches || ['wien', 'graz'];

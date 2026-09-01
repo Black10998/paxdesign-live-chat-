@@ -140,6 +140,7 @@
   "status.returned": "İade edildi",
   "status.repair": "Onarımda",
   "status.assigned": "Atanmış",
+  "status.unassigned": "Atanmamış",
   "branch.label": "Şube",
   "branch.all": "Tümü",
   "branch.wien": "Wien",

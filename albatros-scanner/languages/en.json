@@ -140,6 +140,7 @@
   "status.returned": "Returned",
   "status.repair": "In repair",
   "status.assigned": "Assigned",
+  "status.unassigned": "Unassigned",
   "branch.label": "Branch",
   "branch.all": "All",
   "branch.wien": "Wien",
