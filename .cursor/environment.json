@@ -1,0 +1,5 @@
+{
+  "name": "PAXdesign Live Chat",
+  "install": "./.cursor/install.sh",
+  "start": "./.cursor/start.sh"
+}
