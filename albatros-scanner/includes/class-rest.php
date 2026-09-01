@@ -294,6 +294,15 @@ class Alb_Rest {
             'callback' => array(__CLASS__, 'export'),
             'permission_callback' => array(__CLASS__, 'can_export'),
         ));
+        register_rest_route(self::NS, '/updates/check', array(
+            'methods' => 'POST',
+            'callback' => array(__CLASS__, 'check_updates'),
+            'permission_callback' => array(__CLASS__, 'can_app'),
+        ));
+    }
+
+    public static function can_app() {
+        return is_user_logged_in() && Alb_Capabilities::can_use_admin_app();
     }
 
     public static function can_dashboard() {
@@ -654,6 +663,10 @@ class Alb_Rest {
 
     public static function driver_photo(WP_REST_Request $request) {
         return self::respond(Alb_Drivers::set_photo((int) $request['id'], Alb_Photos::from_request($request), get_current_user_id()));
+    }
+
+    public static function check_updates() {
+        return rest_ensure_response(Alb_Updates::payload(true));
     }
 
     public static function get_settings() {

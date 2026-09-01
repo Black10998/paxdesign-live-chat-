@@ -303,6 +303,18 @@ class Alb_Frontend {
             'is_primary' => Alb_Capabilities::is_primary(),
             'branches' => Alb_Branches::keys(),
             'device_mark' => self::device_mark_url(),
+            'version' => ALB_SCANNER_VERSION,
+            'db_version' => ALB_SCANNER_DB_VERSION,
+            'team' => array(
+                'ceo_name' => ALB_SCANNER_CEO_NAME,
+                'ceo_photo' => self::asset_url(ALB_SCANNER_CEO_PHOTO),
+                'developer_name' => ALB_SCANNER_DEVELOPER_NAME,
+                'developer_role' => ALB_SCANNER_DEVELOPER_ROLE,
+                'developer_url' => ALB_SCANNER_DEVELOPER_URL,
+                'support_name' => 'Albatros Express',
+                'support_url' => Alb_Settings::official_url(),
+                'support_photo' => Alb_Settings::logo_url(),
+            ),
             'path' => '/' . self::path(),
         );
         include ALB_SCANNER_PLUGIN_DIR . 'templates/app.php';

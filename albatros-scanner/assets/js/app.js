@@ -395,6 +395,7 @@
     sel.innerHTML = (A.locales || ['de', 'en', 'tr']).map(function (loc) {
       return '<option value="' + loc + '"' + (A.locale === loc ? ' selected' : '') + '>' + esc(t('lang.' + loc)) + '</option>';
     }).join('');
+    bindUpdateCheck();
   }
 
   function dashView() {
@@ -1229,6 +1230,7 @@
       var p = pack[1];
       var tabs = '<div class="settings-nav">' +
         (needSettings ? '<button type="button" class="active" data-tab="general">' + esc(t('settings.general')) + '</button>' : '') +
+        (needSettings ? '<button type="button" data-tab="system">' + esc(t('settings.system')) + '</button>' : '') +
         (needPerms ? '<button type="button" data-tab="roles">' + esc(t('settings.roles')) + '</button>' : '') +
         '</div>';
       var ownerFields = isPrimary()
@@ -1236,25 +1238,38 @@
         : '<div class="field"><label>' + esc(t('settings.company_name')) + '</label><input type="text" value="' + esc(s.company_name || '') + '" readonly class="readonly"></div>' +
           '<div class="field"><label>' + esc(t('settings.owner_name')) + '</label><input type="text" value="' + esc(s.owner_name || '') + '" readonly class="readonly"></div>' +
           '<p class="hint wide">' + esc(t('settings.owner_locked')) + '</p>';
-      var general = needSettings ? '<form id="settings-form" class="card form-grid" method="post" action="#" novalidate>' +
-        ownerFields +
-        '<div class="field wide"><label>' + esc(t('official.website')) + '</label>' +
-        '<a href="' + esc(A.official_url || 'https://www.albatros-express.at/') + '" target="_blank" rel="noopener noreferrer">www.albatros-express.at</a></div>' +
-        '<div class="field"><label>' + esc(t('settings.default_language')) + '</label><select name="default_language">' +
-        (A.locales || []).map(function (l) { return '<option value="' + l + '"' + (s.default_language === l ? ' selected' : '') + '>' + esc(t('lang.' + l)) + '</option>'; }).join('') +
-        '</select></div>' +
-        field('timezone', t('settings.timezone'), 'text', s.timezone) +
-        field('date_format', t('settings.date_format'), 'text', s.date_format) +
-        field('items_per_page', t('settings.items_per_page'), 'number', s.items_per_page) +
-        field('min_password_length', t('settings.min_password_length'), 'number', s.min_password_length) +
-        field('remember_days', t('settings.remember_days'), 'number', s.remember_days) +
-        field('audit_retention_days', t('settings.audit_retention_days'), 'number', s.audit_retention_days) +
-        '<div class="wide"><h2>' + esc(t('settings.sms')) + '</h2><p class="hint">' + esc(t('settings.sms_hint')) + '</p></div>' +
-        field('twilio_sid', t('settings.twilio_sid'), 'text', s.twilio_sid || '') +
-        field('twilio_token', t('settings.twilio_token'), 'password', s.twilio_token || '') +
-        field('twilio_from', t('settings.twilio_from'), 'text', s.twilio_from || '') +
-        (can('settings.manage') ? '<div class="wide"><button class="btn" type="submit">' + esc(t('common.save')) + '</button></div>' : '') +
-        '</form>' : '';
+      var general = needSettings ? '<div id="general-panel" class="settings-stack">' +
+        '<form id="settings-form" method="post" action="#" novalidate>' +
+        settingsSection('settings.section.company', ownerFields +
+          '<div class="field wide"><label>' + esc(t('official.website')) + '</label>' +
+          '<a href="' + esc(A.official_url || 'https://www.albatros-express.at/') + '" target="_blank" rel="noopener noreferrer">www.albatros-express.at</a></div>') +
+        settingsSection('settings.section.locale',
+          '<div class="field"><label>' + esc(t('settings.default_language')) + '</label><select name="default_language">' +
+          (A.locales || []).map(function (l) { return '<option value="' + l + '"' + (s.default_language === l ? ' selected' : '') + '>' + esc(t('lang.' + l)) + '</option>'; }).join('') +
+          '</select></div>' + timezoneSelect(s.timezone) +
+          formatSelect('date_format', t('settings.date_format'), s.date_format || 'd.m.Y', ['d.m.Y', 'Y-m-d', 'd/m/Y']) +
+          formatSelect('time_format', t('settings.time_format'), s.time_format || 'H:i', ['H:i', 'H:i:s', 'h:i A'])) +
+        settingsSection('settings.section.display', field('items_per_page', t('settings.items_per_page'), 'number', s.items_per_page)) +
+        settingsSection('settings.section.security',
+          field('min_password_length', t('settings.min_password_length'), 'number', s.min_password_length) +
+          field('remember_days', t('settings.remember_days'), 'number', s.remember_days)) +
+        settingsSection('settings.section.audit', field('audit_retention_days', t('settings.audit_retention_days'), 'number', s.audit_retention_days)) +
+        settingsSection('settings.section.sms', '<p class="hint wide">' + esc(t('settings.sms_hint')) + '</p>' +
+          field('twilio_sid', t('settings.twilio_sid'), 'text', s.twilio_sid || '') +
+          field('twilio_token', t('settings.twilio_token'), 'password', s.twilio_token || '') +
+          field('twilio_from', t('settings.twilio_from'), 'text', s.twilio_from || '')) +
+        (can('settings.manage') ? '<div class="wide action-bar-form"><button class="btn" type="submit">' + esc(t('common.save')) + '</button></div>' : '') +
+        '</form></div>' : '';
+      var system = needSettings ? '<div id="system-panel" class="settings-stack" hidden>' +
+        '<div class="card settings-card"><h2>' + esc(t('settings.section.system')) + '</h2>' +
+        '<div class="settings-kv"><span>' + esc(t('settings.version')) + '</span><strong>' + esc(A.version || '') + '</strong></div>' +
+        '<div class="settings-kv"><span>' + esc(t('settings.db_version')) + '</span><strong>' + esc(A.db_version || '') + '</strong></div>' +
+        '<div class="settings-kv"><span>' + esc(t('settings.branches')) + '</span><strong>' + esc((A.branches || []).map(function (b) { return branchLabel(b); }).join(', ')) + '</strong></div>' +
+        '<div class="settings-kv"><span>' + esc(t('settings.sms')) + '</span><strong>' + esc(s.sms_ready ? t('settings.sms_ready') : t('settings.sms_missing')) + '</strong></div>' +
+        '<div class="settings-kv"><span>' + esc(t('about.developer')) + '</span><strong>' + esc(A.developer_name || 'Ahmad Al Khalaf') + '</strong></div>' +
+        '<p class="sys-update-msg" id="system-update-status" hidden></p>' +
+        '<div class="action-bar-form"><button type="button" class="btn btn-sec" id="settings-update-check">' + esc(t('update.check')) + '</button></div>' +
+        '</div></div>' : '';
       var roles = '';
       if (p) {
         roles = '<form id="perm-form" class="card" method="post" action="#" novalidate hidden><div class="table-scroll"><table class="data perm-table"><thead><tr><th></th>' +
@@ -1267,17 +1282,27 @@
             }).join('') + '</tr>';
           }).join('') + '</tbody></table></div><div style="padding:12px"><button class="btn" type="submit">' + esc(t('common.save')) + '</button></div></form>';
       }
-      root.innerHTML = '<div class="page-head"><h1>' + esc(t('settings.title')) + '</h1></div>' + tabs + '<div id="tab-general">' + general + '</div><div id="tab-roles">' + roles + '</div>';
+      root.innerHTML = '<div class="page-head"><div><h1>' + esc(t('settings.title')) + '</h1><p class="help-lead">' + esc(t('settings.lead')) + '</p></div></div>' + tabs + general + system + '<div id="tab-roles">' + roles + '</div>';
       document.querySelectorAll('.settings-nav button').forEach(function (btn) {
         btn.onclick = function () {
           document.querySelectorAll('.settings-nav button').forEach(function (b) { b.classList.remove('active'); });
           btn.classList.add('active');
-          var generalEl = document.getElementById('settings-form');
+          var tab = btn.getAttribute('data-tab');
+          var generalEl = document.getElementById('general-panel');
+          var systemEl = document.getElementById('system-panel');
           var permEl = document.getElementById('perm-form');
-          if (generalEl) generalEl.hidden = btn.getAttribute('data-tab') !== 'general';
-          if (permEl) permEl.hidden = btn.getAttribute('data-tab') !== 'roles';
+          if (generalEl) generalEl.hidden = tab !== 'general';
+          if (systemEl) systemEl.hidden = tab !== 'system';
+          if (permEl) permEl.hidden = tab !== 'roles';
         };
       });
+      var settingsUpdate = document.getElementById('settings-update-check');
+      if (settingsUpdate) {
+        settingsUpdate.onclick = function () {
+          var sidebarBtn = document.getElementById('update-check');
+          if (sidebarBtn) sidebarBtn.click();
+        };
+      }
       var sf = document.getElementById('settings-form');
       if (sf && can('settings.manage')) {
         bindAjaxForm(sf, function () {
@@ -1358,34 +1383,156 @@
     renderScanners({});
   }
 
-  function helpBlock(titleKey, bodyKey) {
-    return '<section class="help-block"><h2>' + esc(t(titleKey)) + '</h2><p>' + esc(t(bodyKey)) + '</p></section>';
+  function formatSelect(name, label, current, options) {
+    var value = current || options[0];
+    if (options.indexOf(value) === -1) {
+      options = [value].concat(options);
+    }
+    return '<div class="field"><label>' + esc(label) + '</label><select name="' + esc(name) + '">' +
+      options.map(function (opt) {
+        return '<option value="' + esc(opt) + '"' + (value === opt ? ' selected' : '') + '>' + esc(opt) + '</option>';
+      }).join('') + '</select></div>';
+  }
+  function timezoneSelect(selected) {
+    var zones = ['Europe/Vienna', 'Europe/Berlin', 'Europe/Istanbul', 'UTC'];
+    var current = selected || 'Europe/Vienna';
+    if (zones.indexOf(current) === -1) {
+      zones = [current].concat(zones);
+    }
+    return '<div class="field"><label>' + esc(t('settings.timezone')) + '</label><select name="timezone">' +
+      zones.map(function (z) {
+        return '<option value="' + esc(z) + '"' + (current === z ? ' selected' : '') + '>' + esc(z) + '</option>';
+      }).join('') + '</select></div>';
+  }
+  function settingsSection(titleKey, inner) {
+    return '<div class="card settings-card"><h2>' + esc(t(titleKey)) + '</h2><div class="form-grid">' + inner + '</div></div>';
+  }
+  function showUpdateResult(data) {
+    var box = document.getElementById('update-status');
+    var sys = document.getElementById('system-update-status');
+    var text = '';
+    var cls = 'sys-update-msg';
+    if (!data) {
+      text = t('update.failed');
+      cls += ' is-err';
+    } else if (data.available) {
+      text = t('update.available', { version: data.latest || '' });
+      cls += ' is-warn';
+    } else {
+      text = t('update.none');
+      cls += ' is-ok';
+    }
+    [box, sys].forEach(function (el) {
+      if (!el) return;
+      el.hidden = false;
+      el.className = cls;
+      el.textContent = text;
+    });
+    var ver = document.getElementById('app-version');
+    if (ver && data && data.current) ver.textContent = data.current;
+  }
+  function bindUpdateCheck() {
+    var btn = document.getElementById('update-check');
+    if (!btn || btn.getAttribute('data-bound') === '1') return;
+    btn.setAttribute('data-bound', '1');
+    btn.setAttribute('aria-label', t('update.check'));
+    btn.title = t('update.check');
+    btn.onclick = function () {
+      var status = document.getElementById('update-status');
+      btn.setAttribute('aria-busy', 'true');
+      if (status) {
+        status.hidden = false;
+        status.className = 'sys-update-msg';
+        status.textContent = t('update.checking');
+      }
+      api('updates/check', { method: 'POST', body: {} }).then(function (data) {
+        btn.removeAttribute('aria-busy');
+        showUpdateResult(data);
+      }).catch(function () {
+        btn.removeAttribute('aria-busy');
+        showUpdateResult(null);
+      });
+    };
+  }
+
+  function helpBlock(titleKey, bodyKey, iconName) {
+    return '<article class="help-topic" data-help="' + esc(t(titleKey) + ' ' + t(bodyKey)) + '">' +
+      '<div class="help-topic-head">' + icon(iconName || 'help') + '<h2>' + esc(t(titleKey)) + '</h2></div>' +
+      '<p>' + esc(t(bodyKey)) + '</p></article>';
+  }
+  function helpCard(href, iconName, titleKey, bodyKey) {
+    var tag = href ? 'a' : 'div';
+    var extra = href ? ' href="' + esc(href) + '" data-go="' + esc(href) + '"' : '';
+    return '<' + tag + ' class="help-card" data-help="' + esc(t(titleKey) + ' ' + t(bodyKey)) + '"' + extra + '>' +
+      '<div class="help-card-head">' + icon(iconName) + '<strong>' + esc(t(titleKey)) + '</strong></div>' +
+      '<p>' + esc(t(bodyKey)) + '</p></' + tag + '>';
+  }
+  function helpFaq(qKey, aKey) {
+    return '<details data-help="' + esc(t(qKey) + ' ' + t(aKey)) + '"><summary>' + esc(t(qKey)) + '</summary><p>' + esc(t(aKey)) + '</p></details>';
   }
   function renderHelp() {
-    var aboutUrl = A.developer_url || 'https://paxdesign.at/';
-    root.innerHTML = '<div class="page-head"><h1>' + esc(t('help.title')) + '</h1></div>' +
-      '<div class="card">' +
-      helpBlock('help.using', 'help.using_body') +
-      helpBlock('help.scanners', 'help.scanners_body') +
-      helpBlock('help.handover', 'help.handover_body') +
-      helpBlock('help.qr', 'help.qr_body') +
-      helpBlock('help.drivers', 'help.drivers_body') +
-      helpBlock('help.permissions', 'help.permissions_body') +
-      helpBlock('help.reports', 'help.reports_body') +
-      '<section class="help-block"><h2>' + esc(t('help.faq')) + '</h2><dl class="help-faq">' +
-        '<dt>' + esc(t('help.faq_q1')) + '</dt><dd>' + esc(t('help.faq_a1')) + '</dd>' +
-        '<dt>' + esc(t('help.faq_q2')) + '</dt><dd>' + esc(t('help.faq_a2')) + '</dd>' +
-      '</dl></section>' +
-      helpBlock('help.support', 'help.support_body') +
-      '<section class="help-block about-block"><h2>' + esc(t('about.title')) + '</h2>' +
-        '<div class="kv">' +
-          kv(t('about.developer'), A.developer_name || 'Ahmad Al Khalaf') +
-          kv(t('about.role'), A.developer_role || 'IT / Software Development') +
-          '<div class="k">' + esc(t('about.website')) + '</div><div><a href="' + esc(aboutUrl) + '" target="_blank" rel="noopener noreferrer">paxdesign.at</a></div>' +
-        '</div>' +
-        '<p class="hint">' + esc(t('about.note')) + '</p>' +
+    var team = A.team || {};
+    var aboutUrl = team.developer_url || A.developer_url || 'https://paxdesign.at/';
+    var ceoName = team.ceo_name || 'Burak Ünver';
+    var ceoPhoto = team.ceo_photo
+      ? '<img class="team-photo" src="' + esc(team.ceo_photo) + '" alt="' + esc(ceoName) + '">'
+      : '<div class="team-photo team-photo--initials" aria-hidden="true">BU</div>';
+    var supportPhoto = team.support_photo
+      ? '<img class="team-photo team-photo--logo" src="' + esc(team.support_photo) + '" alt="">'
+      : '<div class="team-photo team-photo--initials" aria-hidden="true">AE</div>';
+    var quick = [];
+    if (can('dashboard.view')) quick.push(helpCard('/dashboard', 'dashboard', 'nav.dashboard', 'help.using_body'));
+    if (can('scanners.view')) quick.push(helpCard('/scanners', 'scanners', 'help.quick.scanners', 'help.quick.scanners_body'));
+    quick.push(helpCard('', 'help', 'help.quick.qr', 'help.quick.qr_body'));
+    if (can('drivers.view')) quick.push(helpCard('/drivers', 'drivers', 'help.quick.drivers', 'help.quick.drivers_body'));
+    if (can('reports.export')) quick.push(helpCard('/reports', 'reports', 'help.reports', 'help.reports_body'));
+    if (can('settings.view') || can('roles.manage')) quick.push(helpCard('/settings', 'settings', 'help.quick.settings', 'help.quick.settings_body'));
+    root.innerHTML =
+      '<div class="help-center">' +
+      '<div class="page-head"><div><h1>' + esc(t('help.title')) + '</h1><p class="help-lead">' + esc(t('help.lead')) + '</p></div></div>' +
+      '<div class="help-search-wrap"><input id="help-q" type="search" placeholder="' + esc(t('help.search')) + '" aria-label="' + esc(t('help.search')) + '"></div>' +
+      (quick.length ? '<p class="help-section-title">' + esc(t('help.quick_title')) + '</p><div class="help-quick">' + quick.join('') + '</div>' : '') +
+      '<p class="help-section-title">' + esc(t('help.topics')) + '</p>' +
+      '<div class="help-topics" id="help-topics">' +
+        helpBlock('help.using', 'help.using_body', 'dashboard') +
+        helpBlock('help.scanners', 'help.scanners_body', 'scanners') +
+        helpBlock('help.handover', 'help.handover_body', 'scanners') +
+        helpBlock('help.qr', 'help.qr_body', 'help') +
+        helpBlock('help.drivers', 'help.drivers_body', 'drivers') +
+        helpBlock('help.permissions', 'help.permissions_body', 'users') +
+        helpBlock('help.reports', 'help.reports_body', 'reports') +
+      '</div>' +
+      '<section class="card help-faq-card"><h2>' + esc(t('help.faq')) + '</h2>' +
+        helpFaq('help.faq_q1', 'help.faq_a1') +
+        helpFaq('help.faq_q2', 'help.faq_a2') +
+        helpFaq('help.faq_q3', 'help.faq_a3') +
+        helpFaq('help.faq_q4', 'help.faq_a4') +
       '</section>' +
-      '</div>';
+      '<section class="card help-team"><h2>' + esc(t('help.team')) + '</h2><p class="help-lead">' + esc(t('help.team_lead')) + '</p>' +
+        '<div class="team-list">' +
+          '<article class="team-card">' + ceoPhoto + '<div class="team-meta"><strong>' + esc(ceoName) + '</strong><span>' + esc(t('help.role.ceo')) + '</span></div></article>' +
+          '<article class="team-card team-card--dev"><div class="team-photo team-photo--initials" aria-hidden="true">AA</div><div class="team-meta"><strong>' + esc(team.developer_name || A.developer_name || 'Ahmad Al Khalaf') + '</strong><span>' + esc(t('help.role.dev')) + '</span><a href="' + esc(aboutUrl) + '" target="_blank" rel="noopener noreferrer">paxdesign.at</a></div></article>' +
+          '<article class="team-card">' + supportPhoto + '<div class="team-meta"><strong>' + esc(team.support_name || 'Albatros Express') + '</strong><span>' + esc(t('help.role.support')) + '</span><a href="' + esc(team.support_url || A.official_url || 'https://www.albatros-express.at/') + '" target="_blank" rel="noopener noreferrer">' + esc(t('help.support_site')) + '</a></div></article>' +
+        '</div></section>' +
+      '<section class="card help-about"><h2>' + esc(t('about.title')) + '</h2>' +
+        '<div class="settings-kv"><span>' + esc(t('settings.version')) + '</span><strong>' + esc(A.version || '') + '</strong></div>' +
+        '<div class="settings-kv"><span>' + esc(t('about.developer')) + '</span><strong>' + esc(A.developer_name || 'Ahmad Al Khalaf') + '</strong></div>' +
+        '<div class="settings-kv"><span>' + esc(t('about.role')) + '</span><strong>' + esc(A.developer_role || '') + '</strong></div>' +
+        '<div class="settings-kv"><span>' + esc(t('about.website')) + '</span><a href="' + esc(aboutUrl) + '" target="_blank" rel="noopener noreferrer">paxdesign.at</a></div>' +
+        '<p class="hint">' + esc(t('about.note')) + '</p>' +
+        '<p class="help-lead">' + esc(t('help.support_body')) + '</p>' +
+        '<a class="btn btn-sec" href="' + esc(A.official_url || 'https://www.albatros-express.at/') + '" target="_blank" rel="noopener noreferrer">' + esc(t('help.support')) + '</a>' +
+      '</section></div>';
+    var q = document.getElementById('help-q');
+    if (q) {
+      q.oninput = function () {
+        var needle = q.value.toLowerCase();
+        root.querySelectorAll('[data-help]').forEach(function (el) {
+          var hay = (el.getAttribute('data-help') || '').toLowerCase();
+          el.hidden = needle !== '' && hay.indexOf(needle) === -1;
+        });
+      };
+    }
   }
 
   document.addEventListener('submit', function (e) {

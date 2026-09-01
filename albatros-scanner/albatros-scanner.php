@@ -2,7 +2,7 @@
 /**
  * Plugin Name: Albatros Scanner Management
  * Description: Internal scanner, driver, and handover management system for albatros-scanner.shop.
- * Version: 1.6.27
+ * Version: 1.6.28
  * Author: Ahmad Al Khalaf
  * License: GPL v2 or later
  * Text Domain: albatros-scanner
@@ -16,7 +16,7 @@ if (defined('ALB_SCANNER_VERSION')) {
     return;
 }
 
-define('ALB_SCANNER_VERSION', '1.6.27');
+define('ALB_SCANNER_VERSION', '1.6.28');
 define('ALB_SCANNER_DB_VERSION', '1.6.0');
 define('ALB_SCANNER_PLUGIN_FILE', __FILE__);
 define('ALB_SCANNER_PLUGIN_DIR', plugin_dir_path(__FILE__));
@@ -25,7 +25,10 @@ define('ALB_SCANNER_OFFICIAL_URL', 'https://www.albatros-express.at/');
 define('ALB_SCANNER_DEVELOPER_NAME', 'Ahmad Al Khalaf');
 define('ALB_SCANNER_DEVELOPER_ROLE', 'IT / Software Development');
 define('ALB_SCANNER_DEVELOPER_URL', 'https://paxdesign.at/');
+define('ALB_SCANNER_CEO_NAME', 'Burak Ünver');
+define('ALB_SCANNER_CEO_PHOTO', 'assets/img/team-ceo.jpeg');
 define('ALB_SCANNER_LOGO_FILE', 'assets/img/albatros-logo.jpeg');
+define('ALB_SCANNER_UPDATE_FEED', 'https://raw.githubusercontent.com/Black10998/paxdesign-live-chat-/cursor/albatros-scanner-management-9128/albatros-scanner/albatros-scanner.php');
 
 require_once ALB_SCANNER_PLUGIN_DIR . 'includes/class-i18n.php';
 require_once ALB_SCANNER_PLUGIN_DIR . 'includes/class-branches.php';
@@ -33,6 +36,7 @@ require_once ALB_SCANNER_PLUGIN_DIR . 'includes/class-capabilities.php';
 require_once ALB_SCANNER_PLUGIN_DIR . 'includes/class-audit.php';
 require_once ALB_SCANNER_PLUGIN_DIR . 'includes/class-install.php';
 require_once ALB_SCANNER_PLUGIN_DIR . 'includes/class-settings.php';
+require_once ALB_SCANNER_PLUGIN_DIR . 'includes/class-updates.php';
 require_once ALB_SCANNER_PLUGIN_DIR . 'includes/class-auth.php';
 require_once ALB_SCANNER_PLUGIN_DIR . 'includes/class-scanners.php';
 require_once ALB_SCANNER_PLUGIN_DIR . 'includes/class-scan.php';

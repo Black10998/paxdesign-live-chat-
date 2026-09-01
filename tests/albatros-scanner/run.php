@@ -178,7 +178,8 @@ alb_ok(strpos($js, 'login.error') === false || strpos($js, 'api(') !== false, 'a
 alb_ok(strpos($app_tpl, 'help-btn') !== false && strpos($app_tpl, 'page-context') !== false, 'header has page context, search, and help');
 alb_ok(strpos($js, "items.push(['/help', 'nav.help', 'help'])") !== false, 'help is in the main navigation');
 alb_ok(strpos($js, 'function icon(') !== false && strpos($js, 'nav-icon') !== false, 'navigation uses consistent SVG icons');
-alb_ok(strpos($js, 'renderHelp') !== false && strpos($js, 'about.title') !== false, 'help page includes about and system information');
+alb_ok(strpos($js, 'renderHelp') !== false && strpos($js, 'help-center') !== false && strpos($js, 'about.title') !== false, 'help page is a help center with system information');
+alb_ok(strpos($js, 'team-card--dev') !== false && strpos($js, 'help.role.ceo') !== false, 'help page has vertical team cards including a darker developer card');
 alb_ok(strpos($js, 'stroke="currentColor"') !== false && strpos($js, 'stroke-width="1.75"') !== false, 'icons are stroke SVGs without decorative fills');
 alb_ok(strpos($frontend, "home_url('/scanners')") !== false && strpos($js, "replaceState({}, '', '/scanners')") !== false, 'login and app root open the scanner page');
 alb_ok(strpos($js, "items.push(['/dashboard', 'nav.dashboard', 'dashboard'])") !== false, 'overview stays available at /dashboard');
@@ -276,7 +277,14 @@ alb_ok(strpos($js, 'return renderScannerDetail(id, saved)') !== false, 'scanner 
 alb_ok(strpos($js, 'data-act="activate"') !== false && strpos($js, "activate: 'active'") !== false, 'reactivate uses the status endpoint instead of soft-delete restore');
 alb_ok(strpos($rest, 'function with_scanner_detail') !== false && strpos($rest, 'function respond_scanner') !== false, 'scanner mutations return history so the UI can paint without a stale GET');
 alb_ok(strpos($rest, 'function with_driver_detail') !== false && strpos($rest, 'function respond_driver') !== false, 'driver mutations return assigned scanners and history');
-alb_ok(strpos($boot, "ALB_SCANNER_VERSION', '1.6.27'") !== false, 'plugin version is 1.6.27');
+alb_ok(strpos($boot, "ALB_SCANNER_VERSION', '1.6.28'") !== false, 'plugin version is 1.6.28');
+alb_ok(is_file($plugin . '/includes/class-updates.php'), 'update checker exists');
+alb_ok(is_file($plugin . '/assets/img/team-ceo.jpeg'), 'CEO portrait is bundled');
+alb_ok(strpos($app_tpl, 'id="update-check"') !== false && strpos($js, 'updates/check') !== false, 'sidebar can check for plugin updates');
+alb_ok(strpos($js, 'time_format') !== false && strpos($js, 'settings.section.system') !== false, 'settings include time format and a system tab');
+alb_ok(($de['update.none'] ?? '') === 'Keine Updates verfügbar', 'german no-update message exists');
+alb_ok(($de['help.title'] ?? '') === 'Hilfe-Center', 'german help center title exists');
+alb_ok(($de['settings.lead'] ?? '') !== ($en['settings.lead'] ?? ''), 'settings lead is translated');
 alb_ok(strpos($scan_tpl, 'Alb_Frontend::asset_url') !== false, 'public QR page cache-busts the shared app stylesheet');
 alb_ok(strpos($scanners, 'function apply_holder') !== false && strpos($scanners, 'function request_has_holder') !== false, 'scanner Speichern can create, replace, or remove the assigned employee');
 alb_ok(strpos($js, 'body.assign_notes') !== false && strpos($js, 'employeePayload(new FormData(form))') !== false, 'scanner Speichern sends employee name, phone, branch, and notes');

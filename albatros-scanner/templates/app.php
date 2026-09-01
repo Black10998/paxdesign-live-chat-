@@ -19,8 +19,20 @@ if (!defined('ABSPATH')) {
             </div>
             <nav class="nav" id="app-nav" aria-label=""></nav>
             <div class="sidebar-foot">
-                <span><?php echo esc_html($config['i18n']['official.website']); ?></span>
-                <a href="<?php echo esc_url($config['official_url']); ?>" target="_blank" rel="noopener noreferrer">www.albatros-express.at</a>
+                <div class="sys-version">
+                    <span class="sys-version-text"><?php echo esc_html($config['i18n']['settings.version'] ?? 'Version'); ?> <strong id="app-version"><?php echo esc_html($config['version'] ?? ALB_SCANNER_VERSION); ?></strong></span>
+                    <button type="button" class="sys-update" id="update-check" title="<?php echo esc_attr($config['i18n']['update.check'] ?? ''); ?>" aria-label="<?php echo esc_attr($config['i18n']['update.check'] ?? ''); ?>">
+                        <svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="square" stroke-linejoin="miter" aria-hidden="true">
+                            <path d="M20 12a8 8 0 1 1-2.2-5.5"></path>
+                            <path d="M20 4v6h-6"></path>
+                        </svg>
+                    </button>
+                </div>
+                <p class="sys-update-msg" id="update-status" hidden></p>
+                <div class="official-block">
+                    <span><?php echo esc_html($config['i18n']['official.website']); ?></span>
+                    <a href="<?php echo esc_url($config['official_url']); ?>" target="_blank" rel="noopener noreferrer">www.albatros-express.at</a>
+                </div>
             </div>
         </aside>
         <section class="main">

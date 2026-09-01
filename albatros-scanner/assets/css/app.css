@@ -160,6 +160,37 @@ input:focus, select:focus, textarea:focus { outline: 1px solid var(--focus); bor
 }
 .sidebar-foot span { display: block; }
 .sidebar-foot a { color: #8aa4b8; }
+.sys-version {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  margin: 0 0 8px;
+}
+.sys-version-text { color: #c5ced6; }
+.sys-version-text strong { color: #fff; font-weight: 600; }
+.sys-update {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 24px;
+  height: 24px;
+  padding: 0;
+  border: 1px solid #3a4654;
+  background: #2a3440;
+  color: #d5dde4;
+}
+.sys-update:hover, .sys-update:focus { color: #fff; border-color: #8aa4b8; }
+.sys-update[aria-busy="true"] { opacity: 0.55; }
+.sys-update-msg {
+  margin: 0 0 8px;
+  color: #d5dde4;
+  font-size: 11px;
+}
+.sys-update-msg.is-ok { color: #9ec5a8; }
+.sys-update-msg.is-warn { color: #e0cc9a; }
+.sys-update-msg.is-err { color: #d7b4b4; }
+.official-block { margin-top: 4px; }
 .nav a, .nav button.nav-link {
   display: flex;
   align-items: center;
@@ -240,18 +271,157 @@ input:focus, select:focus, textarea:focus { outline: 1px solid var(--focus); bor
   clip: rect(0, 0, 0, 0);
   border: 0;
 }
-.help-block {
-  padding: 14px 16px;
-  border-bottom: 1px solid var(--line);
+.help-center { max-width: 880px; }
+.help-lead {
+  margin: 4px 0 0;
+  color: var(--muted);
+  font-size: 13px;
 }
-.help-block:last-child { border-bottom: 0; }
-.help-block h2 { padding: 0; border: 0; background: none; margin: 0 0 8px; }
-.help-block p, .help-block li { margin: 0 0 8px; color: var(--text); }
-.help-block ul { margin: 0; padding: 0 0 0 18px; }
-.help-faq dt { font-weight: 600; margin: 10px 0 4px; }
-.help-faq dd { margin: 0 0 8px; color: var(--muted); }
-.about-block { color: var(--muted); }
-.about-block a { color: var(--accent); }
+.help-search-wrap { margin: 0 0 18px; }
+.help-search-wrap input {
+  width: 100%;
+  max-width: 520px;
+  height: 36px;
+  padding: 0 12px;
+}
+.help-quick, .help-topics {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 10px;
+  margin: 0 0 20px;
+}
+.help-card, .help-topic {
+  display: block;
+  padding: 14px;
+  border: 1px solid var(--line);
+  background: var(--panel);
+  color: inherit;
+  text-align: left;
+}
+.help-card:hover, .help-topic:hover { border-color: var(--line-strong); }
+a.help-card, button.help-card { width: 100%; cursor: pointer; }
+.help-card strong, .help-topic h2 {
+  display: block;
+  margin: 0;
+  padding: 0;
+  border: 0;
+  background: none;
+  font-size: 14px;
+}
+.help-card p, .help-topic p {
+  margin: 0;
+  color: var(--muted);
+  font-size: 12px;
+}
+.help-card-head, .help-topic-head {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-bottom: 6px;
+}
+.help-card-head .nav-icon,
+.help-topic-head .nav-icon { color: var(--accent); }
+.help-section-title {
+  margin: 0 0 8px;
+  font-size: 12px;
+  color: var(--muted);
+  font-weight: 700;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+}
+.help-faq-card { padding: 4px 0; margin-bottom: 16px; }
+.help-faq-card h2,
+.help-team h2,
+.help-about h2 {
+  padding: 12px 16px 8px;
+  border: 0;
+  background: none;
+}
+.help-faq-card details {
+  padding: 10px 16px;
+  border-top: 1px solid var(--line);
+}
+.help-faq-card summary {
+  cursor: pointer;
+  font-weight: 600;
+}
+.help-faq-card details p {
+  margin: 8px 0 0;
+  color: var(--muted);
+}
+.help-team, .help-about { padding: 4px 16px 16px; margin-bottom: 16px; }
+.help-team .help-lead,
+.help-about .help-lead { margin: 0 16px 0 0; }
+.help-about .btn { margin-top: 12px; }
+.team-list {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  margin-top: 12px;
+}
+.team-card {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  padding: 12px;
+  border: 1px solid var(--line);
+  background: #f7f8fa;
+}
+.team-card--dev {
+  background: #151b22;
+  border-color: #2c3642;
+  color: #e8eef3;
+}
+.team-card--dev .team-meta span,
+.team-card--dev .team-meta a { color: #9eb0bf; }
+.team-card--dev .team-meta a:hover { color: #fff; }
+.team-photo {
+  width: 64px;
+  height: 64px;
+  border-radius: 50%;
+  object-fit: cover;
+  object-position: center 18%;
+  border: 1px solid var(--line);
+  flex: 0 0 64px;
+  background: #e8edf2;
+}
+.team-photo--logo { object-fit: contain; background: #fff; padding: 8px; }
+.team-photo--initials {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: #0d1116;
+  color: #d5dde4;
+  font-weight: 700;
+  letter-spacing: 0.04em;
+  border-color: #3a4654;
+}
+.team-meta strong { display: block; font-size: 14px; }
+.team-meta span, .team-meta a { display: block; font-size: 12px; color: var(--muted); }
+.settings-stack { display: flex; flex-direction: column; gap: 12px; }
+.settings-card { padding: 14px 16px 8px; }
+.settings-card h2 {
+  padding: 0 0 8px;
+  margin: 0 0 8px;
+  border-bottom: 1px solid var(--line);
+  background: none;
+}
+.settings-status {
+  margin: 0 0 10px;
+  color: var(--muted);
+}
+.settings-status strong { color: var(--text); }
+.settings-kv {
+  display: flex;
+  justify-content: space-between;
+  gap: 16px;
+  padding: 10px 0;
+  border-bottom: 1px solid var(--line);
+  font-size: 13px;
+}
+.settings-kv:last-of-type { border-bottom: 0; }
+.settings-kv span { color: var(--muted); }
+.settings-kv strong, .settings-kv a { font-weight: 700; }
 
 .content {
   padding: 16px;
@@ -899,7 +1069,15 @@ table.data tbody tr.click { cursor: pointer; }
     border-left-color: transparent;
     border-bottom-color: #8aa4b8;
   }
-  .sidebar-foot { display: none; }
+  .sidebar-foot {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 8px 12px;
+    padding: 8px 12px 10px;
+  }
+  .sidebar-foot .official-block { display: none; }
+  .sys-version { margin: 0; width: 100%; max-width: 280px; }
   .perm-user { grid-template-columns: 1fr; }
   .settings-nav { flex-wrap: wrap; }
 }
@@ -924,4 +1102,7 @@ table.data tbody tr.click { cursor: pointer; }
   .toolbar { align-items: stretch; }
   .toolbar .btn { flex: 0 0 auto; }
   .page-head { align-items: flex-start; }
+  .help-quick, .help-topics { grid-template-columns: 1fr; }
+  .team-photo { width: 56px; height: 56px; flex-basis: 56px; }
+  .help-search-wrap input { max-width: none; }
 }
