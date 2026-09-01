@@ -276,7 +276,8 @@ alb_ok(strpos($js, 'return renderScannerDetail(id, saved)') !== false, 'scanner 
 alb_ok(strpos($js, 'data-act="activate"') !== false && strpos($js, "activate: 'active'") !== false, 'reactivate uses the status endpoint instead of soft-delete restore');
 alb_ok(strpos($rest, 'function with_scanner_detail') !== false && strpos($rest, 'function respond_scanner') !== false, 'scanner mutations return history so the UI can paint without a stale GET');
 alb_ok(strpos($rest, 'function with_driver_detail') !== false && strpos($rest, 'function respond_driver') !== false, 'driver mutations return assigned scanners and history');
-alb_ok(strpos($boot, "ALB_SCANNER_VERSION', '1.6.26'") !== false, 'plugin version is 1.6.26');
+alb_ok(strpos($boot, "ALB_SCANNER_VERSION', '1.6.27'") !== false, 'plugin version is 1.6.27');
+alb_ok(strpos($scan_tpl, 'Alb_Frontend::asset_url') !== false, 'public QR page cache-busts the shared app stylesheet');
 alb_ok(strpos($scanners, 'function apply_holder') !== false && strpos($scanners, 'function request_has_holder') !== false, 'scanner Speichern can create, replace, or remove the assigned employee');
 alb_ok(strpos($js, 'body.assign_notes') !== false && strpos($js, 'employeePayload(new FormData(form))') !== false, 'scanner Speichern sends employee name, phone, branch, and notes');
 alb_ok(strpos($js, 'field(\'brand\'') !== false && strpos($js, '!canDevice') !== false, 'device identity fields are read-only without identity permission');
