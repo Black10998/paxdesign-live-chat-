@@ -155,7 +155,8 @@ input:focus, select:focus, textarea:focus { outline: 1px solid var(--focus); bor
 }
 .brand strong { display: block; color: #fff; font-size: 14px; }
 .brand span { font-size: 11px; color: #93a0ad; }
-.nav { padding: 8px 0; flex: 1; overflow-y: auto; }
+.nav { padding: 8px 0; overflow-y: auto; }
+.sidebar-spacer { flex: 1; min-height: 8px; }
 .sidebar-foot {
   padding: 12px 16px 16px;
   border-top: 1px solid var(--sidebar-line);
@@ -360,8 +361,7 @@ a.help-card, button.help-card { width: 100%; cursor: pointer; }
   display: flex;
   flex-direction: column;
   gap: 6px;
-  padding: 8px 12px 10px;
-  border-top: 1px solid var(--sidebar-line);
+  padding: 4px 12px 10px;
 }
 .nav-person {
   display: flex;
@@ -1077,6 +1077,7 @@ table.data tbody tr.click { cursor: pointer; }
     height: auto;
     max-height: none;
   }
+  .sidebar-spacer { display: none; }
   .brand { display: none; }
   .nav {
     display: flex;

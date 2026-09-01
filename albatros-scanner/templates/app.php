@@ -49,6 +49,7 @@ if (!defined('ABSPATH')) {
                     </span>
                 </div>
             </div>
+            <div class="sidebar-spacer" aria-hidden="true"></div>
             <div class="sidebar-foot">
                 <div class="sys-version">
                     <span class="sys-version-text"><?php echo esc_html($config['i18n']['settings.version'] ?? 'Version'); ?> <strong id="app-version"><?php echo esc_html($config['version'] ?? ALB_SCANNER_VERSION); ?></strong></span>

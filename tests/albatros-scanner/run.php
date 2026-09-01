@@ -183,6 +183,7 @@ alb_ok(strpos($js, 'function icon(') !== false && strpos($js, 'nav-icon') !== fa
 alb_ok(strpos($js, 'renderHelp') !== false && strpos($js, 'help-center') !== false && strpos($js, 'about.title') !== false, 'help page is a help center with system information');
 alb_ok(strpos($js, 'id="help-team"') === false && strpos($js, 'team-card--dev') === false, 'help page does not contain large team profile cards');
 alb_ok(strpos($app_tpl, 'id="nav-people"') !== false && strpos($app_tpl, 'nav-person--dev') !== false, 'sidebar shows compact people avatars under Hilfe');
+alb_ok(strpos($css, '.sidebar-spacer') !== false, 'sidebar keeps version at the bottom under the people avatars');
 alb_ok(strpos($app_tpl, 'data-people-role="ceo"') !== false && strpos($css, '.nav-people') !== false, 'sidebar people include Geschäftsführer, developer, and support');
 alb_ok(strpos($js, 'stroke="currentColor"') !== false && strpos($js, 'stroke-width="1.75"') !== false, 'icons are stroke SVGs without decorative fills');
 alb_ok(strpos($frontend, "home_url('/scanners')") !== false && strpos($js, "replaceState({}, '', '/scanners')") !== false, 'login and app root open the scanner page');
