@@ -18,6 +18,37 @@ if (!defined('ABSPATH')) {
                 <span>Scanner Management</span>
             </div>
             <nav class="nav" id="app-nav" aria-label=""></nav>
+            <div class="nav-people" id="nav-people">
+                <div class="nav-person">
+                    <?php if (!empty($config['team']['ceo_photo'])) : ?>
+                        <img class="nav-avatar" src="<?php echo esc_url($config['team']['ceo_photo']); ?>" alt="<?php echo esc_attr($config['team']['ceo_name'] ?? 'Burak Ünver'); ?>">
+                    <?php else : ?>
+                        <span class="nav-avatar nav-avatar--initials" aria-hidden="true">BU</span>
+                    <?php endif; ?>
+                    <span class="nav-person-text">
+                        <strong><?php echo esc_html($config['team']['ceo_name'] ?? 'Burak Ünver'); ?></strong>
+                        <span class="nav-person-role" data-people-role="ceo"><?php echo esc_html($config['i18n']['help.role.ceo'] ?? 'Geschäftsführer'); ?></span>
+                    </span>
+                </div>
+                <div class="nav-person nav-person--dev">
+                    <span class="nav-avatar nav-avatar--initials" aria-hidden="true">AA</span>
+                    <span class="nav-person-text">
+                        <strong><?php echo esc_html($config['team']['developer_name'] ?? 'Ahmad Al Khalaf'); ?></strong>
+                        <span class="nav-person-role" data-people-role="dev"><?php echo esc_html($config['i18n']['help.role.dev'] ?? 'Programmierer / Entwickler'); ?></span>
+                    </span>
+                </div>
+                <div class="nav-person">
+                    <?php if (!empty($config['team']['support_photo'])) : ?>
+                        <img class="nav-avatar nav-avatar--logo" src="<?php echo esc_url($config['team']['support_photo']); ?>" alt="">
+                    <?php else : ?>
+                        <span class="nav-avatar nav-avatar--initials" aria-hidden="true">AE</span>
+                    <?php endif; ?>
+                    <span class="nav-person-text">
+                        <strong><?php echo esc_html($config['team']['support_name'] ?? 'Albatros Express'); ?></strong>
+                        <span class="nav-person-role" data-people-role="support"><?php echo esc_html($config['i18n']['help.role.support'] ?? 'Technischer Support'); ?></span>
+                    </span>
+                </div>
+            </div>
             <div class="sidebar-foot">
                 <div class="sys-version">
                     <span class="sys-version-text"><?php echo esc_html($config['i18n']['settings.version'] ?? 'Version'); ?> <strong id="app-version"><?php echo esc_html($config['version'] ?? ALB_SCANNER_VERSION); ?></strong></span>

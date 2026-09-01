@@ -396,6 +396,14 @@
       return '<option value="' + loc + '"' + (A.locale === loc ? ' selected' : '') + '>' + esc(t('lang.' + loc)) + '</option>';
     }).join('');
     bindUpdateCheck();
+    bindSidebarPeople();
+  }
+  function bindSidebarPeople() {
+    var roles = { ceo: 'help.role.ceo', dev: 'help.role.dev', support: 'help.role.support' };
+    Object.keys(roles).forEach(function (key) {
+      var el = document.querySelector('[data-people-role="' + key + '"]');
+      if (el) el.textContent = t(roles[key]);
+    });
   }
 
   function dashView() {
@@ -1471,15 +1479,7 @@
     return '<details data-help="' + esc(t(qKey) + ' ' + t(aKey)) + '"><summary>' + esc(t(qKey)) + '</summary><p>' + esc(t(aKey)) + '</p></details>';
   }
   function renderHelp() {
-    var team = A.team || {};
-    var aboutUrl = team.developer_url || A.developer_url || 'https://paxdesign.at/';
-    var ceoName = team.ceo_name || 'Burak Ünver';
-    var ceoPhoto = team.ceo_photo
-      ? '<img class="team-photo" src="' + esc(team.ceo_photo) + '" alt="' + esc(ceoName) + '">'
-      : '<div class="team-photo team-photo--initials" aria-hidden="true">BU</div>';
-    var supportPhoto = team.support_photo
-      ? '<img class="team-photo team-photo--logo" src="' + esc(team.support_photo) + '" alt="">'
-      : '<div class="team-photo team-photo--initials" aria-hidden="true">AE</div>';
+    var aboutUrl = (A.team && A.team.developer_url) || A.developer_url || 'https://paxdesign.at/';
     var quick = [];
     if (can('dashboard.view')) quick.push(helpCard('/dashboard', 'dashboard', 'nav.dashboard', 'help.using_body'));
     if (can('scanners.view')) quick.push(helpCard('/scanners', 'scanners', 'help.quick.scanners', 'help.quick.scanners_body'));
@@ -1487,30 +1487,10 @@
     if (can('drivers.view')) quick.push(helpCard('/drivers', 'drivers', 'help.quick.drivers', 'help.quick.drivers_body'));
     if (can('reports.export')) quick.push(helpCard('/reports', 'reports', 'help.reports', 'help.reports_body'));
     if (can('settings.view') || can('roles.manage')) quick.push(helpCard('/settings', 'settings', 'help.quick.settings', 'help.quick.settings_body'));
-    var teamHtml =
-      '<section class="card help-team" id="help-team">' +
-        '<h2>' + esc(t('help.team')) + '</h2>' +
-        '<p class="help-lead">' + esc(t('help.team_lead')) + '</p>' +
-        '<div class="team-list">' +
-          '<article class="team-card">' +
-            ceoPhoto +
-            '<div class="team-meta"><strong>' + esc(ceoName) + '</strong><span>' + esc(t('help.role.ceo')) + '</span></div>' +
-          '</article>' +
-          '<article class="team-card team-card--dev">' +
-            '<div class="team-photo team-photo--initials" aria-hidden="true">AA</div>' +
-            '<div class="team-meta"><strong>' + esc(team.developer_name || A.developer_name || 'Ahmad Al Khalaf') + '</strong><span>' + esc(t('help.role.dev')) + '</span><a href="' + esc(aboutUrl) + '" target="_blank" rel="noopener noreferrer">paxdesign.at</a></div>' +
-          '</article>' +
-          '<article class="team-card">' +
-            supportPhoto +
-            '<div class="team-meta"><strong>' + esc(team.support_name || 'Albatros Express') + '</strong><span>' + esc(t('help.role.support')) + '</span><a href="' + esc(team.support_url || A.official_url || 'https://www.albatros-express.at/') + '" target="_blank" rel="noopener noreferrer">' + esc(t('help.support_site')) + '</a></div>' +
-          '</article>' +
-        '</div>' +
-      '</section>';
     root.innerHTML =
       '<div class="help-center">' +
       '<div class="page-head"><div><h1>' + esc(t('help.title')) + '</h1><p class="help-lead">' + esc(t('help.lead')) + '</p></div></div>' +
       '<div class="help-search-wrap"><input id="help-q" type="search" placeholder="' + esc(t('help.search')) + '" aria-label="' + esc(t('help.search')) + '"></div>' +
-      teamHtml +
       (quick.length ? '<p class="help-section-title">' + esc(t('help.quick_title')) + '</p><div class="help-quick">' + quick.join('') + '</div>' : '') +
       '<p class="help-section-title">' + esc(t('help.topics')) + '</p>' +
       '<div class="help-topics" id="help-topics">' +
