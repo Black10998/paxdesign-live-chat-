@@ -283,7 +283,7 @@ alb_ok(strpos($js, 'return renderScannerDetail(id, saved)') !== false, 'scanner 
 alb_ok(strpos($js, 'data-act="activate"') !== false && strpos($js, "activate: 'active'") !== false, 'reactivate uses the status endpoint instead of soft-delete restore');
 alb_ok(strpos($rest, 'function with_scanner_detail') !== false && strpos($rest, 'function respond_scanner') !== false, 'scanner mutations return history so the UI can paint without a stale GET');
 alb_ok(strpos($rest, 'function with_driver_detail') !== false && strpos($rest, 'function respond_driver') !== false, 'driver mutations return assigned scanners and history');
-alb_ok(strpos($boot, "ALB_SCANNER_VERSION', '1.6.32'") !== false, 'plugin version is 1.6.32');
+alb_ok(strpos($boot, "ALB_SCANNER_VERSION', '1.7.0'") !== false, 'plugin version is 1.7.0');
 alb_ok(is_file($plugin . '/includes/class-updates.php'), 'update checker exists');
 alb_ok(is_file($plugin . '/assets/img/team-ceo.jpeg'), 'CEO portrait is bundled');
 alb_ok(strpos($app_tpl, 'id="update-check"') !== false && strpos($js, 'updates/check') !== false, 'sidebar can check for plugin updates');
@@ -298,6 +298,69 @@ alb_ok(strpos($js, 'field(\'brand\'') !== false && strpos($js, '!canDevice') !==
 alb_ok(strpos($rest, 'function can_scanners_update') !== false && strpos($rest, 'can_scanners_update') !== false, 'scanner Speichern is allowed for assign and status roles');
 alb_ok(strpos($scanners, '$previous === $driver_id') !== false, 'saving the same employee does not insert a duplicate handover');
 alb_ok(($de['scanner.immutable'] ?? '') !== ($en['scanner.immutable'] ?? ''), 'protected device data hint is translated');
+
+// ---- Handy-Box + employee refusal status guards (v1.7.0) ----
+$phones_class = is_file($plugin . '/includes/class-phones.php') ? file_get_contents($plugin . '/includes/class-phones.php') : '';
+alb_ok(is_file($plugin . '/includes/class-phones.php'), 'Handy-Box phones class exists');
+alb_ok(strpos($boot, "class-phones.php") !== false, 'phones class is loaded by the plugin bootstrap');
+alb_ok(strpos($boot, "ALB_SCANNER_DB_VERSION', '1.7.0'") !== false, 'db version bumped to 1.7.0');
+
+// Database migrations
+alb_ok(strpos($install, "table('phones')") !== false, 'schema creates phones table');
+alb_ok(strpos($install, "table('phone_assignments')") !== false, 'schema creates phone assignment history table');
+alb_ok(strpos($install, 'imei varchar') !== false && strpos($install, "status varchar(20) NOT NULL DEFAULT 'available'") !== false, 'phones store model, serial, imei and status');
+alb_ok(strpos($install, 'phone_data_refused tinyint') !== false && strpos($install, 'photo_refused tinyint') !== false, 'drivers store explicit refusal flags');
+alb_ok(strpos($install, "LIKE 'phone_data_refused'") !== false && strpos($install, "SHOW TABLES LIKE %s', \$phones") !== false, 'schema_ready upgrades add refusal columns and phones table');
+
+// Employee refusal status logic (existing data preserved)
+alb_ok(strpos($drivers, 'function refusal_flag') !== false && strpos($drivers, 'function disclosure_status') !== false, 'driver refusal helpers exist');
+alb_ok(strpos($drivers, "'phone_status'") !== false && strpos($drivers, "'photo_status'") !== false, 'driver payload exposes provided/missing/refused statuses');
+preg_match('/function update\(.+?function digits/s', $drivers, $driver_update_fn);
+alb_ok(!empty($driver_update_fn[0]) && strpos($driver_update_fn[0], 'phone_data_refused') !== false && strpos($driver_update_fn[0], "unset(") === false && strpos($driver_update_fn[0], "'phone' => ''") === false, 'setting a refusal never clears stored phone/photo data');
+alb_ok(strpos($drivers, "'phone_data_refused',") !== false && strpos($drivers, "'photo_refused',") !== false, 'refusal columns are in the driver write allowlist');
+
+// Handy-Box backend
+alb_ok(strpos($phones_class, "const STATUSES = array('available', 'assigned', 'damaged', 'lost', 'retired')") !== false, 'phone statuses are available/assigned/damaged/lost/retired');
+alb_ok(strpos($phones_class, 'function assign(') !== false && strpos($phones_class, 'function return_phone(') !== false, 'phones can be assigned and returned');
+alb_ok(strpos($phones_class, "'status' => 'assigned'") !== false && strpos($phones_class, "'status' => 'available'") !== false, 'assign marks assigned and return marks available');
+alb_ok(strpos($phones_class, 'assignments_table') !== false && strpos($phones_class, "wpdb->insert(self::assignments_table()") !== false && strpos($phones_class, "'action' => 'return'") !== false, 'assignment history is preserved, not overwritten');
+alb_ok(strpos($phones_class, 'function counts(') !== false && strpos($phones_class, 'function box_items(') !== false, 'inventory counts and box (available only) helpers exist');
+alb_ok(strpos($phones_class, "status' => 'available'") !== false && strpos($phones_class, 'function box_items') !== false, 'only available phones populate the Handy-Box');
+alb_ok(strpos($phones_class, 'function assigned_to_driver') !== false, 'phones assigned to an employee can be listed for return');
+alb_ok(strpos($phones_class, 'private static function write_row') !== false && strpos($phones_class, '` = NULL') !== false, 'phone writes use NULL-safe row helper');
+alb_ok(strpos($phones_class, 'Alb_Audit::record') !== false, 'phone changes are audit logged');
+
+// Permissions + REST
+foreach (array('phones.view', 'phones.create', 'phones.edit', 'phones.assign', 'phones.delete') as $perm) {
+    alb_ok(strpos($caps, "'" . $perm . "'") !== false, 'permission exists: ' . $perm);
+}
+alb_ok(strpos($rest, "/phones'") !== false && strpos($rest, "/phones/(?P<id>\\d+)'") !== false, 'phones REST collection and item routes exist');
+alb_ok(strpos($rest, "/phones/(?P<id>\\d+)/assign'") !== false && strpos($rest, "/phones/(?P<id>\\d+)/return'") !== false, 'phone assign and return routes exist');
+alb_ok(strpos($rest, 'function can_phones_view') !== false && strpos($rest, 'function can_phones_assign') !== false, 'phone routes are permission gated');
+alb_ok(strpos($rest, 'assigned_phones') !== false, 'employee detail includes assigned phones for return');
+
+// Frontend
+alb_ok(strpos($js, "items.push(['/handybox', 'nav.handybox', 'handybox'])") !== false, 'Handy-Box is a sidebar page gated by phones.view');
+alb_ok(strpos($js, 'function renderHandybox') !== false && strpos($js, 'function renderPhoneDetail') !== false, 'Handy-Box list and phone detail views exist');
+alb_ok(strpos($js, 'function phoneBox') !== false && strpos($js, 'phone-box-toggle') !== false && strpos($js, 'is-open') !== false, 'Handy-Box shows an openable physical box');
+alb_ok(strpos($js, 'function inventoryBar') !== false && strpos($js, "handybox.available_summary") !== false, 'inventory overview with counts is shown at the top');
+alb_ok(strpos($js, "data-phone-act=\"return\"") !== false && strpos($js, 'phones/') !== false && strpos($js, "'/return'") !== false, 'phones can be returned from the UI');
+alb_ok(strpos($js, 'phone-assign') !== false && strpos($js, "'/assign'") !== false, 'phones can be assigned to an employee from the UI');
+alb_ok(strpos($js, 'checkboxField') !== false && strpos($js, 'phone_data_refused') !== false && strpos($js, 'photo_refused') !== false, 'employee form has independent refusal options');
+alb_ok(strpos($js, 'function disclosureBadge') !== false && strpos($js, "phone_status") !== false && strpos($js, "photo_status") !== false, 'employee detail shows provided/missing/refused statuses');
+
+// Styling within the project constraints (no gradients/shadows/animations)
+alb_ok(strpos($css, '.phone-box') !== false && strpos($css, '.phone-box-inner') !== false, 'Handy-Box has a dedicated box treatment');
+alb_ok(strpos($css, '.inv-bar') !== false && strpos($css, '.phone-tile') !== false, 'inventory bar and phone tiles are styled');
+alb_ok(strpos($css, '.disclosure-refused') !== false && strpos($css, '.phone-badge-available') !== false, 'refusal and phone status badges are styled');
+
+// i18n
+alb_ok(($de['nav.handybox'] ?? '') !== '' && ($en['nav.handybox'] ?? '') === 'Handy-Box', 'Handy-Box nav label exists');
+alb_ok(($en['driver.refusal.phone_data'] ?? '') === 'Refused to provide phone/device data', 'english phone-data refusal label exists');
+alb_ok(($en['driver.refusal.photo'] ?? '') === 'Refused to provide personal photo', 'english photo refusal label exists');
+alb_ok(($en['disclosure.provided'] ?? '') === 'Provided' && ($en['disclosure.refused'] ?? '') === 'Refused' && ($en['disclosure.missing'] ?? '') === 'Missing', 'provided/missing/refused labels exist');
+alb_ok(($de['phone.status.available'] ?? '') === 'Verfügbar' && ($en['phone.status.retired'] ?? '') === 'Retired', 'phone status labels are translated');
+alb_ok(($tr['nav.handybox'] ?? '') !== '' && ($tr['phone.status.available'] ?? '') !== '', 'turkish Handy-Box labels exist');
 
 $js_check = array();
 $js_code = 0;

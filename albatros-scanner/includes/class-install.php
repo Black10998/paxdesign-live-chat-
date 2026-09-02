@@ -56,7 +56,16 @@ class Alb_Install {
         $deleted = $wpdb->get_var('SHOW COLUMNS FROM ' . self::table('scanners') . " LIKE 'deleted_at'");
         $sbranch = $wpdb->get_var('SHOW COLUMNS FROM ' . self::table('scanners') . " LIKE 'branch'");
         $dbranch = $wpdb->get_var('SHOW COLUMNS FROM ' . self::table('drivers') . " LIKE 'branch'");
-        return $otp_found === $otp && $photo === 'photo_path' && $user_id === 'user_id' && $deleted === 'deleted_at' && $sbranch === 'branch' && $dbranch === 'branch';
+        $refused = $wpdb->get_var('SHOW COLUMNS FROM ' . self::table('drivers') . " LIKE 'phone_data_refused'");
+        $photo_refused = $wpdb->get_var('SHOW COLUMNS FROM ' . self::table('drivers') . " LIKE 'photo_refused'");
+        $phones = self::table('phones');
+        $phones_found = $wpdb->get_var($wpdb->prepare('SHOW TABLES LIKE %s', $phones));
+        $assignments = self::table('phone_assignments');
+        $assignments_found = $wpdb->get_var($wpdb->prepare('SHOW TABLES LIKE %s', $assignments));
+        return $otp_found === $otp && $photo === 'photo_path' && $user_id === 'user_id' && $deleted === 'deleted_at'
+            && $sbranch === 'branch' && $dbranch === 'branch'
+            && $refused === 'phone_data_refused' && $photo_refused === 'photo_refused'
+            && $phones_found === $phones && $assignments_found === $assignments;
     }
 
     public static function table($name) {
@@ -76,6 +85,8 @@ class Alb_Install {
         $audit = self::table('audit_logs');
         $scans = self::table('scan_events');
         $otp = self::table('otp_challenges');
+        $phones = self::table('phones');
+        $phone_assignments = self::table('phone_assignments');
 
         dbDelta("CREATE TABLE $scanners (
             id bigint(20) unsigned NOT NULL AUTO_INCREMENT,
@@ -121,6 +132,8 @@ class Alb_Install {
             user_id bigint(20) unsigned DEFAULT NULL,
             phone_verified tinyint(1) NOT NULL DEFAULT 0,
             phone_verified_at datetime DEFAULT NULL,
+            phone_data_refused tinyint(1) NOT NULL DEFAULT 0,
+            photo_refused tinyint(1) NOT NULL DEFAULT 0,
             notes text NULL,
             created_at datetime NOT NULL,
             created_by bigint(20) unsigned NOT NULL DEFAULT 0,
@@ -222,6 +235,47 @@ class Alb_Install {
             PRIMARY KEY  (id),
             KEY scanner_phone (scanner_id, phone),
             KEY created_at (created_at)
+        ) $charset;");
+
+        dbDelta("CREATE TABLE $phones (
+            id bigint(20) unsigned NOT NULL AUTO_INCREMENT,
+            model varchar(160) NOT NULL DEFAULT '',
+            serial_number varchar(120) NOT NULL DEFAULT '',
+            imei varchar(40) NOT NULL DEFAULT '',
+            branch varchar(20) NOT NULL DEFAULT '',
+            status varchar(20) NOT NULL DEFAULT 'available',
+            current_driver_id bigint(20) unsigned DEFAULT NULL,
+            current_assignment_id bigint(20) unsigned DEFAULT NULL,
+            assigned_date date DEFAULT NULL,
+            date_added date DEFAULT NULL,
+            notes text NULL,
+            created_at datetime NOT NULL,
+            created_by bigint(20) unsigned NOT NULL DEFAULT 0,
+            updated_at datetime NOT NULL,
+            updated_by bigint(20) unsigned NOT NULL DEFAULT 0,
+            PRIMARY KEY  (id),
+            KEY status (status),
+            KEY current_driver_id (current_driver_id),
+            KEY branch (branch),
+            KEY serial_number (serial_number),
+            KEY imei (imei)
+        ) $charset;");
+
+        dbDelta("CREATE TABLE $phone_assignments (
+            id bigint(20) unsigned NOT NULL AUTO_INCREMENT,
+            phone_id bigint(20) unsigned NOT NULL,
+            driver_id bigint(20) unsigned DEFAULT NULL,
+            previous_driver_id bigint(20) unsigned DEFAULT NULL,
+            action varchar(20) NOT NULL DEFAULT 'assign',
+            assigned_at datetime NOT NULL,
+            recorded_by bigint(20) unsigned NOT NULL DEFAULT 0,
+            snapshot_name varchar(190) NOT NULL DEFAULT '',
+            snapshot_phone varchar(60) NOT NULL DEFAULT '',
+            notes text NULL,
+            PRIMARY KEY  (id),
+            KEY phone_id (phone_id),
+            KEY driver_id (driver_id),
+            KEY assigned_at (assigned_at)
         ) $charset;");
     }
 }

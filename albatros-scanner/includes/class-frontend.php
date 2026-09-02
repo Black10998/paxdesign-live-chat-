@@ -295,6 +295,7 @@ class Alb_Frontend {
             'developer_url' => ALB_SCANNER_DEVELOPER_URL,
             'user' => Alb_Auth::current_payload(),
             'statuses' => Alb_Scanners::statuses(),
+            'phone_statuses' => Alb_Phones::statuses(),
             'roles' => Alb_Capabilities::roles(),
             'permission_keys' => Alb_Capabilities::permission_keys(),
             'assignable_roles' => Alb_Capabilities::assignable_roles(),

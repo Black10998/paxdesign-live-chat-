@@ -10,7 +10,7 @@ class Alb_Capabilities {
     const USER_PERMS = 'alb_permissions';
     const PRIMARY_EMAIL = 'sarah.gta1995@gmail.com';
     const SCHEMA_OPTION = 'alb_role_schema';
-    const SCHEMA_VERSION = 4;
+    const SCHEMA_VERSION = 5;
 
     const SUPER_ADMIN = 'super_admin';
     const ADMINISTRATOR = 'administrator';
@@ -54,6 +54,11 @@ class Alb_Capabilities {
             'drivers.create',
             'drivers.edit',
             'drivers.deactivate',
+            'phones.view',
+            'phones.create',
+            'phones.edit',
+            'phones.assign',
+            'phones.delete',
             'history.view',
             'audit.view',
             'users.view',
@@ -75,6 +80,8 @@ class Alb_Capabilities {
         $employee['scanners.assign'] = true;
         $employee['scanners.status'] = true;
         $employee['qr.view'] = true;
+        $employee['phones.view'] = true;
+        $employee['phones.assign'] = true;
         $scanner = $employee;
         $scanner['scanners.create'] = true;
         $scanner['scanners.edit'] = true;
@@ -82,12 +89,15 @@ class Alb_Capabilities {
         $scanner['drivers.create'] = true;
         $scanner['drivers.edit'] = true;
         $scanner['drivers.deactivate'] = true;
+        $scanner['phones.create'] = true;
+        $scanner['phones.edit'] = true;
         $scanner['history.view'] = true;
         $admin = $scanner;
         $admin['reports.export'] = true;
         $admin['users.view'] = true;
         $admin['audit.view'] = true;
         $admin['settings.view'] = true;
+        $admin['phones.delete'] = true;
         return array(
             self::SUPER_ADMIN => $all,
             self::ADMINISTRATOR => $admin,

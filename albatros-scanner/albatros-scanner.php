@@ -2,7 +2,7 @@
 /**
  * Plugin Name: Albatros Scanner Management
  * Description: Internal scanner, driver, and handover management system for albatros-scanner.shop.
- * Version: 1.6.32
+ * Version: 1.7.0
  * Author: Ahmad Al Khalaf
  * License: GPL v2 or later
  * Text Domain: albatros-scanner
@@ -16,8 +16,8 @@ if (defined('ALB_SCANNER_VERSION')) {
     return;
 }
 
-define('ALB_SCANNER_VERSION', '1.6.32');
-define('ALB_SCANNER_DB_VERSION', '1.6.0');
+define('ALB_SCANNER_VERSION', '1.7.0');
+define('ALB_SCANNER_DB_VERSION', '1.7.0');
 define('ALB_SCANNER_PLUGIN_FILE', __FILE__);
 define('ALB_SCANNER_PLUGIN_DIR', plugin_dir_path(__FILE__));
 define('ALB_SCANNER_PLUGIN_URL', plugin_dir_url(__FILE__));
@@ -39,6 +39,7 @@ require_once ALB_SCANNER_PLUGIN_DIR . 'includes/class-settings.php';
 require_once ALB_SCANNER_PLUGIN_DIR . 'includes/class-updates.php';
 require_once ALB_SCANNER_PLUGIN_DIR . 'includes/class-auth.php';
 require_once ALB_SCANNER_PLUGIN_DIR . 'includes/class-scanners.php';
+require_once ALB_SCANNER_PLUGIN_DIR . 'includes/class-phones.php';
 require_once ALB_SCANNER_PLUGIN_DIR . 'includes/class-scan.php';
 require_once ALB_SCANNER_PLUGIN_DIR . 'includes/class-photos.php';
 require_once ALB_SCANNER_PLUGIN_DIR . 'includes/class-otp.php';

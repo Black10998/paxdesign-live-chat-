@@ -231,6 +231,50 @@ class Alb_Rest {
             'callback' => array(__CLASS__, 'driver_photo'),
             'permission_callback' => array(__CLASS__, 'can_driver_photo'),
         ));
+        register_rest_route(self::NS, '/phones', array(
+            array(
+                'methods' => 'GET',
+                'callback' => array(__CLASS__, 'list_phones'),
+                'permission_callback' => array(__CLASS__, 'can_phones_view'),
+            ),
+            array(
+                'methods' => 'POST',
+                'callback' => array(__CLASS__, 'create_phone'),
+                'permission_callback' => array(__CLASS__, 'can_phones_create'),
+            ),
+        ));
+        register_rest_route(self::NS, '/phones/(?P<id>\d+)', array(
+            array(
+                'methods' => 'GET',
+                'callback' => array(__CLASS__, 'get_phone'),
+                'permission_callback' => array(__CLASS__, 'can_phones_view'),
+            ),
+            array(
+                'methods' => 'POST',
+                'callback' => array(__CLASS__, 'update_phone'),
+                'permission_callback' => array(__CLASS__, 'can_phones_update'),
+            ),
+        ));
+        register_rest_route(self::NS, '/phones/(?P<id>\d+)/assign', array(
+            'methods' => 'POST',
+            'callback' => array(__CLASS__, 'assign_phone'),
+            'permission_callback' => array(__CLASS__, 'can_phones_assign'),
+        ));
+        register_rest_route(self::NS, '/phones/(?P<id>\d+)/return', array(
+            'methods' => 'POST',
+            'callback' => array(__CLASS__, 'return_phone'),
+            'permission_callback' => array(__CLASS__, 'can_phones_assign'),
+        ));
+        register_rest_route(self::NS, '/phones/(?P<id>\d+)/status', array(
+            'methods' => 'POST',
+            'callback' => array(__CLASS__, 'status_phone'),
+            'permission_callback' => array(__CLASS__, 'can_phones_edit'),
+        ));
+        register_rest_route(self::NS, '/phones/(?P<id>\d+)/history', array(
+            'methods' => 'GET',
+            'callback' => array(__CLASS__, 'phone_history'),
+            'permission_callback' => array(__CLASS__, 'can_phones_view'),
+        ));
         register_rest_route(self::NS, '/audit', array(
             'methods' => 'GET',
             'callback' => array(__CLASS__, 'audit'),
@@ -348,6 +392,24 @@ class Alb_Rest {
     public static function can_driver_photo() {
         return self::can_drivers_edit() || self::can_scanners_assign();
     }
+    public static function can_phones_view() {
+        return Alb_Capabilities::current_user_can('phones.view');
+    }
+    public static function can_phones_create() {
+        return Alb_Capabilities::current_user_can('phones.create');
+    }
+    public static function can_phones_edit() {
+        return Alb_Capabilities::current_user_can('phones.edit');
+    }
+    public static function can_phones_assign() {
+        return Alb_Capabilities::current_user_can('phones.assign');
+    }
+    public static function can_phones_delete() {
+        return Alb_Capabilities::current_user_can('phones.delete');
+    }
+    public static function can_phones_update() {
+        return self::can_phones_edit() || self::can_phones_assign() || self::can_phones_delete();
+    }
     public static function can_history() {
         return Alb_Capabilities::current_user_can('history.view');
     }
@@ -410,6 +472,7 @@ class Alb_Rest {
             'locale' => Alb_I18n::current(),
             'locales' => Alb_I18n::supported(),
             'statuses' => Alb_Scanners::statuses(),
+            'phone_statuses' => Alb_Phones::statuses(),
             'roles' => Alb_Capabilities::roles(),
             'permission_keys' => Alb_Capabilities::permission_keys(),
             'assignable_roles' => Alb_Capabilities::assignable_roles(),
@@ -621,6 +684,7 @@ class Alb_Rest {
             return self::respond(new WP_Error('alb_not_found', Alb_I18n::t('driver.error.not_found'), array('status' => 404)));
         }
         $item['assigned_scanners'] = Alb_Drivers::assigned_scanners($item['id']);
+        $item['assigned_phones'] = Alb_Capabilities::current_user_can('phones.view') ? Alb_Phones::assigned_to_driver($item['id']) : array();
         $item['history'] = Alb_Capabilities::current_user_can('history.view') ? Alb_Drivers::history($item['id']) : array();
         return rest_ensure_response($item);
     }
@@ -663,6 +727,56 @@ class Alb_Rest {
 
     public static function driver_photo(WP_REST_Request $request) {
         return self::respond(Alb_Drivers::set_photo((int) $request['id'], Alb_Photos::from_request($request), get_current_user_id()));
+    }
+
+    public static function list_phones(WP_REST_Request $request) {
+        return rest_ensure_response(Alb_Phones::query($request->get_params()));
+    }
+
+    public static function create_phone(WP_REST_Request $request) {
+        return self::respond(Alb_Phones::create($request->get_json_params() ?: $request->get_params(), get_current_user_id()));
+    }
+
+    public static function get_phone(WP_REST_Request $request) {
+        $item = Alb_Phones::get((int) $request['id']);
+        if (!$item) {
+            return self::respond(new WP_Error('alb_not_found', Alb_I18n::t('phone.error.not_found'), array('status' => 404)));
+        }
+        $item['history'] = Alb_Capabilities::current_user_can('history.view') ? Alb_Phones::history($item['id']) : array();
+        return rest_ensure_response($item);
+    }
+
+    public static function update_phone(WP_REST_Request $request) {
+        return self::respond_phone(Alb_Phones::update((int) $request['id'], $request->get_json_params() ?: $request->get_params(), get_current_user_id()));
+    }
+
+    public static function assign_phone(WP_REST_Request $request) {
+        $params = $request->get_json_params() ?: $request->get_params();
+        $driver_id = Alb_Scanners::person_id_from_request($params, get_current_user_id());
+        if (is_wp_error($driver_id)) {
+            return self::respond($driver_id);
+        }
+        return self::respond_phone(Alb_Phones::assign(
+            (int) $request['id'],
+            $driver_id,
+            $params['assigned_date'] ?? '',
+            $params['notes'] ?? '',
+            get_current_user_id()
+        ));
+    }
+
+    public static function return_phone(WP_REST_Request $request) {
+        $params = $request->get_json_params() ?: $request->get_params();
+        return self::respond_phone(Alb_Phones::return_phone((int) $request['id'], $params['notes'] ?? '', get_current_user_id()));
+    }
+
+    public static function status_phone(WP_REST_Request $request) {
+        $params = $request->get_json_params() ?: $request->get_params();
+        return self::respond_phone(Alb_Phones::change_status((int) $request['id'], $params['status'] ?? '', $params['notes'] ?? '', get_current_user_id()));
+    }
+
+    public static function phone_history(WP_REST_Request $request) {
+        return rest_ensure_response(array('items' => Alb_Phones::history((int) $request['id'])));
     }
 
     public static function check_updates() {
@@ -743,6 +857,20 @@ class Alb_Rest {
         return self::respond(self::with_driver_detail($result));
     }
 
+    private static function respond_phone($result) {
+        return self::respond(self::with_phone_detail($result));
+    }
+
+    private static function with_phone_detail($result) {
+        if (is_wp_error($result) || !is_array($result) || empty($result['id'])) {
+            return $result;
+        }
+        $result['history'] = Alb_Capabilities::current_user_can('history.view')
+            ? Alb_Phones::history((int) $result['id'])
+            : array();
+        return $result;
+    }
+
     private static function with_scanner_detail($result) {
         if (is_wp_error($result) || !is_array($result) || empty($result['id'])) {
             return $result;
@@ -758,6 +886,9 @@ class Alb_Rest {
             return $result;
         }
         $result['assigned_scanners'] = Alb_Drivers::assigned_scanners((int) $result['id']);
+        $result['assigned_phones'] = Alb_Capabilities::current_user_can('phones.view')
+            ? Alb_Phones::assigned_to_driver((int) $result['id'])
+            : array();
         $result['history'] = Alb_Capabilities::current_user_can('history.view')
             ? Alb_Drivers::history((int) $result['id'])
             : array();

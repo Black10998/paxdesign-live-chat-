@@ -237,6 +237,19 @@
   function badge(status) {
     return '<span class="badge badge-' + esc(status) + '">' + esc(statusLabel(status)) + '</span>';
   }
+  function checkboxField(name, label, checked, hint) {
+    return '<div class="field wide check-field"><label class="check-line">' +
+      '<input type="checkbox" name="' + esc(name) + '"' + (checked ? ' checked' : '') + '>' +
+      '<span>' + esc(label) + '</span></label>' +
+      (hint ? '<p class="hint">' + esc(hint) + '</p>' : '') + '</div>';
+  }
+  function disclosureBadge(status) {
+    var key = status || 'missing';
+    return '<span class="badge disclosure disclosure-' + esc(key) + '">' + esc(t('disclosure.' + key)) + '</span>';
+  }
+  function phoneStatusBadge(status) {
+    return '<span class="badge phone-badge phone-badge-' + esc(status) + '">' + esc(t('phone.status.' + status)) + '</span>';
+  }
   function qs(params) {
     return Object.keys(params).filter(function (k) { return params[k] !== '' && params[k] != null; })
       .map(function (k) { return encodeURIComponent(k) + '=' + encodeURIComponent(params[k]); }).join('&');
@@ -320,6 +333,7 @@
       dashboard: '<path d="M4 4h7v7H4zM13 4h7v4h-7zM13 10h7v10h-7zM4 13h7v7H4z"/>',
       scanners: '<rect x="6" y="3" width="12" height="18" rx="1"/><path d="M9 7h6M9 10h6M9 13h4M10 17h4"/>',
       drivers: '<circle cx="9" cy="8" r="2.5"/><path d="M4.5 18c.4-3 2.3-4.5 4.5-4.5S13.1 15 13.5 18"/><circle cx="16" cy="8.5" r="2"/><path d="M15 13.6c1.8.2 3.3 1.5 3.6 4.4"/>',
+      handybox: '<path d="M3 8l9-4 9 4v8l-9 4-9-4z"/><path d="M3 8l9 4 9-4M12 12v8"/><rect x="9.5" y="6.2" width="5" height="3.2" rx="0.5"/>',
       vehicle: '<path d="M3 16V9h11l5 4v3H3z"/><path d="M14 9v4h5"/><circle cx="7.5" cy="17.5" r="1.6"/><circle cx="16.5" cy="17.5" r="1.6"/>',
       package: '<path d="M4 8l8-4 8 4v11l-8 4-8-4z"/><path d="M4 8l8 4 8-4M12 12v11M8 6l8 4"/>',
       audit: '<path d="M7 3h8l3 3v15H7z"/><path d="M15 3v4h4M9 12h6M9 15h6"/>',
@@ -343,6 +357,7 @@
     if (can('dashboard.view')) items.push(['/dashboard', 'nav.dashboard', 'dashboard']);
     if (can('scanners.view')) items.push(['/scanners', 'nav.scanners', 'scanners']);
     if (can('drivers.view')) items.push(['/drivers', 'nav.drivers', 'drivers']);
+    if (can('phones.view')) items.push(['/handybox', 'nav.handybox', 'handybox']);
     if (can('audit.view')) items.push(['/audit', 'nav.audit', 'audit']);
     if (can('reports.export')) items.push(['/reports', 'nav.reports', 'reports']);
     if (can('users.view') || can('users.manage')) items.push(['/users', 'nav.users', 'users']);
@@ -355,6 +370,7 @@
     if (!p.length || p[0] === 'dashboard') return t('nav.dashboard');
     if (p[0] === 'scanners') return t('nav.scanners');
     if (p[0] === 'drivers') return t('nav.drivers');
+    if (p[0] === 'handybox') return t('nav.handybox');
     if (p[0] === 'audit') return t('nav.audit');
     if (p[0] === 'reports') return t('nav.reports');
     if (p[0] === 'users') return t('nav.users');
@@ -682,6 +698,12 @@
     if (body.email && body.email.indexOf('@') === -1) {
       throw new Error(t('users.error.email'));
     }
+    ['phone_data_refused', 'photo_refused'].forEach(function (name) {
+      var el = form.querySelector('input[name="' + name + '"]');
+      if (el) {
+        body[name] = el.checked ? 1 : 0;
+      }
+    });
     return body;
   }
 
@@ -888,6 +910,9 @@
       field('email', t('driver.email'), 'email', '') +
       field('employee_code', t('driver.employee_code'), 'text', '') +
       photoField('') +
+      '<div class="wide refusal-block"><h2>' + esc(t('driver.refusal.section')) + '</h2><p class="hint">' + esc(t('driver.refusal.hint')) + '</p></div>' +
+      checkboxField('phone_data_refused', t('driver.refusal.phone_data'), false) +
+      checkboxField('photo_refused', t('driver.refusal.photo'), false) +
       '<div class="field wide"><label>' + esc(t('common.notes')) + '</label><textarea name="notes"></textarea></div>' +
       '<div class="wide"><button class="btn" type="submit">' + esc(t('common.create')) + '</button></div></form>';
     bindAjaxForm(document.getElementById('driver-form'), function (form) {
@@ -913,10 +938,22 @@
         return '<li>' + esc(h.at_display) + ' — ' + esc(h.scanner_code) + ' / ' + esc(h.serial_number) + ' (' + esc(h.action) + ')</li>';
       }).join('') || '<li>' + esc(t('common.empty')) + '</li>';
       var qrItem = (d.assigned_scanners || []).find(function (s) { return s.qr_url; }) || null;
+      var canReturnPhone = can('phones.assign');
+      var phoneCols = canReturnPhone ? 5 : 4;
+      var phoneRows = (d.assigned_phones || []).map(function (p) {
+        return '<tr class="click" data-go="/handybox/' + p.id + '"><td>' + esc(p.model) + '</td><td>' + esc(p.serial_number || '') + '</td><td>' + esc(p.imei || '') + '</td><td>' + phoneStatusBadge(p.status) + '</td>' +
+          (canReturnPhone ? '<td class="row-actions" data-stop="1"><button type="button" class="btn btn-sec" data-phone-return="' + p.id + '">' + esc(t('phone.return')) + '</button></td>' : '') +
+          '</tr>';
+      }).join('') || emptyRow(phoneCols);
+      var phonesCard = can('phones.view') ? '<div class="card" style="margin-top:12px"><h2>' + icon('handybox') + ' ' + esc(t('nav.handybox')) + '</h2><div class="table-scroll"><table class="data"><thead><tr><th>' + esc(t('phone.model')) + '</th><th>' + esc(t('phone.serial')) + '</th><th>' + esc(t('phone.imei')) + '</th><th>' + esc(t('common.status')) + '</th>' + (canReturnPhone ? '<th>' + esc(t('common.actions')) + '</th>' : '') + '</tr></thead><tbody>' + phoneRows + '</tbody></table></div></div>' : '';
       root.innerHTML = '<div class="page-head"><h1>' + icon('drivers') + ' ' + esc(d.name) + '</h1><button class="btn btn-sec" data-go="/drivers">' + esc(t('common.back')) + '</button></div>' +
         topicMarks() +
         '<div class="detail"><div class="card"><h2>' + esc(t('driver.detail')) + '</h2>' +
         '<div class="person-row">' + face(d.photo_url, 'face-lg') + '<div><strong>' + esc(d.name) + '</strong><br>' + esc(t('driver.phone')) + ': ' + esc(d.phone || '—') + '<br>' + esc(t('branch.label')) + ': ' + esc(d.branch_label || branchLabel(d.branch)) + '</div></div>' +
+        '<div class="disclosure-row">' +
+        '<span class="disclosure-item">' + esc(t('driver.phone_status')) + ': ' + disclosureBadge(d.phone_status) + '</span>' +
+        '<span class="disclosure-item">' + esc(t('driver.photo_status')) + ': ' + disclosureBadge(d.photo_status) + '</span>' +
+        '</div>' +
         (can('drivers.edit') ? '<form id="driver-edit" class="form-grid" method="post" action="#" novalidate>' +
           field('first_name', t('driver.first_name'), 'text', d.first_name) +
           field('last_name', t('driver.last_name'), 'text', d.last_name) +
@@ -925,14 +962,29 @@
           field('email', t('driver.email'), 'email', d.email) +
           field('employee_code', t('driver.employee_code'), 'text', d.employee_code) +
           photoField(d.photo_url) +
+          '<div class="wide refusal-block"><h2>' + esc(t('driver.refusal.section')) + '</h2><p class="hint">' + esc(t('driver.refusal.hint')) + '</p></div>' +
+          checkboxField('phone_data_refused', t('driver.refusal.phone_data'), !!d.phone_data_refused) +
+          checkboxField('photo_refused', t('driver.refusal.photo'), !!d.photo_refused) +
           '<div class="field wide"><label>' + esc(t('common.notes')) + '</label><textarea name="notes">' + esc(d.notes || '') + '</textarea></div>' +
           '<div class="wide"><button class="btn" type="submit">' + esc(t('common.save')) + '</button>' +
           (can('drivers.deactivate') ? ' <button type="button" class="btn btn-danger" id="toggle-driver">' + esc(d.status === 'active' ? t('driver.deactivate') : t('driver.activate')) + '</button>' : '') +
           '</div></form>' : '<div class="kv">' + kv(t('driver.phone'), d.phone) + kv(t('branch.label'), d.branch_label || branchLabel(d.branch)) + kv(t('driver.email'), d.email) + '</div>') +
         '</div>' + qrCard(qrItem) + '</div>' +
         '<div class="card" style="margin-top:12px"><h2>' + esc(t('driver.assigned')) + '</h2><div class="table-scroll"><table class="data"><thead><tr><th>' + esc(t('scanner.code')) + '</th><th>' + esc(t('scanner.serial')) + '</th><th>' + esc(t('scanner.phone')) + '</th><th>' + esc(t('branch.label')) + '</th><th>' + esc(t('common.status')) + '</th></tr></thead><tbody>' + assigned + '</tbody></table></div></div>' +
+        phonesCard +
         '<div class="card" style="margin-top:12px"><h2>' + esc(t('driver.history')) + '</h2><ul class="history">' + history + '</ul></div>';
       bindQr(qrItem);
+      root.querySelectorAll('[data-phone-return]').forEach(function (btn) {
+        btn.onclick = function (e) {
+          e.preventDefault();
+          e.stopPropagation();
+          if (!window.confirm(t('phone.return_confirm'))) return;
+          api('phones/' + btn.getAttribute('data-phone-return') + '/return', { method: 'POST', body: {} })
+            .then(function () {
+              return renderDriverDetail(d.id).then(function () { showSuccess(t('common.saved')); });
+            }).catch(showError);
+        };
+      });
       var form = document.getElementById('driver-edit');
       if (form) {
         bindPhotoReplace(form, 'drivers/' + d.id + '/photo', function (res) {
@@ -968,6 +1020,241 @@
             }).catch(showError);
         };
       }
+    }).catch(showError);
+  }
+
+  function phoneStatuses() {
+    return A.phone_statuses || ['available', 'assigned', 'damaged', 'lost', 'retired'];
+  }
+  function phoneTile(p) {
+    return '<button type="button" class="phone-tile" data-go="/handybox/' + p.id + '" title="' + esc(p.model) + '">' +
+      '<span class="phone-tile-body"><span class="phone-tile-cam" aria-hidden="true"></span></span>' +
+      '<span class="phone-tile-meta"><span class="phone-tile-model">' + esc(p.model) + '</span>' +
+      (p.serial_number ? '<span class="phone-tile-serial">' + esc(p.serial_number) + '</span>' : '') + '</span>' +
+      '</button>';
+  }
+  function phoneBox(items) {
+    var count = items.length;
+    var slots = count ? items.map(phoneTile).join('') : '<p class="phone-box-empty">' + esc(t('handybox.empty')) + '</p>';
+    return '<div class="phone-box" id="phone-box">' +
+      '<button type="button" class="phone-box-toggle" id="phone-box-toggle" aria-expanded="false">' +
+      '<span class="phone-box-lid" aria-hidden="true"><span class="phone-box-lid-tab"></span></span>' +
+      '<span class="phone-box-face">' +
+      '<span class="phone-box-count">' + esc(count) + '</span>' +
+      '<span class="phone-box-title">' + esc(t('handybox.title')) + '</span>' +
+      '<span class="phone-box-hint" id="phone-box-hint">' + esc(t('handybox.reveal_hint')) + '</span>' +
+      '</span></button>' +
+      '<div class="phone-box-inner" id="phone-box-inner" hidden><div class="phone-box-grid">' + slots + '</div></div>' +
+      '</div>';
+  }
+  function phoneTable(items) {
+    var rows = (items || []).map(function (p) {
+      return '<tr class="click" data-go="/handybox/' + p.id + '">' +
+        '<td>' + esc(p.model) + '</td><td>' + esc(p.serial_number || '') + '</td><td>' + esc(p.imei || '') + '</td>' +
+        '<td>' + esc(p.branch_label || branchLabel(p.branch)) + '</td>' +
+        '<td>' + (p.current_driver_id ? esc(p.driver_name || '') : '<span class="muted">' + esc(t('phone.no_employee')) + '</span>') + '</td>' +
+        '<td>' + phoneStatusBadge(p.status) + '</td></tr>';
+    }).join('') || emptyRow(6);
+    return '<div class="table-scroll"><table class="data"><thead><tr>' +
+      '<th>' + esc(t('phone.model')) + '</th><th>' + esc(t('phone.serial')) + '</th><th>' + esc(t('phone.imei')) + '</th>' +
+      '<th>' + esc(t('branch.label')) + '</th><th>' + esc(t('phone.assigned_to')) + '</th><th>' + esc(t('common.status')) + '</th>' +
+      '</tr></thead><tbody>' + rows + '</tbody></table></div>';
+  }
+  function inventoryBar(counts) {
+    counts = counts || {};
+    var cells = [
+      ['inv.total', counts.total || 0, 'total'],
+      ['inv.available', counts.available || 0, 'available'],
+      ['inv.assigned', counts.assigned || 0, 'assigned'],
+      ['inv.damaged', counts.damaged || 0, 'damaged'],
+      ['inv.lost', counts.lost || 0, 'lost']
+    ];
+    return '<div class="inv-bar">' + cells.map(function (c) {
+      return '<div class="inv-cell inv-cell--' + c[2] + '"><div class="inv-value">' + esc(c[1]) + '</div><div class="inv-label">' + esc(t(c[0])) + '</div></div>';
+    }).join('') + '</div>';
+  }
+  function bindPhoneBox() {
+    var toggle = document.getElementById('phone-box-toggle');
+    var inner = document.getElementById('phone-box-inner');
+    var boxEl = document.getElementById('phone-box');
+    var hint = document.getElementById('phone-box-hint');
+    if (!toggle || !inner || !boxEl) return;
+    toggle.onclick = function () {
+      var open = boxEl.classList.toggle('is-open');
+      inner.hidden = !open;
+      toggle.setAttribute('aria-expanded', open ? 'true' : 'false');
+      if (hint) hint.textContent = open ? t('handybox.close') : t('handybox.reveal_hint');
+    };
+  }
+  function renderHandybox(query) {
+    query = query || {};
+    root.innerHTML = '<div class="page-head"><h1>' + icon('handybox') + ' ' + esc(t('handybox.title')) + '</h1>' +
+      (can('phones.create') ? '<div class="actions"><button class="btn" data-go="/handybox/new">' + esc(t('phone.new')) + '</button></div>' : '') +
+      '</div><p>' + esc(t('common.loading')) + '</p>';
+    var listQ = qs({ q: query.q || '', status: query.status || '', branch: query.branch || '', page: query.page || 1, sort: 'id', dir: 'desc' });
+    return Promise.all([
+      api('phones?' + qs({ status: 'available', per_page: 200, sort: 'model', dir: 'asc' })),
+      api('phones?' + listQ)
+    ]).then(function (packs) {
+      var boxData = packs[0] || {};
+      var listData = packs[1] || {};
+      var counts = boxData.counts || listData.counts || {};
+      root.innerHTML = '<div class="page-head"><h1>' + icon('handybox') + ' ' + esc(t('handybox.title')) + '</h1>' +
+        (can('phones.create') ? '<div class="actions"><button class="btn" data-go="/handybox/new">' + esc(t('phone.new')) + '</button></div>' : '') +
+        '</div>' +
+        '<p class="handybox-summary">' + esc(t('handybox.available_summary', { count: counts.available || 0 })) + '</p>' +
+        '<div class="card"><h2>' + esc(t('handybox.inventory')) + '</h2>' + inventoryBar(counts) + '</div>' +
+        '<div class="card handybox-card"><h2>' + esc(t('handybox.title')) + '</h2><p class="hint">' + esc(t('handybox.subtitle')) + '</p>' + phoneBox(boxData.items || []) + '</div>' +
+        '<div class="card"><h2>' + esc(t('handybox.all_phones')) + '</h2>' +
+        branchTabs(query.branch || '') +
+        '<div class="toolbar"><div class="field grow"><label>' + esc(t('common.search')) + '</label><input id="ph-q" value="' + esc(query.q || '') + '"></div>' +
+        '<div class="field"><label>' + esc(t('common.status')) + '</label><select id="ph-status"><option value="">' + esc(t('common.all')) + '</option>' +
+        phoneStatuses().map(function (s) { return '<option value="' + s + '"' + (query.status === s ? ' selected' : '') + '>' + esc(t('phone.status.' + s)) + '</option>'; }).join('') +
+        '</select></div><button class="btn" id="ph-apply">' + esc(t('common.filter')) + '</button></div>' +
+        phoneTable(listData.items || []) + pager(listData) + '</div>';
+      bindPhoneBox();
+      function applyPhoneFilters() {
+        renderHandybox({
+          q: document.getElementById('ph-q').value,
+          status: document.getElementById('ph-status').value,
+          branch: document.getElementById('f-branch') ? document.getElementById('f-branch').value : ''
+        });
+      }
+      document.getElementById('ph-apply').onclick = applyPhoneFilters;
+      bindBranchTabs(applyPhoneFilters);
+      bindPager(function (page) { renderHandybox(Object.assign({}, query, { page: page })); });
+    }).catch(showError);
+  }
+  function renderPhoneForm() {
+    root.innerHTML = '<div class="page-head"><h1>' + icon('handybox') + ' ' + esc(t('phone.new')) + '</h1><button class="btn btn-sec" data-go="/handybox">' + esc(t('common.back')) + '</button></div>' +
+      '<form id="phone-form" class="card form-grid" method="post" action="#" novalidate>' +
+      field('model', t('phone.model'), 'text', '', false) +
+      field('serial_number', t('phone.serial'), 'text', '', false) +
+      field('imei', t('phone.imei'), 'text', '', false) +
+      branchSelect('branch', '') +
+      field('date_added', t('phone.date_added'), 'date', '', false) +
+      '<div class="field wide"><label>' + esc(t('common.notes')) + '</label><textarea name="notes"></textarea></div>' +
+      '<div class="wide"><button class="btn" type="submit">' + esc(t('common.create')) + '</button></div></form>';
+    bindAjaxForm(document.getElementById('phone-form'), function (form) {
+      var fd = new FormData(form);
+      var body = {
+        model: String(fd.get('model') || '').trim(),
+        serial_number: String(fd.get('serial_number') || '').trim(),
+        imei: String(fd.get('imei') || '').trim(),
+        branch: fd.get('branch') || '',
+        date_added: fd.get('date_added') || '',
+        notes: fd.get('notes') || ''
+      };
+      if (!body.model) {
+        return Promise.reject(new Error(t('phone.error.model_required')));
+      }
+      return api('phones', { method: 'POST', body: body }).then(function (item) {
+        go('/handybox/' + item.id);
+      });
+    });
+  }
+  function renderPhoneDetail(id, preloaded) {
+    root.innerHTML = '<p>' + esc(t('common.loading')) + '</p>';
+    var load = (preloaded && preloaded.id) ? Promise.resolve(preloaded) : api('phones/' + id);
+    return load.then(function (p) {
+      setPageTitle(p.model + (p.serial_number ? ' / ' + p.serial_number : ''));
+      var history = (p.history || []).map(function (h) {
+        var actKey = h.action === 'return' ? 'phone.return' : (h.action === 'reassign' ? 'phone.assign' : 'phone.assign');
+        var who = h.driver_name || h.previous_driver_name || '—';
+        return '<li>' + esc(h.at_display) + ' — ' + esc(t(actKey)) + ': ' + esc(who) + (h.notes ? ' — ' + esc(h.notes) : '') + '</li>';
+      }).join('') || '<li>' + esc(t('common.empty')) + '</li>';
+      var holder = p.current_driver_id
+        ? '<div class="holder-box"><h2>' + esc(t('phone.assigned_employee')) + '</h2><div class="person-row holder-person" data-go="/drivers/' + p.current_driver_id + '">' + face(p.driver_photo_url, 'face-lg') +
+          '<div><strong>' + esc(p.driver_name || '') + '</strong><div class="holder-meta">' + esc(t('driver.phone')) + ': ' + esc(p.driver_phone || '—') + '</div>' +
+          (p.assigned_date_display ? '<div class="holder-meta">' + esc(t('phone.assigned_date')) + ': ' + esc(p.assigned_date_display) + '</div>' : '') + '</div></div></div>'
+        : '<div class="holder-box"><h2>' + esc(t('phone.assigned_employee')) + '</h2><p class="holder-empty">' + (p.status === 'available' ? esc(t('phone.in_box')) : esc(t('phone.no_employee'))) + '</p></div>';
+      var canEdit = can('phones.edit');
+      var canAssign = can('phones.assign');
+      var editStatuses = phoneStatuses().filter(function (s) { return s !== 'assigned'; });
+      var actions = '';
+      if (canAssign && p.current_driver_id) {
+        actions += '<button type="button" class="btn btn-sec" data-phone-act="return" data-id="' + p.id + '">' + esc(t('phone.return')) + '</button>';
+      }
+      if (canEdit) {
+        if (p.status !== 'damaged') actions += '<button type="button" class="btn btn-sec" data-phone-act="damaged" data-id="' + p.id + '">' + esc(t('phone.mark_damaged')) + '</button>';
+        if (p.status !== 'lost') actions += '<button type="button" class="btn btn-sec" data-phone-act="lost" data-id="' + p.id + '">' + esc(t('phone.mark_lost')) + '</button>';
+        if (p.status !== 'retired') actions += '<button type="button" class="btn btn-sec" data-phone-act="retired" data-id="' + p.id + '">' + esc(t('phone.mark_retired')) + '</button>';
+        if (p.status !== 'available') actions += '<button type="button" class="btn btn-sec" data-phone-act="available" data-id="' + p.id + '">' + esc(t('phone.mark_available')) + '</button>';
+      }
+      var editForm = canEdit ? '<form id="phone-edit" class="form-grid" method="post" action="#" novalidate>' +
+        '<div class="wide"><h2>' + esc(t('phone.detail')) + '</h2></div>' +
+        field('model', t('phone.model'), 'text', p.model, false) +
+        field('serial_number', t('phone.serial'), 'text', p.serial_number, false) +
+        field('imei', t('phone.imei'), 'text', p.imei, false) +
+        branchSelect('branch', p.branch || '') +
+        field('date_added', t('phone.date_added'), 'date', p.date_added || '', false) +
+        '<div class="field"><label>' + esc(t('common.status')) + '</label><select name="status">' +
+        editStatuses.map(function (s) { return '<option value="' + s + '"' + (p.status === s ? ' selected' : '') + '>' + esc(t('phone.status.' + s)) + '</option>'; }).join('') +
+        '</select></div>' +
+        '<div class="field wide"><label>' + esc(t('common.notes')) + '</label><textarea name="notes">' + esc(p.notes || '') + '</textarea></div>' +
+        '<div class="wide"><button class="btn" type="submit">' + esc(t('common.save')) + '</button></div></form>' : '';
+      var assignForm = canAssign ? '<form id="phone-assign" class="form-grid" method="post" action="#" novalidate>' +
+        '<div class="wide"><h2>' + esc(t('phone.assign')) + '</h2><p class="hint">' + esc(t('phone.assign_hint')) + '</p></div>' +
+        field('employee_name', t('driver.full_name'), 'text', p.driver_name || '', false) +
+        field('employee_phone', t('driver.phone'), 'text', p.driver_phone || '', false) +
+        branchSelect('employee_branch', p.branch || '') +
+        field('assigned_date', t('phone.assigned_date'), 'date', p.assigned_date || '', false) +
+        '<div class="field wide"><label>' + esc(t('common.notes')) + '</label><input name="notes"></div>' +
+        '<div class="wide"><button class="btn" type="submit">' + esc(t('phone.assign')) + '</button></div></form>' : '';
+      root.innerHTML = '<div class="page-head"><h1>' + icon('handybox') + ' ' + esc(p.model) + (p.serial_number ? ' / ' + esc(p.serial_number) : '') + '</h1><button class="btn btn-sec" data-go="/handybox">' + esc(t('common.back')) + '</button></div>' +
+        '<div class="detail"><div class="card"><h2>' + esc(t('phone.detail')) + '</h2>' +
+        '<div class="kv">' +
+        kv(t('phone.model'), p.model) +
+        kv(t('phone.serial'), p.serial_number || '—') +
+        kv(t('phone.imei'), p.imei || '—') +
+        kv(t('branch.label'), p.branch_label || branchLabel(p.branch)) +
+        kv(t('common.status'), '') +
+        '</div><div class="phone-detail-status">' + phoneStatusBadge(p.status) + '</div>' +
+        '<div class="kv">' + kv(t('phone.date_added'), p.date_added_display || '—') + kv(t('common.notes'), p.notes || '') + '</div>' +
+        holder +
+        (actions ? '<div class="action-bar">' + actions + '</div>' : '') +
+        editForm +
+        '</div><div>' + (assignForm ? '<div class="card">' + assignForm + '</div>' : '') + '</div></div>' +
+        '<div class="card" style="margin-top:12px"><h2>' + esc(t('phone.history')) + '</h2><ul class="history">' + history + '</ul></div>';
+      var edit = document.getElementById('phone-edit');
+      if (edit) {
+        bindAjaxForm(edit, function () {
+          var v = collectFormValues(edit);
+          var body = { model: v.model || '', serial_number: v.serial_number || '', imei: v.imei || '', branch: v.branch || '', date_added: v.date_added || '', notes: v.notes || '', status: v.status || p.status };
+          return afterSave(function (saved) {
+            return renderPhoneDetail(p.id, saved).then(function () { showSuccess(t('common.saved')); });
+          }, api('phones/' + p.id, { method: 'POST', body: body }));
+        });
+      }
+      var af = document.getElementById('phone-assign');
+      if (af) {
+        bindAjaxForm(af, function () {
+          var fd = new FormData(af);
+          var body = employeePayload(fd);
+          body.assigned_date = fd.get('assigned_date') || '';
+          body.notes = String(fd.get('notes') || '').trim();
+          if (!body.employee_name && !body.employee_phone) {
+            return Promise.reject(new Error(t('driver.error.name_required')));
+          }
+          return afterSave(function (saved) {
+            return renderPhoneDetail(p.id, saved).then(function () { showSuccess(t('common.saved')); });
+          }, api('phones/' + p.id + '/assign', { method: 'POST', body: body }));
+        });
+      }
+      root.querySelectorAll('[data-phone-act]').forEach(function (btn) {
+        btn.onclick = function (e) {
+          e.preventDefault();
+          e.stopPropagation();
+          var act = btn.getAttribute('data-phone-act');
+          if (act === 'return' && !window.confirm(t('phone.return_confirm'))) return;
+          var req = act === 'return'
+            ? api('phones/' + p.id + '/return', { method: 'POST', body: {} })
+            : api('phones/' + p.id + '/status', { method: 'POST', body: { status: act } });
+          req.then(function (saved) {
+            return renderPhoneDetail(p.id, saved).then(function () { showSuccess(t('common.saved')); });
+          }).catch(showError);
+        };
+      });
     }).catch(showError);
   }
 
@@ -1380,6 +1667,9 @@
     if (p[0] === 'drivers' && p[1] === 'new') { setPageTitle(t('driver.new')); return renderDriverForm(); }
     if (p[0] === 'drivers' && p[1]) { setPageTitle(t('driver.detail')); return renderDriverDetail(p[1]); }
     if (p[0] === 'drivers') { setPageTitle(t('driver.title')); return renderDrivers({}); }
+    if (p[0] === 'handybox' && p[1] === 'new') { setPageTitle(t('phone.new')); return renderPhoneForm(); }
+    if (p[0] === 'handybox' && p[1]) { setPageTitle(t('handybox.detail')); return renderPhoneDetail(p[1]); }
+    if (p[0] === 'handybox') { setPageTitle(t('handybox.title')); return renderHandybox({}); }
     if (p[0] === 'audit') { setPageTitle(t('audit.title')); return renderAudit({}); }
     if (p[0] === 'users' && p[1]) { setPageTitle(t('users.edit')); return renderUserDetail(p[1]); }
     if (p[0] === 'users') { setPageTitle(t('users.title')); return renderUsers(); }

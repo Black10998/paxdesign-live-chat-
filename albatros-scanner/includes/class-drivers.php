@@ -24,6 +24,8 @@ class Alb_Drivers {
             'employee_code' => sanitize_text_field($data['employee_code'] ?? ''),
             'branch' => Alb_Branches::normalize($data['branch'] ?? ''),
             'status' => !empty($data['status']) && $data['status'] === 'inactive' ? 'inactive' : 'active',
+            'phone_data_refused' => self::refusal_flag($data['phone_data_refused'] ?? 0),
+            'photo_refused' => self::refusal_flag($data['photo_refused'] ?? 0),
             'notes' => sanitize_textarea_field($data['notes'] ?? ''),
             'user_id' => !empty($data['user_id']) ? (int) $data['user_id'] : null,
             'created_at' => $now,
@@ -106,6 +108,17 @@ class Alb_Drivers {
                 $changes['status'] = array($current['status'], $value);
             }
         }
+        foreach (array('phone_data_refused', 'photo_refused') as $flag) {
+            if (!array_key_exists($flag, $data)) {
+                continue;
+            }
+            $value = self::refusal_flag($data[$flag]);
+            if ($value !== (int) ($current[$flag] ?? 0)) {
+                // A refusal is only a status flag: existing phone/photo data is never removed here.
+                $fields[$flag] = $value;
+                $changes[$flag] = array((int) ($current[$flag] ?? 0), $value);
+            }
+        }
         if (!$fields) {
             return $current;
         }
@@ -128,6 +141,25 @@ class Alb_Drivers {
 
     public static function digits($phone) {
         return preg_replace('/\D+/', '', (string) $phone);
+    }
+
+    public static function refusal_flag($value) {
+        if (is_bool($value)) {
+            return $value ? 1 : 0;
+        }
+        $value = strtolower(trim((string) $value));
+        return in_array($value, array('1', 'true', 'on', 'yes'), true) ? 1 : 0;
+    }
+
+    /**
+     * Explicit disclosure status for a data point: provided, missing, or refused.
+     * A refusal takes precedence but never removes the underlying value.
+     */
+    public static function disclosure_status($refused, $has_value) {
+        if ($refused) {
+            return 'refused';
+        }
+        return $has_value ? 'provided' : 'missing';
     }
 
     public static function split_name($name) {
@@ -496,6 +528,9 @@ class Alb_Drivers {
         } elseif ($user_id && Alb_Users::photo_path($user_id) !== '') {
             $photo_url = Alb_Photos::admin_url('user', $user_id, Alb_Users::photo_path($user_id));
         }
+        $phone_refused = !empty($row['phone_data_refused']);
+        $photo_refused = !empty($row['photo_refused']);
+        $has_photo = ($photo !== '') || ($photo_url !== '');
         return array(
             'id' => (int) $row['id'],
             'user_id' => $user_id ?: null,
@@ -506,6 +541,10 @@ class Alb_Drivers {
             'phone_verified' => !empty($row['phone_verified']),
             'phone_verified_at' => $row['phone_verified_at'] ?? '',
             'phone_verified_at_display' => !empty($row['phone_verified_at']) ? Alb_Settings::format_datetime($row['phone_verified_at']) : '',
+            'phone_data_refused' => $phone_refused,
+            'photo_refused' => $photo_refused,
+            'phone_status' => self::disclosure_status($phone_refused, trim((string) $row['phone']) !== ''),
+            'photo_status' => self::disclosure_status($photo_refused, $has_photo),
             'photo_path' => $photo,
             'photo_url' => $photo_url,
             'email' => $row['email'],
@@ -535,6 +574,8 @@ class Alb_Drivers {
             'phone',
             'phone_verified',
             'phone_verified_at',
+            'phone_data_refused',
+            'photo_refused',
             'photo_path',
             'email',
             'employee_code',
