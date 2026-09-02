@@ -142,7 +142,9 @@ class PAXdesign_Customer_Auth {
             $user = get_user_by('id', $user_id);
             if ($user instanceof WP_User) {
                 $payload['role'] = self::resolve_portal_role($user);
-                $payload['is_staff'] = PAXdesign_Live_Chat_Permissions::has_live_chat_access($user_id);
+                $payload['is_staff'] = PAXdesign_Live_Chat_Permissions::has_live_chat_access($user_id)
+                    && !(class_exists('PAXdesign_Auth_Native') && PAXdesign_Auth_Native::is_owner_account($user_id))
+                    && !(class_exists('PAXdesign_Customer_Master_Admin') && PAXdesign_Customer_Master_Admin::is_master_admin($user_id));
             }
             if (class_exists('PAXdesign_Customer_Avatar')) {
                 $avatar = PAXdesign_Customer_Avatar::profile_fields($user_id);
@@ -183,7 +185,9 @@ class PAXdesign_Customer_Auth {
             'is_admin'         => user_can($user, 'manage_options') || (class_exists('PAXdesign_Auth_Native') && PAXdesign_Auth_Native::is_owner_account($user_id)),
             'is_owner'         => class_exists('PAXdesign_Auth_Native') && PAXdesign_Auth_Native::is_owner_account($user_id),
             'is_master_admin'  => class_exists('PAXdesign_Customer_Master_Admin') && PAXdesign_Customer_Master_Admin::is_master_admin($user_id),
-            'is_staff'         => PAXdesign_Live_Chat_Permissions::has_live_chat_access($user_id),
+            'is_staff'         => PAXdesign_Live_Chat_Permissions::has_live_chat_access($user_id)
+                && !(class_exists('PAXdesign_Auth_Native') && PAXdesign_Auth_Native::is_owner_account($user_id))
+                && !(class_exists('PAXdesign_Customer_Master_Admin') && PAXdesign_Customer_Master_Admin::is_master_admin($user_id)),
             'avatar_url'       => class_exists('PAXdesign_Customer_Avatar') ? PAXdesign_Customer_Avatar::url_for_user($user_id) : '',
             'avatar_has_image' => class_exists('PAXdesign_Customer_Avatar') ? PAXdesign_Customer_Avatar::has_visible_avatar($user_id) : false,
             'nonce'            => wp_create_nonce('wp_rest'),
@@ -239,6 +243,12 @@ class PAXdesign_Customer_Auth {
             return $base;
         }
         $user_id = self::current_user_id();
+        if (class_exists('PAXdesign_Auth_Native') && PAXdesign_Auth_Native::is_owner_account($user_id)) {
+            return true;
+        }
+        if (class_exists('PAXdesign_Customer_Master_Admin') && PAXdesign_Customer_Master_Admin::is_master_admin($user_id)) {
+            return true;
+        }
         if (!PAXdesign_Live_Chat_Permissions::has_live_chat_access($user_id) && !user_can($user_id, 'manage_options')) {
             return new WP_Error('rest_forbidden', __('Staff access required.', 'paxdesign-booking'), array('status' => 403));
         }
@@ -250,7 +260,14 @@ class PAXdesign_Customer_Auth {
         if (is_wp_error($base)) {
             return $base;
         }
-        if (!user_can(self::current_user_id(), 'manage_options')) {
+        $user_id = self::current_user_id();
+        if (class_exists('PAXdesign_Auth_Native') && PAXdesign_Auth_Native::is_owner_account($user_id)) {
+            return true;
+        }
+        if (class_exists('PAXdesign_Customer_Master_Admin') && PAXdesign_Customer_Master_Admin::is_master_admin($user_id)) {
+            return true;
+        }
+        if (!user_can($user_id, 'manage_options')) {
             return new WP_Error('rest_forbidden', __('Administrator access required.', 'paxdesign-booking'), array('status' => 403));
         }
         return true;

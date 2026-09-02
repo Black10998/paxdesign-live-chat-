@@ -319,6 +319,10 @@ class PAXdesign_Auth_Native {
 			'is_master_admin'  => class_exists( 'PAXdesign_Customer_Master_Admin' )
 				? PAXdesign_Customer_Master_Admin::is_master_admin( $user_id )
 				: self::is_owner_account( $user_id ),
+			'is_staff'         => class_exists( 'PAXdesign_Live_Chat_Permissions' )
+				&& PAXdesign_Live_Chat_Permissions::has_live_chat_access( $user_id )
+				&& ! self::is_owner_account( $user_id )
+				&& !( class_exists( 'PAXdesign_Customer_Master_Admin' ) && PAXdesign_Customer_Master_Admin::is_master_admin( $user_id ) ),
 		];
 	}
 
