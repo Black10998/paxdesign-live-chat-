@@ -1,0 +1,101 @@
+name: Deploy OpenAI key hardening
+
+# Surgical production patch for leaked-key hardening files only.
+# Does not rsync --delete the plugin tree.
+on:
+  workflow_dispatch:
+  push:
+    branches:
+      - main
+    paths:
+      - '.github/triggers/deploy-openai-key-hardening'
+      - '.github/workflows/deploy-openai-key-hardening.yml'
+      - 'paxdesign-booking/includes/class-paxdesign-chat.php'
+      - 'paxdesign-booking/includes/class-paxdesign-live-chat-mobile-api.php'
+      - 'paxdesign-booking/templates/settings-page.php'
+      - 'tests/openai-key-hardening/run.php'
+
+permissions:
+  contents: read
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    timeout-minutes: 12
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: OpenAI key hardening guards
+        run: |
+          php tests/openai-key-hardening/run.php
+          php tests/production-baseline/run.php
+          php tests/restored-chat-human-ui/run.php
+
+      - name: Validate secrets
+        run: |
+          set -euo pipefail
+          for key in WP_SSH_HOST WP_SSH_USER WP_SSH_PRIVATE_KEY WP_PATH; do
+            [ -n "${!key:-}" ] || { echo "Missing $key"; exit 1; }
+          done
+        env:
+          WP_SSH_HOST: ${{ secrets.WP_SSH_HOST }}
+          WP_SSH_USER: ${{ secrets.WP_SSH_USER }}
+          WP_SSH_PRIVATE_KEY: ${{ secrets.WP_SSH_PRIVATE_KEY }}
+          WP_PATH: ${{ secrets.WP_PATH }}
+
+      - name: Deploy OpenAI hardening files
+        env:
+          WP_SSH_HOST: ${{ secrets.WP_SSH_HOST }}
+          WP_SSH_PORT: ${{ secrets.WP_SSH_PORT }}
+          WP_SSH_USER: ${{ secrets.WP_SSH_USER }}
+          WP_SSH_PRIVATE_KEY: ${{ secrets.WP_SSH_PRIVATE_KEY }}
+          WP_PATH: ${{ secrets.WP_PATH }}
+        run: |
+          set -euo pipefail
+          PORT="${WP_SSH_PORT:-22}"
+          SSH_OPTS=(-i ~/.ssh/id_deploy -p "$PORT" -o StrictHostKeyChecking=yes -o BatchMode=yes)
+          install -m 600 -D /dev/null ~/.ssh/id_deploy
+          printf '%s\n' "$WP_SSH_PRIVATE_KEY" > ~/.ssh/id_deploy
+          ssh-keyscan -p "$PORT" -H "$WP_SSH_HOST" >> ~/.ssh/known_hosts 2>/dev/null || true
+
+          PLUGIN="${WP_PATH%/}/wp-content/plugins/paxdesign-booking"
+          REMOTE="${WP_SSH_USER}@${WP_SSH_HOST}"
+
+          rsync_with_retry() {
+            local attempt=1
+            local max_attempts=4
+            local delay=4
+            while [ "$attempt" -le "$max_attempts" ]; do
+              if rsync -az -e "ssh ${SSH_OPTS[*]}" "$@"; then
+                return 0
+              fi
+              if [ "$attempt" -eq "$max_attempts" ]; then
+                return 1
+              fi
+              echo "rsync failed (attempt ${attempt}/${max_attempts}); retrying in ${delay}s..."
+              sleep "$delay"
+              attempt=$((attempt + 1))
+              delay=$((delay * 2))
+            done
+          }
+
+          rsync_with_retry \
+            paxdesign-booking/includes/class-paxdesign-chat.php \
+            "${REMOTE}:${PLUGIN}/includes/class-paxdesign-chat.php"
+
+          rsync_with_retry \
+            paxdesign-booking/includes/class-paxdesign-live-chat-mobile-api.php \
+            "${REMOTE}:${PLUGIN}/includes/class-paxdesign-live-chat-mobile-api.php"
+
+          rsync_with_retry \
+            paxdesign-booking/templates/settings-page.php \
+            "${REMOTE}:${PLUGIN}/templates/settings-page.php"
+
+          ssh "${SSH_OPTS[@]}" "$REMOTE" \
+            "cd '$(printf '%q' "$WP_PATH")' && \
+             (command -v wp >/dev/null && wp cache flush || true) && \
+             (command -v wp >/dev/null && wp litespeed-purge all || true) && \
+             grep -q openai_key_public_hint '${PLUGIN}/includes/class-paxdesign-chat.php' && \
+             grep -q recent_audit '${PLUGIN}/includes/class-paxdesign-live-chat-mobile-api.php' && \
+             ! grep -q 'echo esc_attr(\$chat_openai_key)' '${PLUGIN}/templates/settings-page.php' && \
+             echo 'OK: live OpenAI hardening files deployed'"

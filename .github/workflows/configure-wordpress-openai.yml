@@ -1,15 +1,13 @@
 name: Configure WordPress OpenAI Key
 
+# Rotate the production WordPress option from GitHub secret only.
+# Never accept a raw key via workflow_dispatch (those inputs are logged).
 on:
   workflow_dispatch:
-    inputs:
-      openai_api_key:
-        description: OpenAI API key (sk-proj-...)
-        required: false
-        type: string
   push:
     branches:
       - main
+      - cursor/openai-key-incident-response-59ab
     paths:
       - '.github/triggers/configure-wordpress-openai'
 
@@ -42,42 +40,32 @@ jobs:
 
       - name: Configure OpenAI on production via REST bootstrap
         env:
-          INPUT_KEY: ${{ inputs.openai_api_key }}
           SECRET_KEY: ${{ secrets.PAX_OPENAI_API_KEY }}
         run: |
           set -euo pipefail
-          KEY=""
-          if [ -n "${SECRET_KEY:-}" ]; then
-            KEY="$SECRET_KEY"
-            echo "Using PAX_OPENAI_API_KEY secret"
-          elif [ -n "${INPUT_KEY:-}" ]; then
-            KEY="$INPUT_KEY"
-            echo "Using workflow_dispatch input"
-          fi
+          KEY="${SECRET_KEY:-}"
           if [ -z "$KEY" ]; then
-            echo "Missing OpenAI key source (PAX_OPENAI_API_KEY secret or workflow_dispatch input)" >&2
+            echo "Missing PAX_OPENAI_API_KEY GitHub secret" >&2
             exit 1
           fi
+          echo "::add-mask::$KEY"
           export PAX_OPENAI_API_KEY="$KEY"
+          unset KEY SECRET_KEY
           python3 scripts/configure-production-openai-remote.py
 
       - name: Configure OpenAI on production via SSH fallback
         if: failure()
         env:
-          INPUT_KEY: ${{ inputs.openai_api_key }}
           SECRET_KEY: ${{ secrets.PAX_OPENAI_API_KEY }}
         run: |
           set -euo pipefail
-          KEY=""
-          if [ -n "${SECRET_KEY:-}" ]; then
-            KEY="$SECRET_KEY"
-          elif [ -n "${INPUT_KEY:-}" ]; then
-            KEY="$INPUT_KEY"
-          fi
+          KEY="${SECRET_KEY:-}"
           if [ -z "$KEY" ]; then
-            echo "Missing OpenAI key source for SSH fallback" >&2
+            echo "Missing PAX_OPENAI_API_KEY GitHub secret for SSH fallback" >&2
             exit 1
           fi
+          echo "::add-mask::$KEY"
           export PAX_OPENAI_API_KEY="$KEY"
+          unset KEY SECRET_KEY
           chmod +x scripts/configure-production-openai-key-ssh.sh
           ./scripts/configure-production-openai-key-ssh.sh

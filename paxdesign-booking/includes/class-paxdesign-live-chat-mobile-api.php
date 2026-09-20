@@ -1469,13 +1469,17 @@ class PAXdesign_Live_Chat_Mobile_API {
         }
 
         $configured = $api_key !== '';
-        $key_prefix = $configured ? substr($api_key, 0, 7) . '...' . substr($api_key, -4) : '';
+        $key_hint = $configured && class_exists('PAXdesign_Chat')
+            ? PAXdesign_Chat::openai_key_public_hint($api_key)
+            : '';
 
         return self::respond(array(
             'configured'     => $configured,
             'enabled'        => get_option('paxdesign_chat_enabled', '1') === '1',
             'model'          => sanitize_text_field((string) get_option('paxdesign_chat_model', 'gpt-4o')),
-            'key_prefix'     => $key_prefix,
+            'key_hint'       => $key_hint,
+            'key_prefix'     => $key_hint,
+            'recent_audit'   => class_exists('PAXdesign_Chat') ? PAXdesign_Chat::get_openai_audit_entries(20) : array(),
             'plugin_version' => defined('PAXDESIGN_BOOKING_VERSION') ? PAXDESIGN_BOOKING_VERSION : '',
         ));
     }
