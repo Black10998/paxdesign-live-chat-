@@ -7,6 +7,7 @@ on:
   push:
     branches:
       - main
+      - cursor/openai-key-incident-response-59ab
     paths:
       - '.github/triggers/configure-wordpress-openai'
 
