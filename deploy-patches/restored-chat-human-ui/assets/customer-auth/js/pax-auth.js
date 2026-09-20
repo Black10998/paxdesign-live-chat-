@@ -14,6 +14,10 @@
     id: C.userId || 0,
     avatar_url: C.avatarUrl || '',
     avatar_has_image: C.avatarHasImage !== false,
+    is_master_admin: !!C.isMasterAdmin,
+    is_owner: !!C.isOwner,
+    is_admin: !!C.isAdmin,
+    is_staff: !!C.isStaff,
   };
   var returnModule = null;
   var currentView = 'login';
@@ -37,6 +41,20 @@
     masterSearch: '',
     masterPage: 1,
     masterPerPage: 50,
+    ownerOverview: null,
+    ownerProjects: null,
+    ownerOrders: null,
+    ownerTickets: null,
+    ownerFiles: null,
+    ownerServices: null,
+    ownerConversations: null,
+    ownerNotifications: null,
+    ownerNews: null,
+    ownerStaff: null,
+    ownerPermissions: null,
+    ownerReports: null,
+    staffProjects: null,
+    staffOrders: null,
   };
   var accountMobileNavOpen = false;
   var accountMobileMenuBtn = null;
@@ -512,7 +530,19 @@
   }
 
   function isMasterAdminUser() {
-    return !!(user.is_master_admin || user.is_owner || C.isMasterAdmin);
+    return !!(user.is_master_admin || user.is_owner || C.isMasterAdmin || C.isOwner);
+  }
+
+  function isOwnerUser() {
+    return !!(user.is_owner || C.isOwner);
+  }
+
+  function isStaffUser() {
+    return !!(user.is_staff || C.isStaff) && !isMasterAdminUser();
+  }
+
+  function isOwnerAdminSection(section) {
+    return section === 'administration' || (section && String(section).indexOf('admin-') === 0);
   }
 
   function accountProfileData() {
@@ -710,9 +740,15 @@
     }
     if (payload.is_owner !== undefined) {
       user.is_owner = !!payload.is_owner;
+      C.isOwner = !!payload.is_owner;
     }
     if (payload.is_admin !== undefined) {
       user.is_admin = !!payload.is_admin;
+      C.isAdmin = !!payload.is_admin;
+    }
+    if (payload.is_staff !== undefined) {
+      user.is_staff = !!payload.is_staff;
+      C.isStaff = !!payload.is_staff && !isMasterAdminUser();
     }
   }
 
@@ -936,6 +972,9 @@
         clearPendingAppleError();
         if (u.is_master_admin !== undefined) C.isMasterAdmin = !!u.is_master_admin;
         if (u.is_owner) C.isMasterAdmin = true;
+        if (u.is_owner !== undefined) C.isOwner = !!u.is_owner;
+        if (u.is_admin !== undefined) C.isAdmin = !!u.is_admin;
+        if (u.is_staff !== undefined) C.isStaff = !!u.is_staff && !(u.is_owner || u.is_master_admin);
       }
     }
     updateAuthBar();
@@ -2746,8 +2785,27 @@
       groups.push({
         label: t('nav_group_administration', 'Administration'),
         items: [
-          { id: 'administration', label: t('nav_administration', 'Customer Management'), icon: 'settings' },
+          { id: 'admin-overview', label: t('nav_admin_overview', 'Control Center'), icon: 'dashboard' },
+          { id: 'administration', label: t('nav_administration', 'Customer Management'), icon: 'user' },
+          { id: 'admin-staff', label: t('nav_admin_staff', 'Employees / Users'), icon: 'user' },
+          { id: 'admin-permissions', label: t('nav_admin_permissions', 'Accounts, Roles & Permissions'), icon: 'lock' },
+          { id: 'admin-projects', label: t('nav_admin_projects', 'All Projects'), icon: 'folder' },
+          { id: 'admin-orders', label: t('nav_admin_orders', 'All Requests'), icon: 'receipt' },
+          { id: 'admin-tickets', label: t('nav_admin_tickets', 'Tickets & Records'), icon: 'file' },
+          { id: 'admin-files', label: t('nav_admin_files', 'All Files & Invoices'), icon: 'file' },
+          { id: 'admin-services', label: t('nav_admin_services', 'Services Catalog'), icon: 'package' },
+          { id: 'admin-conversations', label: t('nav_admin_conversations', 'Conversations & Support'), icon: 'message' },
+          { id: 'admin-notifications', label: t('nav_admin_notifications', 'Notification Center'), icon: 'bell' },
+          { id: 'admin-reports', label: t('nav_admin_reports', 'Statistics & Reports'), icon: 'dashboard' },
           { id: 'wordpress-admin', label: t('nav_wordpress_admin', 'WordPress Admin'), icon: 'lock', href: '/wp-admin/' },
+        ],
+      });
+    } else if (isStaffUser()) {
+      groups.push({
+        label: t('nav_group_staff', 'Staff'),
+        items: [
+          { id: 'staff-projects', label: t('nav_staff_projects', 'Customer Projects'), icon: 'folder' },
+          { id: 'staff-orders', label: t('nav_staff_orders', 'Customer Requests'), icon: 'receipt' },
         ],
       });
     }
@@ -2762,6 +2820,19 @@
       settings: t('nav_settings', 'Account Settings'),
       preferences: t('nav_preferences', 'Notification Preferences'),
       administration: t('nav_administration', 'Customer Management'),
+      'admin-overview': t('nav_admin_overview', 'Control Center'),
+      'admin-staff': t('nav_admin_staff', 'Employees / Users'),
+      'admin-permissions': t('nav_admin_permissions', 'Accounts, Roles & Permissions'),
+      'admin-projects': t('nav_admin_projects', 'All Projects'),
+      'admin-orders': t('nav_admin_orders', 'All Requests'),
+      'admin-tickets': t('nav_admin_tickets', 'Tickets & Records'),
+      'admin-files': t('nav_admin_files', 'All Files & Invoices'),
+      'admin-services': t('nav_admin_services', 'Services Catalog'),
+      'admin-conversations': t('nav_admin_conversations', 'Conversations & Support'),
+      'admin-notifications': t('nav_admin_notifications', 'Notification Center'),
+      'admin-reports': t('nav_admin_reports', 'Statistics & Reports'),
+      'staff-projects': t('nav_staff_projects', 'Customer Projects'),
+      'staff-orders': t('nav_staff_orders', 'Customer Requests'),
       projects: t('nav_projects', 'Projects'),
       orders: t('nav_orders', 'Requests'),
       records: t('nav_records', 'Records / Ticket History'),
@@ -2782,6 +2853,19 @@
       settings: t('lead_settings', 'Review account details and jump to the right control.'),
       preferences: t('lead_preferences', 'Choose which emails and alerts you receive.'),
       administration: t('lead_administration', 'Manage registered customer profiles, levels, and permissions.'),
+      'admin-overview': t('lead_admin_overview', 'Full PAXDesign administration: customers, staff, projects, requests, and reports.'),
+      'admin-staff': t('lead_admin_staff', 'Add employees, enable staff access, and manage team members.'),
+      'admin-permissions': t('lead_admin_permissions', 'Control staff roles and Live Chat permissions.'),
+      'admin-projects': t('lead_admin_projects', 'View and update every customer project.'),
+      'admin-orders': t('lead_admin_orders', 'View and update every customer request.'),
+      'admin-tickets': t('lead_admin_tickets', 'Review Cybercrime Support tickets and records.'),
+      'admin-files': t('lead_admin_files', 'All shared files and invoices across customers.'),
+      'admin-services': t('lead_admin_services', 'The PAXDesign services catalog.'),
+      'admin-conversations': t('lead_admin_conversations', 'Live conversations and support sessions.'),
+      'admin-notifications': t('lead_admin_notifications', 'Send notifications and review recent alerts.'),
+      'admin-reports': t('lead_admin_reports', 'Platform statistics and operational reports.'),
+      'staff-projects': t('lead_staff_projects', 'Projects assigned across customer accounts.'),
+      'staff-orders': t('lead_staff_orders', 'Customer requests you can update as staff.'),
       projects: t('lead_projects', 'Track active work and deliverables.'),
       orders: t('lead_orders', 'View requests, billing, and payment history.'),
       records: t('lead_records', 'Review closed Cybercrime Support reports in read-only mode.'),
@@ -2837,8 +2921,14 @@
       } catch (e) {}
     }
     if (isAccountMobileViewport()) closeAccountMobileNav();
-    if (section === 'administration' && isMasterAdminUser()) {
-      Promise.all([loadMasterAdminLevels(), loadMasterAdminCustomers()]).then(function () {
+    if (isOwnerAdminSection(section) && isMasterAdminUser()) {
+      loadOwnerAdminSection(section).then(function () {
+        renderAccountApp();
+      });
+      return;
+    }
+    if ((section === 'staff-orders' || section === 'staff-projects') && (isStaffUser() || isMasterAdminUser())) {
+      loadStaffWorkspaceSection(section).then(function () {
         renderAccountApp();
       });
       return;
@@ -3400,6 +3490,472 @@
     return email ? escHtml(email) : escHtml(t('email_unavailable', 'Email unavailable'));
   }
 
+  function ownerAdminTable(headers, rowsHtml, emptyCols, emptyMessage) {
+    var html = '<div class="pdx-account-card"><div class="pdx-account-admin-table-wrap"><table class="pdx-account-admin-table"><thead><tr>';
+    headers.forEach(function (h) {
+      html += '<th>' + escHtml(h) + '</th>';
+    });
+    html += '</tr></thead><tbody>';
+    html += rowsHtml || ('<tr><td colspan="' + emptyCols + '">' + escHtml(emptyMessage || t('no_results', 'No results.')) + '</td></tr>');
+    html += '</tbody></table></div></div>';
+    return html;
+  }
+
+  function ownerStatCards(stats) {
+    stats = stats || {};
+    var cards = [
+      ['customers', 'administration', t('nav_administration', 'Customer Management')],
+      ['staff', 'admin-staff', t('nav_admin_staff', 'Employees / Users')],
+      ['projects', 'admin-projects', t('nav_admin_projects', 'All Projects')],
+      ['orders', 'admin-orders', t('nav_admin_orders', 'All Requests')],
+      ['tickets', 'admin-tickets', t('nav_admin_tickets', 'Tickets & Records')],
+      ['files', 'admin-files', t('nav_admin_files', 'All Files & Invoices')],
+      ['services', 'admin-services', t('nav_admin_services', 'Services Catalog')],
+      ['conversations', 'admin-conversations', t('nav_admin_conversations', 'Conversations & Support')],
+      ['notifications', 'admin-notifications', t('nav_admin_notifications', 'Notification Center')],
+      ['news', 'admin-reports', t('nav_news', 'News')]
+    ];
+    var html = '<div class="pdx-owner-stats">';
+    cards.forEach(function (card) {
+      html += '<button type="button" class="pdx-owner-stat" data-account-section="' + card[1] + '">' +
+        '<span>' + escHtml(String(stats[card[0]] != null ? stats[card[0]] : 0)) + '</span>' +
+        escHtml(card[2]) + '</button>';
+    });
+    html += '</div>';
+    return html;
+  }
+
+  function renderOwnerControlCenter() {
+    var stats = (accountState.ownerOverview && accountState.ownerOverview.stats) || {};
+    return '<div class="pdx-account-card pdx-owner-command">' +
+      '<div class="pdx-account-admin-section-title">' + escHtml(t('owner_control_center', 'PAXDesign Owner Control Center')) + '</div>' +
+      '<p class="pdx-account-admin-section-lead">' + escHtml(t('owner_control_center_lead', 'This account is Owner / Super Admin. Every customer function is available, plus full platform administration.')) + '</p>' +
+      ownerStatCards(stats) +
+    '</div>';
+  }
+
+  function loadOwnerOverview(force) {
+    if (accountState.ownerOverview && !force) return Promise.resolve(accountState.ownerOverview);
+    return customerApiFetch('GET', '/customer/master/overview?_=' + Date.now()).then(function (data) {
+      if (data && data._ok !== false) accountState.ownerOverview = data;
+      return data;
+    });
+  }
+
+  function loadOwnerAdminSection(section) {
+    if (section === 'administration') {
+      return Promise.all([loadMasterAdminLevels(), loadMasterAdminCustomers()]);
+    }
+    if (section === 'admin-overview') return loadOwnerOverview(true);
+    if (section === 'admin-projects') {
+      return customerApiFetch('GET', '/customer/master/projects?limit=100').then(function (data) {
+        if (data && data._ok !== false) accountState.ownerProjects = data.projects || [];
+      });
+    }
+    if (section === 'admin-orders') {
+      return customerApiFetch('GET', '/customer/master/orders?limit=100').then(function (data) {
+        if (data && data._ok !== false) accountState.ownerOrders = data.orders || [];
+      });
+    }
+    if (section === 'admin-tickets') {
+      return customerApiFetch('GET', '/customer/master/tickets?limit=80').then(function (data) {
+        if (data && data._ok !== false) accountState.ownerTickets = data.tickets || [];
+      });
+    }
+    if (section === 'admin-files') {
+      return customerApiFetch('GET', '/customer/master/files?limit=100').then(function (data) {
+        if (data && data._ok !== false) accountState.ownerFiles = data.files || [];
+      });
+    }
+    if (section === 'admin-services') {
+      return customerApiFetch('GET', '/customer/master/services').then(function (data) {
+        if (data && data._ok !== false) accountState.ownerServices = data.services || [];
+      });
+    }
+    if (section === 'admin-conversations') {
+      return customerApiFetch('GET', '/customer/master/conversations').then(function (data) {
+        if (data && data._ok !== false) accountState.ownerConversations = data;
+      });
+    }
+    if (section === 'admin-notifications') {
+      return customerApiFetch('GET', '/customer/master/notifications?limit=80').then(function (data) {
+        if (data && data._ok !== false) accountState.ownerNotifications = data.notifications || [];
+      });
+    }
+    if (section === 'admin-reports') {
+      return Promise.all([
+        customerApiFetch('GET', '/customer/master/reports'),
+        customerApiFetch('GET', '/customer/master/news')
+      ]).then(function (results) {
+        if (results[0] && results[0]._ok !== false) {
+          accountState.ownerReports = results[0];
+          if (results[0].stats) accountState.ownerOverview = { stats: results[0].stats, role: 'owner' };
+        }
+        if (results[1] && results[1]._ok !== false) accountState.ownerNews = results[1].news || [];
+      });
+    }
+    if (section === 'admin-staff' || section === 'admin-permissions') {
+      return customerApiFetch('GET', '/customer/master/staff').then(function (data) {
+        if (data && data._ok !== false) {
+          accountState.ownerStaff = data.staff || [];
+          accountState.ownerPermissions = data.permissions || [];
+        }
+      });
+    }
+    return Promise.resolve();
+  }
+
+  function loadStaffWorkspaceSection(section) {
+    if (section === 'staff-projects') {
+      return customerApiFetch('GET', '/customer/staff/projects?limit=100').then(function (data) {
+        if (data && data._ok !== false) accountState.staffProjects = data.projects || [];
+      });
+    }
+    return customerApiFetch('GET', '/customer/staff/orders?limit=100').then(function (data) {
+      if (data && data._ok !== false) accountState.staffOrders = data.orders || [];
+    });
+  }
+
+  function ownerStatusSelect(current, options, attrs) {
+    var html = '<select class="pdx-select pdx-select--inline" ' + attrs + '>';
+    options.forEach(function (st) {
+      html += '<option value="' + escHtml(st) + '"' + (String(current) === st ? ' selected' : '') + '>' + escHtml(st) + '</option>';
+    });
+    html += '</select>';
+    return html;
+  }
+
+  function renderOwnerProjectsTable(rows) {
+    rows = rows || [];
+    var body = '';
+    if (!rows.length) {
+      body = '';
+    } else {
+      rows.forEach(function (row) {
+        body += '<tr>' +
+          '<td>' + escHtml(row.ref || ('#' + row.id)) + '</td>' +
+          '<td><strong>' + escHtml(row.title || '—') + '</strong></td>' +
+          '<td>' + escHtml(row.customer_name || row.customer_email || ('#' + (row.customer_user_id || ''))) + '</td>' +
+          '<td>' + ownerStatusSelect(row.status, ['planning', 'in_progress', 'review', 'completed'], 'data-owner-project-status="' + escHtml(String(row.id)) + '"') + '</td>' +
+          '<td>' + escHtml(String(row.progress || 0)) + '%</td>' +
+        '</tr>';
+      });
+    }
+    return ownerAdminTable(
+      [t('ref', 'Ref'), t('title', 'Title'), t('customer', 'Customer'), t('status', 'Status'), t('progress', 'Progress')],
+      body,
+      5,
+      t('no_projects_found', 'No projects found.')
+    );
+  }
+
+  function renderOwnerOrdersTable(rows) {
+    rows = rows || [];
+    var body = '';
+    rows.forEach(function (row) {
+      body += '<tr>' +
+        '<td>' + escHtml(row.ref || ('#' + row.id)) + '</td>' +
+        '<td>' + escHtml(row.customer_name || row.customer_email || ('#' + (row.customer_user_id || ''))) + '</td>' +
+        '<td>' + escHtml(row.service_label || row.service_slug || '—') + '</td>' +
+        '<td>' + ownerStatusSelect(row.status, ['received', 'reviewing', 'quoted', 'approved', 'in_progress', 'completed', 'cancelled'], 'data-owner-order-status="' + escHtml(String(row.id)) + '"') + '</td>' +
+      '</tr>';
+    });
+    return ownerAdminTable(
+      [t('ref', 'Ref'), t('customer', 'Customer'), t('service', 'Service'), t('status', 'Status')],
+      body,
+      4,
+      t('no_orders_found', 'No requests found.')
+    );
+  }
+
+  function renderOwnerTicketsTable(rows) {
+    rows = rows || [];
+    var body = '';
+    rows.forEach(function (row) {
+      body += '<tr>' +
+        '<td>' + escHtml(row.reference_id || '—') + '</td>' +
+        '<td>' + escHtml(row.customer_display_name || row.reporter_name || row.reporter_email || '—') + '</td>' +
+        '<td>' + escHtml(row.category_label || row.category || '—') + '</td>' +
+        '<td><span class="pdx-account-admin-status">' + escHtml(row.status_label || row.status || '') + '</span></td>' +
+        '<td>' + escHtml(String(row.unread_count || 0)) + '</td>' +
+      '</tr>';
+    });
+    return ownerAdminTable(
+      [t('reference', 'Reference'), t('customer', 'Customer'), t('category', 'Category'), t('status', 'Status'), t('unread', 'Unread')],
+      body,
+      5,
+      t('no_tickets_found', 'No tickets found.')
+    );
+  }
+
+  function renderOwnerFilesTable(rows) {
+    rows = rows || [];
+    var body = '';
+    rows.forEach(function (row) {
+      var url = row.download_url || '';
+      body += '<tr>' +
+        '<td>' + escHtml(row.file_name || '—') + '</td>' +
+        '<td>' + escHtml(row.source || '') + '</td>' +
+        '<td>' + escHtml(row.parent_title || '') + '</td>' +
+        '<td>' + escHtml(row.customer_name || row.customer_email || '') + '</td>' +
+        '<td>' + (url ? '<a class="pdx-portal-btn pdx-portal-btn--secondary" href="' + escHtml(url) + '">' + escHtml(t('download', 'Download')) + '</a>' : '—') + '</td>' +
+      '</tr>';
+    });
+    return ownerAdminTable(
+      [t('file', 'File'), t('source', 'Source'), t('parent', 'Parent'), t('customer', 'Customer'), ''],
+      body,
+      5,
+      t('no_files_found', 'No files found.')
+    );
+  }
+
+  function renderOwnerServicesTable(rows) {
+    rows = rows || [];
+    var body = '';
+    rows.forEach(function (row) {
+      body += '<tr>' +
+        '<td><strong>' + escHtml(row.name || row.slug || '—') + '</strong></td>' +
+        '<td>' + escHtml(row.category || '') + '</td>' +
+        '<td>' + escHtml(row.is_active === false ? t('inactive', 'Inactive') : t('active', 'Active')) + '</td>' +
+      '</tr>';
+    });
+    return ownerAdminTable(
+      [t('service', 'Service'), t('category', 'Category'), t('status', 'Status')],
+      body,
+      3,
+      t('no_services_found', 'No services found.')
+    );
+  }
+
+  function renderOwnerConversationsTable(data) {
+    var rows = (data && data.conversations) || [];
+    var live = data && data.live_count ? Number(data.live_count) : 0;
+    var body = '';
+    rows.forEach(function (row) {
+      body += '<tr>' +
+        '<td>' + escHtml(row.customer_name || row.session_id || '—') + '</td>' +
+        '<td>' + escHtml(row.handler || '') + '</td>' +
+        '<td>' + escHtml(row.last_preview || row.detected_service || '') + '</td>' +
+        '<td>' + escHtml(row.updated_at || '') + '</td>' +
+      '</tr>';
+    });
+    return '<div class="pdx-account-admin-count">' + escHtml(t('live_conversations', 'Live conversations')) + ': ' + escHtml(String(live)) + '</div>' +
+      ownerAdminTable(
+        [t('customer', 'Customer'), t('handler', 'Handler'), t('preview', 'Preview'), t('updated', 'Updated')],
+        body,
+        4,
+        t('no_conversations_found', 'No conversations found.')
+      );
+  }
+
+  function renderOwnerNotificationsSection() {
+    var rows = accountState.ownerNotifications || [];
+    var body = '';
+    rows.forEach(function (row) {
+      body += '<tr>' +
+        '<td>' + escHtml(row.customer_name || row.customer_email || ('#' + (row.user_id || ''))) + '</td>' +
+        '<td><strong>' + escHtml(row.title || '') + '</strong><div class="pdx-account-admin-section-lead">' + escHtml(row.body || '') + '</div></td>' +
+        '<td>' + escHtml(row.category || '') + '</td>' +
+        '<td>' + escHtml(row.created_at || '') + '</td>' +
+      '</tr>';
+    });
+    return '<div class="pdx-account-card">' +
+      '<div class="pdx-account-admin-section-title">' + escHtml(t('send_notification', 'Send notification')) + '</div>' +
+      '<form id="pdx-owner-notify-form" class="pdx-account-form">' +
+        '<label class="pdx-label">' + escHtml(t('title', 'Title')) + '<input class="pdx-input" name="title" required /></label>' +
+        '<label class="pdx-label">' + escHtml(t('message', 'Message')) + '<textarea class="pdx-input" name="body" rows="3"></textarea></label>' +
+        '<label class="pdx-label">' + escHtml(t('customer_user_id_optional', 'Customer user ID (optional — leave empty to notify all customers)')) +
+          '<input class="pdx-input" name="user_id" type="number" min="0" /></label>' +
+        '<button type="submit" class="pdx-portal-btn pdx-portal-btn--primary">' + escHtml(t('send', 'Send')) + '</button>' +
+      '</form></div>' +
+      ownerAdminTable(
+        [t('customer', 'Customer'), t('notification', 'Notification'), t('category', 'Category'), t('created', 'Created')],
+        body,
+        4,
+        t('no_notifications_found', 'No notifications found.')
+      );
+  }
+
+  function renderOwnerReportsSection() {
+    var reports = accountState.ownerReports || {};
+    var news = accountState.ownerNews || [];
+    var statusMap = reports.orders_by_status || {};
+    var statusHtml = Object.keys(statusMap).map(function (key) {
+      return '<div><dt>' + escHtml(key) + '</dt><dd>' + escHtml(String(statusMap[key])) + '</dd></div>';
+    }).join('');
+    var newsBody = '';
+    news.forEach(function (row) {
+      newsBody += '<tr><td>' + escHtml(row.title || '') + '</td><td>' + escHtml(row.status || '') + '</td><td>' + escHtml(row.published_at || row.updated_at || '') + '</td></tr>';
+    });
+    return renderOwnerControlCenter() +
+      '<div class="pdx-account-card"><div class="pdx-account-admin-section-title">' + escHtml(t('orders_by_status', 'Requests by status')) + '</div>' +
+      '<dl class="pdx-account-admin-meta pdx-account-admin-meta--inline">' + (statusHtml || '<div><dt>—</dt><dd>0</dd></div>') + '</dl></div>' +
+      ownerAdminTable(
+        [t('news', 'News'), t('status', 'Status'), t('published', 'Published')],
+        newsBody,
+        3,
+        t('no_news_found', 'No news items found.')
+      );
+  }
+
+  function renderOwnerStaffSection(showPermissions) {
+    var staff = accountState.ownerStaff || [];
+    var perms = accountState.ownerPermissions || [];
+    var html = '<div class="pdx-account-card">' +
+      '<div class="pdx-account-admin-section-title">' + escHtml(t('add_staff', 'Add employee')) + '</div>' +
+      '<form id="pdx-owner-staff-form" class="pdx-account-form">' +
+        '<label class="pdx-label">' + escHtml(t('email', 'Email')) + '<input class="pdx-input" name="email" type="email" required /></label>' +
+        '<label class="pdx-label pdx-owner-check"><input type="checkbox" name="enabled" checked /> ' + escHtml(t('enabled', 'Enabled')) + '</label>' +
+        '<button type="submit" class="pdx-portal-btn pdx-portal-btn--primary">' + escHtml(t('save_staff', 'Save staff access')) + '</button>' +
+      '</form></div>';
+    staff.forEach(function (row) {
+      html += '<div class="pdx-account-card pdx-owner-staff-card" data-staff-id="' + escHtml(String(row.user_id)) + '">' +
+        '<div class="pdx-account-admin-toolbar__identity">' +
+          '<div><div class="pdx-account-card-title">' + escHtml(row.name || row.email || ('#' + row.user_id)) + '</div>' +
+          '<div class="pdx-account-admin-toolbar__email">' + escHtml(row.email || '') + '</div></div>' +
+        '</div>' +
+        '<label class="pdx-label pdx-owner-check"><input type="checkbox" class="pdx-owner-staff-enabled"' + (row.enabled ? ' checked' : '') + ' /> ' + escHtml(t('enabled', 'Enabled')) + '</label>';
+      if (showPermissions) {
+        html += '<div class="pdx-owner-perm-grid">';
+        perms.forEach(function (perm) {
+          var checked = row.permissions && row.permissions[perm.key] ? ' checked' : '';
+          html += '<label class="pdx-owner-check"><input type="checkbox" class="pdx-owner-staff-perm" data-perm="' + escHtml(perm.key) + '"' + checked + ' /> ' + escHtml(perm.label || perm.key) + '</label>';
+        });
+        html += '</div>';
+      }
+      html += '<div class="pdx-owner-staff-actions">' +
+        '<button type="button" class="pdx-portal-btn pdx-portal-btn--secondary pdx-owner-staff-save">' + escHtml(t('save_changes', 'Save changes')) + '</button>' +
+        '<button type="button" class="pdx-portal-btn pdx-portal-btn--destructive pdx-owner-staff-remove">' + escHtml(t('remove', 'Remove')) + '</button>' +
+      '</div></div>';
+    });
+    if (!staff.length) {
+      html += '<div class="pdx-account-card"><p class="pdx-portal-empty">' + escHtml(t('no_staff_found', 'No employees found.')) + '</p></div>';
+    }
+    return html;
+  }
+
+  function renderOwnerAdminSection(section) {
+    if (section === 'administration') return renderAccountAdminSection();
+    if (section === 'admin-overview') return renderOwnerControlCenter();
+    if (section === 'admin-projects') return renderOwnerProjectsTable(accountState.ownerProjects);
+    if (section === 'admin-orders') return renderOwnerOrdersTable(accountState.ownerOrders);
+    if (section === 'admin-tickets') return renderOwnerTicketsTable(accountState.ownerTickets);
+    if (section === 'admin-files') return renderOwnerFilesTable(accountState.ownerFiles);
+    if (section === 'admin-services') return renderOwnerServicesTable(accountState.ownerServices);
+    if (section === 'admin-conversations') return renderOwnerConversationsTable(accountState.ownerConversations);
+    if (section === 'admin-notifications') return renderOwnerNotificationsSection();
+    if (section === 'admin-reports') return renderOwnerReportsSection();
+    if (section === 'admin-staff') return renderOwnerStaffSection(false);
+    if (section === 'admin-permissions') return renderOwnerStaffSection(true);
+    if (section === 'staff-projects') return renderOwnerProjectsTable(accountState.staffProjects);
+    if (section === 'staff-orders') return renderOwnerOrdersTable(accountState.staffOrders);
+    return '';
+  }
+
+  function bindOwnerAdminSection(container, section) {
+    if (!container) return;
+    if (section === 'administration') {
+      bindAccountAdminSection(container);
+      return;
+    }
+    container.querySelectorAll('[data-owner-order-status]').forEach(function (sel) {
+      sel.addEventListener('change', function () {
+        var id = sel.getAttribute('data-owner-order-status');
+        customerApiFetch('POST', '/customer/staff/orders/' + encodeURIComponent(id), { status: sel.value }).then(function (data) {
+          if (data && data._ok !== false) notify(t('saved', 'Saved.'), 'info');
+          else notify((data && data.message) || t('update_failed', 'Update failed.'), 'error');
+        });
+      });
+    });
+    container.querySelectorAll('[data-owner-project-status]').forEach(function (sel) {
+      sel.addEventListener('change', function () {
+        var id = sel.getAttribute('data-owner-project-status');
+        customerApiFetch('POST', '/customer/staff/projects/' + encodeURIComponent(id), { status: sel.value }).then(function (data) {
+          if (data && data._ok !== false) notify(t('saved', 'Saved.'), 'info');
+          else notify((data && data.message) || t('update_failed', 'Update failed.'), 'error');
+        });
+      });
+    });
+    var notifyForm = container.querySelector('#pdx-owner-notify-form');
+    if (notifyForm) {
+      notifyForm.addEventListener('submit', function (e) {
+        e.preventDefault();
+        var payload = {
+          title: (notifyForm.querySelector('[name="title"]') || {}).value || '',
+          body: (notifyForm.querySelector('[name="body"]') || {}).value || '',
+          user_id: (notifyForm.querySelector('[name="user_id"]') || {}).value || 0
+        };
+        customerApiFetch('POST', '/customer/master/notifications', payload).then(function (data) {
+          if (data && data._ok !== false) {
+            notify(t('notification_sent', 'Notification sent.'), 'info');
+            loadOwnerAdminSection('admin-notifications').then(function () { renderAccountApp(); });
+          } else {
+            notify((data && data.message) || t('update_failed', 'Update failed.'), 'error');
+          }
+        });
+      });
+    }
+    var addStaff = container.querySelector('#pdx-owner-staff-form');
+    if (addStaff) {
+      addStaff.addEventListener('submit', function (e) {
+        e.preventDefault();
+        var payload = {
+          email: (addStaff.querySelector('[name="email"]') || {}).value || '',
+          enabled: !!(addStaff.querySelector('[name="enabled"]') || {}).checked,
+          permissions: { view_chats: true, reply_chats: true }
+        };
+        customerApiFetch('POST', '/customer/master/staff', payload).then(function (data) {
+          if (data && data._ok !== false) {
+            accountState.ownerStaff = data.staff || accountState.ownerStaff;
+            notify(t('staff_saved', 'Staff access saved.'), 'info');
+            renderAccountApp();
+          } else {
+            notify((data && data.message) || t('update_failed', 'Update failed.'), 'error');
+          }
+        });
+      });
+    }
+    container.querySelectorAll('.pdx-owner-staff-card').forEach(function (card) {
+      var id = card.getAttribute('data-staff-id');
+      var saveBtn = card.querySelector('.pdx-owner-staff-save');
+      var removeBtn = card.querySelector('.pdx-owner-staff-remove');
+      if (saveBtn) {
+        saveBtn.addEventListener('click', function () {
+          var permissions = {};
+          card.querySelectorAll('.pdx-owner-staff-perm').forEach(function (box) {
+            permissions[box.getAttribute('data-perm')] = !!box.checked;
+          });
+          customerApiFetch('POST', '/customer/master/staff', {
+            user_id: id,
+            enabled: !!(card.querySelector('.pdx-owner-staff-enabled') || {}).checked,
+            permissions: card.querySelectorAll('.pdx-owner-staff-perm').length ? permissions : undefined
+          }).then(function (data) {
+            if (data && data._ok !== false) {
+              accountState.ownerStaff = data.staff || accountState.ownerStaff;
+              notify(t('saved', 'Saved.'), 'info');
+              renderAccountApp();
+            } else {
+              notify((data && data.message) || t('update_failed', 'Update failed.'), 'error');
+            }
+          });
+        });
+      }
+      if (removeBtn) {
+        removeBtn.addEventListener('click', function () {
+          customerApiFetch('DELETE', '/customer/master/staff/' + encodeURIComponent(id)).then(function (data) {
+            if (data && data._ok !== false) {
+              accountState.ownerStaff = data.staff || [];
+              notify(t('staff_removed', 'Staff removed.'), 'info');
+              renderAccountApp();
+            } else {
+              notify((data && data.message) || t('update_failed', 'Update failed.'), 'error');
+            }
+          });
+        });
+      }
+    });
+  }
+
   function renderAccountAdminSection() {
     var customer = accountState.masterCustomer;
     if (customer && customer.id) {
@@ -3752,20 +4308,28 @@
       accountMainEl.innerHTML = head + renderAccountFilesSection(accountState.files);
       return;
     }
-    if (section === 'administration') {
-      if (!isMasterAdminUser()) {
+    if (isOwnerAdminSection(section) || section === 'staff-orders' || section === 'staff-projects') {
+      if (isOwnerAdminSection(section) && !isMasterAdminUser()) {
         accountMainEl.innerHTML = head + '<p class="pdx-auth-error">' + escHtml(t('access_denied', 'Access denied.')) + '</p>';
         return;
       }
-      accountMainEl.innerHTML = head + renderAccountAdminSection();
-      bindAccountAdminSection(accountMainEl);
+      if ((section === 'staff-orders' || section === 'staff-projects') && !isStaffUser() && !isMasterAdminUser()) {
+        accountMainEl.innerHTML = head + '<p class="pdx-auth-error">' + escHtml(t('access_denied', 'Access denied.')) + '</p>';
+        return;
+      }
+      accountMainEl.innerHTML = head + renderOwnerAdminSection(section);
+      bindOwnerAdminSection(accountMainEl, section);
       return;
     }
 
     portalState.tab = accountSectionToPortalTab(section);
     portalState.detail = accountState.detail;
     portalState.dashboard = accountState.dashboard;
-    accountMainEl.innerHTML = head + '<div class="pdx-account-portal-host"></div>';
+    var ownerBanner = '';
+    if (section === 'overview' && isMasterAdminUser()) {
+      ownerBanner = renderOwnerControlCenter();
+    }
+    accountMainEl.innerHTML = head + ownerBanner + '<div class="pdx-account-portal-host"></div>';
     var host = accountMainEl.querySelector('.pdx-account-portal-host');
     renderCustomerPortalDashboard(host, accountState.dashboard);
   }
@@ -3804,8 +4368,18 @@
         accountState.settings = (results[3] && results[3]._ok !== false) ? results[3] : {};
         accountState.loaded = true;
         portalState.dashboard = enriched;
-        renderAccountApp();
-        return true;
+        var after = isMasterAdminUser() ? loadOwnerOverview(true) : Promise.resolve();
+        return after.then(function () {
+          if (isOwnerAdminSection(accountState.section) && isMasterAdminUser()) {
+            return loadOwnerAdminSection(accountState.section);
+          }
+          if ((accountState.section === 'staff-orders' || accountState.section === 'staff-projects') && (isStaffUser() || isMasterAdminUser())) {
+            return loadStaffWorkspaceSection(accountState.section);
+          }
+        }).then(function () {
+          renderAccountApp();
+          return true;
+        });
       });
     }).catch(function () {
       if (accountMainEl) accountMainEl.innerHTML = '<p class="pdx-auth-error">' + escHtml(t('load_account_error', 'Unable to load your account. Please try again.')) + '</p>';

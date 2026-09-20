@@ -17,9 +17,17 @@ on:
       - 'paxdesign-booking/includes/customer/class-paxdesign-customer-master-admin.php'
       - 'paxdesign-booking/includes/customer/class-paxdesign-customer-registry.php'
       - 'paxdesign-booking/includes/customer/class-paxdesign-customer-auth.php'
+      - 'paxdesign-booking/includes/customer/class-paxdesign-customer-master-rest.php'
+      - 'paxdesign-booking/includes/customer/class-paxdesign-customer-staff-rest.php'
+      - 'paxdesign-booking/includes/customer/class-paxdesign-customer-projects.php'
+      - 'paxdesign-booking/includes/customer/class-paxdesign-customer-orders.php'
+      - 'paxdesign-booking/includes/customer/class-paxdesign-customer-notifications.php'
+      - 'paxdesign-booking/includes/customer/class-paxdesign-customer-services.php'
+      - 'paxdesign-booking/includes/auth/class-paxdesign-auth-frontend.php'
       - 'paxdesign-booking/includes/customer/data/account-ui-l10n.php'
       - 'paxdesign-booking/includes/customer/data/account-ui-l10n-tr.php'
       - 'paxdesign-booking/assets/customer-auth/js/pax-auth.js'
+      - 'paxdesign-booking/assets/customer-auth/css/pdx-account-app.css'
       - 'paxdesign-booking/scripts/wp-eval-ensure-live-admin-access.php'
       - 'deploy-patches/restored-chat-human-ui/assets/customer-auth/js/pax-auth.js'
       - 'deploy-patches/restored-chat-human-ui/includes/auth/class-paxdesign-auth-github.php'
@@ -127,6 +135,7 @@ jobs:
               $(printf '%q' "$PLUGIN/includes/customer") \
               $(printf '%q' "$PLUGIN/includes/customer/data") \
               $(printf '%q' "$PLUGIN/assets/customer-auth/js") \
+              $(printf '%q' "$PLUGIN/assets/customer-auth/css") \
               $(printf '%q' "$PLUGIN/scripts")"
 
           rsync_with_retry paxdesign-booking/includes/auth/class-paxdesign-auth-native.php "${REMOTE}:${PLUGIN}/includes/auth/class-paxdesign-auth-native.php"
@@ -136,9 +145,17 @@ jobs:
           rsync_with_retry paxdesign-booking/includes/customer/class-paxdesign-customer-master-admin.php "${REMOTE}:${PLUGIN}/includes/customer/class-paxdesign-customer-master-admin.php"
           rsync_with_retry paxdesign-booking/includes/customer/class-paxdesign-customer-registry.php "${REMOTE}:${PLUGIN}/includes/customer/class-paxdesign-customer-registry.php"
           rsync_with_retry paxdesign-booking/includes/customer/class-paxdesign-customer-auth.php "${REMOTE}:${PLUGIN}/includes/customer/class-paxdesign-customer-auth.php"
+          rsync_with_retry paxdesign-booking/includes/customer/class-paxdesign-customer-master-rest.php "${REMOTE}:${PLUGIN}/includes/customer/class-paxdesign-customer-master-rest.php"
+          rsync_with_retry paxdesign-booking/includes/customer/class-paxdesign-customer-staff-rest.php "${REMOTE}:${PLUGIN}/includes/customer/class-paxdesign-customer-staff-rest.php"
+          rsync_with_retry paxdesign-booking/includes/customer/class-paxdesign-customer-projects.php "${REMOTE}:${PLUGIN}/includes/customer/class-paxdesign-customer-projects.php"
+          rsync_with_retry paxdesign-booking/includes/customer/class-paxdesign-customer-orders.php "${REMOTE}:${PLUGIN}/includes/customer/class-paxdesign-customer-orders.php"
+          rsync_with_retry paxdesign-booking/includes/customer/class-paxdesign-customer-notifications.php "${REMOTE}:${PLUGIN}/includes/customer/class-paxdesign-customer-notifications.php"
+          rsync_with_retry paxdesign-booking/includes/customer/class-paxdesign-customer-services.php "${REMOTE}:${PLUGIN}/includes/customer/class-paxdesign-customer-services.php"
+          rsync_with_retry paxdesign-booking/includes/auth/class-paxdesign-auth-frontend.php "${REMOTE}:${PLUGIN}/includes/auth/class-paxdesign-auth-frontend.php"
           rsync_with_retry paxdesign-booking/includes/customer/data/account-ui-l10n.php "${REMOTE}:${PLUGIN}/includes/customer/data/account-ui-l10n.php"
           rsync_with_retry paxdesign-booking/includes/customer/data/account-ui-l10n-tr.php "${REMOTE}:${PLUGIN}/includes/customer/data/account-ui-l10n-tr.php"
           rsync_with_retry paxdesign-booking/assets/customer-auth/js/pax-auth.js "${REMOTE}:${PLUGIN}/assets/customer-auth/js/pax-auth.js"
+          rsync_with_retry paxdesign-booking/assets/customer-auth/css/pdx-account-app.css "${REMOTE}:${PLUGIN}/assets/customer-auth/css/pdx-account-app.css"
           rsync_with_retry paxdesign-booking/scripts/wp-eval-ensure-live-admin-access.php "${REMOTE}:${PLUGIN}/scripts/wp-eval-ensure-live-admin-access.php"
 
           ssh_with_retry "$REMOTE" \
@@ -155,6 +172,9 @@ jobs:
              grep -q 'OWNER_EMAIL' '$(printf '%q' "$PLUGIN")/includes/customer/class-paxdesign-customer-master-admin.php' && \
              grep -q 'user.is_owner' '$(printf '%q' "$PLUGIN")/assets/customer-auth/js/pax-auth.js' && \
              grep -q 'nav_wordpress_admin' '$(printf '%q' "$PLUGIN")/assets/customer-auth/js/pax-auth.js' && \
+             grep -q 'nav_admin_overview' '$(printf '%q' "$PLUGIN")/assets/customer-auth/js/pax-auth.js' && \
+             grep -q 'loadOwnerAdminSection' '$(printf '%q' "$PLUGIN")/assets/customer-auth/js/pax-auth.js' && \
+             grep -q '/customer/master/overview' '$(printf '%q' "$PLUGIN")/includes/customer/class-paxdesign-customer-master-rest.php' && \
              grep -q 'Version: 3.174.128' '$(printf '%q' "$PLUGIN")/assets/js/chat-script.js' && \
              ! grep -q 'skipping stacked sync' '$(printf '%q' "$PLUGIN")/assets/js/chat-script.js' && \
              echo 'OK: live owner super-admin deployed without 3.176 chat rewrite'"

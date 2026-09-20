@@ -513,4 +513,89 @@ class PAXdesign_Customer_Orders {
 
         return array_slice($items, 0, $limit);
     }
+
+    /**
+     * Aggregated file library for owner / staff (all customers, all visibilities).
+     *
+     * @return array<int, array<string, mixed>>
+     */
+    public static function library_for_staff($limit = 100) {
+        global $wpdb;
+        $limit = max(1, min(200, (int) $limit));
+        $items = array();
+
+        $project_files = $wpdb->get_results($wpdb->prepare(
+            "SELECT pf.id, pf.file_name, pf.mime_type, pf.file_size, pf.category AS kind, pf.visibility, pf.created_at,
+                    p.id AS parent_id, p.title AS parent_title, p.customer_user_id,
+                    u.display_name AS customer_name, u.user_email AS customer_email
+             FROM " . PAXdesign_Customer_DB::table('project_files') . " pf
+             INNER JOIN " . PAXdesign_Customer_DB::table('projects') . " p ON p.id = pf.project_id
+             LEFT JOIN {$wpdb->users} u ON u.ID = p.customer_user_id
+             ORDER BY pf.created_at DESC LIMIT %d",
+            $limit
+        ), ARRAY_A);
+        foreach ($project_files ?: array() as $row) {
+            $file_id = (int) ($row['id'] ?? 0);
+            $parent_id = (int) ($row['parent_id'] ?? 0);
+            if ($file_id <= 0) {
+                continue;
+            }
+            $items[] = array(
+                'id'             => $file_id,
+                'source'         => 'project',
+                'parent_id'      => $parent_id,
+                'parent_title'   => (string) ($row['parent_title'] ?? ''),
+                'customer_user_id' => (int) ($row['customer_user_id'] ?? 0),
+                'customer_name'  => (string) ($row['customer_name'] ?? ''),
+                'customer_email' => (string) ($row['customer_email'] ?? ''),
+                'file_name'      => (string) ($row['file_name'] ?? ''),
+                'mime_type'      => (string) ($row['mime_type'] ?? 'application/octet-stream'),
+                'file_size'      => (int) ($row['file_size'] ?? 0),
+                'kind'           => (string) ($row['kind'] ?? 'file'),
+                'visibility'     => (string) ($row['visibility'] ?? ''),
+                'created_at'     => (string) ($row['created_at'] ?? ''),
+                'download_url'   => rest_url('pdx/v1/customer/staff/projects/' . $parent_id . '/files/' . $file_id . '/download'),
+            );
+        }
+
+        $order_files = $wpdb->get_results($wpdb->prepare(
+            "SELECT ofl.id, ofl.file_name, ofl.mime_type, ofl.file_size, ofl.kind, ofl.visibility, ofl.created_at,
+                    o.id AS parent_id, o.service_label AS parent_title, o.customer_user_id,
+                    u.display_name AS customer_name, u.user_email AS customer_email
+             FROM " . PAXdesign_Customer_DB::table('order_files') . " ofl
+             INNER JOIN " . PAXdesign_Customer_DB::table('orders') . " o ON o.id = ofl.order_id
+             LEFT JOIN {$wpdb->users} u ON u.ID = o.customer_user_id
+             ORDER BY ofl.created_at DESC LIMIT %d",
+            $limit
+        ), ARRAY_A);
+        foreach ($order_files ?: array() as $row) {
+            $file_id = (int) ($row['id'] ?? 0);
+            $parent_id = (int) ($row['parent_id'] ?? 0);
+            if ($file_id <= 0) {
+                continue;
+            }
+            $items[] = array(
+                'id'             => $file_id,
+                'source'         => 'order',
+                'parent_id'      => $parent_id,
+                'parent_title'   => (string) ($row['parent_title'] ?? ''),
+                'customer_user_id' => (int) ($row['customer_user_id'] ?? 0),
+                'customer_name'  => (string) ($row['customer_name'] ?? ''),
+                'customer_email' => (string) ($row['customer_email'] ?? ''),
+                'file_name'      => (string) ($row['file_name'] ?? ''),
+                'mime_type'      => (string) ($row['mime_type'] ?? 'application/octet-stream'),
+                'file_size'      => (int) ($row['file_size'] ?? 0),
+                'kind'           => (string) ($row['kind'] ?? 'file'),
+                'visibility'     => (string) ($row['visibility'] ?? ''),
+                'created_at'     => (string) ($row['created_at'] ?? ''),
+                'download_url'   => rest_url('pdx/v1/customer/staff/orders/' . $parent_id . '/files/' . $file_id . '/download'),
+            );
+        }
+
+        usort($items, static function ($a, $b) {
+            return strcmp($b['created_at'], $a['created_at']);
+        });
+
+        return array_slice($items, 0, $limit);
+    }
 }

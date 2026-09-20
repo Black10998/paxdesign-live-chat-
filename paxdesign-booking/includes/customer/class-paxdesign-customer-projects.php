@@ -24,6 +24,29 @@ class PAXdesign_Customer_Projects {
         return array_map(array(__CLASS__, 'format_project'), $rows ?: array());
     }
 
+    /**
+     * All customer projects for staff / owner administration.
+     *
+     * @return array<int, array<string, mixed>>
+     */
+    public static function list_for_staff($status = '', $limit = 100) {
+        global $wpdb;
+        $table = PAXdesign_Customer_DB::table('projects');
+        $sql = "SELECT p.*, u.display_name AS customer_name, u.user_email AS customer_email
+                FROM $table p
+                LEFT JOIN {$wpdb->users} u ON u.ID = p.customer_user_id
+                WHERE 1=1";
+        $params = array();
+        if ($status !== '') {
+            $sql .= " AND p.status = %s";
+            $params[] = sanitize_key($status);
+        }
+        $sql .= " ORDER BY p.updated_at DESC LIMIT %d";
+        $params[] = max(1, min(200, (int) $limit));
+        $rows = $wpdb->get_results($wpdb->prepare($sql, $params), ARRAY_A);
+        return array_map(array(__CLASS__, 'format_staff_project'), $rows ?: array());
+    }
+
     public static function get_for_user($user_id, $project_id) {
         global $wpdb;
         $row = $wpdb->get_row($wpdb->prepare(
@@ -179,6 +202,18 @@ class PAXdesign_Customer_Projects {
             'chat_session_id'     => $row['chat_session_id'],
             'updated_at'          => $row['updated_at'],
         );
+    }
+
+    /**
+     * @param array<string, mixed> $row
+     * @return array<string, mixed>
+     */
+    private static function format_staff_project($row) {
+        $project = self::format_project($row);
+        $project['customer_user_id'] = (int) ($row['customer_user_id'] ?? 0);
+        $project['customer_name'] = (string) ($row['customer_name'] ?? '');
+        $project['customer_email'] = (string) ($row['customer_email'] ?? '');
+        return $project;
     }
 
     private static function nullable_date($value) {
@@ -351,6 +386,20 @@ class PAXdesign_Customer_Projects {
         }
         return $wpdb->get_row($wpdb->prepare(
             "SELECT * FROM " . PAXdesign_Customer_DB::table('project_files') . " WHERE id = %d AND project_id = %d AND visibility = 'customer' LIMIT 1",
+            absint($file_id),
+            absint($project_id)
+        ), ARRAY_A);
+    }
+
+    /**
+     * Staff / owner download of any project file (including internal visibility).
+     *
+     * @return array<string, mixed>|null
+     */
+    public static function get_file_for_staff($project_id, $file_id) {
+        global $wpdb;
+        return $wpdb->get_row($wpdb->prepare(
+            "SELECT * FROM " . PAXdesign_Customer_DB::table('project_files') . " WHERE id = %d AND project_id = %d LIMIT 1",
             absint($file_id),
             absint($project_id)
         ), ARRAY_A);

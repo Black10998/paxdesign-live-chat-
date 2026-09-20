@@ -865,6 +865,151 @@ return array(
 		'de' => 'Registrierte Kundenprofile, Level und Berechtigungen verwalten.',
 		'ar' => 'إدارة ملفات العملاء والمستويات والصلاحيات.',
 	),
+	'nav_admin_overview' => array(
+		'en' => 'Control Center',
+		'de' => 'Schaltzentrale',
+		'ar' => 'مركز التحكم',
+	),
+	'nav_admin_staff' => array(
+		'en' => 'Employees / Users',
+		'de' => 'Mitarbeiter / Benutzer',
+		'ar' => 'إدارة الموظفين / المستخدمين',
+	),
+	'nav_admin_permissions' => array(
+		'en' => 'Accounts, Roles & Permissions',
+		'de' => 'Konten, Rollen & Berechtigungen',
+		'ar' => 'إدارة الحسابات والصلاحيات والأدوار',
+	),
+	'nav_admin_projects' => array(
+		'en' => 'All Projects',
+		'de' => 'Alle Projekte',
+		'ar' => 'إدارة المشاريع',
+	),
+	'nav_admin_orders' => array(
+		'en' => 'All Requests',
+		'de' => 'Alle Anfragen',
+		'ar' => 'إدارة الطلبات',
+	),
+	'nav_admin_tickets' => array(
+		'en' => 'Tickets & Records',
+		'de' => 'Tickets & Akten',
+		'ar' => 'إدارة التذاكر والسجلات',
+	),
+	'nav_admin_files' => array(
+		'en' => 'All Files & Invoices',
+		'de' => 'Alle Dateien & Rechnungen',
+		'ar' => 'إدارة الملفات والفواتير',
+	),
+	'nav_admin_services' => array(
+		'en' => 'Services Catalog',
+		'de' => 'Leistungskatalog',
+		'ar' => 'إدارة الخدمات',
+	),
+	'nav_admin_conversations' => array(
+		'en' => 'Conversations & Support',
+		'de' => 'Gespräche & Support',
+		'ar' => 'إدارة المحادثات والدعم',
+	),
+	'nav_admin_notifications' => array(
+		'en' => 'Notification Center',
+		'de' => 'Benachrichtigungen',
+		'ar' => 'إدارة الإشعارات',
+	),
+	'nav_admin_reports' => array(
+		'en' => 'Statistics & Reports',
+		'de' => 'Statistiken & Berichte',
+		'ar' => 'الإحصائيات والتقارير',
+	),
+	'nav_group_staff' => array(
+		'en' => 'Staff',
+		'de' => 'Mitarbeiter',
+		'ar' => 'الموظفون',
+	),
+	'nav_staff_projects' => array(
+		'en' => 'Customer Projects',
+		'de' => 'Kundenprojekte',
+		'ar' => 'مشاريع العملاء',
+	),
+	'nav_staff_orders' => array(
+		'en' => 'Customer Requests',
+		'de' => 'Kundenanfragen',
+		'ar' => 'طلبات العملاء',
+	),
+	'lead_admin_overview' => array(
+		'en' => 'Full PAXDesign administration: customers, staff, projects, requests, and reports.',
+		'de' => 'Vollständige PAXDesign-Verwaltung: Kunden, Team, Projekte, Anfragen und Berichte.',
+		'ar' => 'إدارة PAXDesign الكاملة: العملاء والموظفون والمشاريع والطلبات والتقارير.',
+	),
+	'lead_admin_staff' => array(
+		'en' => 'Add employees, enable staff access, and manage team members.',
+		'de' => 'Mitarbeiter hinzufügen, Zugriff aktivieren und das Team verwalten.',
+		'ar' => 'إضافة الموظفين وتفعيل صلاحيات الفريق وإدارتهم.',
+	),
+	'lead_admin_permissions' => array(
+		'en' => 'Control staff roles and Live Chat permissions.',
+		'de' => 'Rollen und Live-Chat-Berechtigungen steuern.',
+		'ar' => 'التحكم في أدوار الموظفين وصلاحيات الدردشة.',
+	),
+	'lead_admin_projects' => array(
+		'en' => 'View and update every customer project.',
+		'de' => 'Alle Kundenprojekte ansehen und aktualisieren.',
+		'ar' => 'عرض وتحديث جميع مشاريع العملاء.',
+	),
+	'lead_admin_orders' => array(
+		'en' => 'View and update every customer request.',
+		'de' => 'Alle Kundenanfragen ansehen und aktualisieren.',
+		'ar' => 'عرض وتحديث جميع طلبات العملاء.',
+	),
+	'lead_admin_tickets' => array(
+		'en' => 'Review Cybercrime Support tickets and records.',
+		'de' => 'Cybercrime-Support-Tickets und Akten prüfen.',
+		'ar' => 'مراجعة تذاكر وسجلات دعم الجرائم الإلكترونية.',
+	),
+	'lead_admin_files' => array(
+		'en' => 'All shared files and invoices across customers.',
+		'de' => 'Alle Dateien und Rechnungen aller Kunden.',
+		'ar' => 'جميع الملفات والفواتير عبر حسابات العملاء.',
+	),
+	'lead_admin_services' => array(
+		'en' => 'The PAXDesign services catalog.',
+		'de' => 'Der PAXDesign-Leistungskatalog.',
+		'ar' => 'كتالوج خدمات PAXDesign.',
+	),
+	'lead_admin_conversations' => array(
+		'en' => 'Live conversations and support sessions.',
+		'de' => 'Live-Gespräche und Support-Sitzungen.',
+		'ar' => 'المحادثات الحية وجلسات الدعم.',
+	),
+	'lead_admin_notifications' => array(
+		'en' => 'Send notifications and review recent alerts.',
+		'de' => 'Benachrichtigungen senden und aktuelle Hinweise prüfen.',
+		'ar' => 'إرسال الإشعارات ومراجعة التنبيهات الأخيرة.',
+	),
+	'lead_admin_reports' => array(
+		'en' => 'Platform statistics and operational reports.',
+		'de' => 'Plattformstatistiken und Betriebsberichte.',
+		'ar' => 'إحصائيات المنصة والتقارير التشغيلية.',
+	),
+	'lead_staff_projects' => array(
+		'en' => 'Projects assigned across customer accounts.',
+		'de' => 'Projekte über Kundenkonten hinweg.',
+		'ar' => 'المشاريع عبر حسابات العملاء.',
+	),
+	'lead_staff_orders' => array(
+		'en' => 'Customer requests you can update as staff.',
+		'de' => 'Kundenanfragen, die Sie als Mitarbeiter aktualisieren können.',
+		'ar' => 'طلبات العملاء التي يمكن للموظف تحديثها.',
+	),
+	'owner_control_center' => array(
+		'en' => 'PAXDesign Owner Control Center',
+		'de' => 'PAXDesign-Inhaber-Schaltzentrale',
+		'ar' => 'مركز تحكم مالك PAXDesign',
+	),
+	'owner_control_center_lead' => array(
+		'en' => 'This account is Owner / Super Admin. Every customer function is available, plus full platform administration.',
+		'de' => 'Dieses Konto ist Inhaber / Super-Admin. Alle Kundenfunktionen sind verfügbar, plus die vollständige Plattformverwaltung.',
+		'ar' => 'هذا الحساب هو المالك / المشرف الأعلى. كل وظائف العميل متاحة، بالإضافة إلى إدارة المنصة بالكامل.',
+	),
 	'admin_customer_preview' => array(
 		'en' => 'Customer account preview',
 		'de' => 'Kundenkonto-Vorschau',

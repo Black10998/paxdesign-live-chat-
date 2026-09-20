@@ -34,6 +34,7 @@ cx_assert_true(strpos($rest, 'chat_stream') !== false, 'Missing chat_stream hand
 
 $staff = file_get_contents($customer_dir . '/class-paxdesign-customer-staff-rest.php');
 cx_assert_true(strpos($staff, '/customer/staff/projects') !== false, 'Missing staff project routes');
+cx_assert_true(strpos($staff, 'function list_projects') !== false, 'Staff can list all customer projects');
 cx_assert_true(strpos($staff, 'require_staff') !== false, 'Staff routes must use require_staff');
 
 $auth = file_get_contents($customer_dir . '/class-paxdesign-customer-auth.php');
@@ -229,6 +230,8 @@ cx_assert_true(strpos($apple_auth, 'find_master_user') !== false, 'Apple auth mu
 
 $master_rest = file_get_contents($customer_dir . '/class-paxdesign-customer-master-rest.php');
 cx_assert_true(strpos($master_rest, '/customer/master/customers') !== false, 'Master admin customer routes must exist');
+cx_assert_true(strpos($master_rest, '/customer/master/overview') !== false, 'Master admin overview route must exist');
+cx_assert_true(strpos($master_rest, '/customer/master/staff') !== false, 'Master admin staff route must exist');
 cx_assert_true(strpos($master_rest, 'PAXdesign_Customer_Registry') !== false, 'Master admin list must use customer registry');
 
 $registry = file_get_contents($customer_dir . '/class-paxdesign-customer-registry.php');
@@ -254,6 +257,8 @@ cx_assert_true(strpos($pax_auth_js, 'isMasterAdminUser()') !== false && strpos($
 
 cx_assert_true(strpos($pax_auth_js, 'pdx-account-level-badge') !== false, 'Account JS must render level badges');
 cx_assert_true(strpos($pax_auth_js, 'administration') !== false, 'Account JS must include administration section');
+cx_assert_true(strpos($pax_auth_js, 'function loadOwnerAdminSection') !== false, 'Account JS must load owner administration sections');
+cx_assert_true(strpos($pax_auth_js, "href: '/wp-admin/'") !== false, 'Account JS must keep the WordPress Admin link');
 
 $pdx_customers = file_get_contents(dirname(__DIR__, 2) . '/paxdesign-booking/includes/auth/class-paxdesign-customers.php');
 cx_assert_true(strpos($pdx_customers, 'META_ADMIN_NOTES') !== false, 'Booking customers must support admin notes without toolbar');

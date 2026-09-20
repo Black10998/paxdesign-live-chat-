@@ -303,4 +303,73 @@ class PAXdesign_Customer_Notifications {
             self::notify_user($uid, 'news', $title, $excerpt, 'news', $slug, $deep_link);
         }
     }
+
+    /**
+     * Recent notifications across all users for owner / staff administration.
+     *
+     * @return array<int, array<string, mixed>>
+     */
+    public static function list_recent_for_admin($limit = 80) {
+        global $wpdb;
+        $limit = max(1, min(200, (int) $limit));
+        $rows = $wpdb->get_results($wpdb->prepare(
+            "SELECT n.*, u.display_name AS customer_name, u.user_email AS customer_email
+             FROM " . self::table_or_notifications() . " n
+             LEFT JOIN {$wpdb->users} u ON u.ID = n.user_id
+             ORDER BY n.created_at DESC
+             LIMIT %d",
+            $limit
+        ), ARRAY_A);
+        $out = array();
+        foreach ($rows ?: array() as $row) {
+            $item = self::format($row);
+            $item['user_id'] = (int) ($row['user_id'] ?? 0);
+            $item['customer_name'] = (string) ($row['customer_name'] ?? '');
+            $item['customer_email'] = (string) ($row['customer_email'] ?? '');
+            $out[] = $item;
+        }
+        return $out;
+    }
+
+    /**
+     * Send a notification to every manageable customer (and optionally one user).
+     *
+     * @return array<string, mixed>
+     */
+    public static function broadcast($title, $body, $category = 'general', $user_id = 0) {
+        $title = sanitize_text_field((string) $title);
+        $body = sanitize_textarea_field((string) $body);
+        $category = sanitize_key((string) $category);
+        if ($category === '') {
+            $category = 'general';
+        }
+        $sent = 0;
+        $user_id = absint($user_id);
+        if ($user_id > 0) {
+            $id = self::notify_user($user_id, $category, $title, $body, 'broadcast', '', '/account/#/notifications');
+            return array('sent' => $id > 0 ? 1 : 0, 'notification_id' => $id);
+        }
+
+        $result = class_exists('PAXdesign_Customer_Registry')
+            ? PAXdesign_Customer_Registry::query_manageable_customers('', 1, 100)
+            : array('users' => array());
+        $users = isset($result['users']) && is_array($result['users']) ? $result['users'] : array();
+        foreach ($users as $user) {
+            $uid = $user instanceof WP_User ? (int) $user->ID : 0;
+            if ($uid <= 0) {
+                continue;
+            }
+            if (self::notify_user($uid, $category, $title, $body, 'broadcast', '', '/account/#/notifications')) {
+                $sent++;
+            }
+        }
+        return array('sent' => $sent);
+    }
+
+    /**
+     * @return string
+     */
+    private static function table_or_notifications() {
+        return PAXdesign_Customer_DB::table('notifications');
+    }
 }

@@ -72,11 +72,32 @@ owner_ok(strpos($js, 'user.is_master_admin || user.is_owner') !== false, 'Owner 
 owner_ok(strpos($js, 'nav_overview') !== false && strpos($js, 'nav_personal') !== false && strpos($js, 'nav_settings') !== false, 'Owner still has Overview, Personal Information, and Account Settings');
 owner_ok(strpos($js, 'nav_administration') !== false, 'Owner account UI includes Customer Management');
 owner_ok(strpos($js, 'nav_wordpress_admin') !== false, 'Owner account UI includes a WordPress Admin link');
+owner_ok(strpos($js, "href: '/wp-admin/'") !== false, 'WordPress Admin nav still links to /wp-admin/ and is not removed');
+owner_ok(strpos($js, 'nav_admin_overview') !== false && strpos($js, 'nav_admin_staff') !== false, 'Owner account UI includes Control Center and employee management');
+owner_ok(strpos($js, 'nav_admin_permissions') !== false && strpos($js, 'nav_admin_projects') !== false, 'Owner account UI includes permissions and all projects');
+owner_ok(strpos($js, 'nav_admin_orders') !== false && strpos($js, 'nav_admin_tickets') !== false, 'Owner account UI includes all requests and tickets');
+owner_ok(strpos($js, 'nav_admin_files') !== false && strpos($js, 'nav_admin_services') !== false, 'Owner account UI includes all files and services');
+owner_ok(strpos($js, 'nav_admin_conversations') !== false && strpos($js, 'nav_admin_notifications') !== false, 'Owner account UI includes conversations and notifications');
+owner_ok(strpos($js, 'nav_admin_reports') !== false, 'Owner account UI includes statistics and reports');
+owner_ok(strpos($js, 'function loadOwnerAdminSection') !== false, 'Owner admin sections load from PAXDesign master APIs');
+owner_ok(strpos($js, 'function isStaffUser') !== false && strpos($js, 'nav_group_staff') !== false, 'Staff users get a separate staff workspace, not the owner control panel');
 owner_ok(strpos($js, 'owner_super_admin') !== false, 'Account status labels the owner as Owner / Super Admin, not a customer');
 owner_ok($js === $overlay_js, 'Overlay pax-auth.js matches the plugin copy');
 
 owner_ok(strpos($l10n, 'owner_super_admin') !== false, 'Account l10n includes the owner status label');
 owner_ok(strpos($l10n, 'nav_wordpress_admin') !== false, 'Account l10n includes the WordPress Admin nav label');
+owner_ok(strpos($l10n, 'nav_admin_overview') !== false && strpos($l10n, 'owner_control_center') !== false, 'Account l10n includes the in-account owner control center');
+
+$master_rest = file_get_contents($plugin . '/includes/customer/class-paxdesign-customer-master-rest.php');
+$staff_rest = file_get_contents($plugin . '/includes/customer/class-paxdesign-customer-staff-rest.php');
+owner_ok(strpos($master_rest, '/customer/master/overview') !== false, 'Master REST exposes owner overview stats');
+owner_ok(strpos($master_rest, '/customer/master/staff') !== false, 'Master REST exposes staff management');
+owner_ok(strpos($master_rest, '/customer/master/projects') !== false && strpos($master_rest, '/customer/master/orders') !== false, 'Master REST lists all projects and orders');
+owner_ok(strpos($master_rest, '/customer/master/tickets') !== false && strpos($master_rest, '/customer/master/files') !== false, 'Master REST lists tickets and files');
+owner_ok(strpos($master_rest, '/customer/master/services') !== false && strpos($master_rest, '/customer/master/conversations') !== false, 'Master REST lists services and conversations');
+owner_ok(strpos($master_rest, '/customer/master/notifications') !== false && strpos($master_rest, '/customer/master/reports') !== false, 'Master REST exposes notifications and reports');
+owner_ok(strpos($staff_rest, '/customer/staff/projects') !== false && strpos($staff_rest, 'list_projects') !== false, 'Staff REST can list all customer projects');
+owner_ok(strpos($customer_auth, 'is_owner_account') !== false && strpos($customer_auth, 'require_staff') !== false, 'Staff/admin REST permission checks include the owner account');
 
 owner_ok(strpos($eval, 'provision_owner_administrator') !== false, 'Deploy eval-file promotes the owner account');
 
@@ -84,6 +105,8 @@ owner_ok(is_file($root . '/.github/workflows/deploy-owner-super-admin.yml'), 'Su
 owner_ok(strpos($workflow, 'rsync --delete') === false && strpos($workflow, 'rsync -az --delete') === false, 'Owner-admin deploy must not rsync --delete the plugin tree');
 owner_ok(strpos($workflow, 'class-paxdesign-auth-native.php') !== false, 'Owner-admin deploy rsyncs auth-native.php');
 owner_ok(strpos($workflow, 'wp-eval-ensure-live-admin-access.php') !== false, 'Owner-admin deploy runs live owner promotion');
+owner_ok(strpos($workflow, 'class-paxdesign-customer-master-rest.php') !== false, 'Owner-admin deploy rsyncs master REST');
+owner_ok(strpos($workflow, 'pdx-account-app.css') !== false, 'Owner-admin deploy rsyncs account CSS');
 owner_ok(strpos($workflow, 'Version: 3.174.128') !== false, 'Owner-admin deploy still verifies chat 3.174.128');
 
 $syntax = array(
@@ -94,6 +117,13 @@ $syntax = array(
     $plugin . '/includes/customer/class-paxdesign-customer-master-admin.php',
     $plugin . '/includes/customer/class-paxdesign-customer-registry.php',
     $plugin . '/includes/customer/class-paxdesign-customer-auth.php',
+    $plugin . '/includes/customer/class-paxdesign-customer-master-rest.php',
+    $plugin . '/includes/customer/class-paxdesign-customer-staff-rest.php',
+    $plugin . '/includes/customer/class-paxdesign-customer-projects.php',
+    $plugin . '/includes/customer/class-paxdesign-customer-orders.php',
+    $plugin . '/includes/customer/class-paxdesign-customer-notifications.php',
+    $plugin . '/includes/customer/class-paxdesign-customer-services.php',
+    $plugin . '/includes/auth/class-paxdesign-auth-frontend.php',
     $plugin . '/scripts/wp-eval-ensure-live-admin-access.php',
 );
 foreach ($syntax as $file) {

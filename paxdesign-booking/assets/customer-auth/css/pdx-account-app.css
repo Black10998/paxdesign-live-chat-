@@ -1656,6 +1656,76 @@ body.pdx-account-signout-confirm-open {
   }
 }
 
+.pdx-owner-command {
+  margin-bottom: 18px;
+}
+
+.pdx-owner-stats {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(150px, 1fr));
+  gap: 10px;
+  margin-top: 14px;
+}
+
+.pdx-owner-stat {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 6px;
+  padding: 14px 16px;
+  border: 1px solid rgba(0, 0, 0, 0.08);
+  border-radius: 14px;
+  background: #fff;
+  text-align: start;
+  cursor: pointer;
+  color: inherit;
+  font: inherit;
+}
+
+.pdx-owner-stat span {
+  font-size: 22px;
+  font-weight: 700;
+  letter-spacing: -0.03em;
+  color: #1d1d1f;
+}
+
+.pdx-owner-stat:hover,
+.pdx-owner-stat:focus-visible {
+  border-color: rgba(0, 0, 0, 0.18);
+  background: #f5f5f7;
+}
+
+.pdx-owner-perm-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(220px, 1fr));
+  gap: 8px 14px;
+  margin: 12px 0;
+}
+
+.pdx-owner-check {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 13px;
+}
+
+.pdx-owner-staff-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin-top: 12px;
+}
+
+.pdx-select--inline {
+  min-width: 140px;
+}
+
+.pdx-account-app[dir="rtl"] .pdx-owner-stat,
+.pdx-account-app[dir="rtl"] .pdx-owner-check {
+  align-items: flex-end;
+  text-align: end;
+}
+
 .pdx-profile-identity {
   margin-bottom: 16px;
   padding-bottom: 16px;
