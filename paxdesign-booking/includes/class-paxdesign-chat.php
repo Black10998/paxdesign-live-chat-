@@ -859,6 +859,7 @@ class PAXdesign_Chat {
                 'has_content' => false,
                 'full_content'=> '',
                 'api_error'   => '',
+                'request_id'  => '',
             );
 
             $payload = wp_json_encode($this->build_openai_payload($model, $openai_messages));
@@ -884,6 +885,12 @@ class PAXdesign_Chat {
                 CURLOPT_CONNECTTIMEOUT => 8,
                 CURLOPT_TCP_NODELAY    => true,
                 CURLOPT_ENCODING       => '',
+                CURLOPT_HEADERFUNCTION => function ($handle, $header) use (&$state) {
+                    if (stripos($header, 'x-request-id:') === 0) {
+                        $state['request_id'] = trim(substr($header, 13));
+                    }
+                    return strlen($header);
+                },
                 CURLOPT_WRITEFUNCTION  => function ($handle, $data) use (&$state) {
                     return $this->process_openai_stream_chunk($data, $state);
                 },
@@ -893,6 +900,13 @@ class PAXdesign_Chat {
             $curl_error = curl_error($ch);
             $http_code  = (int) curl_getinfo($ch, CURLINFO_HTTP_CODE);
             curl_close($ch);
+            $this->record_openai_audit(array(
+                'model'      => $model,
+                'http'       => $http_code,
+                'request_id' => isset($state['request_id']) ? (string) $state['request_id'] : '',
+                'source'     => 'stream',
+                'ok'         => !empty($state['has_content']),
+            ));
 
             if ($state['has_content']) {
                 $stored = null;
@@ -1453,6 +1467,13 @@ class PAXdesign_Chat {
             }
             $code = (int) wp_remote_retrieve_response_code($response);
             $body = json_decode(wp_remote_retrieve_body($response), true);
+            $this->record_openai_audit(array(
+                'model'      => $model,
+                'http'       => $code,
+                'request_id' => (string) wp_remote_retrieve_header($response, 'x-request-id'),
+                'source'     => 'completion',
+                'ok'         => $code >= 200 && $code < 300,
+            ));
             if ($code >= 200 && $code < 300 && is_array($body)) {
                 $content = isset($body['choices'][0]['message']['content'])
                     ? trim((string) $body['choices'][0]['message']['content'])
@@ -1547,6 +1568,13 @@ class PAXdesign_Chat {
 
             $code = (int) wp_remote_retrieve_response_code($response);
             $body = json_decode(wp_remote_retrieve_body($response), true);
+            $this->record_openai_audit(array(
+                'model'      => $model,
+                'http'       => $code,
+                'request_id' => (string) wp_remote_retrieve_header($response, 'x-request-id'),
+                'source'     => 'test',
+                'ok'         => $code >= 200 && $code < 300,
+            ));
 
             if ($code >= 200 && $code < 300 && is_array($body)) {
                 $content = isset($body['choices'][0]['message']['content'])
@@ -1737,6 +1765,13 @@ class PAXdesign_Chat {
 
             $code = (int) wp_remote_retrieve_response_code($response);
             $body = json_decode(wp_remote_retrieve_body($response), true);
+            $this->record_openai_audit(array(
+                'model'      => $model,
+                'http'       => $code,
+                'request_id' => (string) wp_remote_retrieve_header($response, 'x-request-id'),
+                'source'     => 'suggestions',
+                'ok'         => $code >= 200 && $code < 300,
+            ));
 
             if ($code < 200 || $code >= 300 || !is_array($body)) {
                 $last_error = $this->format_openai_error_message($code, is_array($body) ? $body : array(), $model);
@@ -1887,6 +1922,69 @@ class PAXdesign_Chat {
             @ob_flush();
         }
         flush();
+    }
+
+    /**
+     * Non-identifying key type for admin/status responses. Never include unique key characters.
+     *
+     * @param string $api_key
+     * @return string
+     */
+    public static function openai_key_public_hint($api_key) {
+        $api_key = trim((string) $api_key);
+        if ($api_key === '') {
+            return '';
+        }
+        if (strpos($api_key, 'sk-proj-') === 0) {
+            return 'sk-proj';
+        }
+        if (strpos($api_key, 'sk-svcacct-') === 0) {
+            return 'sk-svcacct';
+        }
+        if (strpos($api_key, 'sk-admin-') === 0) {
+            return 'sk-admin';
+        }
+        if (strpos($api_key, 'sk-') === 0) {
+            return 'sk';
+        }
+        return 'configured';
+    }
+
+    /**
+     * @param int $limit
+     * @return array<int, array<string, mixed>>
+     */
+    public static function get_openai_audit_entries($limit = 20) {
+        $rows = get_option('paxdesign_chat_openai_audit', array());
+        if (!is_array($rows)) {
+            return array();
+        }
+        $limit = max(1, min(50, (int) $limit));
+        return array_slice($rows, 0, $limit);
+    }
+
+    /**
+     * Persist a redacted OpenAI call record for incident review. Never stores API keys.
+     *
+     * @param array<string, mixed> $context
+     */
+    private function record_openai_audit(array $context) {
+        $request_id = isset($context['request_id']) ? preg_replace('/[^A-Za-z0-9_-]/', '', (string) $context['request_id']) : '';
+        $entry = array(
+            'ts'         => time(),
+            'endpoint'   => 'https://api.openai.com/v1/chat/completions',
+            'model'      => isset($context['model']) ? sanitize_text_field((string) $context['model']) : '',
+            'http'       => isset($context['http']) ? (int) $context['http'] : 0,
+            'request_id' => is_string($request_id) ? substr($request_id, 0, 128) : '',
+            'source'     => isset($context['source']) ? sanitize_text_field((string) $context['source']) : '',
+            'ok'         => !empty($context['ok']),
+        );
+        $rows = get_option('paxdesign_chat_openai_audit', array());
+        if (!is_array($rows)) {
+            $rows = array();
+        }
+        array_unshift($rows, $entry);
+        update_option('paxdesign_chat_openai_audit', array_slice($rows, 0, 50), false);
     }
 
     /**

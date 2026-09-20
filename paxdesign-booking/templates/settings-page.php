@@ -629,12 +629,12 @@ $chat_quick_links   = class_exists('PAXdesign_Chat_Quick_Links') ? PAXdesign_Cha
               <div class="ps-input-wrap ps-has-icon ps-pw-wrap">
                 <span class="ps-input-icon"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><rect x="3" y="11" width="18" height="11" rx="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/></svg></span>
                 <input type="password" id="paxdesign_chat_worker_secret" name="paxdesign_chat_worker_secret"
-                       value="<?php echo esc_attr($chat_worker_secret); ?>" placeholder="CHAT_SHARED_SECRET" autocomplete="new-password">
+                       value="" placeholder="<?php echo $chat_worker_ok && $chat_worker_secret !== '' ? esc_attr('••••••••') : 'CHAT_SHARED_SECRET'; ?>" autocomplete="new-password">
                 <button type="button" class="ps-eye-btn paxdesign-toggle-pass" aria-label="Shared Secret anzeigen">
                   <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/></svg>
                 </button>
               </div>
-              <span class="ps-hint">Muss mit dem Wrangler-Secret <code>CHAT_SHARED_SECRET</code> übereinstimmen. Wird maskiert gespeichert.</span>
+              <span class="ps-hint">Muss mit dem Wrangler-Secret <code>CHAT_SHARED_SECRET</code> übereinstimmen. Leer lassen, um das gespeicherte Secret zu behalten.</span>
             </div>
 
             <div class="ps-divider"><span>OpenAI Fallback</span></div>
@@ -645,13 +645,13 @@ $chat_quick_links   = class_exists('PAXdesign_Chat_Quick_Links') ? PAXdesign_Cha
                 <div class="ps-input-wrap ps-has-icon ps-pw-wrap">
                   <span class="ps-input-icon"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><rect x="3" y="11" width="18" height="11" rx="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/></svg></span>
                   <input type="password" id="paxdesign_chat_openai_key" name="paxdesign_chat_openai_key"
-                         value="<?php echo esc_attr($chat_openai_key); ?>" placeholder="sk-..." autocomplete="new-password">
+                         value="" placeholder="<?php echo $chat_openai_ok ? esc_attr('••••••••') : 'sk-...'; ?>" autocomplete="new-password">
                   <button type="button" class="ps-eye-btn paxdesign-toggle-pass" aria-label="API Key anzeigen">
                     <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/></svg>
                   </button>
                 </div>
                 <?php if ($chat_openai_ok) : ?>
-                  <span class="ps-hint"><span class="ps-badge ps-badge--success" style="margin-right:6px;">Konfiguriert</span> Wird nur serverseitig verwendet — nie im Frontend.</span>
+                  <span class="ps-hint"><span class="ps-badge ps-badge--success" style="margin-right:6px;">Konfiguriert</span> Leer lassen, um den gespeicherten Schlüssel zu behalten. Wird nur serverseitig verwendet — nie im Frontend.</span>
                 <?php else : ?>
                   <span class="ps-hint"><span class="ps-badge ps-badge--neutral" style="margin-right:6px;">Nicht konfiguriert</span> Aktiv wenn kein Worker konfiguriert ist.</span>
                 <?php endif; ?>

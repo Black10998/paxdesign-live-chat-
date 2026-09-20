@@ -130,7 +130,7 @@ def configure_openai_bootstrap(key_p8: str) -> dict | None:
         fail(f"ASC bootstrap OpenAI response did not mark backend as configured: {payload}")
     ok(
         "OpenAI key saved via ASC bootstrap "
-        f"(model={payload.get('model')}, prefix={payload.get('key_prefix')})"
+        f"(model={payload.get('model')}, hint={payload.get('key_hint') or payload.get('key_prefix')})"
     )
     return payload
 
@@ -155,7 +155,7 @@ def configure_openai_admin() -> dict:
         fail(f"OpenAI configure response did not mark backend as configured: {payload}")
     ok(
         "OpenAI key saved via admin REST "
-        f"(model={payload.get('model')}, prefix={payload.get('key_prefix')})"
+        f"(model={payload.get('model')}, hint={payload.get('key_hint') or payload.get('key_prefix')})"
     )
     return payload
 

@@ -29,3 +29,5 @@ jobs:
         run: php tests/chat-readable-fonts/run.php
       - name: Account Apple UI guards
         run: php tests/account-apple-ui/run.php
+      - name: OpenAI key hardening guards
+        run: php tests/openai-key-hardening/run.php
