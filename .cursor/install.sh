@@ -17,3 +17,12 @@ sudo apt-get install -y --no-install-recommends \
 
 php --version
 mariadbd --version
+
+# Fail fast if the PHP extension the messaging durability/concurrency suite
+# depends on is missing, so a broken image is caught during install instead of
+# only when tests/messaging connects over PDO.
+if ! php -m | grep -qi '^pdo_mysql$'; then
+  echo "Required PHP extension pdo_mysql is not available" >&2
+  exit 1
+fi
+echo "pdo_mysql extension present."
